@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Manrope, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { SiteHeader } from "@/components/site-header";
 const manrope = Manrope({
   variable: "--font-manrope",
   subsets: ["latin"],
@@ -31,8 +34,14 @@ export default function RootLayout({
         {" "}
 
 
-        <Toaster />
-        {children}
+        <SidebarProvider>
+          <AppSidebar variant="inset" />
+          <SidebarInset>
+            <SiteHeader />
+            <Toaster />
+            <main className="w-full">{children}</main>
+          </SidebarInset>
+        </SidebarProvider>
       </body>
     </html>
   );
