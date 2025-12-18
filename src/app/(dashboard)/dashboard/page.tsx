@@ -1,11 +1,12 @@
 "use client";
 import React from "react";
-import SidebarWithCollapsable from "@/components/app-sidebar/app-header";
+import PageTitleWithBreadcrumb from "@/common/PageTitileWithBreadCrumb";
 
 function DashboardPage() {
   return (
     <>
-      <SidebarWithCollapsable />
+
+      <PageTitleWithBreadcrumb />
       I am Dashboard
     </>
   );
