@@ -9,6 +9,7 @@ import { CreateJobTicketDialog } from "./create-job-ticket-dialog";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { AlertDeleteDialog } from "@/common/DeletePoppup";
+import { useRouter } from "next/navigation";
 
 
 export interface Job {
@@ -48,10 +49,21 @@ export function PurchaseOrderCard({
 }: PurchaseOrderCardProps) {
     const [isJobTicketOpen, setIsJobTicketOpen] = useState(false);
     const [openDelete, setOpenDelete] = useState(false);
-
+    const router = useRouter();
     const handleClickDelete = () => {
         setOpenDelete(true);
     };
+
+    const handleEditClick = () => {
+
+        router.push(`/purchase-order/${po_id}/edit`);
+    };
+
+    const handleViewClick = () => {
+
+        router.push(`/purchase-order/${po_id}/view`);
+    };
+
     return (
         <>
             <Card className={cn("w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col", className)}>
@@ -79,12 +91,12 @@ export function PurchaseOrderCard({
                                 Create Job Ticket
                             </DropdownMenuItem>
 
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => handleEditClick()}>
                                 <PencilIcon />
                                 Edit Purchase Order
                             </DropdownMenuItem>
 
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => handleViewClick()}>
                                 <EyeIcon />
                                 View Purchase Order
                             </DropdownMenuItem>
