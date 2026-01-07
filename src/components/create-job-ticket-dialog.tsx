@@ -37,59 +37,11 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
+import { jobTicketSchema } from "@/lib/formSchema"
 
 
 
-// Schema Definition
-const jobTicketSchema = z.object({
-    poNumber: z.string().optional(),
-    item: z.string().optional(),
-    orderReceivedDate: z.date().optional(),
-    jobNumber: z.string().optional(),
-    jobOpenDate: z.date().optional(),
-    customer: z.string().optional(),
-    jobName: z.string().optional(),
-    productType: z.string().min(1, "Product Type is required"),
-    quantity: z.string().min(1, "Quantity is required"),
-    wastage: z.string().optional(),
-    packingDate: z.date().optional(),
-    expiryDate: z.date().optional(),
-    poNo: z.string().optional(),
-    tcNo: z.string().optional(),
-    batchRef: z.string().optional(),
-    remarks: z.string().optional(),
-    addAnotherJob: z.boolean().default(false).optional(),
 
-
-    // CTP Plates
-    oldPlatesQuantity: z.string().optional(),
-    oldPlatesStatus: z.string().optional(),
-    oldPlatesRemarks: z.string().optional(),
-    newPlatesQuantity: z.string().optional(),
-    newPlatesStatus: z.string().optional(),
-    newPlatesRemarks: z.string().optional(),
-
-    // Dynamic Lists
-    rawMaterials: z.array(z.object({
-        item: z.string().optional(),
-        quantity: z.string().optional(),
-        status: z.string().optional(),
-        remarks: z.string().optional(),
-    })).optional(),
-    inks: z.array(z.object({
-        ink: z.string().optional(),
-        quantity: z.string().optional(),
-        status: z.string().optional(),
-        remarks: z.string().optional(),
-    })).optional(),
-
-    //Paper Types
-    paperTypes: z.array(z.object({
-        paper_type: z.string().min(1, "Paper Type is required"),
-        coating: z.string().min(1, "Coating is required"),
-        delivery_date: z.date().optional(),
-    })).min(1),
-})
 
 type JobTicketFormValues = z.infer<typeof jobTicketSchema>
 
@@ -303,15 +255,27 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                                     <FormLabel>Job Open Date</FormLabel>
                                     <Popover>
                                         <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                                    {field.value ? format(field.value, "PPP") : format(new Date(), "PPP")}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button>
-                                            </FormControl>
+                                            <Button
+                                                variant="outline"
+                                                className={cn(
+                                                    "w-full flex items-center justify-between px-3 py-2 text-left font-normal",
+                                                    !field.value && "text-muted-foreground"
+                                                )}
+                                            >
+                                                {field.value ? format(field.value, "PPP") : "Select date"}
+                                                <CalendarIcon className="h-4 w-4 opacity-50" />
+                                            </Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus />
+                                            <Calendar
+                                                mode="single"
+                                                selected={field.value}
+
+                                                captionLayout="dropdown"
+
+                                                onSelect={field.onChange}
+
+                                            />
                                         </PopoverContent>
                                     </Popover>
                                     <FormMessage />
@@ -412,7 +376,7 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                                                         </FormControl>
                                                     </PopoverTrigger>
                                                     <PopoverContent className="w-auto p-0" align="start">
-                                                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date("1900-01-01")} initialFocus />
+                                                        <Calendar mode="single" captionLayout="dropdown" selected={field.value} onSelect={field.onChange} />
                                                     </PopoverContent>
                                                 </Popover>
                                                 <FormMessage className="min-h-[20px]" />
@@ -423,7 +387,7 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                                         <Button type="button" variant="outline" size="icon" onClick={() => { }}><Edit2 className="h-4 w-4" /></Button>
                                         <Button
                                             type="button"
-                                            variant="outline"
+                                            variant="destructive"
                                             size="icon"
                                             onClick={() => removePaperType(index)}
                                             disabled={paperTypeFields.length <= 1} // Disable if only one item
@@ -455,7 +419,7 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                                             </FormControl>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date("1900-01-01")} initialFocus />
+                                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} captionLayout="dropdown" />
                                         </PopoverContent>
                                     </Popover>
                                     <FormMessage />
@@ -474,7 +438,7 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                                             </FormControl>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date("1900-01-01")} initialFocus />
+                                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} captionLayout="dropdown" />
                                         </PopoverContent>
                                     </Popover>
                                     <FormMessage />
@@ -621,7 +585,7 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                                         <Button type="button" variant="outline" size="icon" onClick={() => { }}><Edit2 className="h-4 w-4" /></Button>
                                         <Button
                                             type="button"
-                                            variant="outline"
+                                            variant="destructive"
                                             size="icon"
                                             onClick={() => removeRawMaterial(index)}
                                             disabled={rawMaterialFields.length <= 1} // Disable if only one item
@@ -688,7 +652,7 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                                         <Button type="button" variant="outline" size="icon" onClick={() => { }}><Edit2 className="h-4 w-4" /></Button>
                                         <Button
                                             type="button"
-                                            variant="outline"
+                                            variant="destructive"
                                             size="icon"
                                             onClick={() => removeInk(index)}
                                             disabled={inkFields.length <= 1} // Disable if only one item
