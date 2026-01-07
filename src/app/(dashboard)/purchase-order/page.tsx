@@ -1,4 +1,4 @@
-
+"use client"
 import PageTitleWithBreadcrumb from "@/common/PageTitileWithBreadCrumb";
 import { PurchaseOrderCard } from "@/components/purchase-order-card";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { LayoutPanelTop, PlusIcon, Search, Table2 } from "lucide-react";
 import React from "react";
+import { useRouter } from "next/navigation";
 
 function PurchaseOrderPage() {
+
+  const router = useRouter()
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       <PageTitleWithBreadcrumb
@@ -34,7 +37,7 @@ function PurchaseOrderPage() {
             <TabsTrigger value="Grid-View"><LayoutPanelTop /></TabsTrigger>
             <TabsTrigger value="Table-View"><Table2 /></TabsTrigger>
           </TabsList>
-          <Button>
+          <Button onClick={() => router.push("/purchase-order/create")}>
             <PlusIcon /> Create New
           </Button>
         </div>
@@ -42,6 +45,7 @@ function PurchaseOrderPage() {
         <TabsContent value="Grid-View">
           <div className="grid gap-[24px] grid-cols-[repeat(auto-fit,minmax(412px,1fr))]">
             <PurchaseOrderCard
+              po_id="po-212201"
               companyName="Korean SPA Packaging (PVT) LTD"
               contactEmail="sydney.moore@korenspa.com"
               poNumber="PO-212201"
@@ -56,6 +60,7 @@ function PurchaseOrderPage() {
               status="Created"
             />
             <PurchaseOrderCard
+              po_id="po-212202"
               companyName="Korean SPA Packaging (PVT) LTD"
               contactEmail="sydney.moore@korenspa.com"
               poNumber="PO-212202"
@@ -70,6 +75,7 @@ function PurchaseOrderPage() {
               status="Created"
             />
             <PurchaseOrderCard
+              po_id="po-212203"
               companyName="Korean SPA Packaging (PVT) LTD"
               contactEmail="sydney.moore@korenspa.com"
               poNumber="PO-212203"
@@ -84,6 +90,7 @@ function PurchaseOrderPage() {
               status="Created"
             />
             <PurchaseOrderCard
+              po_id="po-212203"
               companyName="Korean SPA Packaging (PVT) LTD"
               contactEmail="sydney.moore@korenspa.com"
               poNumber="PO-212203"
@@ -98,6 +105,7 @@ function PurchaseOrderPage() {
               status="Created"
             />
             <PurchaseOrderCard
+              po_id="po-212203"
               companyName="Korean SPA Packaging (PVT) LTD"
               contactEmail="sydney.moore@korenspa.com"
               poNumber="PO-212203"
@@ -112,6 +120,7 @@ function PurchaseOrderPage() {
               status="Created"
             />
             <PurchaseOrderCard
+              po_id="po-212203"
               companyName="Korean SPA Packaging (PVT) LTD"
               contactEmail="sydney.moore@korenspa.com"
               poNumber="PO-212203"

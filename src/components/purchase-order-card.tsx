@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Barcode, Calendar, DeleteIcon, EyeIcon, FileText, MoreVertical, PencilIcon, PlusIcon, Ticket, TrashIcon, Truck } from "lucide-react";
-import React from "react";
+import React, { useState } from "react";
 import { CreateJobTicketDialog } from "./create-job-ticket-dialog";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { AlertDeleteDialog } from "@/common/DeletePoppup";
+
 
 export interface Job {
     id: string;
@@ -27,6 +29,7 @@ export interface PurchaseOrderCardProps {
     totalJobs: number;
     additionalJobs: number;
     status: string;
+    po_id: string;
     className?: string;
 }
 
@@ -40,10 +43,15 @@ export function PurchaseOrderCard({
     totalJobs,
     additionalJobs,
     status,
+    po_id,
     className,
 }: PurchaseOrderCardProps) {
-    const [isJobTicketOpen, setIsJobTicketOpen] = React.useState(false);
+    const [isJobTicketOpen, setIsJobTicketOpen] = useState(false);
+    const [openDelete, setOpenDelete] = useState(false);
 
+    const handleClickDelete = () => {
+        setOpenDelete(true);
+    };
     return (
         <>
             <Card className={cn("w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col", className)}>
@@ -81,7 +89,7 @@ export function PurchaseOrderCard({
                                 View Purchase Order
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem variant="destructive">
+                            <DropdownMenuItem onSelect={() => handleClickDelete()} variant="destructive">
                                 <TrashIcon />
                                 Delete Purchase Order
                             </DropdownMenuItem>
@@ -149,6 +157,14 @@ export function PurchaseOrderCard({
             </Card>
 
             <CreateJobTicketDialog open={isJobTicketOpen} onOpenChange={setIsJobTicketOpen} />
+            <AlertDeleteDialog
+                isOpen={openDelete}
+                onClose={() => setOpenDelete(false)}
+                handleSubmit={() => {
+                    console.log(`Deleting Purchase Order with ID: ${po_id}`);
+                    setOpenDelete(false);
+                }}
+            />
         </>
     );
 }
