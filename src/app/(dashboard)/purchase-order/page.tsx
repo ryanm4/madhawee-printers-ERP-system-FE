@@ -6,12 +6,35 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { LayoutPanelTop, PlusIcon, Search, Table2 } from "lucide-react";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { purchaseOrderApi } from "@/modules/purchase-order/api";
+import { PURCHASE_ORDER } from "@/types/purchse_orders";
 
 function PurchaseOrderPage() {
 
+  const [data, setData] = useState<PURCHASE_ORDER[]>([]);
+  const [loading, setLoading] = useState(false);
   const router = useRouter()
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const response = await purchaseOrderApi.getAll();
+      console.log(response)
+      setData(response.data);
+    } catch (error) {
+      console.error('Failed to fetch POs');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       <PageTitleWithBreadcrumb
