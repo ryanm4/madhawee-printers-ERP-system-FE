@@ -11,9 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { useFieldArray } from 'react-hook-form'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { CloudUpload, FileArchive, X } from 'lucide-react'
 
@@ -86,7 +84,7 @@ function CreateCustomerRelationship() {
         form.clearErrors()
     }
     return (
-        <div className='className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3"'>
+        <div className='flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3'>
             <PageTitleWithBreadcrumb
                 title="Create Customer"
                 breadcrumbs={[
