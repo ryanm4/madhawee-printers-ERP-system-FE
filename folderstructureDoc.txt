@@ -1,0 +1,113 @@
+public/
+├── favicon.ico
+└── logo.png
+
+├── next.config.mjs
+├── package.json
+└── tsconfig.json
+
+src/
+├── app/                                    # Next.js App Router + Co-located Components
+│   ├── layout.tsx                         # Root layout
+│   ├── page.tsx                          # Home page
+│   ├── (dashboard)/                      # Route group: /dashboard/*
+│   │   ├── quotation-management/
+│   │   │   ├── page.tsx                  # /dashboard/quotation-management
+│   │   │   ├── DataTable.tsx            # Table logic + API calls
+│   │   │   └── columns.tsx              # Column definitions
+│   │   ├── inventory-management/         # INVENTORY EXAMPLE ⭐
+│   │   │   ├── page.tsx                 # /dashboard/inventory-management
+│   │   │   ├── DataTable.tsx            # Table + useGetInventoryQuery()
+│   │   │   └── columns.tsx              # Inventory columns
+│   │   ├── purchase-order-management/
+│   │   │   ├── page.tsx
+│   │   │   ├── DataTable.tsx
+│   │   │   └── columns.tsx
+│   │   ├── job-ticket-management/
+│   │   │   ├── page.tsx
+│   │   │   ├── DataTable.tsx
+│   │   │   └── columns.tsx
+│   │   ├── dispatch-invoice-management/
+│   │   │   ├── page.tsx
+│   │   │   ├── DataTable.tsx
+│   │   │   └── columns.tsx
+│   │   ├── crm/
+│   │   │   ├── page.tsx
+│   │   │   ├── DataTable.tsx
+│   │   │   └── columns.tsx
+│   │   └── admin-dashboard/
+│   │       └── page.tsx
+│   └── (auth)/                          # Route group: /login, /register
+│       ├── login/
+│       │   └── page.tsx
+│       ├── register/
+│       │   └── page.tsx
+│       └── forgot-password/
+│           └── page.tsx
+│
+├── modules/                              # 🔥 API LOCATION + Redux Slices
+│   ├── inventory/                       # INVENTORY EXAMPLE ⭐
+│   │   ├── api.ts                      # 🔥 API CALLS HERE
+│   │   │                               # useGetInventoryQuery()
+│   │   ├── slice.ts                    # Redux state
+│   │   └── types.ts                    # InventoryItem interface
+│   ├── quotation/
+│   │   ├── api.ts                      # 🔥 QUOTATION API CALLS
+│   │   ├── slice.ts
+│   │   └── types.ts
+│   ├── purchase-order/
+│   │   ├── api.ts                      # 🔥 PURCHASE ORDER API
+│   │   ├── slice.ts
+│   │   └── types.ts
+│   ├── job-ticket/
+│   │   ├── api.ts                      # 🔥 JOB TICKET API
+│   │   ├── slice.ts
+│   │   └── types.ts
+│   ├── dispatch-invoice/
+│   │   ├── api.ts                      # 🔥 DISPATCH API
+│   │   ├── slice.ts
+│   │   └── types.ts
+│   └── crm/
+│       ├── api.ts                      # 🔥 CRM API
+│       ├── slice.ts
+│       └── types.ts
+│
+├── components/                          # Shared UI (Generic only)
+│   └── common/
+│       ├── Button.tsx
+│       ├── Modal.tsx
+│       └── DataTable.tsx               # Generic TanStack wrapper
+│
+├── redux/                               # Redux Store
+│   ├── store.ts                        # Combines modules/*/slice.ts
+│   └── hooks.ts                        # useAppDispatch, useAppSelector
+│
+├── lib/                                 # Core Utilities
+│   ├── apiClient.ts                    # Axios instance
+│   └── auth.ts                         # Auth helpers
+│
+├── services/                            # App Services
+│   └── notifications.ts
+├── styles/
+│   └── globals.css
+├── types/                               # Global Types
+│   └── index.ts
+└── utils/                               # Helpers
+    ├── formatCurrency.ts
+    └── dateUtils.ts
+
+
+1. API Calls: modules/inventory/api.ts
+   → useGetInventoryQuery()
+
+2. DataTable Logic: app/(dashboard)/inventory-management/DataTable.tsx
+   → Calls inventory API + passes to generic Table
+
+3. Columns: app/(dashboard)/inventory-management/columns.tsx
+   → Column definitions for TanStack
+
+4. Page: app/(dashboard)/inventory-management/page.tsx
+   → Imports DataTable
+
+5. Redux: modules/inventory/slice.ts
+   → Global inventory state
