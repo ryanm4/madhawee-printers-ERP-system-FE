@@ -1,12 +1,12 @@
 "use client"
-import PageTitleWithBreadcrumb from "@/common/PageTitileWithBreadCrumb";
+import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlusIcon, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React from "react";
-import { DataTable } from "./data-table";
-import { columns, JobTicket } from "./columns";
+import { DataTable } from "./_components/job-ticket-table";
+import { columns, JobTicket } from "./_components/job-ticket-columns";
 
 
 async function getData(): Promise<JobTicket[]> {

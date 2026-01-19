@@ -1,0 +1,90 @@
+export enum PurchaseOrderType {
+    TIEP = 1,
+    NON_TIEP = 2,
+    MP = 3,
+}
+
+export enum CustomerType {
+    CUSTOMER = "CUSTOMER",
+    SUPPLIER = "SUPPLIER",
+    BOTH = "BOTH",
+}
+
+export enum QuotationStatus {
+    PENDING = "PENDING",
+    CREATED = "CREATED",
+    APPROVED = "APPROVED",
+    COMPLETED = "COMPLETED",
+    REJECTED = "REJECTED",
+}
+
+export enum PurchaseOrderStatus {
+    PENDING = "PENDING",
+    CREATED = "CREATED",
+    APPROVED = "APPROVED",
+    COMPLETED = "COMPLETED",
+
+}
+
+export enum JobTicketStatus {
+    CREATED = "CREATED",
+    APPROVED = "APPROVED",
+    MATERIALS_REQUESTED = "MATERIALS_REQUESTED",
+    MATERIALS_ALLOCATED = "MATERIALS_ALLOCATED",
+    IN_PRINTING = "IN_PRINTING",
+    PRINTING_COMPLETED = "PRINTING_COMPLETED",
+    PARTIALLY_DISPATCHED = "PARTIALLY_DISPATCHED",
+    DISPATCHED = "DISPATCHED",
+    COMPLETED = "COMPLETED",
+}
+
+export enum CustomerStatus {
+    ACTIVE = "ACTIVE",
+    INACTIVE = "INACTIVE",
+}
+
+export enum TaxTypes {
+    NON = 'NON',
+    SVAT = "SVAT",
+    VAT = "VAT",
+}
+
+
+export enum ITEM_CATEGORY {
+    PAPER = "PAPER",
+    BOARD = "BOARD",
+    CHEMICALS = "CHEMICALS",
+    GLUE = "GLUE",
+    INK = "INK",
+    LAMINATING_FILM = "LAMINATING FILM",
+    MISCELLANEOUS = "MISCELLANEOUS",
+    PRE_PRESS = "PRE-PRESS",
+    SPIRAL = "SPIRAL"
+}
+
+export enum ITEM_SUB_CATEGORY {
+    BLANKS = "BLANKS",
+    ART_BOARD = "ART BOARD",
+    ART_PAPER = "ART PAPER",
+    BLANK_PAPER = "BLANK PAPER",
+    BOX_BOARD = "BOX BOARD",
+    CLEANING = "CLEANING",
+    COUTED_PAPER_BOARD = "COUTED PAPER BOARD",
+    GLUE = "GLUE",
+    INK = "INK",
+    IVORY_BOARD = "IVORY BOARD",
+    LAMINATING_FILM = "LAMINATING FILM",
+    LINEN_PAPER = "LINEN PAPER",
+    NEWS_PRINT_PAPER = "NEWS PRINT PAPER",
+    OP = "OP",
+    OTHER = "OTHER",
+    SPIRAL = "SPIRAL",
+}
+
+export enum UNIT_OF_MEASSURE {
+    NOS = "NOS",
+    REEL = "REEL",
+    SHEET = "SHEET",
+    LTR = "LTR",
+    KG = "KG",
+}

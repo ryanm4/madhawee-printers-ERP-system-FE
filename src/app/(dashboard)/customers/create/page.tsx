@@ -1,7 +1,7 @@
 "use client"
 
-import PageTitleWithBreadcrumb from '@/common/PageTitileWithBreadCrumb'
-import { customerSchema } from '@/lib/formSchema'
+import PageTitleWithBreadcrumb from '@/components/shared/page-title-with-breadcrumb'
+import { customerSchema } from '@/modules/customer/validation'
 import { useRouter } from 'next/navigation'
 import React, { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -14,6 +14,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { CloudUpload, FileArchive, X } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CustomerType } from '@/config/enum'
 
 type CustomerFormValues = z.infer<typeof customerSchema>
 
@@ -23,7 +25,7 @@ function CreateCustomerRelationship() {
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const baseDefaultValues: CustomerFormValues = {
-        customerName: "",
+        customer_type: "",
         companyName: "",
         address: "",
         phone: "",
@@ -111,11 +113,19 @@ function CreateCustomerRelationship() {
                             </CardHeader>
                             <CardContent className='flex flex-col gap-4'>
 
-                                <FormField control={form.control} name="customerName" render={({ field }) => (
+                                <FormField control={form.control} name="customer_type" render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Customer Name</FormLabel>
-                                        <FormControl><Input placeholder="Enter Customer Name" {...field} /></FormControl>
-                                        <FormMessage />
+                                        <FormLabel>Customer / Supplier<span className="text-red-500">*</span></FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Customer" /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                {Object.values(CustomerType).map((customer) => (
+                                                    <SelectItem key={customer} value={customer}>
+                                                        {customer}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </FormItem>
                                 )} />
                                 <div className='flex flex-row gap-4'>

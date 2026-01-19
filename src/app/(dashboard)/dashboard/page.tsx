@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import PageTitleWithBreadcrumb from "@/common/PageTitileWithBreadCrumb";
+import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 
 function DashboardPage() {
   return (
