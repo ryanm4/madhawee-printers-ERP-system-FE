@@ -4,55 +4,104 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlusIcon, Search } from "lucide-react";
 import { DataTable } from "./_components/customer-table";
-import { columns, JobTicket } from "./_components/customer-columns";
+import { customerColumns } from "./_components/customer-columns";
 import { useRouter } from "next/navigation";
-
-async function getData(): Promise<JobTicket[]> {
-    // Fetch data from your API here.
-    return [
-        {
-            job_id: "728ed52f",
-            quantity: 100,
-            status: "pending",
-            job_open_date: "m@example.com",
-            po_id: "728ed52f",
-        },
-        // ...
-    ]
-}
+import { useEffect, useState } from "react";
+import { CUSTOMER } from "@/modules/customer/types";
+import { CustomerApi } from "@/modules/customer/api";
+import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 
 export default function CRMPage() {
     const router = useRouter();
-    const data = getData()
+    const [data, setData] = useState<CUSTOMER[]>([])
+    const [isLoading, setIsLoading] = useState(false)
+    const [deleteId, setDeleteId] = useState<number | null>(null);
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+    const fetchData = async () => {
+        try {
+            setIsLoading(true);
+            const response = await CustomerApi.getAll();
+            console.log(response)
+
+            if (response.status === 200) {
+                setData(response.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch inventory');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const columns = customerColumns({
+        onEdit: (id) => {
+            router.push(`/customers/${id}/edit`)
+        },
+        onDelete: (id) => {
+            setDeleteId(id)
+        },
+        onView: (id) => {
+            router.push(`/customers/${id}/view`)
+        }
+    })
+
+
+    const handleDelete = async () => {
+        if (deleteId === null) return;
+
+        try {
+            setIsLoading(true);
+            await CustomerApi.delete(deleteId);
+
+
+            await fetchData();
+
+        } catch (error) {
+            console.error("Failed to delete inventory item");
+        } finally {
+            setIsLoading(false);
+            setDeleteId(null); // close popup
+        }
+    };
     return (
-        <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-            <PageTitleWithBreadcrumb
-                title="Customer Relationship Management"
-                breadcrumbs={[
-                    { title: "Dashboard", href: "/dashboard" }
-                ]}
-            />
-            <div className="flex flex-row justify-end gap-[24px]">
-                <div className="relative w-[320px]">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        type="search"
-                        placeholder="Customer"
-                        className="w-full pl-8"
-                    />
+        <>
+            <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+                <PageTitleWithBreadcrumb
+                    title="Customer Relationship Management"
+                    breadcrumbs={[
+                        { title: "Dashboard", href: "/dashboard" }
+                    ]}
+                />
+                <div className="flex flex-row justify-end gap-[24px]">
+                    <div className="relative w-[320px]">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            placeholder="Customer"
+                            className="w-full pl-8"
+                        />
+                    </div>
+
+
+
+
+                    <Button onClick={() => router.push("/customers/create")}>
+                        <PlusIcon /> Create New
+                    </Button>
                 </div>
-
-
-
-
-                <Button onClick={() => router.push("/crm/create")}>
-                    <PlusIcon /> Create New
-                </Button>
+                <DataTable
+                    columns={columns}
+                    data={data}
+                />
             </div>
-            <DataTable
-                columns={columns}
-                data={data}
+            <AlertDeleteDialog
+                isOpen={deleteId !== null}
+                onClose={() => setDeleteId(null)}
+                handleSubmit={handleDelete}
             />
-        </div>
+        </>
     );
 }

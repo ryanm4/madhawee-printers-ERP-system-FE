@@ -4,7 +4,7 @@ import PageTitleWithBreadcrumb from '@/components/shared/page-title-with-breadcr
 import { customerSchema } from '@/modules/customer/validation'
 import { useRouter } from 'next/navigation'
 import React, { useRef, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { FieldPath, useForm, SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -16,12 +16,16 @@ import { cn } from '@/lib/utils'
 import { CloudUpload, FileArchive, X } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CustomerType } from '@/config/enum'
+import { CREATE_CUSTOMER } from '@/modules/customer/types'
+import { CustomerApi } from '@/modules/customer/api'
+import { toast } from 'sonner'
 
 type CustomerFormValues = z.infer<typeof customerSchema>
 
 function CreateCustomerRelationship() {
     const router = useRouter()
     const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+    const [isLoading, setIsLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const baseDefaultValues: CustomerFormValues = {
@@ -37,6 +41,8 @@ function CreateCustomerRelationship() {
         contactPerson: "",
         contactPersonEmail: "",
         contactPersonPhone: "",
+        created_by: "Admin", // Or get from auth
+        status: "Active",
     }
 
     const form = useForm<CustomerFormValues>({
@@ -80,18 +86,61 @@ function CreateCustomerRelationship() {
         return Math.round(bytes / Math.pow(k, i) * 100) / 100 + sizes[i]
     }
 
-    function onSubmit(data: CustomerFormValues) {
-        console.log("Submitting PO Data:", data)
-        form.reset(baseDefaultValues)
-        form.clearErrors()
+    const onSubmit: SubmitHandler<CustomerFormValues> = async (data) => {
+        try {
+            setIsLoading(true);
+            const payload: CREATE_CUSTOMER = {
+                customer_type: data.customer_type,
+                company_name: data.companyName,
+                address: data.address ?? "",
+                phone: data.phone ?? "",
+                email: data.email ?? "",
+                credit_period: data.creditPeriod ?? "",
+                svat_reg_no: data.SVAT_reg_no ?? "",
+                vat_reg_no: data.VAT_reg_no ?? "",
+                logo_url: data.logoUrl ?? "",
+                contact_person: data.contactPerson ?? "",
+                contact_person_email: data.contactPersonEmail ?? "",
+                contact_person_phone: data.contactPersonPhone ?? "",
+                created_by: data.created_by ?? "Admin",
+                status: "Created"
+            }
+            const response = await CustomerApi.create(payload);
+            console.log(response)
+
+            toast.success("Customer Created Successfully");
+            form.reset(baseDefaultValues)
+            form.clearErrors()
+            router.push("/customers")
+        } catch (error) {
+            console.error("Failed to submit customer:", error)
+            toast.error("Failed to create customer");
+        } finally {
+            setIsLoading(false);
+        }
+
     }
+
+
+    const renderFormField = <TName extends FieldPath<CustomerFormValues>>(
+        name: TName,
+        render: Parameters<typeof FormField<CustomerFormValues, TName>>["0"]["render"]
+    ) => (
+        <FormField
+            control={form.control}
+            name={name}
+            render={render}
+        />
+    );
+
+    const supplierType = form.watch("customer_type");
     return (
         <div className='flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3'>
             <PageTitleWithBreadcrumb
                 title="Create Customer"
                 breadcrumbs={[
                     { title: "Dashboard", href: "/dashboard" },
-                    { title: "Customer Relationship Management", href: "/crm" },
+                    { title: "Customer Relationship Management", href: "/customers" },
 
                 ]}
             />
@@ -113,7 +162,7 @@ function CreateCustomerRelationship() {
                             </CardHeader>
                             <CardContent className='flex flex-col gap-4'>
 
-                                <FormField control={form.control} name="customer_type" render={({ field }) => (
+                                {renderFormField("customer_type", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Customer / Supplier<span className="text-red-500">*</span></FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}>
@@ -127,64 +176,65 @@ function CreateCustomerRelationship() {
                                             </SelectContent>
                                         </Select>
                                     </FormItem>
-                                )} />
+                                ))}
                                 <div className='flex flex-row gap-4'>
-                                    <FormField control={form.control} name="companyName" render={({ field }) => (
+                                    {renderFormField("companyName", ({ field }) => (
                                         <FormItem className='w-full'>
                                             <FormLabel>Company Name<span className="text-red-500">*</span></FormLabel>
                                             <FormControl><Input placeholder="Enter Company Name" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="phone" render={({ field }) => (
+                                    ))}
+                                    {renderFormField("phone", ({ field }) => (
                                         <FormItem className='w-full'>
                                             <FormLabel>Company Phone</FormLabel>
                                             <FormControl><Input placeholder="Enter Company Phone" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
-                                    )} />
+                                    ))}
                                 </div>
-                                <FormField control={form.control} name="address" render={({ field }) => (
+                                {renderFormField("address", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Customer Address</FormLabel>
                                         <FormControl><Textarea placeholder="Enter Customer Address" className="resize-none" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
+                                ))}
                                 <div className='flex flex-row gap-4'>
-                                    <FormField control={form.control} name="email" render={({ field }) => (
+                                    {renderFormField("email", ({ field }) => (
                                         <FormItem className='w-full'>
                                             <FormLabel>Company Email</FormLabel>
                                             <FormControl><Input placeholder="Enter Company Email" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="creditPeriod" render={({ field }) => (
+                                    ))}
+                                    {renderFormField("creditPeriod", ({ field }) => (
                                         <FormItem className='w-full'>
                                             <FormLabel>Credit Period (For Suppliers)</FormLabel>
-                                            <FormControl><Input placeholder="Enter Credit Period" {...field} /></FormControl>
+                                            <FormControl><Input placeholder="Enter Credit Period" disabled={supplierType === "CUSTOMER"}
+                                                className={supplierType === "CUSTOMER" ? "bg-muted cursor-not-allowed" : ""}{...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
-                                    )} />
+                                    ))}
                                 </div>
                                 <div className='flex flex-row gap-4'>
-                                    <FormField control={form.control} name="SVAT_reg_no" render={({ field }) => (
+                                    {renderFormField("SVAT_reg_no", ({ field }) => (
                                         <FormItem className='w-full'>
                                             <FormLabel>SVAT Reg No</FormLabel>
                                             <FormControl><Input placeholder="Enter SVAT Reg No" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="VAT_reg_no" render={({ field }) => (
+                                    ))}
+                                    {renderFormField("VAT_reg_no", ({ field }) => (
                                         <FormItem className='w-full'>
                                             <FormLabel>VAT Reg No</FormLabel>
                                             <FormControl><Input placeholder="Enter VAT Reg No" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
-                                    )} />
+                                    ))}
 
                                 </div>
-                                <FormField control={form.control} name="logoUrl" render={({ field }) => (
+                                {renderFormField("logoUrl", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>
                                             Company Logo
@@ -238,7 +288,7 @@ function CreateCustomerRelationship() {
 
                                         </FormControl>
                                     </FormItem>
-                                )} />
+                                ))}
 
 
                             </CardContent>
@@ -252,27 +302,27 @@ function CreateCustomerRelationship() {
 
                                 </CardHeader>
                                 <CardContent className='flex flex-col gap-4'>
-                                    <FormField control={form.control} name="contactPerson" render={({ field }) => (
+                                    {renderFormField("contactPerson", ({ field }) => (
                                         <FormItem >
                                             <FormLabel>Contact Person Name</FormLabel>
                                             <FormControl><Input placeholder="Enter your name" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="contactPersonEmail" render={({ field }) => (
+                                    ))}
+                                    {renderFormField("contactPersonEmail", ({ field }) => (
                                         <FormItem >
                                             <FormLabel>Contact Person Email</FormLabel>
                                             <FormControl><Input placeholder="Enter your email" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="contactPersonPhone" render={({ field }) => (
+                                    ))}
+                                    {renderFormField("contactPersonPhone", ({ field }) => (
                                         <FormItem >
                                             <FormLabel>Contact Person Phone</FormLabel>
                                             <FormControl><Input placeholder="Enter your phone" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
-                                    )} />
+                                    ))}
 
                                 </CardContent>
                             </Card>

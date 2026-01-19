@@ -1,11 +1,13 @@
 export interface CUSTOMER {
     customer_id: number;
+    customer_type: string;
     company_name: string;
     address: string,
     phone: string,
     email: string,
-    vat_type: string,
-    vat_no: string,
+    credit_period: string,
+    svat_reg_no: string,
+    vat_reg_no: string,
     logo_url: string,
     contact_person: string,
     contact_person_email: string,
@@ -17,3 +19,19 @@ export interface CUSTOMER {
     status: string
 }
 
+export interface CREATE_CUSTOMER {
+    customer_type: string;
+    company_name: string;
+    address: string,
+    phone: string,
+    email: string,
+    credit_period: string,
+    svat_reg_no: string,
+    vat_reg_no: string,
+    logo_url: string,
+    contact_person: string,
+    contact_person_email: string,
+    contact_person_phone: string,
+    created_by: string,
+    status: string,
+}

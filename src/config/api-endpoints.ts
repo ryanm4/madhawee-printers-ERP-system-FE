@@ -5,9 +5,9 @@ export const API_ENDPOINTS = {
     PURCHASE_ORDERS: {
         LIST: `${API_BASE_URL}/purchase_orders`,
         CREATE: `${API_BASE_URL}/purchase_orders`,
-        UPDATE: (poId: string) => `${API_BASE_URL}/purchase_orders/${poId}`,
-        GET: (poId: string) => `${API_BASE_URL}/purchase_orders/${poId}`,
-        DELETE: (poId: string) => `${API_BASE_URL}/purchase_orders/${poId}`,
+        UPDATE: (poId: number | string) => `${API_BASE_URL}/purchase_orders/${poId}`,
+        GET: (poId: number | string) => `${API_BASE_URL}/purchase_orders/${poId}`,
+        DELETE: (poId: number | string) => `${API_BASE_URL}/purchase_orders/${poId}`,
     },
     INVENTORY: {
         LIST: `${API_BASE_URL}/inventory`,
@@ -20,10 +20,10 @@ export const API_ENDPOINTS = {
     QUOTATIONS: {
         LIST: `${API_BASE_URL}/quotes`,
         CREATE: `${API_BASE_URL}/quotes`,
-        UPDATE: (quoteId: string) => `${API_BASE_URL}/quotes/${quoteId}`,
-        DELETE: (quoteId: string) => `${API_BASE_URL}/quotes/${quoteId}`,
-        GET: (quoteId: string) => `${API_BASE_URL}/quotes/${quoteId}`,
-        GET_CUSTOMER: (customerId: string) => `${API_BASE_URL}/quotes/customer/${customerId}`,
+        UPDATE: (quoteId: number | string) => `${API_BASE_URL}/quotes/${quoteId}`,
+        DELETE: (quoteId: number | string) => `${API_BASE_URL}/quotes/${quoteId}`,
+        GET: (quoteId: number | string) => `${API_BASE_URL}/quotes/${quoteId}`,
+        GET_CUSTOMER: (customerId: number | string) => `${API_BASE_URL}/quotes/customer/${customerId}`,
     },
     JOB_TICKETS: {
         LIST: `${API_BASE_URL}/jobs`,
@@ -33,16 +33,16 @@ export const API_ENDPOINTS = {
     DISPATCH: {
         LIST: `${API_BASE_URL}/dispatch`,
         CREATE: `${API_BASE_URL}/dispatch`,
-        UPDATE: (dispatch_id: string) => `${API_BASE_URL}/dispatch/${dispatch_id}`,
-        DELETE: (dispatch_id: string) => `${API_BASE_URL}/dispatch/${dispatch_id}`,
-        GET: (dispatch_id: string) => `${API_BASE_URL}/dispatch/${dispatch_id}`,
+        UPDATE: (dispatch_id: number | string) => `${API_BASE_URL}/dispatch/${dispatch_id}`,
+        DELETE: (dispatch_id: number | string) => `${API_BASE_URL}/dispatch/${dispatch_id}`,
+        GET: (dispatch_id: number | string) => `${API_BASE_URL}/dispatch/${dispatch_id}`,
     },
     CUSTOMERS: {
         LIST: `${API_BASE_URL}/customers`,
         CREATE: `${API_BASE_URL}/customers`,
-        UPDATE: (customerId: string) => `${API_BASE_URL}/customers/${customerId}`,
-        DELETE: (customerId: string) => `${API_BASE_URL}/customers/${customerId}`,
-        GET: (customerId: string) => `${API_BASE_URL}/customers/${customerId}`,
+        UPDATE: (customerId: number | string) => `${API_BASE_URL}/customers/${customerId}`,
+        DELETE: (customerId: number | string) => `${API_BASE_URL}/customers/${customerId}`,
+        GET: (customerId: number | string) => `${API_BASE_URL}/customers/${customerId}`,
     },
 
 
@@ -50,9 +50,9 @@ export const API_ENDPOINTS = {
         PURCHASE_ORDERS: {
             LIST: `${NEXTJS_API_BASE}/purchase-orders`,
             CREATE: `${NEXTJS_API_BASE}/purchase-orders`,
-            UPDATE: (poId: string) => `${NEXTJS_API_BASE}/purchase-orders/${poId}`,
-            GET: (poId: string) => `${NEXTJS_API_BASE}/purchase-orders/${poId}`,
-            DELETE: (poId: string) => `${NEXTJS_API_BASE}/purchase-orders/${poId}`,
+            UPDATE: (poId: number | string) => `${NEXTJS_API_BASE}/purchase-orders/${poId}`,
+            GET: (poId: number | string) => `${NEXTJS_API_BASE}/purchase-orders/${poId}`,
+            DELETE: (poId: number | string) => `${NEXTJS_API_BASE}/purchase-orders/${poId}`,
         },
         INVENTORY: {
             LIST: `${NEXTJS_API_BASE}/inventory`,
@@ -64,10 +64,10 @@ export const API_ENDPOINTS = {
         QUOTATIONS: {
             LIST: `${NEXTJS_API_BASE}/quotes`,
             CREATE: `${NEXTJS_API_BASE}/quotes`,
-            UPDATE: (quoteId: string) => `${NEXTJS_API_BASE}/quotes/${quoteId}`,
-            DELETE: (quoteId: string) => `${NEXTJS_API_BASE}/quotes/${quoteId}`,
-            GET: (quoteId: string) => `${NEXTJS_API_BASE}/quotes/${quoteId}`,
-            GET_CUSTOMER: (customerId: string) => `${NEXTJS_API_BASE}/quotes/customer/${customerId}`,
+            UPDATE: (quoteId: number | string) => `${NEXTJS_API_BASE}/quotes/${quoteId}`,
+            DELETE: (quoteId: number | string) => `${NEXTJS_API_BASE}/quotes/${quoteId}`,
+            GET: (quoteId: number | string) => `${NEXTJS_API_BASE}/quotes/${quoteId}`,
+            GET_CUSTOMER: (customerId: number | string) => `${NEXTJS_API_BASE}/quotes/customer/${customerId}`,
         },
         JOB_TICKETS: {
             LIST: `${NEXTJS_API_BASE}/jobs`,
@@ -76,16 +76,16 @@ export const API_ENDPOINTS = {
         DISPATCH: {
             LIST: `${NEXTJS_API_BASE}/dispatch`,
             CREATE: `${NEXTJS_API_BASE}/dispatch`,
-            UPDATE: (dispatch_id: string) => `${NEXTJS_API_BASE}/dispatch/${dispatch_id}`,
-            DELETE: (dispatch_id: string) => `${NEXTJS_API_BASE}/dispatch/${dispatch_id}`,
-            GET: (dispatch_id: string) => `${NEXTJS_API_BASE}/dispatch/${dispatch_id}`,
+            UPDATE: (dispatch_id: number | string) => `${NEXTJS_API_BASE}/dispatch/${dispatch_id}`,
+            DELETE: (dispatch_id: number | string) => `${NEXTJS_API_BASE}/dispatch/${dispatch_id}`,
+            GET: (dispatch_id: number | string) => `${NEXTJS_API_BASE}/dispatch/${dispatch_id}`,
         },
         CUSTOMERS: {
             LIST: `${NEXTJS_API_BASE}/customers`,
             CREATE: `${NEXTJS_API_BASE}/customers`,
-            UPDATE: (customerId: string) => `${NEXTJS_API_BASE}/customers/${customerId}`,
-            DELETE: (customerId: string) => `${NEXTJS_API_BASE}/customers/${customerId}`,
-            GET: (customerId: string) => `${NEXTJS_API_BASE}/customers/${customerId}`,
+            UPDATE: (customerId: number | string) => `${NEXTJS_API_BASE}/customers/${customerId}`,
+            DELETE: (customerId: number | string) => `${NEXTJS_API_BASE}/customers/${customerId}`,
+            GET: (customerId: number | string) => `${NEXTJS_API_BASE}/customers/${customerId}`,
         },
     },
 } as const;

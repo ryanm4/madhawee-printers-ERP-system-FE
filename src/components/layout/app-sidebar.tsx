@@ -59,9 +59,9 @@ const data = {
       url: "/inventory",
     },
     {
-      title: "CRM Module",
+      title: "Customer Module",
       icon: Users,
-      url: "/customer",
+      url: "/customers",
     },
     {
       title: "Users",
