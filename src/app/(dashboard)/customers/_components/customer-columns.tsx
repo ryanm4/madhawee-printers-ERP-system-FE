@@ -39,6 +39,10 @@ export const customerColumns = (
             header: "Phone",
         },
         {
+            accessorKey: "status",
+            header: "Status",
+        },
+        {
             id: "actions",
             enableHiding: false,
             cell: ({ row }) => {
