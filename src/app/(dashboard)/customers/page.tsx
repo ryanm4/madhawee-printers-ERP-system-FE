@@ -44,7 +44,7 @@ export default function CRMPage() {
             setDeleteId(id)
         },
         onView: (id) => {
-            router.push(`/customers/${id}/view`)
+            router.push(`/customers/${id}`)
         }
     })
 
@@ -70,7 +70,7 @@ export default function CRMPage() {
         <>
             <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
                 <PageTitleWithBreadcrumb
-                    title="Customer Relationship Management"
+                    title="Customer  Management"
                     breadcrumbs={[
                         { title: "Dashboard", href: "/dashboard" }
                     ]}
