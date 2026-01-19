@@ -7,9 +7,8 @@ import {
   IconSearch,
   IconSettings,
 } from "@tabler/icons-react"
-import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
+import { NavMain } from "@/components/layout/nav-main"
+import { NavUser } from "@/components/layout/nav-user"
 import {
   Sidebar,
   SidebarContent,
@@ -20,6 +19,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { LayoutDashboard, FileText, ShoppingCart, ClipboardCheck, Truck, Warehouse, Users, SquareUser, Settings } from "lucide-react"
+import { NavSecondary } from "./nav-secondary"
 
 const data = {
   user: {
@@ -35,7 +35,7 @@ const data = {
     },
     {
       title: "Quotations",
-      url: "/quotation",
+      url: "/quotation-management",
       icon: FileText,
     },
     {
@@ -56,12 +56,12 @@ const data = {
     {
       title: "Inventory Management",
       icon: Warehouse,
-      url: "/inventory-management",
+      url: "/inventory",
     },
     {
       title: "CRM Module",
       icon: Users,
-      url: "/crm",
+      url: "/customer",
     },
     {
       title: "Users",

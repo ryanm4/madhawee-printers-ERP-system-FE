@@ -1,5 +1,5 @@
 "use client"
-import PageTitleWithBreadcrumb from "@/common/PageTitileWithBreadCrumb";
+import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { PurchaseOrderCard } from "@/components/purchase-order-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,8 +8,11 @@ import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, Pagi
 import { LayoutPanelTop, PlusIcon, Search, Table2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+
+
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
-import { PURCHASE_ORDER } from "@/types/purchse_orders";
+import { PURCHASE_ORDER } from "@/modules/purchase-order/types";
+
 
 function PurchaseOrderPage() {
 

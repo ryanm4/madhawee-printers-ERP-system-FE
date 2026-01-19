@@ -5,10 +5,10 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Barcode, Calendar, DeleteIcon, EyeIcon, FileText, MoreVertical, PencilIcon, PlusIcon, Ticket, TrashIcon, Truck } from "lucide-react";
 import React, { useState } from "react";
-import { CreateJobTicketDialog } from "./create-job-ticket-dialog";
+import { CreateJobTicketDialog } from "../app/(dashboard)/job-ticket/_components/create-job-ticket-dialog";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import { AlertDeleteDialog } from "@/common/DeletePoppup";
+import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 import { useRouter } from "next/navigation";
 
 

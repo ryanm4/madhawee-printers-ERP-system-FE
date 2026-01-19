@@ -12,8 +12,9 @@ export const API_ENDPOINTS = {
     INVENTORY: {
         LIST: `${API_BASE_URL}/inventory`,
         CREATE: `${API_BASE_URL}/inventory`,
-        UPDATE: (item_id: string) => `${API_BASE_URL}/inventory/${item_id}`,
-        DELETE: (item_id: string) => `${API_BASE_URL}/inventory/${item_id}`,
+        GET: (item_id: number | string) => `${API_BASE_URL}/inventory/${item_id}`,
+        UPDATE: (item_id: number | string) => `${API_BASE_URL}/inventory/${item_id}`,
+        DELETE: (item_id: number | string) => `${API_BASE_URL}/inventory/${item_id}`,
 
     },
     QUOTATIONS: {
@@ -37,8 +38,8 @@ export const API_ENDPOINTS = {
         GET: (dispatch_id: string) => `${API_BASE_URL}/dispatch/${dispatch_id}`,
     },
     CUSTOMERS: {
-        LIST: `${API_BASE_URL}/customers/`,
-        CREATE: `${API_BASE_URL}/customers/`,
+        LIST: `${API_BASE_URL}/customers`,
+        CREATE: `${API_BASE_URL}/customers`,
         UPDATE: (customerId: string) => `${API_BASE_URL}/customers/${customerId}`,
         DELETE: (customerId: string) => `${API_BASE_URL}/customers/${customerId}`,
         GET: (customerId: string) => `${API_BASE_URL}/customers/${customerId}`,
@@ -56,8 +57,9 @@ export const API_ENDPOINTS = {
         INVENTORY: {
             LIST: `${NEXTJS_API_BASE}/inventory`,
             CREATE: `${NEXTJS_API_BASE}/inventory`,
-            UPDATE: (item_id: string) => `${NEXTJS_API_BASE}/inventory/${item_id}`,
-            DELETE: (item_id: string) => `${NEXTJS_API_BASE}/inventory/${item_id}`,
+            GET: (item_id: number | string) => `${NEXTJS_API_BASE}/inventory/${item_id}`,
+            UPDATE: (item_id: number | string) => `${NEXTJS_API_BASE}/inventory/${item_id}`,
+            DELETE: (item_id: number | string) => `${NEXTJS_API_BASE}/inventory/${item_id}`,
         },
         QUOTATIONS: {
             LIST: `${NEXTJS_API_BASE}/quotes`,

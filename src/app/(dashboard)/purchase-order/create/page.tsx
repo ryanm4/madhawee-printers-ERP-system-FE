@@ -1,11 +1,11 @@
 "use client"
-import PageTitleWithBreadcrumb from '@/common/PageTitileWithBreadCrumb'
+import PageTitleWithBreadcrumb from '@/components/shared/page-title-with-breadcrumb'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardContent } from '@/components/ui/card'
-import { purchaseOrderScheme } from '@/lib/formSchema'
+import { purchaseOrderScheme } from '@/modules/purchase-order/validation'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
-import { useFieldArray, useForm } from 'react-hook-form'
+import { FieldPath, useFieldArray, useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -15,11 +15,18 @@ import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { CalendarIcon, Edit2, PlusIcon, Trash2 } from 'lucide-react'
+import { CalendarIcon, Edit2, Loader2, PlusIcon, Trash2 } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
 import { format } from 'date-fns'
-import { PurchaseOrderType } from '@/lib/enum'
-
+import { PurchaseOrderType } from '@/config/enum'
+import { useEffect, useState } from 'react'
+import { CustomerApi } from '@/modules/customer/api'
+import { CUSTOMER } from '@/modules/customer/types'
+import { QUOTATIONS } from '@/modules/quotations/types'
+import { quotationApi } from '@/modules/quotations/api'
+import { purchaseOrderApi } from '@/modules/purchase-order/api'
+import { toast } from 'sonner'
+import { CREATE_PURCHASE_ORDER } from '@/modules/purchase-order/types'
 
 
 type PurchaseOrderFormValues = z.infer<typeof purchaseOrderScheme>
@@ -27,13 +34,49 @@ type PurchaseOrderFormValues = z.infer<typeof purchaseOrderScheme>
 
 function CreatePurchaseOrder() {
     const router = useRouter()
+    const [customer, setCustomer] = useState<CUSTOMER[]>([])
+    const [quotationList, setQuotationList] = useState<QUOTATIONS[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        getCustomerList();
+        getQuotationList();
+    }, []);
+
+    const getCustomerList = async () => {
+        try {
+            setLoading(true);
+            const response = await CustomerApi.getAll();
+            console.log(response);
+            setCustomer(response.data);
+
+        } catch (error) {
+            console.error('Failed to fetch POs');
+        } finally {
+            setLoading(false);
+        }
+    }
+    const getQuotationList = async () => {
+        try {
+            setLoading(true);
+            const response = await quotationApi.getAll();
+            console.log(response);
+            setQuotationList(response.data);
+
+        } catch (error) {
+            console.error('Failed to fetch POs');
+        } finally {
+            setLoading(false);
+        }
+    }
+
 
     const baseDefaultValues: PurchaseOrderFormValues = {
         customer: "",
-        customerName: "",
         customerAddress: "",
         customerEmail: "",
-
+        customerPhone: "",
         purchaseOrderNo: "",
         quotationId: "",
         tceprNo: "",
@@ -46,21 +89,80 @@ function CreatePurchaseOrder() {
     const form = useForm<PurchaseOrderFormValues>({
         resolver: zodResolver(purchaseOrderScheme),
         defaultValues: baseDefaultValues,
-
     })
-
     const { fields: itemDetailsFields, append: appendItemDetails, remove: removeItemDetails } = useFieldArray({
         control: form.control,
         name: "itemDetails",
     })
 
 
-    function onSubmit(data: PurchaseOrderFormValues) {
-        console.log("Submitting PO Data:", data)
-        form.reset(baseDefaultValues)
-        form.clearErrors()
+    async function onSubmit(data: PurchaseOrderFormValues) {
+        try {
+            setIsSubmitting(true);
+            console.log("Submitting PO Data:", data)
+
+            const poTypeMap: Record<PurchaseOrderType, number> = {
+                [PurchaseOrderType.TIEP]: 1,
+                [PurchaseOrderType.NON_TIEP]: 2,
+                [PurchaseOrderType.MP]: 3,
+            };
+            const formatDate = (date: Date) => {
+                return date.toISOString().split('T')[0]; // "YYYY-MM-DD" format
+            };
+
+            const payload: CREATE_PURCHASE_ORDER = {
+                quote_id: data.quotationId || "",
+                customer_id: data.customer ? parseInt(data.customer) : 0,
+                po_type_id: poTypeMap[data.purchaseOrderType] || 1,
+                batch_ref: data.batchRef,
+                po_date: data.poDate instanceof Date ? formatDate(data.poDate) : data.poDate,
+                TC_E_PR_No: data.tceprNo,
+                created_by: "admin", // TODO: Get from auth context
+                updated_by: "admin", // TODO: Get from auth context
+                status: "CREATED",
+                customer_po: data.purchaseOrderNo,
+                po_items: data.itemDetails.map((item: any) => ({
+                    item_code: item.itemCode,
+                    description: item.description,
+                    quantity: String(item.quantity),
+                    uom: item.unit,
+                    price: String(item.price),
+                })),
+            };
+
+            const response = await purchaseOrderApi.create(payload)
+
+            toast.success("Purchase Order Created", {
+                description: `Purchase Order ${data.purchaseOrderNo} has been created successfully.`,
+            });
+
+            form.reset(baseDefaultValues)
+            form.clearErrors()
+
+            // Navigate to purchase order list
+            router.push("/purchase-order")
+        } catch (error) {
+            console.error("Failed to submit PO:", error)
+            toast.error("Failed to Create Purchase Order", {
+                description: "An error occurred while creating the purchase order. Please try again.",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     }
 
+
+    // Helper to render FormField with correct typing
+    const renderFormField = <TName extends FieldPath<PurchaseOrderFormValues>>(
+        name: TName,
+        render: Parameters<typeof FormField<PurchaseOrderFormValues, TName>>["0"]["render"]
+    ) => (
+        <FormField
+            control={form.control}
+            name={name}
+            render={render}
+        />
+    );
 
 
     return (
@@ -78,8 +180,17 @@ function CreatePurchaseOrder() {
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6  pb-0'>
                     <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-                        <Button size="lg" variant="outline" type="button" onClick={() => router.push("/purchase-order")}>Cancel</Button>
-                        <Button size="lg" type="submit" className="bg-black text-white">Save</Button>
+                        <Button size="lg" variant="outline" type="button" onClick={() => router.push("/purchase-order")} disabled={isSubmitting}>Cancel</Button>
+                        <Button size="lg" type="submit" className="bg-black text-white" disabled={isSubmitting}>
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                "Save"
+                            )}
+                        </Button>
                     </div>
 
 
@@ -92,40 +203,61 @@ function CreatePurchaseOrder() {
                             </CardHeader>
                             <CardContent className='flex flex-col gap-4'>
 
-                                <FormField control={form.control} name="customer" render={({ field }) => (
+                                {renderFormField("customer", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Customer</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Customer" /></SelectTrigger></FormControl>
+                                        <Select
+                                            value={field.value}
+                                            onValueChange={(value) => {
+                                                field.onChange(value)
+
+                                                const selectedCustomer = customer.find(
+                                                    c => String(c.customer_id) === value
+                                                )
+
+                                                if (selectedCustomer) {
+                                                    form.setValue('customerAddress', selectedCustomer.address)
+                                                    form.setValue('customerPhone', selectedCustomer.phone)
+                                                    form.setValue('customerEmail', selectedCustomer.email)
+                                                }
+                                            }}
+                                        >
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Select Customer" />
+                                            </SelectTrigger>
+
                                             <SelectContent>
-                                                <SelectItem value="po1">PO-001</SelectItem>
-                                                <SelectItem value="po2">PO-002</SelectItem>
+                                                {customer.map((cust) => (
+                                                    <SelectItem key={cust.customer_id} value={String(cust.customer_id)}>
+                                                        {cust.company_name}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
-                                <FormField control={form.control} name="customerName" render={({ field }) => (
+                                ))}
+                                {renderFormField("customerPhone", ({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Customer Name</FormLabel>
+                                        <FormLabel>Customer Phone</FormLabel>
                                         <FormControl><Input placeholder="Enter Customer Name" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
-                                <FormField control={form.control} name="customerAddress" render={({ field }) => (
+                                ))}
+                                {renderFormField("customerAddress", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Customer Address</FormLabel>
                                         <FormControl><Textarea placeholder="Enter Customer Address" className="resize-none" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
-                                <FormField control={form.control} name="customerEmail" render={({ field }) => (
+                                ))}
+                                {renderFormField("customerEmail", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Customer Email</FormLabel>
                                         <FormControl><Input placeholder="Enter Customer e-mail address..." {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
+                                ))}
 
 
                             </CardContent>
@@ -137,61 +269,72 @@ function CreatePurchaseOrder() {
 
                             </CardHeader>
                             <CardContent className='flex flex-col gap-4'>
-                                <FormField control={form.control} name="purchaseOrderNo" render={({ field }) => (
+                                {renderFormField("purchaseOrderNo", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Purchase Order No <span className="text-red-500">*</span></FormLabel>
                                         <FormControl><Input placeholder="Enter Purchase Order No" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
+                                ))}
 
-                                <FormField control={form.control} name="quotationId" render={({ field }) => (
+                                {renderFormField("quotationId", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Quotation No</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select a Quotation" /></SelectTrigger></FormControl>
                                             <SelectContent>
-                                                <SelectItem value="po1">PO-001</SelectItem>
-                                                <SelectItem value="po2">PO-002</SelectItem>
+                                                {quotationList.map((quote: QUOTATIONS, index: number) => (
+                                                    <SelectItem key={quote.quote_id || index} value={quote.quote_id}>
+                                                        {quote.quote_id}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
+                                ))}
 
 
                                 <div className='grid grid-cols-2 md:grid-cols-2 gap-4'>
-                                    <FormField control={form.control} name="purchaseOrderType" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Purchase Order Type <span className="text-red-500">*</span></FormLabel>
-                                            <RadioGroup value={field.value} onValueChange={field.onChange} className="flex gap-4">
-                                                {Object.values(PurchaseOrderType).map((type) => (
-                                                    <div key={type} className="flex items-center gap-2">
-                                                        <RadioGroupItem value={type} id={type} />
-                                                        <Label htmlFor={type}>{type}</Label>
-                                                    </div>
-                                                ))}
-                                            </RadioGroup>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="tceprNo" render={({ field }) => (
+                                    {renderFormField("purchaseOrderType", ({ field }) => {
+                                        // Map numeric enum to display labels
+                                        const poTypeLabels: Record<PurchaseOrderType, string> = {
+                                            [PurchaseOrderType.TIEP]: "TIEP",
+                                            [PurchaseOrderType.NON_TIEP]: "NON-TIEP",
+                                            [PurchaseOrderType.MP]: "MP",
+                                        };
+                                        return (
+                                            <FormItem>
+                                                <FormLabel>Purchase Order Type <span className="text-red-500">*</span></FormLabel>
+                                                <RadioGroup value={String(field.value)} onValueChange={(val) => field.onChange(Number(val) as PurchaseOrderType)} className="flex gap-4">
+                                                    {Object.values(PurchaseOrderType).filter(v => typeof v === 'number').map((type) => (
+                                                        <div key={type as number} className="flex items-center gap-2">
+                                                            <RadioGroupItem value={String(type)} id={String(type)} />
+                                                            <Label htmlFor={String(type)}>{poTypeLabels[type as PurchaseOrderType]}</Label>
+                                                        </div>
+                                                    ))}
+                                                </RadioGroup>
+                                                <FormMessage />
+                                            </FormItem>
+                                        );
+                                    })}
+                                    {renderFormField("tceprNo", ({ field }) => (
                                         <FormItem>
                                             <FormLabel>TC/E/PR/No</FormLabel>
                                             <FormControl><Input placeholder="Enter TC/E/PR/No" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
-                                    )} />
+                                    ))}
                                 </div>
-                                <FormField control={form.control} name="batchRef" render={({ field }) => (
+                                {renderFormField("batchRef", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Batch Ref</FormLabel>
                                         <FormControl><Input placeholder="Enter Batch Ref" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
+                                ))}
 
-                                <FormField control={form.control} name="poDate" render={({ field }) => (
+                                {renderFormField("poDate", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>PO Date <span className="text-red-500">*</span></FormLabel>
                                         <Popover>
@@ -209,7 +352,7 @@ function CreatePurchaseOrder() {
                                         </Popover>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
+                                ))}
                             </CardContent>
                         </Card>
                     </div>
@@ -225,44 +368,64 @@ function CreatePurchaseOrder() {
                                 <Button type="button" variant="secondary" onClick={() => appendItemDetails({ itemCode: "", description: "", quantity: 0, unit: "", price: 0 })}><PlusIcon />Add More</Button>
                             </div>
                             <div>
-                                {itemDetailsFields.map((field, index) => (
-                                    <div key={field.id} className="grid grid-cols-[1fr_auto] gap-2 mb-2 items-start">
+                                {itemDetailsFields.map((item, index) => (
+                                    <div key={item.id} className="grid grid-cols-[1fr_auto] gap-2 mb-2 items-start">
                                         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1">
-                                            <FormField control={form.control} name={`itemDetails.${index}.itemCode`} render={({ field }) => (
+                                            {renderFormField(`itemDetails.${index}.itemCode`, ({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Item Code</FormLabel>
                                                     <FormControl><Input placeholder="Enter Item Code" {...field} /></FormControl>
                                                     <FormMessage />
                                                 </FormItem>
-                                            )} />
-                                            <FormField control={form.control} name={`itemDetails.${index}.description`} render={({ field }) => (
+                                            ))}
+                                            {renderFormField(`itemDetails.${index}.description`, ({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Description <span className="text-red-500">*</span></FormLabel>
                                                     <FormControl><Input placeholder="Enter Description" {...field} /></FormControl>
                                                     <FormMessage />
                                                 </FormItem>
-                                            )} />
-                                            <FormField control={form.control} name={`itemDetails.${index}.quantity`} render={({ field }) => (
+                                            ))}
+                                            {renderFormField(`itemDetails.${index}.quantity`, ({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Quantity <span className="text-red-500">*</span></FormLabel>
-                                                    <FormControl><Input type="number" placeholder="Enter Quantity" {...field} /></FormControl>
+                                                    <FormControl>
+                                                        <Input
+                                                            type="number"
+                                                            placeholder="Enter Quantity"
+                                                            value={field.value}
+                                                            onChange={(e) => field.onChange(Number(e.target.value))}
+                                                            onBlur={field.onBlur}
+                                                            name={field.name}
+                                                            ref={field.ref}
+                                                        />
+                                                    </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
-                                            )} />
-                                            <FormField control={form.control} name={`itemDetails.${index}.unit`} render={({ field }) => (
+                                            ))}
+                                            {renderFormField(`itemDetails.${index}.unit`, ({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Unit <span className="text-red-500">*</span></FormLabel>
                                                     <FormControl><Input placeholder="Enter Unit" {...field} /></FormControl>
                                                     <FormMessage />
                                                 </FormItem>
-                                            )} />
-                                            <FormField control={form.control} name={`itemDetails.${index}.price`} render={({ field }) => (
+                                            ))}
+                                            {renderFormField(`itemDetails.${index}.price`, ({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Price <span className="text-red-500">*</span></FormLabel>
-                                                    <FormControl><Input type='number' placeholder="Enter Price" {...field} /></FormControl>
+                                                    <FormControl>
+                                                        <Input
+                                                            type='number'
+                                                            placeholder="Enter Price"
+                                                            value={field.value}
+                                                            onChange={(e) => field.onChange(Number(e.target.value))}
+                                                            onBlur={field.onBlur}
+                                                            name={field.name}
+                                                            ref={field.ref}
+                                                        />
+                                                    </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
-                                            )} />
+                                            ))}
                                         </div>
                                         <div className="flex space-x-2 items-start pt-5">
                                             <Button type="button" variant="outline" size="icon" onClick={() => { }}><Edit2 className="h-4 w-4" /></Button>

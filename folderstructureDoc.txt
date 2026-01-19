@@ -1,113 +1,295 @@
-public/
-├── favicon.ico
-└── logo.png
-
-├── next.config.mjs
+madhawes-printers-ERP-app/
+│
+├── public/
+│   ├── favicon.ico
+│   └── logo.png
+│
+├── src/
+│   │
+│   ├── app/
+│   │   ├── layout.tsx                           # Root layout
+│   │   ├── page.tsx                             # Landing/home page
+│   │   ├── globals.css                          # Global styles
+│   │   │
+│   │   ├── (dashboard)/                         # Protected routes group
+│   │   │   ├── layout.tsx                       # Dashboard layout with sidebar
+│   │   │   │
+│   │   │   ├── dashboard/                       # Main dashboard overview
+│   │   │   │   └── page.tsx                    # /dashboard
+│   │   │   │
+│   │   │   ├── inventory/                       # Inventory management
+│   │   │   │   ├── page.tsx                    # /inventory (list)
+│   │   │   │   ├── loading.tsx                 # Loading state
+│   │   │   │   ├── create/
+│   │   │   │   │   └── page.tsx               # /inventory/create
+│   │   │   │   ├── _components/
+│   │   │   │   │   ├── inventory-table.tsx
+│   │   │   │   │   ├── inventory-columns.tsx
+│   │   │   │   │   ├── inventory-form.tsx
+│   │   │   │   │   └── add-inventory-dialog.tsx
+│   │   │   │   └── [id]/
+│   │   │   │       ├── page.tsx               # /inventory/:id (view)
+│   │   │   │       └── edit/
+│   │   │   │           └── page.tsx           # /inventory/:id/edit
+│   │   │   │
+│   │   │   ├── quotations/                     # Quotation management
+│   │   │   │   ├── page.tsx                   # /quotations (list)
+│   │   │   │   ├── loading.tsx
+│   │   │   │   ├── create/
+│   │   │   │   │   └── page.tsx              # /quotations/create
+│   │   │   │   ├── _components/
+│   │   │   │   │   ├── quotation-table.tsx
+│   │   │   │   │   ├── quotation-columns.tsx
+│   │   │   │   │   ├── quotation-form.tsx
+│   │   │   │   │   └── quotation-pdf-preview.tsx
+│   │   │   │   └── [id]/
+│   │   │   │       ├── page.tsx              # /quotations/:id
+│   │   │   │       └── edit/
+│   │   │   │           └── page.tsx          # /quotations/:id/edit
+│   │   │   │
+│   │   │   ├── purchase-orders/               # Purchase order management
+│   │   │   │   ├── page.tsx                  # /purchase-orders (list)
+│   │   │   │   ├── loading.tsx
+│   │   │   │   ├── create/
+│   │   │   │   │   └── page.tsx             # /purchase-orders/create
+│   │   │   │   ├── _components/
+│   │   │   │   │   ├── purchase-order-table.tsx
+│   │   │   │   │   ├── purchase-order-columns.tsx
+│   │   │   │   │   ├── purchase-order-form.tsx
+│   │   │   │   │   └── purchase-order-card.tsx
+│   │   │   │   └── [id]/
+│   │   │   │       ├── page.tsx             # /purchase-orders/:id
+│   │   │   │       └── edit/
+│   │   │   │           └── page.tsx         # /purchase-orders/:id/edit
+│   │   │   │
+│   │   │   ├── job-tickets/                   # Job ticket management
+│   │   │   │   ├── page.tsx                  # /job-tickets (list)
+│   │   │   │   ├── loading.tsx
+│   │   │   │   ├── create/
+│   │   │   │   │   └── page.tsx             # /job-tickets/create
+│   │   │   │   ├── _components/
+│   │   │   │   │   ├── job-ticket-table.tsx
+│   │   │   │   │   ├── job-ticket-columns.tsx
+│   │   │   │   │   ├── job-ticket-form.tsx
+│   │   │   │   │   └── job-ticket-card.tsx
+│   │   │   │   └── [id]/
+│   │   │   │       ├── page.tsx             # /job-tickets/:id
+│   │   │   │       └── edit/
+│   │   │   │           └── page.tsx         # /job-tickets/:id/edit
+│   │   │   │
+│   │   │   ├── dispatch-invoices/             # Dispatch invoice management
+│   │   │   │   ├── page.tsx                  # /dispatch-invoices (list)
+│   │   │   │   ├── loading.tsx
+│   │   │   │   ├── create/
+│   │   │   │   │   └── page.tsx             # /dispatch-invoices/create
+│   │   │   │   ├── _components/
+│   │   │   │   │   ├── dispatch-invoice-table.tsx
+│   │   │   │   │   ├── dispatch-invoice-columns.tsx
+│   │   │   │   │   └── dispatch-invoice-form.tsx
+│   │   │   │   └── [id]/
+│   │   │   │       ├── page.tsx             # /dispatch-invoices/:id
+│   │   │   │       └── edit/
+│   │   │   │           └── page.tsx         # /dispatch-invoices/:id/edit
+│   │   │   │
+│   │   │   ├── customers/                     # CRM - Customer management
+│   │   │   │   ├── page.tsx                  # /customers (list)
+│   │   │   │   ├── loading.tsx
+│   │   │   │   ├── create/
+│   │   │   │   │   └── page.tsx             # /customers/create
+│   │   │   │   ├── _components/
+│   │   │   │   │   ├── customer-table.tsx
+│   │   │   │   │   ├── customer-columns.tsx
+│   │   │   │   │   ├── customer-form.tsx
+│   │   │   │   │   └── add-customer-dialog.tsx
+│   │   │   │   └── [id]/
+│   │   │   │       ├── page.tsx             # /customers/:id
+│   │   │   │       └── edit/
+│   │   │   │           └── page.tsx         # /customers/:id/edit
+│   │   │   │
+│   │   │   ├── settings/                      # Settings
+│   │   │   │   ├── page.tsx                  # /settings
+│   │   │   │   └── _components/
+│   │   │   │       ├── profile-form.tsx
+│   │   │   │       ├── notification-settings.tsx
+│   │   │   │       └── appearance-settings.tsx
+│   │   │   │
+│   │   │   └── users/                         # User management (admin)
+│   │   │       ├── page.tsx                  # /users (list)
+│   │   │       ├── create/
+│   │   │       │   └── page.tsx             # /users/create
+│   │   │       ├── _components/
+│   │   │       │   ├── user-table.tsx
+│   │   │       │   ├── user-columns.tsx
+│   │   │       │   └── user-form.tsx
+│   │   │       └── [id]/
+│   │   │           ├── page.tsx             # /users/:id
+│   │   │           └── edit/
+│   │   │               └── page.tsx         # /users/:id/edit
+│   │   │
+│   │   ├── (auth)/                            # Authentication routes group
+│   │   │   ├── login/
+│   │   │   │   └── page.tsx                  # /login
+│   │   │   ├── register/
+│   │   │   │   └── page.tsx                  # /register
+│   │   │   └── forgot-password/
+│   │   │       └── page.tsx                  # /forgot-password
+│   │   │
+│   │   └── api/                               # Next.js API Routes (Backend)
+│   │       ├── auth/
+│   │       │   └── route.ts                  # Auth endpoints
+│   │       ├── inventory/
+│   │       │   └── route.ts
+│   │       ├── quotations/
+│   │       │   └── route.ts
+│   │       ├── purchase-orders/
+│   │       │   └── route.ts
+│   │       ├── job-tickets/
+│   │       │   └── route.ts
+│   │       ├── dispatch-invoices/
+│   │       │   └── route.ts
+│   │       ├── customers/
+│   │       │   └── route.ts
+│   │       ├── users/
+│   │       │   └── route.ts
+│   │       └── settings/
+│   │           └── route.ts
+│   │
+│   ├── modules/                               # Frontend API Client Calls
+│   │   ├── auth/
+│   │   │   ├── api.ts                        # login(), register(), logout()
+│   │   │   ├── types.ts                      # User, LoginDto, RegisterDto
+│   │   │   └── validation.ts                 # Zod schemas
+│   │   │
+│   │   ├── inventory/
+│   │   │   ├── api.ts                        # CRUD operations
+│   │   │   ├── types.ts                      # InventoryItem
+│   │   │   └── validation.ts
+│   │   │
+│   │   ├── quotations/
+│   │   │   ├── api.ts
+│   │   │   ├── types.ts                      # Quotation, QuotationItem
+│   │   │   └── validation.ts
+│   │   │
+│   │   ├── purchase-orders/
+│   │   │   ├── api.ts
+│   │   │   ├── types.ts                      # PurchaseOrder, PurchaseOrderItem
+│   │   │   └── validation.ts
+│   │   │
+│   │   ├── job-tickets/
+│   │   │   ├── api.ts
+│   │   │   ├── types.ts                      # JobTicket
+│   │   │   └── validation.ts
+│   │   │
+│   │   ├── dispatch-invoices/
+│   │   │   ├── api.ts
+│   │   │   ├── types.ts                      # DispatchInvoice
+│   │   │   └── validation.ts
+│   │   │
+│   │   ├── customers/
+│   │   │   ├── api.ts
+│   │   │   ├── types.ts                      # Customer
+│   │   │   └── validation.ts
+│   │   │
+│   │   ├── users/
+│   │   │   ├── api.ts
+│   │   │   ├── types.ts                      # User
+│   │   │   └── validation.ts
+│   │   │
+│   │   └── settings/
+│   │       ├── api.ts
+│   │       └── types.ts
+│   │
+│   ├── components/
+│   │   ├── ui/                                # shadcn components ONLY
+│   │   │   ├── button.tsx
+│   │   │   ├── card.tsx
+│   │   │   ├── dialog.tsx
+│   │   │   ├── input.tsx
+│   │   │   ├── label.tsx
+│   │   │   ├── select.tsx
+│   │   │   ├── table.tsx
+│   │   │   ├── badge.tsx
+│   │   │   ├── dropdown-menu.tsx
+│   │   │   ├── toast.tsx
+│   │   │   ├── toaster.tsx
+│   │   │   ├── sheet.tsx
+│   │   │   ├── breadcrumb.tsx
+│   │   │   ├── separator.tsx
+│   │   │   ├── skeleton.tsx
+│   │   │   ├── alert.tsx
+│   │   │   ├── checkbox.tsx
+│   │   │   ├── radio-group.tsx
+│   │   │   ├── switch.tsx
+│   │   │   ├── textarea.tsx
+│   │   │   ├── tabs.tsx
+│   │   │   ├── avatar.tsx
+│   │   │   ├── popover.tsx
+│   │   │   ├── calendar.tsx
+│   │   │   ├── command.tsx
+│   │   │   ├── form.tsx
+│   │   │   └── ...                           # other shadcn components
+│   │   │
+│   │   ├── layout/                            # Layout components
+│   │   │   ├── app-sidebar.tsx               # Main sidebar
+│   │   │   ├── site-header.tsx               # Top header/navbar
+│   │   │   ├── nav-main.tsx                  # Main navigation items
+│   │   │   ├── nav-user.tsx                  # User dropdown menu
+│   │   │   ├── nav-secondary.tsx             # Secondary nav items
+│   │   │   ├── mobile-nav.tsx                # Mobile navigation
+│   │   │   ├── footer.tsx                    # Footer
+│   │   │   └── dashboard-shell.tsx           # Dashboard wrapper
+│   │   │
+│   │   └── shared/                            # Reusable business components
+│   │       ├── data-table.tsx                # Generic TanStack Table wrapper
+│   │       ├── page-title-with-breadcrumb.tsx
+│   │       ├── delete-popup.tsx              # Confirmation dialog
+│   │       ├── action-card.tsx               # Action button cards
+│   │       ├── empty-state.tsx               # Empty state placeholder
+│   │       ├── loading-spinner.tsx           # Loading indicator
+│   │       ├── error-boundary.tsx            # Error display
+│   │       ├── search-input.tsx              # Search with debounce
+│   │       ├── status-badge.tsx              # Status indicator
+│   │       ├── file-upload.tsx               # File upload component
+│   │       └── date-range-picker.tsx         # Date range selector
+│   │
+│   ├── lib/
+│   │   ├── axios-client.ts                   # Axios instance with interceptors
+│   │   ├── utils.ts                          # cn() utility from shadcn
+│   │   └── auth.ts                           # Auth helpers (getToken, setToken)
+│   │
+│   ├── hooks/                                 # Custom React hooks
+│   │   ├── use-toast.ts                      # Toast notifications
+│   │   ├── use-debounce.ts                   # Debounce hook
+│   │   ├── use-media-query.ts                # Responsive breakpoints
+│   │   ├── use-auth.ts                       # Auth state management
+│   │   └── use-local-storage.ts              # LocalStorage hook
+│   │
+│   ├── config/
+│   │   ├── api-helper.ts                     # API endpoint constants
+│   │   ├── site.ts                           # Site metadata & navigation
+│   │   ├── constants.ts                      # App-wide constants
+│   │   └── enums.ts                          # Enums (Status, Role, etc.)
+│   │
+│   ├── types/
+│   │   └── index.ts                          # Global shared types
+│   │                                         # (ApiResponse, PaginatedResponse, etc.)
+│   │
+│   ├── utils/
+│   │   ├── format-currency.ts                # Currency formatting
+│   │   ├── format-date.ts                    # Date formatting
+│   │   ├── form-schema.ts                    # Common form schemas
+│   │   ├── cn.ts                             # Class name utility
+│   │   └── validation-helpers.ts             # Validation utilities
+│   │
+│   └── styles/
+│       └── globals.css                        # Global styles + Tailwind
+│
+├── .env.local                                 # Environment variables
+├── .gitignore
+├── next.config.mjs                            # Next.js configuration
 ├── package.json
-└── tsconfig.json
-
-src/
-├── app/                                    # Next.js App Router + Co-located Components
-│   ├── layout.tsx                         # Root layout
-│   ├── page.tsx                          # Home page
-│   ├── (dashboard)/                      # Route group: /dashboard/*
-│   │   ├── quotation-management/
-│   │   │   ├── page.tsx                  # /dashboard/quotation-management
-│   │   │   ├── DataTable.tsx            # Table logic + API calls
-│   │   │   └── columns.tsx              # Column definitions
-│   │   ├── inventory-management/         # INVENTORY EXAMPLE ⭐
-│   │   │   ├── page.tsx                 # /dashboard/inventory-management
-│   │   │   ├── DataTable.tsx            # Table + useGetInventoryQuery()
-│   │   │   └── columns.tsx              # Inventory columns
-│   │   ├── purchase-order-management/
-│   │   │   ├── page.tsx
-│   │   │   ├── DataTable.tsx
-│   │   │   └── columns.tsx
-│   │   ├── job-ticket-management/
-│   │   │   ├── page.tsx
-│   │   │   ├── DataTable.tsx
-│   │   │   └── columns.tsx
-│   │   ├── dispatch-invoice-management/
-│   │   │   ├── page.tsx
-│   │   │   ├── DataTable.tsx
-│   │   │   └── columns.tsx
-│   │   ├── crm/
-│   │   │   ├── page.tsx
-│   │   │   ├── DataTable.tsx
-│   │   │   └── columns.tsx
-│   │   └── admin-dashboard/
-│   │       └── page.tsx
-│   └── (auth)/                          # Route group: /login, /register
-│       ├── login/
-│       │   └── page.tsx
-│       ├── register/
-│       │   └── page.tsx
-│       └── forgot-password/
-│           └── page.tsx
-│
-├── modules/                              # 🔥 API LOCATION + Redux Slices
-│   ├── inventory/                       # INVENTORY EXAMPLE ⭐
-│   │   ├── api.ts                      # 🔥 API CALLS HERE
-│   │   │                               # useGetInventoryQuery()
-│   │   ├── slice.ts                    # Redux state
-│   │   └── types.ts                    # InventoryItem interface
-│   ├── quotation/
-│   │   ├── api.ts                      # 🔥 QUOTATION API CALLS
-│   │   ├── slice.ts
-│   │   └── types.ts
-│   ├── purchase-order/
-│   │   ├── api.ts                      # 🔥 PURCHASE ORDER API
-│   │   ├── slice.ts
-│   │   └── types.ts
-│   ├── job-ticket/
-│   │   ├── api.ts                      # 🔥 JOB TICKET API
-│   │   ├── slice.ts
-│   │   └── types.ts
-│   ├── dispatch-invoice/
-│   │   ├── api.ts                      # 🔥 DISPATCH API
-│   │   ├── slice.ts
-│   │   └── types.ts
-│   └── crm/
-│       ├── api.ts                      # 🔥 CRM API
-│       ├── slice.ts
-│       └── types.ts
-│
-├── components/                          # Shared UI (Generic only)
-│   └── common/
-│       ├── Button.tsx
-│       ├── Modal.tsx
-│       └── DataTable.tsx               # Generic TanStack wrapper
-│
-├── redux/                               # Redux Store
-│   ├── store.ts                        # Combines modules/*/slice.ts
-│   └── hooks.ts                        # useAppDispatch, useAppSelector
-│
-├── lib/                                 # Core Utilities
-│   ├── apiClient.ts                    # Axios instance
-│   └── auth.ts                         # Auth helpers
-│
-├── services/                            # App Services
-│   └── notifications.ts
-├── styles/
-│   └── globals.css
-├── types/                               # Global Types
-│   └── index.ts
-└── utils/                               # Helpers
-    ├── formatCurrency.ts
-    └── dateUtils.ts
-
-
-1. API Calls: modules/inventory/api.ts
-   → useGetInventoryQuery()
-
-2. DataTable Logic: app/(dashboard)/inventory-management/DataTable.tsx
-   → Calls inventory API + passes to generic Table
-
-3. Columns: app/(dashboard)/inventory-management/columns.tsx
-   → Column definitions for TanStack
-
-4. Page: app/(dashboard)/inventory-management/page.tsx
-   → Imports DataTable
-
-5. Redux: modules/inventory/slice.ts
-   → Global inventory state
+├── tsconfig.json                              # TypeScript configuration
+├── tailwind.config.ts                         # Tailwind configuration
+├── components.json                            # shadcn configuration
+├── postcss.config.mjs
+└── README.md

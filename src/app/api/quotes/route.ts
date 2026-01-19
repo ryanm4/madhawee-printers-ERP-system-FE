@@ -5,8 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
     try {
 
-        const apiUrl = API_ENDPOINTS.PURCHASE_ORDERS.LIST;
-        console.log(apiUrl)
+        const apiUrl = API_ENDPOINTS.QUOTATIONS.LIST;
 
         const response = await fetch(apiUrl, {
             method: "GET",
@@ -25,9 +24,9 @@ export async function GET(request: NextRequest) {
         }
 
         const data = await response.json();
-        return NextResponse.json(data);
+        return NextResponse.json(data.data);
     } catch (error) {
-        console.error('Purchase Orders API Error:', error);
+        console.error('Quotation API Error:', error);
         return NextResponse.json(
             { message: "Internal server error" },
             { status: 500 }
@@ -38,7 +37,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const formData = await request.json();
-        const apiUrl = API_ENDPOINTS.PURCHASE_ORDERS.CREATE;
+        const apiUrl = API_ENDPOINTS.QUOTATIONS.CREATE;
 
         const response = await fetch(apiUrl, {
             method: "POST",
@@ -52,7 +51,7 @@ export async function POST(request: NextRequest) {
 
         if (!response.ok) {
             return NextResponse.json(
-                { message: "Failed to create purchase order" },
+                { message: "Failed to create quotations" },
                 { status: response.status }
             );
         }

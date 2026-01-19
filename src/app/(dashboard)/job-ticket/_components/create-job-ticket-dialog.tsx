@@ -37,7 +37,8 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { jobTicketSchema } from "@/lib/formSchema"
+import { jobTicketSchema } from "@/modules/quotations/validation"
+
 
 
 

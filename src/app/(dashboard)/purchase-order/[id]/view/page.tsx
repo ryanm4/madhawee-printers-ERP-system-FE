@@ -1,11 +1,11 @@
 "use client"
-import PageTitleWithBreadcrumb from '@/common/PageTitileWithBreadCrumb'
+import PageTitleWithBreadcrumb from '@/components/shared/page-title-with-breadcrumb'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardContent } from '@/components/ui/card'
-import { purchaseOrderScheme } from '@/lib/formSchema'
+import { purchaseOrderScheme } from '@/modules/purchase-order/validation'
 import { cn } from '@/lib/utils'
-import { useRouter } from 'next/navigation'
-import { useFieldArray, useForm } from 'react-hook-form'
+import { useRouter, useParams } from 'next/navigation'
+import { FieldPath, useFieldArray, useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -15,11 +15,15 @@ import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { CalendarIcon, Edit2, PlusIcon, Trash2 } from 'lucide-react'
+import { CalendarIcon } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
 import { format } from 'date-fns'
-import { PurchaseOrderType } from '@/lib/enum'
-
+import { PurchaseOrderType } from '@/config/enum'
+import { useEffect, useState } from 'react'
+import { CustomerApi } from '@/modules/customer/api'
+import { CUSTOMER } from '@/modules/customer/types'
+import { QUOTATIONS } from '@/modules/quotations/types'
+import { quotationApi } from '@/modules/quotations/api'
 
 
 type PurchaseOrderFormValues = z.infer<typeof purchaseOrderScheme>
@@ -27,13 +31,51 @@ type PurchaseOrderFormValues = z.infer<typeof purchaseOrderScheme>
 
 function ViewPurchaseOrder() {
     const router = useRouter()
+    const params = useParams()
+    const [customer, setCustomer] = useState<CUSTOMER[]>([])
+    const [quotationList, setQuotationList] = useState<QUOTATIONS[]>([]);
+    const [loading, setLoading] = useState(false);
+    const poTypeLabels: Record<PurchaseOrderType, string> = {
+        [PurchaseOrderType.TIEP]: "TIEP",
+        [PurchaseOrderType.NON_TIEP]: "NON-TIEP",
+        [PurchaseOrderType.MP]: "MP",
+    };
+
+    useEffect(() => {
+        getCustomerList();
+        getQuotationList();
+        // TODO: Fetch existing PO data by params.id and populate form
+    }, []);
+
+    const getCustomerList = async () => {
+        try {
+            setLoading(true);
+            const response = await CustomerApi.getAll();
+            setCustomer(response.data);
+        } catch (error) {
+            console.error('Failed to fetch customers');
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    const getQuotationList = async () => {
+        try {
+            setLoading(true);
+            const response = await quotationApi.getAll();
+            setQuotationList(response.data);
+        } catch (error) {
+            console.error('Failed to fetch quotations');
+        } finally {
+            setLoading(false);
+        }
+    }
 
     const baseDefaultValues: PurchaseOrderFormValues = {
         customer: "po1",
-        customerName: "Korean SPA Packaging (PVT) LTD",
+        customerPhone: "011-2345678",
         customerAddress: "123 SPA Street, Colombo, Sri Lanka",
         customerEmail: "sydney.moore@korenspa.com",
-
         purchaseOrderNo: "PO-212201",
         quotationId: "po1",
         tceprNo: "TC-9988",
@@ -49,21 +91,25 @@ function ViewPurchaseOrder() {
     const form = useForm<PurchaseOrderFormValues>({
         resolver: zodResolver(purchaseOrderScheme),
         defaultValues: baseDefaultValues,
-
     })
 
-    const { fields: itemDetailsFields, append: appendItemDetails, remove: removeItemDetails } = useFieldArray({
+    const { fields: itemDetailsFields } = useFieldArray({
         control: form.control,
         name: "itemDetails",
     })
 
 
-    function onSubmit(data: PurchaseOrderFormValues) {
-        console.log("Submitting PO Data:", data)
-        form.reset(baseDefaultValues)
-        form.clearErrors()
-    }
-
+    // Helper to render FormField with correct typing
+    const renderFormField = <TName extends FieldPath<PurchaseOrderFormValues>>(
+        name: TName,
+        render: Parameters<typeof FormField<PurchaseOrderFormValues, TName>>["0"]["render"]
+    ) => (
+        <FormField
+            control={form.control}
+            name={name}
+            render={render}
+        />
+    );
 
 
     return (
@@ -79,7 +125,7 @@ function ViewPurchaseOrder() {
 
 
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6  pb-0'>
+                <form className='space-y-6  pb-0'>
                     <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
                         <Button size="lg" variant="outline" type="button" onClick={() => router.push("/purchase-order")}>Back to Purchase Order</Button>
                     </div>
@@ -89,45 +135,50 @@ function ViewPurchaseOrder() {
                         <Card className={cn("w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
                             <CardHeader className="flex flex-col gap-[0.5px]">
                                 <h3 className="text-md font-medium mb-2">Customer</h3>
-                                <p className="text-xs text-muted-foreground mb-4">Add your customer details here</p>
+                                <p className="text-xs text-muted-foreground mb-4">Customer details</p>
 
                             </CardHeader>
                             <CardContent className='flex flex-col gap-4'>
 
-                                <FormField control={form.control} name="customer" render={({ field }) => (
+                                {renderFormField("customer", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Customer</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value} disabled={true}>
-                                            <FormControl><SelectTrigger className="w-full disabled:opacity-100 disabled:text-black disabled:cursor-default"><SelectValue placeholder="Select Customer" /></SelectTrigger></FormControl>
+                                        <Select value={field.value} disabled={true}>
+                                            <SelectTrigger className="w-full disabled:opacity-100 disabled:text-black disabled:cursor-default">
+                                                <SelectValue placeholder="Select Customer" />
+                                            </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="po1">PO-001</SelectItem>
-                                                <SelectItem value="po2">PO-002</SelectItem>
+                                                {customer.map((cust) => (
+                                                    <SelectItem key={cust.customer_id} value={String(cust.customer_id)}>
+                                                        {cust.company_name}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
-                                <FormField control={form.control} name="customerName" render={({ field }) => (
+                                ))}
+                                {renderFormField("customerPhone", ({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Customer Name</FormLabel>
-                                        <FormControl><Input placeholder="Enter Customer Name" {...field} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
+                                        <FormLabel>Customer Phone</FormLabel>
+                                        <FormControl><Input placeholder="Enter Customer Phone" {...field} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
-                                <FormField control={form.control} name="customerAddress" render={({ field }) => (
+                                ))}
+                                {renderFormField("customerAddress", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Customer Address</FormLabel>
                                         <FormControl><Textarea placeholder="Enter Customer Address" className="resize-none disabled:opacity-100 disabled:text-black disabled:cursor-default" {...field} disabled={true} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
-                                <FormField control={form.control} name="customerEmail" render={({ field }) => (
+                                ))}
+                                {renderFormField("customerEmail", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Customer Email</FormLabel>
                                         <FormControl><Input placeholder="Enter Customer e-mail address..." {...field} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
+                                ))}
 
 
                             </CardContent>
@@ -135,67 +186,70 @@ function ViewPurchaseOrder() {
                         <Card className={cn("w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
                             <CardHeader className="flex flex-col gap-[0.5px]">
                                 <h3 className="text-md font-medium mb-2">Purchase Order</h3>
-                                <p className="text-xs text-muted-foreground mb-4">Add your purchase order details here</p>
+                                <p className="text-xs text-muted-foreground mb-4">Purchase order details</p>
 
                             </CardHeader>
                             <CardContent className='flex flex-col gap-4'>
-                                <FormField control={form.control} name="purchaseOrderNo" render={({ field }) => (
+                                {renderFormField("purchaseOrderNo", ({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Purchase Order No </FormLabel>
+                                        <FormLabel>Purchase Order No</FormLabel>
                                         <FormControl><Input placeholder="Enter Purchase Order No" {...field} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
+                                ))}
 
-                                <FormField control={form.control} name="quotationId" render={({ field }) => (
+                                {renderFormField("quotationId", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Quotation No</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value} disabled={true}>
+                                        <Select value={field.value} disabled={true}>
                                             <FormControl><SelectTrigger className="w-full disabled:opacity-100 disabled:text-black disabled:cursor-default"><SelectValue placeholder="Select a Quotation" /></SelectTrigger></FormControl>
                                             <SelectContent>
-                                                <SelectItem value="po1">PO-001</SelectItem>
-                                                <SelectItem value="po2">PO-002</SelectItem>
+                                                {quotationList.map((quote: QUOTATIONS, index: number) => (
+                                                    <SelectItem key={quote.quote_id || index} value={quote.quote_id}>
+                                                        {quote.quote_id}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
+                                ))}
 
 
                                 <div className='grid grid-cols-2 md:grid-cols-2 gap-4'>
-                                    <FormField control={form.control} name="purchaseOrderType" render={({ field }) => (
+                                    {renderFormField("purchaseOrderType", ({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Purchase Order Type </FormLabel>
-                                            <RadioGroup value={field.value} onValueChange={field.onChange} className="flex gap-4 disabled:opacity-100" disabled={true}>
-                                                {Object.values(PurchaseOrderType).map((type) => (
-                                                    <div key={type} className="flex items-center gap-2">
-                                                        <RadioGroupItem value={type} id={type} className="disabled:opacity-100" />
-                                                        <Label htmlFor={type} className="disabled:opacity-100 disabled:text-black">{type}</Label>
+                                            <FormLabel>Purchase Order Type</FormLabel>
+                                            <RadioGroup value={String(field.value)} className="flex gap-4" disabled={true}>
+                                                {Object.values(PurchaseOrderType).filter(v => typeof v === 'number').map((type) => (
+                                                    <div key={type as number} className="flex items-center gap-2">
+                                                        <RadioGroupItem value={String(type)} id={String(type)} className="disabled:opacity-100" />
+                                                        <Label htmlFor={String(type)} className="disabled:opacity-100 disabled:text-black">{poTypeLabels[type as PurchaseOrderType]}</Label>
                                                     </div>
                                                 ))}
                                             </RadioGroup>
                                             <FormMessage />
                                         </FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="tceprNo" render={({ field }) => (
+                                    ))}
+                                    {renderFormField("tceprNo", ({ field }) => (
                                         <FormItem>
                                             <FormLabel>TC/E/PR/No</FormLabel>
                                             <FormControl><Input placeholder="Enter TC/E/PR/No" {...field} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
                                             <FormMessage />
                                         </FormItem>
-                                    )} />
+                                    ))}
                                 </div>
-                                <FormField control={form.control} name="batchRef" render={({ field }) => (
+                                {renderFormField("batchRef", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Batch Ref</FormLabel>
                                         <FormControl><Input placeholder="Enter Batch Ref" {...field} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
+                                ))}
 
-                                <FormField control={form.control} name="poDate" render={({ field }) => (
+                                {renderFormField("poDate", ({ field }) => (
                                     <FormItem>
-                                        <FormLabel>PO Date </FormLabel>
+                                        <FormLabel>PO Date</FormLabel>
                                         <Popover>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
@@ -206,12 +260,12 @@ function ViewPurchaseOrder() {
                                                 </FormControl>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} captionLayout="dropdown" />
+                                                <Calendar mode="single" selected={field.value} captionLayout="dropdown" />
                                             </PopoverContent>
                                         </Popover>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
+                                ))}
                             </CardContent>
                         </Card>
                     </div>
@@ -219,52 +273,50 @@ function ViewPurchaseOrder() {
                     <Card className={cn("w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
                         <CardHeader className="flex flex-col gap-[0.5px]">
                             <h3 className="text-md font-medium mb-2">Item Details</h3>
-                            <p className="text-xs text-muted-foreground mb-4">Add your Item Details here</p>
+                            <p className="text-xs text-muted-foreground mb-4">Item details for this purchase order</p>
 
                         </CardHeader>
                         <CardContent className='flex flex-col gap-4'>
-
                             <div>
-                                {itemDetailsFields.map((field, index) => (
-                                    <div key={field.id} className="grid grid-cols-[1fr_auto] gap-2 mb-2 items-start">
+                                {itemDetailsFields.map((item, index) => (
+                                    <div key={item.id} className="grid grid-cols-1 gap-2 mb-2 items-start">
                                         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1">
-                                            <FormField control={form.control} name={`itemDetails.${index}.itemCode`} render={({ field }) => (
+                                            {renderFormField(`itemDetails.${index}.itemCode`, ({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Item Code</FormLabel>
                                                     <FormControl><Input placeholder="Enter Item Code" {...field} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
                                                     <FormMessage />
                                                 </FormItem>
-                                            )} />
-                                            <FormField control={form.control} name={`itemDetails.${index}.description`} render={({ field }) => (
+                                            ))}
+                                            {renderFormField(`itemDetails.${index}.description`, ({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Description </FormLabel>
+                                                    <FormLabel>Description</FormLabel>
                                                     <FormControl><Input placeholder="Enter Description" {...field} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
                                                     <FormMessage />
                                                 </FormItem>
-                                            )} />
-                                            <FormField control={form.control} name={`itemDetails.${index}.quantity`} render={({ field }) => (
+                                            ))}
+                                            {renderFormField(`itemDetails.${index}.quantity`, ({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Quantity </FormLabel>
-                                                    <FormControl><Input type="number" placeholder="Enter Quantity" {...field} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
+                                                    <FormLabel>Quantity</FormLabel>
+                                                    <FormControl><Input type="number" placeholder="Enter Quantity" value={field.value} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
                                                     <FormMessage />
                                                 </FormItem>
-                                            )} />
-                                            <FormField control={form.control} name={`itemDetails.${index}.unit`} render={({ field }) => (
+                                            ))}
+                                            {renderFormField(`itemDetails.${index}.unit`, ({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Unit </FormLabel>
+                                                    <FormLabel>Unit</FormLabel>
                                                     <FormControl><Input placeholder="Enter Unit" {...field} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
                                                     <FormMessage />
                                                 </FormItem>
-                                            )} />
-                                            <FormField control={form.control} name={`itemDetails.${index}.price`} render={({ field }) => (
+                                            ))}
+                                            {renderFormField(`itemDetails.${index}.price`, ({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Price </FormLabel>
-                                                    <FormControl><Input type='number' placeholder="Enter Price" {...field} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
+                                                    <FormLabel>Price</FormLabel>
+                                                    <FormControl><Input type='number' placeholder="Enter Price" value={field.value} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
                                                     <FormMessage />
                                                 </FormItem>
-                                            )} />
+                                            ))}
                                         </div>
-
                                     </div>
                                 ))}
                             </div>
