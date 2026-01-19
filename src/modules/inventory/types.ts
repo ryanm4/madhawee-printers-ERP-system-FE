@@ -27,3 +27,4 @@ export interface CREATE_INVENTORY {
     status: string;
     remarks: string;
 }
+
