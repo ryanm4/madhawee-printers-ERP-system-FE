@@ -10,27 +10,21 @@ import { CreateJobTicketDialog } from "../app/(dashboard)/job-ticket/_components
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 import { useRouter } from "next/navigation";
+import { PURCHASE_ORDER_JOBS } from "@/modules/purchase-order/types";
 
 
-export interface Job {
-    id: string;
-    code: string;
-    name: string;
-    status: string;
-    date: string;
-}
 
 export interface PurchaseOrderCardProps {
     companyName: string;
     contactEmail: string;
-    poNumber: string;
-    poDate: string;
-    deliveryDate: string;
-    jobs: Job[];
+    poNumber: number;
+    poDate: Date;
+    deliveryDate: Date;
+    jobs: PURCHASE_ORDER_JOBS[];
     totalJobs: number;
     additionalJobs: number;
     status: string;
-    po_id: string;
+    po_id: number;
     className?: string;
 }
 
@@ -132,19 +126,19 @@ export function PurchaseOrderCard({
                             <span className="text-md text-muted-foreground flex items-center gap-2">
                                 PO Date <Calendar className="h-6 w-6" />
                             </span>
-                            <span className="font-semibold text-sm">{poDate}</span>
+                            <span className="font-semibold text-sm">{new Date(poDate).toLocaleDateString()}</span>
                         </div>
                         <div className="flex flex-col gap-1">
                             <span className="text-md text-muted-foreground flex items-center gap-2">
                                 Delivery Date <Truck className="h-6 w-6" />
                             </span>
-                            <span className="font-semibold text-sm">{deliveryDate}</span>
+                            <span className="font-semibold text-sm">{new Date(deliveryDate).toLocaleDateString()}</span>
                         </div>
                     </div>
 
                     <div className="flex flex-col gap-4">
                         {jobs.map((job) => (
-                            <div key={job.id} className="flex items-center justify-between group">
+                            <div key={job.job_id} className="flex items-center justify-between group">
                                 <div className="flex items-center gap-3">
 
                                     <Ticket className="h-6 w-6" />

@@ -1,6 +1,6 @@
 "use client"
 import { dispatchInvoiceScheme } from '@/modules/dispatch-invoice/validation';
-import { useRouter } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
 import { FieldPath, useForm, SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -28,11 +28,14 @@ import { toMySQLDateTime } from '@/hooks/sql-date-time';
 
 type DispatchFormValues = z.infer<typeof dispatchInvoiceScheme>
 
-function CreateDispatchandInvoice() {
+function EditDispatchandInvoice() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [isJobLoading, setIsJobLoading] = useState(false);
     const [JobData, setJobData] = useState<ALL_TICKETS[]>([])
+    const params = useParams();
+    const id = params.id as string;
+
     const baseDefaultValues: DispatchFormValues = {
         job_id: "",
         customer_address: "",
@@ -94,13 +97,13 @@ function CreateDispatchandInvoice() {
             const response = await dispatchInventoryApi.create(payload);
             console.log(response)
 
-            toast.success("Dispatch Created Successfully");
+            toast.success("Dispatch Updated Successfully");
             form.reset(baseDefaultValues)
             form.clearErrors()
             router.push("/dispatch-invoice")
         } catch (error) {
             console.error("Failed to submit dispatch:", error)
-            toast.error("Failed to create dispatch");
+            toast.error("Failed to update dispatch");
         } finally {
             setIsLoading(false);
         }
@@ -156,12 +159,50 @@ function CreateDispatchandInvoice() {
         fetchCustomer();
     }, [jobId, JobData, form]);
 
+    useEffect(() => {
+        const fetchDispatch = async () => {
+            try {
+                setIsLoading(true);
+                const response = await dispatchInventoryApi.getById(id);
+                if (response.status === 200) {
+                    const dispatch = response.data;
+                    form.setValue("job_id", dispatch.job_id);
+                    form.setValue("customer_name", dispatch.customer_name);
+                    form.setValue("customer_phone", dispatch.customer_phone);
+                    form.setValue("customer_address", dispatch.customer_address);
+                    form.setValue("delivery_address", dispatch.delivery_address);
+                    form.setValue("dispatch_note", dispatch.dispatch_note);
+                    form.setValue("dispatch_date", dispatch.dispatch_date);
+                    form.setValue("dispatch_quantity", dispatch.dispatch_qty);
+                    form.setValue("dispatch_bundles_qty", dispatch.no_of_bundles);
+                    form.setValue("dispatch_description", dispatch.description);
+                }
+            } catch (err) {
+                console.error("Failed to fetch dispatch:", err);
+                form.setValue("job_id", "");
+                form.setValue("customer_name", "");
+                form.setValue("customer_phone", "");
+                form.setValue("customer_address", "");
+                form.setValue("delivery_address", "");
+                form.setValue("dispatch_note", "");
+                form.setValue("dispatch_date", new Date());
+                form.setValue("dispatch_quantity", "");
+                form.setValue("dispatch_bundles_qty", "");
+                form.setValue("dispatch_description", "");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchDispatch();
+    }, [id, form]);
+
 
 
     return (
         <div className='flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3'>
             <PageTitleWithBreadcrumb
-                title="Create Dispatch and Invoice Management"
+                title="Edit Dispatch and Invoice Management"
                 breadcrumbs={[
                     { title: "Dashboard", href: "/dashboard" },
                     { title: "Dispatch and Invoice Management", href: "/dispatch-invoice" },
@@ -173,7 +214,7 @@ function CreateDispatchandInvoice() {
                 <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6  pb-0'>
                     <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
                         <Button size="lg" variant="outline" type="button" onClick={() => router.push("/dispatch-invoice")}>Cancel</Button>
-                        <Button size="lg" type="submit" className="bg-black text-white">Save</Button>
+                        <Button size="lg" type="submit" className="bg-black text-white">Update</Button>
                     </div>
 
 
@@ -342,5 +383,6 @@ function CreateDispatchandInvoice() {
     )
 }
 
-export default CreateDispatchandInvoice
+export default EditDispatchandInvoice
+
 
