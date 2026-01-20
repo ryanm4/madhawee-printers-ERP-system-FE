@@ -70,96 +70,21 @@ function PurchaseOrderPage() {
 
         <TabsContent value="Grid-View">
           <div className="grid gap-[24px] grid-cols-[repeat(auto-fit,minmax(412px,1fr))]">
-            <PurchaseOrderCard
-              po_id="po-212201"
-              companyName="Korean SPA Packaging (PVT) LTD"
-              contactEmail="sydney.moore@korenspa.com"
-              poNumber="PO-212201"
-              poDate="2025-11-20"
-              deliveryDate="2025-12-23"
-              jobs={[
-                { id: "1", code: "JO-2312", name: "Test Job", status: "Started", date: "2025-12-10" },
-                { id: "2", code: "JO-2315", name: "Test Job 1", status: "Pending", date: "2025-12-10" },
-              ]}
-              totalJobs={4}
-              additionalJobs={2}
-              status="Created"
-            />
-            <PurchaseOrderCard
-              po_id="po-212202"
-              companyName="Korean SPA Packaging (PVT) LTD"
-              contactEmail="sydney.moore@korenspa.com"
-              poNumber="PO-212202"
-              poDate="2025-11-21"
-              deliveryDate="2025-12-24"
-              jobs={[
-                { id: "3", code: "JO-2316", name: "Brochure Design", status: "Started", date: "2025-12-11" },
-                { id: "4", code: "JO-2317", name: "Packaging V2", status: "In Reviews", date: "2025-12-12" },
-              ]}
-              totalJobs={3}
-              additionalJobs={1}
-              status="Created"
-            />
-            <PurchaseOrderCard
-              po_id="po-212203"
-              companyName="Korean SPA Packaging (PVT) LTD"
-              contactEmail="sydney.moore@korenspa.com"
-              poNumber="PO-212203"
-              poDate="2025-11-22"
-              deliveryDate="2025-12-25"
-              jobs={[
-                { id: "5", code: "JO-2318", name: "Label Print", status: "Done", date: "2025-12-13" },
-                { id: "6", code: "JO-2319", name: "Box Mockup", status: "Pending", date: "2025-12-14" },
-              ]}
-              totalJobs={5}
-              additionalJobs={3}
-              status="Created"
-            />
-            <PurchaseOrderCard
-              po_id="po-212203"
-              companyName="Korean SPA Packaging (PVT) LTD"
-              contactEmail="sydney.moore@korenspa.com"
-              poNumber="PO-212203"
-              poDate="2025-11-22"
-              deliveryDate="2025-12-25"
-              jobs={[
-                { id: "5", code: "JO-2318", name: "Label Print", status: "Done", date: "2025-12-13" },
-                { id: "6", code: "JO-2319", name: "Box Mockup", status: "Pending", date: "2025-12-14" },
-              ]}
-              totalJobs={5}
-              additionalJobs={3}
-              status="Created"
-            />
-            <PurchaseOrderCard
-              po_id="po-212203"
-              companyName="Korean SPA Packaging (PVT) LTD"
-              contactEmail="sydney.moore@korenspa.com"
-              poNumber="PO-212203"
-              poDate="2025-11-22"
-              deliveryDate="2025-12-25"
-              jobs={[
-                { id: "5", code: "JO-2318", name: "Label Print", status: "Done", date: "2025-12-13" },
-                { id: "6", code: "JO-2319", name: "Box Mockup", status: "Pending", date: "2025-12-14" },
-              ]}
-              totalJobs={5}
-              additionalJobs={3}
-              status="Created"
-            />
-            <PurchaseOrderCard
-              po_id="po-212203"
-              companyName="Korean SPA Packaging (PVT) LTD"
-              contactEmail="sydney.moore@korenspa.com"
-              poNumber="PO-212203"
-              poDate="2025-11-22"
-              deliveryDate="2025-12-25"
-              jobs={[
-                { id: "5", code: "JO-2318", name: "Label Print", status: "Done", date: "2025-12-13" },
-                { id: "6", code: "JO-2319", name: "Box Mockup", status: "Pending", date: "2025-12-14" },
-              ]}
-              totalJobs={5}
-              additionalJobs={3}
-              status="Created"
-            />
+            {data.map((item: PURCHASE_ORDER) => (
+              <PurchaseOrderCard
+                key={item.po_id}
+                po_id={item.po_id}
+                companyName={item.customer.name}
+                contactEmail={item.customer.email}
+                poNumber={item.po_id}
+                poDate={item.po_date}
+                deliveryDate={item.delivery_date}
+                jobs={item.jobs}
+                totalJobs={item.jobs.length}
+                additionalJobs={item.jobs.length}
+                status={item.status}
+              />
+            ))}
           </div>
           <div className="relative flex flex-col items-center justify-center gap-4 py-4 mt-8 md:flex-row">
             <div className="text-sm text-muted-foreground md:absolute md:left-0">

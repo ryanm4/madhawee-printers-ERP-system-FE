@@ -37,12 +37,8 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { jobTicketSchema } from "@/modules/quotations/validation"
-
-
-
-
-
+import { jobTicketSchema } from "@/modules/job-tickets/validation"
+import { INK_STATUS } from "@/config/enum"
 
 type JobTicketFormValues = z.infer<typeof jobTicketSchema>
 
@@ -66,7 +62,6 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
         wastage: "",
         packingDate: undefined,
         expiryDate: undefined,
-        poNo: "",
         tcNo: "",
         batchRef: "",
         remarks: "",
@@ -447,14 +442,8 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                             )} />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <FormField control={form.control} name="poNo" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>PO No</FormLabel>
-                                    <FormControl><Input placeholder="Enter PO No" {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
+                        <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+
                             <FormField control={form.control} name="tcNo" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>TC No</FormLabel>
@@ -636,7 +625,13 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                                                 <FormLabel className={index !== 0 ? "sr-only" : ""}>Status</FormLabel>
                                                 <Select onValueChange={field.onChange} value={field.value}>
                                                     <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select an Status" /></SelectTrigger></FormControl>
-                                                    <SelectContent><SelectItem value="s1">Status 1</SelectItem></SelectContent>
+                                                    <SelectContent>
+                                                        {Object.values(INK_STATUS).map((status) => (
+                                                            <SelectItem key={status} value={status}>
+                                                                {status}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
                                                 </Select>
                                                 <FormMessage />
                                             </FormItem>

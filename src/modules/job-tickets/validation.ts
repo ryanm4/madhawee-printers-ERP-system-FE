@@ -12,7 +12,6 @@ export const jobTicketSchema = z.object({
     wastage: z.string().optional(),
     packingDate: z.date().optional(),
     expiryDate: z.date().optional(),
-    poNo: z.string().optional(),
     tcNo: z.string().optional(),
     batchRef: z.string().optional(),
     remarks: z.string().optional(),

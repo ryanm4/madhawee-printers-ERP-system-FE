@@ -28,6 +28,9 @@ export const API_ENDPOINTS = {
     JOB_TICKETS: {
         LIST: `${API_BASE_URL}/jobs`,
         CREATE: `${API_BASE_URL}/jobs`,
+        GET: (jobId: number | string) => `${API_BASE_URL}/jobs/${jobId}`,
+        UPDATE: (jobId: number | string) => `${API_BASE_URL}/jobs/${jobId}`,
+        DELETE: (jobId: number | string) => `${API_BASE_URL}/jobs/${jobId}`,
 
     },
     DISPATCH: {
@@ -72,6 +75,9 @@ export const API_ENDPOINTS = {
         JOB_TICKETS: {
             LIST: `${NEXTJS_API_BASE}/jobs`,
             CREATE: `${NEXTJS_API_BASE}/jobs`,
+            GET: (jobId: number | string) => `${NEXTJS_API_BASE}/jobs/${jobId}`,
+            UPDATE: (jobId: number | string) => `${NEXTJS_API_BASE}/jobs/${jobId}`,
+            DELETE: (jobId: number | string) => `${NEXTJS_API_BASE}/jobs/${jobId}`,
         },
         DISPATCH: {
             LIST: `${NEXTJS_API_BASE}/dispatch`,

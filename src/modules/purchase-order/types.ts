@@ -6,15 +6,16 @@ export interface PURCHASE_ORDER {
     po_date: Date,
     delivery_date: Date,
     TC_E_PR_No: string,
-    approved_on: Date,
-    approved_by: string,
-    created_on: Date,
-    created_by: string,
-    updated_on: Date,
-    updated_by: string,
+    // approved_on: Date,
+    // approved_by: string,
+    // created_on: Date,
+    // created_by: string,
+    // updated_on: Date,
+    // updated_by: string,
     status: string,
-    customer_po: string
+    customer: PO_CUSTOMER,
     po_items: PO_ITEMS[]
+    jobs: PURCHASE_ORDER_JOBS[]
 
 }
 export interface PO_ITEMS {
@@ -24,6 +25,13 @@ export interface PO_ITEMS {
     quantity: number,
     uom: string,
     price: number
+}
+
+export interface PO_CUSTOMER {
+    customer_id: number,
+    email: string,
+    name: string,
+
 }
 
 export interface CREATE_PURCHASE_ORDER {
@@ -48,3 +56,11 @@ export interface CREATE_PURCHASE_ORDER {
         price: string;
     }[];
 }
+
+export interface PURCHASE_ORDER_JOBS {
+    job_id: number,
+    code: string;
+    name: string;
+    status: string;
+    date: string;
+}   

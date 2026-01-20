@@ -26,6 +26,7 @@ function CreateInventoryManagement() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
 
+
     const baseDefaultValues: InventoryManagementFormValues = {
         item_category: "",
         item_sub_category: "",
@@ -45,7 +46,7 @@ function CreateInventoryManagement() {
     })
 
     async function onSubmit(data: InventoryManagementFormValues) {
-        console.log("Submitting Inventory Data:", data)
+
 
         try {
             setIsLoading(true);
@@ -86,6 +87,8 @@ function CreateInventoryManagement() {
             render={render}
         />
     );
+
+
 
 
     return (

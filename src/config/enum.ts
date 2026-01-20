@@ -49,6 +49,11 @@ export enum TaxTypes {
     VAT = "VAT",
 }
 
+export enum VatType {
+    SVAT = "SVAT",
+    VAT = "VAT",
+}
+
 
 export enum ITEM_CATEGORY {
     PAPER = "PAPER",
@@ -87,4 +92,14 @@ export enum UNIT_OF_MEASSURE {
     SHEET = "SHEET",
     LTR = "LTR",
     KG = "KG",
+}
+
+export enum PLATES_STATUS {
+    PLATES_REQUESTED = "PLATES REQUESTED",
+    PLATES_RECEIVED = "PLATES RECEIVED",
+}
+
+export enum INK_STATUS {
+    AVAILABLE = "AVAILABLE",
+    NOT_AVAILABLE = "NOT AVAILABLE",
 }

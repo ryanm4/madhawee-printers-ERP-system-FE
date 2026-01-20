@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { CloudUpload, FileArchive, X } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CustomerType } from '@/config/enum'
+import { CustomerType, VatType } from '@/config/enum'
 import { CREATE_CUSTOMER } from '@/modules/customer/types'
 import { CustomerApi } from '@/modules/customer/api'
 import { toast } from 'sonner'
@@ -37,8 +37,8 @@ function EditCustomerRelationship() {
         phone: "",
         email: "",
         creditPeriod: "",
-        SVAT_reg_no: "",
-        VAT_reg_no: "",
+        vat_type: "",
+        vat_no: "",
         logoUrl: "",
         contactPerson: "",
         contactPersonEmail: "",
@@ -72,8 +72,8 @@ function EditCustomerRelationship() {
                     phone: data.phone,
                     email: data.email,
                     creditPeriod: data.credit_period,
-                    SVAT_reg_no: data.svat_reg_no,
-                    VAT_reg_no: data.vat_reg_no,
+                    vat_type: data.vat_type,
+                    vat_no: data.vat_no,
                     logoUrl: data.logo_url,
                     contactPerson: data.contact_person,
                     contactPersonEmail: data.contact_person_email,
@@ -131,7 +131,7 @@ function EditCustomerRelationship() {
     }
 
     const onSubmit: SubmitHandler<CustomerFormValues> = async (data) => {
-        console.log("HELLOOO")
+
         try {
             setIsLoading(true);
             const payload: CREATE_CUSTOMER = {
@@ -141,8 +141,8 @@ function EditCustomerRelationship() {
                 phone: data.phone ?? "",
                 email: data.email ?? "",
                 credit_period: data.creditPeriod ?? "",
-                svat_reg_no: data.SVAT_reg_no ?? "",
-                vat_reg_no: data.VAT_reg_no ?? "",
+                vat_type: data.vat_type ?? "",
+                vat_no: data.vat_no ?? "",
                 logo_url: data.logoUrl ?? "",
                 contact_person: data.contactPerson ?? "",
                 contact_person_email: data.contactPersonEmail ?? "",
@@ -211,7 +211,7 @@ function EditCustomerRelationship() {
                         <Card className={cn("w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
                             <CardHeader className="flex flex-col gap-[0.5px]">
                                 <h3 className="text-md font-medium mb-2">Customer</h3>
-                                <p className="text-xs text-muted-foreground mb-4">Add your customer details here</p>
+                                <p className="text-xs text-muted-foreground mb-4">Edit your customer details here</p>
 
                             </CardHeader>
                             <CardContent className='flex flex-col gap-4'>
@@ -272,21 +272,29 @@ function EditCustomerRelationship() {
                                     ))}
                                 </div>
                                 <div className='flex flex-row gap-4'>
-                                    {renderFormField("SVAT_reg_no", ({ field }) => (
+                                    {renderFormField("vat_type", ({ field }) => (
                                         <FormItem className='w-full'>
-                                            <FormLabel>SVAT Reg No</FormLabel>
-                                            <FormControl><Input placeholder="Enter SVAT Reg No" {...field} /></FormControl>
+                                            <FormLabel>Vat Type</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Vat Type" /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    {Object.values(VatType).map((customer) => (
+                                                        <SelectItem key={customer} value={customer}>
+                                                            {customer}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
                                     ))}
-                                    {renderFormField("VAT_reg_no", ({ field }) => (
+                                    {renderFormField("vat_no", ({ field }) => (
                                         <FormItem className='w-full'>
-                                            <FormLabel>VAT Reg No</FormLabel>
-                                            <FormControl><Input placeholder="Enter VAT Reg No" {...field} /></FormControl>
+                                            <FormLabel>VAT  No</FormLabel>
+                                            <FormControl><Input placeholder="Enter VAT No" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     ))}
-
                                 </div>
                                 {renderFormField("logoUrl", ({ field }) => (
                                     <FormItem>
