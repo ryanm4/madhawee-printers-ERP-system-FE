@@ -1,13 +1,68 @@
 "use client"
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import PageTitleWithBreadcrumb from '@/components/shared/page-title-with-breadcrumb';
 import { Input } from '@/components/ui/input';
 import { PlusIcon, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { QUOTATIONS } from '@/modules/quotations/types';
+import { quotationColumns } from './_components/quotation_columns';
+import { quotationApi } from '@/modules/quotations/api';
+import { DataTable } from './_components/quotation_table';
+import { AlertDeleteDialog } from '@/components/shared/delete_popup';
 
 function QuotationsManagement() {
     const router = useRouter();
+    const [data, setData] = useState<QUOTATIONS[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [deleteId, setDeleteId] = useState<number | null>(null);
+    const [search, setSearch] = useState("")
+
+    const columns = quotationColumns({
+        onEdit: (id) => {
+            router.push(`/quotation-management/${id}/edit`)
+        },
+        onDelete: (id) => {
+            setDeleteId(Number(id))
+        },
+    })
+
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const response = await quotationApi.getAll();
+            console.log(response)
+
+            if (response.status === 200) {
+                setData(response.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch quotation');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (deleteId === null) return;
+        try {
+            setLoading(true);
+            await quotationApi.delete(deleteId);
+            await fetchData();
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+            setDeleteId(null);
+        }
+    };
+
+
     return (
         <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
             <PageTitleWithBreadcrumb
@@ -23,6 +78,8 @@ function QuotationsManagement() {
                         type="search"
                         placeholder="Quotation Number"
                         className="w-full pl-8"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
 
@@ -33,7 +90,19 @@ function QuotationsManagement() {
                     <PlusIcon /> Create New
                 </Button>
             </div>
+            <DataTable
+                columns={columns}
+                data={data}
+                searchValue={search}
+                searchColumn="quote_id"
+            />
 
+            <AlertDeleteDialog
+                isOpen={deleteId !== null}
+                onClose={() => setDeleteId(null)}
+                handleSubmit={handleDelete}
+
+            />
         </div>
     )
 }

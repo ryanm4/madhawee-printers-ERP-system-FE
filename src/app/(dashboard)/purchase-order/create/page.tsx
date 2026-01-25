@@ -27,6 +27,7 @@ import { quotationApi } from '@/modules/quotations/api'
 import { purchaseOrderApi } from '@/modules/purchase-order/api'
 import { toast } from 'sonner'
 import { CREATE_PURCHASE_ORDER } from '@/modules/purchase-order/types'
+import { Combobox } from '@/components/shared/combobox'
 
 
 type PurchaseOrderFormValues = z.infer<typeof purchaseOrderScheme>
@@ -111,7 +112,7 @@ function CreatePurchaseOrder() {
             };
 
             const payload: CREATE_PURCHASE_ORDER = {
-                quote_id: data.quotationId || "",
+                quote_id: data.quotationId ? parseInt(data.quotationId) : 0,
                 customer_id: data.customer ? parseInt(data.customer) : 0,
                 po_type_id: poTypeMap[data.purchaseOrderType] || 1,
                 batch_ref: data.batchRef,
@@ -206,8 +207,9 @@ function CreatePurchaseOrder() {
                                 {renderFormField("customer", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Customer</FormLabel>
-                                        <Select
-                                            value={field.value}
+                                        <Combobox
+                                            items={customer.map(c => ({ value: String(c.customer_id), label: c.company_name }))}
+                                            value={field.value || ""}
                                             onValueChange={(value) => {
                                                 field.onChange(value)
 
@@ -221,19 +223,9 @@ function CreatePurchaseOrder() {
                                                     form.setValue('customerEmail', selectedCustomer.email)
                                                 }
                                             }}
-                                        >
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Select Customer" />
-                                            </SelectTrigger>
-
-                                            <SelectContent>
-                                                {customer.map((cust) => (
-                                                    <SelectItem key={cust.customer_id} value={String(cust.customer_id)}>
-                                                        {cust.company_name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                            placeholder="Select Customer"
+                                            searchPlaceholder="Search customer..."
+                                        />
                                         <FormMessage />
                                     </FormItem>
                                 ))}
@@ -280,16 +272,13 @@ function CreatePurchaseOrder() {
                                 {renderFormField("quotationId", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Quotation No</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select a Quotation" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                {quotationList.map((quote: QUOTATIONS, index: number) => (
-                                                    <SelectItem key={quote.quote_id || index} value={quote.quote_id}>
-                                                        {quote.quote_id}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <Combobox
+                                            items={quotationList.map(q => ({ value: String(q.quote_id), label: String(q.quote_id) }))}
+                                            value={field.value || ""}
+                                            onValueChange={field.onChange}
+                                            placeholder="Select a Quotation"
+                                            searchPlaceholder="Search quotation..."
+                                        />
                                         <FormMessage />
                                     </FormItem>
                                 ))}

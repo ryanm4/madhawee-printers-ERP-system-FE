@@ -45,7 +45,16 @@ export function DataTable<TData, TValue>({
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
     const [globalFilter, setGlobalFilter] = useState("")
     const [columnVisibility, setColumnVisibility] =
-        useState<VisibilityState>({})
+        useState<VisibilityState>({
+            notes: false,
+            created_by: false,
+            created_on: false,
+            updated_by: false,
+            updated_on: false,
+            customer_address: false,
+            customer_email: false,
+            type_id: false,
+        })
 
     // 🔗 Sync external search with global table filter
     useEffect(() => {

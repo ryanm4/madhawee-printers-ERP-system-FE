@@ -2,55 +2,54 @@
 
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { ALL_TICKETS } from "@/modules/job-tickets/types"
+import { PURCHASE_ORDER } from "@/modules/purchase-order/types"
 import { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown, EyeIcon, MoreHorizontal, PencilIcon, TrashIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 
-interface JobTicketTableActions {
+interface PurchaseOrderTableActions {
     onEdit: (id: number) => void
     onDelete: (id: number) => void
     onView: (id: number) => void
 }
 
-
-
-export const jobTicketColumns = (
-    actions: JobTicketTableActions
-): ColumnDef<ALL_TICKETS>[] => [
+export const purchaseOrderColumns = (
+    actions: PurchaseOrderTableActions
+): ColumnDef<PURCHASE_ORDER>[] => [
         {
-            accessorKey: "job_id",
+            accessorKey: "po_id",
             header: ({ column }) => {
                 return (
                     <Button
                         variant="ghost"
                         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                     >
-                        Job ID
+                        PO ID
                         <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                 )
             },
         },
         {
-            accessorKey: "po_id",
-            header: "Purchase Order Number",
+            accessorKey: "customer.name",
+            header: "Customer",
         },
         {
-            accessorKey: "quantity",
-            header: "Quantity",
-        },
-        {
-            accessorKey: "job_open_date",
-            header: "Job Open Date",
+            accessorKey: "po_date",
+            header: "PO Date",
             cell: ({ row }) => {
-                const date = row.original.job_open_date
-
-                return date
-                    ? format(new Date(date), "dd MMM yyyy")
-                    : "-"
-            },
+                const date = row.original.po_date
+                return date ? format(new Date(date), "PPP") : "N/A"
+            }
+        },
+        {
+            accessorKey: "delivery_date",
+            header: "Delivery Date",
+            cell: ({ row }) => {
+                const date = row.original.delivery_date
+                return date ? format(new Date(date), "PPP") : "N/A"
+            }
         },
         {
             accessorKey: "status",
@@ -61,8 +60,7 @@ export const jobTicketColumns = (
                     <Badge
                         className={`uppercase ${status === "COMPLETED" ? "bg-green-100 text-green-800" :
                             status === "PENDING" ? "bg-yellow-100 text-yellow-800" :
-                                status === "ACTIVE" ? "bg-blue-100 text-blue-800" :
-                                    "bg-gray-100 text-gray-800"
+                                "bg-blue-100 text-blue-800"
                             } px-2 py-1 rounded-md text-sm font-medium`}
                     >
                         {status || "N/A"}
@@ -74,7 +72,7 @@ export const jobTicketColumns = (
             id: "actions",
             enableHiding: false,
             cell: ({ row }) => {
-                const job_ticket = row.original
+                const po = row.original
                 return (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -84,26 +82,26 @@ export const jobTicketColumns = (
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem
-                                onClick={() => actions.onView(job_ticket.job_id)}
+                                onClick={() => actions.onView(po.po_id)}
                             >
                                 <EyeIcon className="mr-2 h-4 w-4" />
-                                View Job Ticket
+                                View PO
                             </DropdownMenuItem>
-
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem
-                                onClick={() => actions.onEdit(job_ticket.job_id)}
+                                onClick={() => actions.onEdit(po.po_id)}
                             >
                                 <PencilIcon className="mr-2 h-4 w-4" />
-                                Edit Job Ticket
+                                Edit PO
                             </DropdownMenuItem>
-
                             <DropdownMenuItem
                                 variant="destructive"
-                                onClick={() => actions.onDelete(job_ticket.job_id)}
+                                onClick={() => actions.onDelete(po.po_id)}
                             >
                                 <TrashIcon className="mr-2 h-4 w-4" />
-                                Delete Job Ticket
+                                Delete PO
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>

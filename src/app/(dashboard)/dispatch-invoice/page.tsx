@@ -17,6 +17,8 @@ function DispatchInvoiceManagement() {
     const [deleteId, setDeleteId] = useState<string | number | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
+    const [search, setSearch] = useState("")
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -80,6 +82,8 @@ function DispatchInvoiceManagement() {
                             type="search"
                             placeholder="Dispatch"
                             className="w-full pl-8"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
 
@@ -93,6 +97,8 @@ function DispatchInvoiceManagement() {
                 <DataTable
                     columns={columns}
                     data={data}
+                    searchValue={search}
+                    searchColumn="dispatch_note"
                 />
             </div>
 

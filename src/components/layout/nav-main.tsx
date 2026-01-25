@@ -24,18 +24,14 @@ export function NavMain({
   const pathname = usePathname()
   return (
     <SidebarGroup>
-      <SidebarGroupContent className="flex flex-col gap-2">
-        <SidebarMenu>
-          <SidebarMenuItem className="flex items-center gap-2">
-          </SidebarMenuItem>
-        </SidebarMenu>
-        <SidebarMenu>
+      <SidebarGroupContent>
+        <SidebarMenu className="flex flex-col gap-1">
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton tooltip={item.title} isActive={pathname === item.url}>
-                <a href={item.url} className="flex items-center gap-2 w-full group-data-[collapsible=icon]:justify-center">
+              <SidebarMenuButton asChild tooltip={item.title} isActive={pathname === item.url}>
+                <a href={item.url}>
                   {item.icon && <item.icon />}
-                  <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
+                  <span>{item.title}</span>
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>

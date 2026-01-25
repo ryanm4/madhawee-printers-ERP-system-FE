@@ -84,7 +84,7 @@ export async function DELETE(
 ) {
     try {
         const { id } = await context.params; // ✅ Await the params
-        const apiUrl = API_ENDPOINTS.INVENTORY.DELETE(id);
+        const apiUrl = API_ENDPOINTS.JOB_TICKETS.DELETE(id);
 
         const response = await fetch(apiUrl, {
             method: "DELETE",

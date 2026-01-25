@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 import { useRouter } from "next/navigation";
 import { PURCHASE_ORDER_JOBS } from "@/modules/purchase-order/types";
+import { format } from "date-fns"
 
 
 
@@ -26,6 +27,8 @@ export interface PurchaseOrderCardProps {
     status: string;
     po_id: number;
     className?: string;
+    onDelete: (id: number) => Promise<void>;
+    onRefresh?: () => Promise<void>;
 }
 
 export function PurchaseOrderCard({
@@ -40,9 +43,12 @@ export function PurchaseOrderCard({
     status,
     po_id,
     className,
+    onDelete,
+    onRefresh,
 }: PurchaseOrderCardProps) {
     const [isJobTicketOpen, setIsJobTicketOpen] = useState(false);
     const [openDelete, setOpenDelete] = useState(false);
+
     const router = useRouter();
     const handleClickDelete = () => {
         setOpenDelete(true);
@@ -57,6 +63,7 @@ export function PurchaseOrderCard({
 
         router.push(`/purchase-order/${po_id}/view`);
     };
+
 
     return (
         <>
@@ -118,42 +125,42 @@ export function PurchaseOrderCard({
                     <div className="grid grid-cols-3 gap-4 mb-8">
                         <div className="flex flex-col gap-1">
                             <span className="text-sm text-muted-foreground flex items-center gap-2">
-                                PO Number <span className="font-mono tracking-widest text-md"><Barcode className="h-6 w-6" /></span>
+                                PO Number <span className="font-mono tracking-widest text-md"><Barcode className="h-5 w-5" /></span>
                             </span>
                             <span className="font-semibold text-sm">{poNumber}</span>
                         </div>
                         <div className="flex flex-col gap-1">
                             <span className="text-md text-muted-foreground flex items-center gap-2">
-                                PO Date <Calendar className="h-6 w-6" />
+                                PO Date <Calendar className="h-5 w-5" />
                             </span>
                             <span className="font-semibold text-sm">{new Date(poDate).toLocaleDateString()}</span>
                         </div>
                         <div className="flex flex-col gap-1">
                             <span className="text-md text-muted-foreground flex items-center gap-2">
-                                Delivery Date <Truck className="h-6 w-6" />
+                                Delivery Date <Truck className="h-5 w-5" />
                             </span>
                             <span className="font-semibold text-sm">{new Date(deliveryDate).toLocaleDateString()}</span>
                         </div>
                     </div>
 
                     <div className="flex flex-col gap-4">
-                        {jobs.map((job) => (
+                        {jobs.slice(0, 2).map((job) => (
                             <div key={job.job_id} className="flex items-center justify-between group">
                                 <div className="flex items-center gap-3">
 
-                                    <Ticket className="h-6 w-6" />
+                                    <Ticket className="h-8 w-8" />
 
                                     <div className="flex flex-col gap-0.5">
-                                        <span className="text-[16px] text-muted-foreground line-clamp-1">
-                                            {job.code}
+                                        <span className="text-[14px] text-muted-foreground line-clamp-1">
+                                            {job.job_id}
                                         </span>
-                                        <span className="text-[18px] font-medium leading-none">
-                                            {job.name}
+                                        <span className="text-[16px] font-medium leading-none">
+                                            {job.job_name}
                                         </span>
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-end gap-0.5">
-                                    <span className="text-[16px] text-muted-foreground">{job.date}</span>
+                                    <span className="text-[14px] text-muted-foreground">{format(new Date(job.job_open_date), "dd MMM yyyy")}</span>
                                     <span className="text-[18px] font-light text-muted-foreground">{job.status}</span>
                                 </div>
                             </div>
@@ -162,12 +169,12 @@ export function PurchaseOrderCard({
                 </CardContent>
             </Card>
 
-            <CreateJobTicketDialog open={isJobTicketOpen} onOpenChange={setIsJobTicketOpen} />
+            <CreateJobTicketDialog open={isJobTicketOpen} onOpenChange={setIsJobTicketOpen} initialPoId={String(po_id)} onSuccess={onRefresh} />
             <AlertDeleteDialog
                 isOpen={openDelete}
                 onClose={() => setOpenDelete(false)}
-                handleSubmit={() => {
-                    console.log(`Deleting Purchase Order with ID: ${po_id}`);
+                handleSubmit={async () => {
+                    await onDelete(po_id);
                     setOpenDelete(false);
                 }}
             />

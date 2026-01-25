@@ -1,11 +1,11 @@
 "use client"
 
-import { useFieldArray, useForm } from "react-hook-form"
+import { SubmitHandler, useFieldArray, useForm, FieldPath } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { CalendarIcon, CloudUpload, Plus, Trash2, Edit2, X, FileArchive } from "lucide-react" // Import icons
 import { format } from "date-fns"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -38,7 +38,15 @@ import { Textarea } from "@/components/ui/textarea"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { jobTicketSchema } from "@/modules/job-tickets/validation"
-import { INK_STATUS } from "@/config/enum"
+import { COATING_TYPES, INK_STATUS, PAPER_TYPES, PRODUCT_TYPES } from "@/config/enum"
+import { PURCHASE_ORDER, PURCHASE_ORDER_ID } from "@/modules/purchase-order/types"
+import { purchaseOrderApi } from "@/modules/purchase-order/api"
+import { CustomerApi } from "@/modules/customer/api"
+import { CUSTOMER } from "@/modules/customer/types"
+import { jobTicketsApi } from "@/modules/job-tickets/api"
+import { CREATE_TICKETS } from "@/modules/job-tickets/types"
+import { toast } from "sonner"
+import { toMySQLDateTime } from "@/hooks/sql-date-time"
 
 type JobTicketFormValues = z.infer<typeof jobTicketSchema>
 
@@ -46,9 +54,21 @@ interface CreateJobTicketDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     defaultValues?: Partial<JobTicketFormValues>
+    initialPoId?: string
+    onSuccess?: () => void
 }
 
-export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDialogProps) {
+import { PaperTypeCombobox } from "./paper-type-combobox"
+import { Combobox } from "@/components/shared/combobox"
+
+export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSuccess }: CreateJobTicketDialogProps) {
+
+    const [purchaseOrderData, setPurchaseOrderData] = useState<PURCHASE_ORDER[]>([]);
+    const [customerData, setCustomerData] = useState<CUSTOMER[]>([]);
+    const [selectedPoDetails, setSelectedPoDetails] = useState<PURCHASE_ORDER_ID | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [fetchingDetails, setFetchingDetails] = useState(false);
+
     const baseDefaultValues = {
         poNumber: "",
         item: "",
@@ -59,6 +79,7 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
         jobName: "",
         productType: "",
         quantity: "",
+        completed_qty: "",
         wastage: "",
         packingDate: undefined,
         expiryDate: undefined,
@@ -139,35 +160,165 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
         return Math.round(bytes / Math.pow(k, i) * 100) / 100 + sizes[i]
     }
 
-    function onSubmit(data: JobTicketFormValues) {
-        console.log("Submitting Job Ticket:", data)
-        console.log(form.formState.errors)
-        if (data.addAnotherJob) {
-            form.reset(
-                {
-                    ...baseDefaultValues,
-                    addAnotherJob: true,
-                },
-                {
-                    keepDefaultValues: false,
-                }
-            )
-            form.clearErrors()
-        } else {
-            onOpenChange(false)
-            form.reset(
-                {
-                    ...baseDefaultValues,
-                    addAnotherJob: false,
-                },
-                {
-                    keepDefaultValues: false,
-                }
-            )
-            form.clearErrors()
+
+    async function onSubmit(data: JobTicketFormValues) {
+        try {
+            setLoading(true)
+            const payload: CREATE_TICKETS = {
+                po_id: data.poNumber ? Number(data.poNumber) : undefined,
+                item_code: data.item,
+                job_number: data.jobNumber,
+                order_received_date: data.orderReceivedDate ? toMySQLDateTime(data.orderReceivedDate) : undefined,
+                job_open_date: data.jobOpenDate ? toMySQLDateTime(data.jobOpenDate) : undefined,
+                customer_id: data.customer,
+                job_name: data.jobName,
+                product_type: data.productType,
+                quantity: data.quantity ? Number(data.quantity) : undefined,
+                completed_qty: data.completed_qty ? Number(data.completed_qty) : undefined,
+                wastage: data.wastage,
+                packing_date: data.packingDate ? toMySQLDateTime(data.packingDate) : undefined,
+                expiry_date: data.expiryDate ? toMySQLDateTime(data.expiryDate) : undefined,
+                tc_no: data.tcNo,
+                batch_ref: data.batchRef,
+                remarks: data.remarks,
+
+                old_plates_quantity: data.oldPlatesQuantity,
+                old_plates_status: data.oldPlatesStatus,
+                old_plates_remarks: data.oldPlatesRemarks,
+                new_plates_quantity: data.newPlatesQuantity,
+                new_plates_status: data.newPlatesStatus,
+                new_plates_remarks: data.newPlatesRemarks,
+
+                raw_materials: data.rawMaterials,
+                inks: data.inks,
+                paper_types: data.paperTypes?.map(p => ({
+                    ...p,
+                    delivery_date: p.delivery_date ? toMySQLDateTime(p.delivery_date) : undefined
+                })),
+
+                status: "PENDING",
+                create_by: "Admin",
+                created_on: new Date(),
+            }
+
+            const response = await jobTicketsApi.create(payload)
+            console.log(response)
+
+            toast.success("Job Ticket Created Successfully")
+
+            if (data.addAnotherJob) {
+                form.reset(
+                    {
+                        ...baseDefaultValues,
+                        addAnotherJob: true,
+                    },
+                    {
+                        keepDefaultValues: false,
+                    }
+                )
+                form.clearErrors()
+            } else {
+                onOpenChange(false)
+                onSuccess?.()
+
+                form.reset(
+                    {
+                        ...baseDefaultValues,
+                        addAnotherJob: false,
+                    },
+                    {
+                        keepDefaultValues: false,
+                    }
+                )
+                form.clearErrors()
+            }
+        } catch (error) {
+            console.error("Failed to submit job ticket:", error)
+            toast.error("Failed to create job ticket")
+        } finally {
+            setLoading(false)
         }
     }
 
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const [poResponse, customerResponse] = await Promise.all([
+                purchaseOrderApi.getAll(),
+                CustomerApi.getAll()
+            ]);
+
+            setPurchaseOrderData(poResponse.data);
+            setCustomerData(customerResponse.data);
+        } catch (error) {
+            console.error('Failed to fetch data', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const selectedPoId = form.watch("poNumber");
+    const selectedPoItems = selectedPoDetails?.po_items ?? [];
+
+    useEffect(() => {
+        const fetchPoDetails = async () => {
+            if (!selectedPoId) {
+                setSelectedPoDetails(null);
+                return;
+            }
+            try {
+                setFetchingDetails(true);
+                const response = await purchaseOrderApi.getById(selectedPoId);
+                if (response.status === 200) {
+                    const po = response.data;
+                    console.log("po", po)
+                    setSelectedPoDetails(po);
+
+                    if (po.customer) {
+                        // Find the customer in our list to ensure we have the right value
+                        // or just use the ID if we decide to use IDs as values
+                        form.setValue("customer", String(po.customer.customer_id));
+                    }
+                    if (po.po_date) {
+                        form.setValue("orderReceivedDate", new Date(po.po_date));
+                    }
+                    form.setValue("tcNo", po.TC_E_PR_No);
+                    form.setValue("batchRef", po.batch_ref);
+                }
+            } catch (err) {
+                console.error("Error fetching PO details", err);
+            } finally {
+                setFetchingDetails(false);
+            }
+        };
+
+        fetchPoDetails();
+        form.setValue("item", "");
+    }, [selectedPoId, form]);
+
+    useEffect(() => {
+        if (open && initialPoId) {
+            form.setValue("poNumber", initialPoId);
+        }
+    }, [open, initialPoId, form]);
+
+
+
+    const renderFormField = <TName extends FieldPath<JobTicketFormValues>>(
+        name: TName,
+        render: Parameters<typeof FormField<JobTicketFormValues, TName>>["0"]["render"]
+    ) => (
+        <FormField
+            control={form.control}
+            name={name}
+            render={render}
+        />
+    );
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -188,40 +339,52 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                         <p className="text-xs text-muted-foreground mb-4">Complete this form to update or create a job ticket.</p>
                         {/* General Info */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField control={form.control} name="poNumber" render={({ field }) => (
+                            {renderFormField("poNumber", ({ field }) => (
                                 <FormItem>
                                     <FormLabel>PO Number</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                        <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select PO Number" /></SelectTrigger></FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="po1">PO-001</SelectItem>
-                                            <SelectItem value="po2">PO-002</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <Combobox
+                                        items={purchaseOrderData.map(po => ({ value: String(po.po_id), label: String(po.po_id) }))}
+                                        value={field.value || ""}
+                                        onValueChange={(value) => {
+                                            field.onChange(value);
+                                            form.setValue("item", "");
+                                        }}
+                                        placeholder="Select PO Number"
+                                        searchPlaceholder="Search PO..."
+                                    />
                                     <FormMessage />
                                 </FormItem>
-                            )} />
-                            <FormField control={form.control} name="item" render={({ field }) => (
+                            ))}
+                            {renderFormField("item", ({ field }) => (
                                 <FormItem>
                                     <FormLabel>Item</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                        <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Item" /></SelectTrigger></FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="item1">Item 1</SelectItem>
-                                            <SelectItem value="item2">Item 2</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <Combobox
+                                        items={selectedPoItems.map((item: any) => ({ value: item.item_code, label: item.item_code }))}
+                                        value={field.value || ""}
+                                        onValueChange={(value) => {
+                                            field.onChange(value);
+                                            const selectedItem = selectedPoItems.find((i: any) => i.item_code === value);
+                                            if (selectedItem) {
+                                                form.setValue("quantity", String(selectedItem.quantity));
+                                                form.setValue("jobName", selectedItem.description);
+                                            }
+                                        }}
+                                        placeholder={fetchingDetails ? "Loading items..." : selectedPoItems.length > 0 ? "Select Item" : "No items found"}
+                                        disabled={!selectedPoId || fetchingDetails}
+                                        searchPlaceholder="Search item..."
+                                        emptyMessage={fetchingDetails ? "Loading..." : "No items found in this PO"}
+                                    />
                                     <FormMessage />
                                 </FormItem>
-                            )} />
-                            <FormField control={form.control} name="jobNumber" render={({ field }) => (
+                            ))}
+                            {renderFormField("jobNumber", ({ field }) => (
                                 <FormItem>
                                     <FormLabel>Job Number</FormLabel>
                                     <FormControl><Input placeholder="MPL/8450/25/TIEP" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
-                            )} />
-                            <FormField control={form.control} name="orderReceivedDate" render={({ field }) => (
+                            ))}
+                            {renderFormField("orderReceivedDate", ({ field }) => (
                                 <FormItem>
                                     <FormLabel>Order Received Date</FormLabel>
                                     <Popover>
@@ -239,94 +402,100 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                                     </Popover>
                                     <FormMessage />
                                 </FormItem>
-                            )} />
+                            ))}
 
 
                         </div>
 
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <FormField control={form.control} name="jobOpenDate" render={({ field }) => (
+                            {renderFormField("jobOpenDate", ({ field }) => (
                                 <FormItem>
                                     <FormLabel>Job Open Date</FormLabel>
                                     <Popover>
                                         <PopoverTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                className={cn(
-                                                    "w-full flex items-center justify-between px-3 py-2 text-left font-normal",
-                                                    !field.value && "text-muted-foreground"
-                                                )}
-                                            >
-                                                {field.value ? format(field.value, "PPP") : "Select date"}
-                                                <CalendarIcon className="h-4 w-4 opacity-50" />
-                                            </Button>
+                                            <FormControl>
+                                                <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                    {field.value ? format(field.value, "PPP") : format(new Date(), "PPP")}
+                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </FormControl>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={field.value}
-
-                                                captionLayout="dropdown"
-
-                                                onSelect={field.onChange}
-
-                                            />
+                                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus />
                                         </PopoverContent>
                                     </Popover>
                                     <FormMessage />
                                 </FormItem>
-                            )} />
-                            <FormField control={form.control} name="customer" render={({ field }) => (
+                            ))}
+                            {renderFormField("customer", ({ field }) => (
                                 <FormItem>
                                     <FormLabel>Customer</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                        <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Customer" /></SelectTrigger></FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="c1">Customer 1</SelectItem>
-                                            <SelectItem value="c2">Customer 2</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <Combobox
+                                        items={[
+                                            ...customerData.map(cust => ({ value: String(cust.customer_id), label: cust.company_name })),
+                                            ...(field.value && !customerData.some(c => String(c.customer_id) === field.value) ? [{
+                                                value: field.value,
+                                                label: selectedPoDetails?.customer?.name || field.value
+                                            }] : [])
+                                        ]}
+                                        value={field.value || ""}
+                                        onValueChange={field.onChange}
+                                        placeholder="Select Customer"
+                                        searchPlaceholder="Search customer..."
+                                    />
                                     <FormMessage />
                                 </FormItem>
-                            )} />
-                            <FormField control={form.control} name="jobName" render={({ field }) => (
+                            ))}
+                            {renderFormField("jobName", ({ field }) => (
                                 <FormItem>
                                     <FormLabel>Job Name</FormLabel>
                                     <FormControl><Input placeholder="Enter Job Name" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
-                            )} />
+                            ))}
                         </div>
                         {/* Product Details */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <FormField control={form.control} name="productType" render={({ field }) => (
+                        <div className="grid grid-cols-4 md:grid-cols-4 gap-4">
+                            {renderFormField("productType", ({ field }) => (
                                 <FormItem>
                                     <FormLabel>Product Type <span className="text-red-500">*</span></FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Product Type" /></SelectTrigger></FormControl>
                                         <SelectContent>
-                                            <SelectItem value="pt1">Product Type 1</SelectItem>
-                                            <SelectItem value="pt2">Product Type 2</SelectItem>
+                                            {Object.values(PRODUCT_TYPES).map((productType) => (
+                                                <SelectItem key={productType} value={productType}>
+                                                    {productType}
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />
                                 </FormItem>
-                            )} />
-                            <FormField control={form.control} name="quantity" render={({ field }) => (
+                            ))}
+                            {renderFormField("quantity", ({ field }) => (
                                 <FormItem>
                                     <FormLabel>Quantity <span className="text-red-500">*</span></FormLabel>
-                                    <FormControl><Input placeholder="Enter Quantity" {...field} /></FormControl>
+                                    <FormControl><Input type="number" placeholder="Enter Quantity" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
-                            )} />
-                            <FormField control={form.control} name="wastage" render={({ field }) => (
+                            ))}
+
+                            {renderFormField("completed_qty", ({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Completed Quantity <span className="text-red-500">*</span></FormLabel>
+                                    <FormControl><Input type="number" placeholder="Enter Completed Quantity" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            ))}
+
+                            {renderFormField("wastage", ({ field }) => (
                                 <FormItem>
                                     <FormLabel>Wastage %</FormLabel>
-                                    <FormControl><Input placeholder="Enter Wastage" {...field} /></FormControl>
+                                    <FormControl><Input type="number" placeholder="Enter Wastage" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
-                            )} />
+                            ))}
                         </div>
 
                         <div>
@@ -336,13 +505,7 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                                         <FormField control={form.control} name={`paperTypes.${index}.paper_type`} render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Paper Type <span className="text-red-500">*</span></FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value}>
-                                                    <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Paper Type" /></SelectTrigger></FormControl>
-                                                    <SelectContent>
-                                                        <SelectItem value="p1">Paper 1</SelectItem>
-                                                        <SelectItem value="p2">Paper 2</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
+                                                <PaperTypeCombobox value={field.value} onChange={field.onChange} />
                                                 <FormMessage className="min-h-[20px]" />
                                             </FormItem>
                                         )} />
@@ -352,8 +515,11 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                                                 <Select onValueChange={field.onChange} value={field.value}>
                                                     <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Coating" /></SelectTrigger></FormControl>
                                                     <SelectContent>
-                                                        <SelectItem value="c1">Coating 1</SelectItem>
-                                                        <SelectItem value="c2">Coating 2</SelectItem>
+                                                        {Object.values(COATING_TYPES).map((coating) => (
+                                                            <SelectItem key={coating} value={coating}>
+                                                                {coating}
+                                                            </SelectItem>
+                                                        ))}
                                                     </SelectContent>
                                                 </Select>
                                                 <FormMessage className="min-h-[20px]" />
@@ -402,7 +568,7 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                         {/* Dates */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                            <FormField control={form.control} name="packingDate" render={({ field }) => (
+                            {renderFormField("packingDate", ({ field }) => (
                                 <FormItem>
                                     <FormLabel>Packing Date</FormLabel>
                                     <Popover>
@@ -420,8 +586,8 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                                     </Popover>
                                     <FormMessage />
                                 </FormItem>
-                            )} />
-                            <FormField control={form.control} name="expiryDate" render={({ field }) => (
+                            ))}
+                            {renderFormField("expiryDate", ({ field }) => (
                                 <FormItem>
                                     <FormLabel>Expiry Date</FormLabel>
                                     <Popover>
@@ -439,34 +605,34 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                                     </Popover>
                                     <FormMessage />
                                 </FormItem>
-                            )} />
+                            ))}
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
 
-                            <FormField control={form.control} name="tcNo" render={({ field }) => (
+                            {renderFormField("tcNo", ({ field }) => (
                                 <FormItem>
-                                    <FormLabel>TC No</FormLabel>
+                                    <FormLabel>TC/E/PR/No</FormLabel>
                                     <FormControl><Input placeholder="Enter TC No" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
-                            )} />
-                            <FormField control={form.control} name="batchRef" render={({ field }) => (
+                            ))}
+                            {renderFormField("batchRef", ({ field }) => (
                                 <FormItem>
                                     <FormLabel>Batch Ref</FormLabel>
                                     <FormControl><Input placeholder="Enter Batch Ref" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
-                            )} />
+                            ))}
                         </div>
 
-                        <FormField control={form.control} name="remarks" render={({ field }) => (
+                        {renderFormField("remarks", ({ field }) => (
                             <FormItem>
                                 <FormLabel>Remarks</FormLabel>
                                 <FormControl><Textarea placeholder="Enter Remarks" className="resize-none" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
-                        )} />
+                        ))}
 
                         {/* CTP Plates */}
                         <div>
@@ -474,14 +640,14 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                             <p className="text-xs text-muted-foreground mb-4">Select the CTP Plates for Old and New Plates.</p>
                             <div className="grid grid-cols-1 md:grid-cols-3  gap-4 mb-2">
 
-                                <FormField control={form.control} name="oldPlatesQuantity" render={({ field }) => (
+                                {renderFormField("oldPlatesQuantity", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Old Plates Quantity</FormLabel>
-                                        <FormControl><Input placeholder="Quantity" {...field} /></FormControl>
+                                        <FormControl><Input type="number" placeholder="Quantity" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
-                                <FormField control={form.control} name="oldPlatesStatus" render={({ field }) => (
+                                ))}
+                                {renderFormField("oldPlatesStatus", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Old Plates Status</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}>
@@ -490,25 +656,25 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                                         </Select>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
-                                <FormField control={form.control} name="oldPlatesRemarks" render={({ field }) => (
+                                ))}
+                                {renderFormField("oldPlatesRemarks", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Old Plates Remarks</FormLabel>
                                         <FormControl><Input placeholder="Remarks" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
+                                ))}
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-                                <FormField control={form.control} name="newPlatesQuantity" render={({ field }) => (
+                                {renderFormField("newPlatesQuantity", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>New Plates Quantity</FormLabel>
-                                        <FormControl><Input placeholder="Quantity" {...field} /></FormControl>
+                                        <FormControl><Input type="number" placeholder="Quantity" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
-                                <FormField control={form.control} name="newPlatesStatus" render={({ field }) => (
+                                ))}
+                                {renderFormField("newPlatesStatus", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>New Plates Status</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}>
@@ -517,14 +683,14 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                                         </Select>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
-                                <FormField control={form.control} name="newPlatesRemarks" render={({ field }) => (
+                                ))}
+                                {renderFormField("newPlatesRemarks", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>New Plates Remarks</FormLabel>
                                         <FormControl><Input placeholder="Remarks" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
-                                )} />
+                                ))}
                             </div>
                         </div>
 
@@ -549,7 +715,7 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                                         <FormField control={form.control} name={`rawMaterials.${index}.quantity`} render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel className={index !== 0 ? "sr-only" : ""}>Quantity</FormLabel>
-                                                <FormControl><Input placeholder="Enter Quantity" {...field} /></FormControl>
+                                                <FormControl><Input type="number" placeholder="Enter Quantity" {...field} /></FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )} />
@@ -616,7 +782,7 @@ export function CreateJobTicketDialog({ open, onOpenChange }: CreateJobTicketDia
                                         <FormField control={form.control} name={`inks.${index}.quantity`} render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel className={index !== 0 ? "sr-only" : ""}>Quantity</FormLabel>
-                                                <FormControl><Input placeholder="Enter Quantity" {...field} /></FormControl>
+                                                <FormControl><Input type="number" placeholder="Enter Quantity" {...field} /></FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )} />

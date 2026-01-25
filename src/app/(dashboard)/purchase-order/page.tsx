@@ -4,20 +4,23 @@ import { PurchaseOrderCard } from "@/components/purchase-order-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { LayoutPanelTop, PlusIcon, Search, Table2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { PURCHASE_ORDER } from "@/modules/purchase-order/types";
+import { DataTable } from "./_components/purchase-order-table";
+import { purchaseOrderColumns } from "./_components/purchase-order-columns";
 
 
 function PurchaseOrderPage() {
 
   const [data, setData] = useState<PURCHASE_ORDER[]>([]);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
   const router = useRouter()
 
   useEffect(() => {
@@ -30,13 +33,32 @@ function PurchaseOrderPage() {
       const response = await purchaseOrderApi.getAll();
       console.log(response)
       setData(response.data);
-    } catch (error) {
-      console.error('Failed to fetch POs');
+    } catch (err) {
+      console.error('Failed to fetch POs', err);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleDelete = async (id: number) => {
+    try {
+      setLoading(true);
+      await purchaseOrderApi.delete(id);
+      toast.success("Purchase Order deleted successfully");
+      await fetchData();
+    } catch (error) {
+      console.error('Failed to delete PO:', error);
+      toast.error("Failed to delete Purchase Order");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const columns = purchaseOrderColumns({
+    onEdit: (id) => router.push(`/purchase-order/${id}/edit`),
+    onDelete: (id) => handleDelete(id),
+    onView: (id) => router.push(`/purchase-order/${id}`),
+  })
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
@@ -54,6 +76,8 @@ function PurchaseOrderPage() {
               type="search"
               placeholder="PO Number"
               className="w-full pl-8"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
           </div>
 
@@ -63,66 +87,51 @@ function PurchaseOrderPage() {
             <TabsTrigger value="Grid-View"><LayoutPanelTop /></TabsTrigger>
             <TabsTrigger value="Table-View"><Table2 /></TabsTrigger>
           </TabsList>
-          <Button onClick={() => router.push("/purchase-order/create")}>
+          <Button onClick={() => router.push("/purchase-order/create")} disabled={loading}>
             <PlusIcon /> Create New
           </Button>
         </div>
 
         <TabsContent value="Grid-View">
           <div className="grid gap-[24px] grid-cols-[repeat(auto-fit,minmax(412px,1fr))]">
-            {data.map((item: PURCHASE_ORDER) => (
-              <PurchaseOrderCard
-                key={item.po_id}
-                po_id={item.po_id}
-                companyName={item.customer.name}
-                contactEmail={item.customer.email}
-                poNumber={item.po_id}
-                poDate={item.po_date}
-                deliveryDate={item.delivery_date}
-                jobs={item.jobs}
-                totalJobs={item.jobs.length}
-                additionalJobs={item.jobs.length}
-                status={item.status}
-              />
-            ))}
+            {data
+              .filter((item) => {
+                if (!search) return true
+                const s = search.toLowerCase()
+                return (
+                  item.po_id.toString().toLowerCase().includes(s) ||
+                  item.customer?.name?.toLowerCase().includes(s) ||
+                  item.status?.toLowerCase().includes(s)
+                )
+              })
+              .map((item: PURCHASE_ORDER) => (
+                <PurchaseOrderCard
+                  key={item.po_id}
+                  po_id={item.po_id}
+                  companyName={item.customer?.name}
+                  contactEmail={item.customer?.email}
+                  poNumber={item.po_id}
+                  poDate={item.po_date}
+                  deliveryDate={item.delivery_date}
+                  jobs={item.jobs}
+                  totalJobs={item.jobs.length}
+                  additionalJobs={item.jobs.length}
+                  status={item.status}
+                  onDelete={handleDelete}
+                  onRefresh={fetchData}
+                />
+              ))}
           </div>
-          <div className="relative flex flex-col items-center justify-center gap-4 py-4 mt-8 md:flex-row">
-            <div className="text-sm text-muted-foreground md:absolute md:left-0">
-              Page 1 of 10
-            </div>
-            <Pagination className="w-auto mx-0">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious href="#" />
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationLink href="#" isActive>1</PaginationLink>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationLink href="#">2</PaginationLink>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationLink href="#">3</PaginationLink>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationEllipsis />
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationLink href="#">10</PaginationLink>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationNext href="#" />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
+          {/* Pagination could be here if needed */}
         </TabsContent>
 
         <TabsContent value="Table-View">
-          <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-            <div className="bg-muted/50 aspect-video rounded-xl" />
-            <div className="bg-muted/50 aspect-video rounded-xl" />
-          </div>
+          <DataTable
+            columns={columns}
+            data={data}
+            searchValue={search}
+            searchColumn="po_id"
+          />
         </TabsContent>
       </Tabs>
     </div>

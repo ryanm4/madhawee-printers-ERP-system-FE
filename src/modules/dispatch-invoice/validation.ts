@@ -10,7 +10,7 @@ export const dispatchInvoiceScheme = z.object({
     dispatch_quantity: z.string().optional(),
     dispatch_bundles_qty: z.string().optional(),
     dispatch_description: z.string().optional(),
-
+    customer_id: z.string().optional(),
 })
 
 

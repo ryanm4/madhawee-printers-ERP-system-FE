@@ -25,6 +25,7 @@ import { ALL_TICKETS } from '@/modules/job-tickets/types';
 import { formatPhone } from '@/hooks/format-phone-no';
 import { CustomerApi } from '@/modules/customer/api';
 import { toMySQLDateTime } from '@/hooks/sql-date-time';
+import { Combobox } from '@/components/shared/combobox';
 
 type DispatchFormValues = z.infer<typeof dispatchInvoiceScheme>
 
@@ -230,22 +231,16 @@ function EditDispatchandInvoice() {
                                 {renderFormField("job_id", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Job ID</FormLabel>
-                                        <FormControl>
-                                            <Select onValueChange={field.onChange} value={field.value ? String(field.value) : ""}>
-                                                <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select a Job Ticket" /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    {JobData.map((job) => (
-                                                        <SelectItem key={job.job_id} value={String(job.job_id)}>
-                                                            {`Job-${job.job_id} (${job.job_name})`}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </FormControl>
+                                        <Combobox
+                                            items={JobData.map(job => ({ value: String(job.job_id), label: `Job-${job.job_id} (${job.job_name})` }))}
+                                            value={field.value ? String(field.value) : ""}
+                                            onValueChange={field.onChange}
+                                            placeholder="Select a Job Ticket"
+                                            searchPlaceholder="Search job..."
+                                        />
                                         <FormMessage />
                                     </FormItem>
-                                ))}
-                                <div className='flex flex-row gap-4'>
+                                ))}                           <div className='flex flex-row gap-4'>
                                     {renderFormField("customer_name", ({ field }) => (
                                         <FormItem className='w-full'>
                                             <FormLabel>Customer Name<span className="text-red-500">*</span></FormLabel>

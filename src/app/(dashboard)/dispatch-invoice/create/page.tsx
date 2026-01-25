@@ -25,6 +25,7 @@ import { ALL_TICKETS } from '@/modules/job-tickets/types';
 import { formatPhone } from '@/hooks/format-phone-no';
 import { CustomerApi } from '@/modules/customer/api';
 import { toMySQLDateTime } from '@/hooks/sql-date-time';
+import { Combobox } from '@/components/shared/combobox';
 
 type DispatchFormValues = z.infer<typeof dispatchInvoiceScheme>
 
@@ -44,6 +45,7 @@ function CreateDispatchandInvoice() {
         dispatch_quantity: "",
         dispatch_bundles_qty: "",
         dispatch_description: "",
+        customer_id: "",
     }
 
     const form = useForm<DispatchFormValues>({
@@ -79,7 +81,7 @@ function CreateDispatchandInvoice() {
         try {
             setIsLoading(true);
             const payload: CREATE_DISPATCH = {
-                customer_id: data.customer_phone ?? "", // Assuming customer_phone as id for now or change based on actual mapping
+                customer_id: data.customer_id ?? "",
                 job_id: data.job_id,
                 dispatch_note: data.dispatch_note ?? "",
                 dispatch_date: toMySQLDateTime(new Date("2025-01-05")),
@@ -139,6 +141,7 @@ function CreateDispatchandInvoice() {
                 const response = await CustomerApi.getById(customerId);
                 if (response.status === 200) {
                     const customer = response.data;
+                    form.setValue("customer_id", String(customer.customer_id));
                     form.setValue("customer_name", customer.company_name ?? "");
                     form.setValue("customer_phone", customer.phone ?? "");
                     form.setValue("customer_address", customer.address ?? "");
@@ -189,18 +192,13 @@ function CreateDispatchandInvoice() {
                                 {renderFormField("job_id", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Job ID</FormLabel>
-                                        <FormControl>
-                                            <Select onValueChange={field.onChange} value={field.value ? String(field.value) : ""}>
-                                                <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select a Job Ticket" /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    {JobData.map((job) => (
-                                                        <SelectItem key={job.job_id} value={String(job.job_id)}>
-                                                            {`Job-${job.job_id} (${job.job_name})`}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </FormControl>
+                                        <Combobox
+                                            items={JobData.map(job => ({ value: String(job.job_id), label: `Job-${job.job_id} (${job.job_name})` }))}
+                                            value={field.value ? String(field.value) : ""}
+                                            onValueChange={field.onChange}
+                                            placeholder="Select a Job Ticket"
+                                            searchPlaceholder="Search job..."
+                                        />
                                         <FormMessage />
                                     </FormItem>
                                 ))}

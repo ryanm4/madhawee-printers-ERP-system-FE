@@ -6,8 +6,9 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ColumnDef } from "@tanstack/react-table"
-import { MoreHorizontal, PencilIcon, TrashIcon } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal, PencilIcon, TrashIcon } from "lucide-react"
 import { ALL_DISPATCH } from "@/modules/dispatch-invoice/types"
+import { Badge } from "@/components/ui/badge"
 
 interface DispatchTableActions {
     onEdit: (id: string | number) => void
@@ -19,7 +20,17 @@ export const DispatchColumns = (
 ): ColumnDef<ALL_DISPATCH>[] => [
         {
             accessorKey: "dispatch_id",
-            header: "Dispatch ID",
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    >
+                        Dispatch ID
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                )
+            },
         },
         {
             accessorKey: "dispatch_note",
@@ -48,6 +59,19 @@ export const DispatchColumns = (
         {
             accessorKey: "status",
             header: "Status",
+            cell: ({ row }) => {
+                const status = row.original.status
+                return (
+                    <Badge
+                        className={`uppercase ${status === "COMPLETED" ? "bg-green-100 text-green-800" :
+                            status === "PENDING" ? "bg-yellow-100 text-yellow-800" :
+                                "bg-gray-100 text-gray-800"
+                            } px-2 py-1 rounded-md text-sm font-medium`}
+                    >
+                        {status}
+                    </Badge>
+                )
+            },
         },
         {
             id: "actions",

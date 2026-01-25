@@ -3,19 +3,21 @@ import PageTitleWithBreadcrumb from '@/components/shared/page-title-with-breadcr
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { inventoryApi } from '@/modules/inventory/api'
+import { AlertDeleteDialog } from '@/components/shared/delete_popup'
 import { PlusIcon, Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
 import { DataTable } from './_components/inventory_table'
 import { inventoryColumns } from './_components/inventory_columns'
 import { GET_ALL_INVENTORY } from '@/modules/inventory/types'
-import { AlertDeleteDialog } from '@/components/shared/delete_popup'
 
 function InventoryManagement() {
     const router = useRouter()
     const [data, setData] = useState<GET_ALL_INVENTORY[]>([]);
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+
+    const [search, setSearch] = useState("")
 
     useEffect(() => {
         fetchData();
@@ -80,6 +82,8 @@ function InventoryManagement() {
                             type="search"
                             placeholder="Item Name"
                             className="w-full pl-8"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
 
@@ -93,6 +97,8 @@ function InventoryManagement() {
                 <DataTable
                     columns={columns}
                     data={data}
+                    searchValue={search}
+                    searchColumn="item_name"
                 />
             </div>
 

@@ -144,7 +144,7 @@ function ViewCustomerRelationship() {
 
     const supplierType = form.watch("customer_type");
     useEffect(() => {
-        if (supplierType === "CUSTOMER") {
+        if (supplierType === CustomerType.CUSTOMER) {
             form.setValue("creditPeriod", "");
             form.clearErrors("creditPeriod");
         }
@@ -181,7 +181,7 @@ function ViewCustomerRelationship() {
                                             <SelectContent>
                                                 {Object.values(CustomerType).map((customer) => (
                                                     <SelectItem key={customer} value={customer}>
-                                                        {customer}
+                                                        {customer.charAt(0).toUpperCase() + customer.slice(1).toLowerCase()}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -222,8 +222,8 @@ function ViewCustomerRelationship() {
                                     {renderFormField("creditPeriod", ({ field }) => (
                                         <FormItem className='w-full'>
                                             <FormLabel>Credit Period (For Suppliers)</FormLabel>
-                                            <FormControl><Input readOnly placeholder="Enter Credit Period" disabled={supplierType === "CUSTOMER"}
-                                                className={supplierType === "CUSTOMER" ? "bg-muted cursor-not-allowed" : ""}{...field} /></FormControl>
+                                            <FormControl><Input readOnly placeholder="Enter Credit Period" disabled={supplierType === CustomerType.CUSTOMER}
+                                                className={supplierType === CustomerType.CUSTOMER ? "bg-muted cursor-not-allowed" : ""}{...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     ))}

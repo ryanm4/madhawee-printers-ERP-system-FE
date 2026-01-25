@@ -26,6 +26,8 @@ import { QUOTATIONS } from '@/modules/quotations/types'
 import { quotationApi } from '@/modules/quotations/api'
 import { purchaseOrderApi } from '@/modules/purchase-order/api'
 import { toast } from 'sonner'
+import { CREATE_PURCHASE_ORDER, PURCHASE_ORDER } from '@/modules/purchase-order/types'
+import { Combobox } from '@/components/shared/combobox'
 
 
 type PurchaseOrderFormValues = z.infer<typeof purchaseOrderScheme>
@@ -38,7 +40,7 @@ function EditPurchaseOrder() {
     const [quotationList, setQuotationList] = useState<QUOTATIONS[]>([]);
     const [loading, setLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
+    const id = params.id as string;
     useEffect(() => {
         getCustomerList();
         getQuotationList();
@@ -69,6 +71,7 @@ function EditPurchaseOrder() {
         }
     }
 
+
     const baseDefaultValues: PurchaseOrderFormValues = {
         customer: "",
         customerAddress: "",
@@ -94,25 +97,57 @@ function EditPurchaseOrder() {
     })
 
 
+
+
     async function onSubmit(data: PurchaseOrderFormValues) {
         try {
             setIsSubmitting(true);
-            console.log("Updating PO Data:", data)
+            console.log("Submitting PO Data:", data)
 
-            // TODO: Call purchaseOrderApi.update with params.id and transformed data
-            // const response = await purchaseOrderApi.update(params.id as string, payload)
+            const poTypeMap: Record<PurchaseOrderType, number> = {
+                [PurchaseOrderType.TIEP]: 1,
+                [PurchaseOrderType.NON_TIEP]: 2,
+                [PurchaseOrderType.MP]: 3,
+            };
+            const formatDate = (date: Date) => {
+                return date.toISOString().split('T')[0]; // "YYYY-MM-DD" format
+            };
 
-            toast.success("Purchase Order Updated", {
-                description: `Purchase Order ${data.purchaseOrderNo} has been updated successfully.`,
+            const payload: CREATE_PURCHASE_ORDER = {
+                quote_id: data.quotationId ? parseInt(data.quotationId) : 0,
+                customer_id: data.customer ? parseInt(data.customer) : 0,
+                po_type_id: poTypeMap[data.purchaseOrderType] || 1,
+                batch_ref: data.batchRef,
+                po_date: data.poDate instanceof Date ? formatDate(data.poDate) : data.poDate,
+                TC_E_PR_No: data.tceprNo,
+                created_by: "admin", // TODO: Get from auth context
+                updated_by: "admin", // TODO: Get from auth context
+                status: "PENDING",
+                customer_po: data.purchaseOrderNo,
+                po_items: data.itemDetails.map((item: any) => ({
+                    item_code: item.itemCode,
+                    description: item.description,
+                    quantity: String(item.quantity),
+                    uom: item.unit,
+                    price: String(item.price),
+                })),
+            };
+
+            const response = await purchaseOrderApi.update(Number(id), payload)
+
+            toast.success("Purchase Order Created", {
+                description: `Purchase Order ${data.purchaseOrderNo} has been created successfully.`,
             });
 
             form.reset(baseDefaultValues)
             form.clearErrors()
+
+            // Navigate to purchase order list
             router.push("/purchase-order")
         } catch (error) {
-            console.error("Failed to update PO:", error)
-            toast.error("Failed to Update Purchase Order", {
-                description: "An error occurred while updating the purchase order. Please try again.",
+            console.error("Failed to submit PO:", error)
+            toast.error("Failed to Create Purchase Order", {
+                description: "An error occurred while creating the purchase order. Please try again.",
             });
         } finally {
             setIsSubmitting(false);
@@ -131,6 +166,47 @@ function EditPurchaseOrder() {
             render={render}
         />
     );
+
+    useEffect(() => {
+        const fetchPurchaseOrder = async () => {
+            try {
+                setLoading(true);
+                const response = await purchaseOrderApi.getById(id);
+                if (response.status === 200) {
+                    const poData = response.data;
+
+                    form.reset({
+                        customer: String(poData.customer.customer_id),
+                        customerPhone: poData.customer.phone,
+                        customerAddress: poData.customer.address,
+                        customerEmail: poData.customer.email,
+                        purchaseOrderNo: String(poData.po_id), // Assuming po_id maps to purchaseOrderNo or similar
+                        quotationId: String(poData.quote_id),
+                        tceprNo: poData.TC_E_PR_No,
+                        purchaseOrderType: poData.po_type_id as PurchaseOrderType,
+                        batchRef: poData.batch_ref,
+                        poDate: new Date(poData.po_date),
+                        itemDetails: poData.po_items.map(item => ({
+                            itemCode: item.item_code,
+                            description: item.description,
+                            quantity: item.quantity,
+                            unit: item.uom,
+                            price: item.price
+                        }))
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to fetch purchase order:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (id) {
+            fetchPurchaseOrder();
+        }
+    }, [id, form]);
+
 
 
     return (
@@ -174,8 +250,9 @@ function EditPurchaseOrder() {
                                 {renderFormField("customer", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Customer</FormLabel>
-                                        <Select
-                                            value={field.value}
+                                        <Combobox
+                                            items={customer.map(c => ({ value: String(c.customer_id), label: c.company_name }))}
+                                            value={field.value || ""}
                                             onValueChange={(value) => {
                                                 field.onChange(value)
 
@@ -189,19 +266,9 @@ function EditPurchaseOrder() {
                                                     form.setValue('customerEmail', selectedCustomer.email)
                                                 }
                                             }}
-                                        >
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Select Customer" />
-                                            </SelectTrigger>
-
-                                            <SelectContent>
-                                                {customer.map((cust) => (
-                                                    <SelectItem key={cust.customer_id} value={String(cust.customer_id)}>
-                                                        {cust.company_name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                            placeholder="Select Customer"
+                                            searchPlaceholder="Search customer..."
+                                        />
                                         <FormMessage />
                                     </FormItem>
                                 ))}
@@ -248,16 +315,13 @@ function EditPurchaseOrder() {
                                 {renderFormField("quotationId", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Quotation No</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select a Quotation" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                {quotationList.map((quote: QUOTATIONS, index: number) => (
-                                                    <SelectItem key={quote.quote_id || index} value={quote.quote_id}>
-                                                        {quote.quote_id}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <Combobox
+                                            items={quotationList.map(quote => ({ value: String(quote.quote_id), label: String(quote.quote_id) }))}
+                                            value={field.value || ""}
+                                            onValueChange={field.onChange}
+                                            placeholder="Select a Quotation"
+                                            searchPlaceholder="Search quotation..."
+                                        />
                                         <FormMessage />
                                     </FormItem>
                                 ))}

@@ -6,8 +6,9 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ColumnDef } from "@tanstack/react-table"
-import { MoreHorizontal, PencilIcon, TrashIcon } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal, PencilIcon, TrashIcon } from "lucide-react"
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types"
+import { Badge } from "@/components/ui/badge"
 
 interface InventoryTableActions {
     onEdit: (id: number) => void
@@ -19,7 +20,17 @@ export const inventoryColumns = (
 ): ColumnDef<GET_ALL_INVENTORY>[] => [
         {
             accessorKey: "item_id",
-            header: "Item ID",
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    >
+                        Item ID
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                )
+            },
         },
         {
             accessorKey: "item_category",
@@ -52,6 +63,19 @@ export const inventoryColumns = (
         {
             accessorKey: "status",
             header: "Status",
+            cell: ({ row }) => {
+                const status = row.original.status
+                return (
+                    <Badge
+                        className={`uppercase ${status === "IN_STOCK" ? "bg-green-100 text-green-800" :
+                            status === "LOW_STOCK" ? "bg-yellow-100 text-yellow-800" :
+                                "bg-red-100 text-red-800"
+                            } px-2 py-1 rounded-md text-sm font-medium`}
+                    >
+                        {status}
+                    </Badge>
+                )
+            },
         },
         {
             id: "actions",
