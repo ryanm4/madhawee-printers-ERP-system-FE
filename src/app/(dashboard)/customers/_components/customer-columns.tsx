@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { CUSTOMER } from "@/modules/customer/types"
 import { ColumnDef } from "@tanstack/react-table"
-import { EyeIcon, MoreHorizontal, PencilIcon, TrashIcon } from "lucide-react"
+import { ArrowUpDown, EyeIcon, MoreHorizontal, PencilIcon, TrashIcon } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
@@ -14,13 +15,29 @@ interface CustomerTableActions {
     onView: (id: number) => void
 }
 
+const formatPhone = (phone: string) => {
+    if (!phone) return "-"
+
+
+    return phone.replace(/^0(\d{2})(\d{3})(\d{4})$/, "+94 $1 $2 $3")
+}
 
 export const customerColumns = (
     actions: CustomerTableActions
 ): ColumnDef<CUSTOMER>[] => [
         {
             accessorKey: "customer_id",
-            header: "Customer ID",
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    >
+                        Customer ID
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                )
+            },
         },
         {
             accessorKey: "company_name",
@@ -37,10 +54,28 @@ export const customerColumns = (
         {
             accessorKey: "phone",
             header: "Phone",
+            cell: ({ row }) => {
+                const phone = row.original.phone
+                return formatPhone(phone)
+            },
         },
+
         {
             accessorKey: "status",
             header: "Status",
+            cell: ({ row }) => {
+                const status = row.original.status
+                return (
+                    <Badge
+                        className={`uppercase ${status === "ACTIVE" ? "bg-green-100 text-green-800" :
+                            status === "INACTIVE" ? "bg-red-100 text-red-800" :
+                                "bg-gray-100 text-gray-800"
+                            } px-2 py-1 rounded-md text-sm font-medium`}
+                    >
+                        {status || "N/A"}
+                    </Badge>
+                )
+            },
         },
         {
             id: "actions",

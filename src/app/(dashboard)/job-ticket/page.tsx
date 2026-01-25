@@ -6,9 +6,10 @@ import { PlusIcon, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { DataTable } from "./_components/job-ticket-table";
-import { columns, JobTicket, jobTicketColumns } from "./_components/job-ticket-columns";
+import { jobTicketColumns } from "./_components/job-ticket-columns";
 import { ALL_TICKETS } from "@/modules/job-tickets/types";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
+import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 
 
 
@@ -17,6 +18,7 @@ function JobTicketComponent() {
     const [data, setData] = useState<ALL_TICKETS[]>([])
     const [isLoading, setIsLoading] = useState(false)
     const [deleteId, setDeleteId] = useState<number | null>(null);
+    const [search, setSearch] = useState("")
 
     useEffect(() => {
         fetchData();
@@ -48,36 +50,65 @@ function JobTicketComponent() {
             router.push(`/job-ticket/${id}`)
         }
     })
+
+    const handleDelete = async () => {
+        if (deleteId === null) return;
+
+        try {
+            setIsLoading(true);
+            await jobTicketsApi.delete(deleteId);
+
+
+            await fetchData();
+
+        } catch (error) {
+            console.error("Failed to delete inventory item");
+        } finally {
+            setIsLoading(false);
+            setDeleteId(null); // close popup
+        }
+    };
     return (
-        <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-            <PageTitleWithBreadcrumb
-                title="Job Ticket Management"
-                breadcrumbs={[
-                    { title: "Dashboard", href: "/dashboard" }
-                ]}
-            />
-            <div className="flex flex-row justify-end gap-[24px]">
-                <div className="relative w-[320px]">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        type="search"
-                        placeholder="Job Number"
-                        className="w-full pl-8"
-                    />
+        <>
+            <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+                <PageTitleWithBreadcrumb
+                    title="Job Ticket Management"
+                    breadcrumbs={[
+                        { title: "Dashboard", href: "/dashboard" }
+                    ]}
+                />
+                <div className="flex flex-row justify-end gap-[24px]">
+                    <div className="relative w-[320px]">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            placeholder="Job Number"
+                            className="w-full pl-8"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+
+
+
+
+                    <Button onClick={() => router.push("/job-ticket/create")}>
+                        <PlusIcon /> Create New
+                    </Button>
                 </div>
-
-
-
-
-                <Button onClick={() => router.push("/job-ticket/create")}>
-                    <PlusIcon /> Create New
-                </Button>
+                <DataTable
+                    columns={columns}
+                    data={data}
+                    searchValue={search}
+                    searchColumn="job_id"
+                />
             </div>
-            <DataTable
-                columns={columns}
-                data={data}
+            <AlertDeleteDialog
+                isOpen={deleteId !== null}
+                onClose={() => setDeleteId(null)}
+                handleSubmit={handleDelete}
             />
-        </div>
+        </>
     );
 }
 

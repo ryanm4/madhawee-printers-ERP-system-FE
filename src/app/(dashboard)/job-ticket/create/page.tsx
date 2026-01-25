@@ -36,7 +36,15 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { CUSTOMER } from "@/modules/customer/types"
 import { CustomerApi } from "@/modules/customer/api"
-import { INK_STATUS, PLATES_STATUS } from "@/config/enum"
+import { COATING_TYPES, INK_STATUS, PAPER_TYPES, PLATES_STATUS, PRODUCT_TYPES } from "@/config/enum"
+import { PaperTypeCombobox } from "../_components/paper-type-combobox"
+import { Combobox } from "@/components/shared/combobox"
+import { PURCHASE_ORDER, PURCHASE_ORDER_ID } from "@/modules/purchase-order/types"
+import { purchaseOrderApi } from "@/modules/purchase-order/api"
+import { toMySQLDateTime } from "@/hooks/sql-date-time"
+import { CREATE_TICKETS } from "@/modules/job-tickets/types"
+import { toast } from "sonner"
+import { jobTicketsApi } from "@/modules/job-tickets/api"
 
 type JobTicketFormValues = z.infer<typeof jobTicketSchema>
 
@@ -45,6 +53,10 @@ function CreateJobTicket() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [customerData, setCustomerData] = useState<CUSTOMER[]>([])
+    const [purchaseOrderData, setPurchaseOrderData] = useState<PURCHASE_ORDER[]>([]);
+    const [selectedPoDetails, setSelectedPoDetails] = useState<PURCHASE_ORDER_ID | null>(null);
+    const [fetchingDetails, setFetchingDetails] = useState(false);
+
     const baseDefaultValues = {
         poNumber: "",
         item: "",
@@ -54,6 +66,7 @@ function CreateJobTicket() {
         customer: "",
         jobName: "",
         productType: "",
+        completed_qty: "",
         quantity: "",
         wastage: "",
         packingDate: undefined,
@@ -135,11 +148,125 @@ function CreateJobTicket() {
         return Math.round(bytes / Math.pow(k, i) * 100) / 100 + sizes[i]
     }
 
-    function onSubmit(data: JobTicketFormValues) {
-        console.log("Submitting Job Ticket:", data)
-        console.log(form.formState.errors)
+    async function onSubmit(data: JobTicketFormValues) {
+        try {
+            setIsLoading(true)
+            const payload: CREATE_TICKETS = {
+                po_id: data.poNumber ? Number(data.poNumber) : undefined,
+                item_code: data.item,
+                job_number: data.jobNumber,
+                order_received_date: data.orderReceivedDate ? toMySQLDateTime(data.orderReceivedDate) : undefined,
+                job_open_date: data.jobOpenDate ? toMySQLDateTime(data.jobOpenDate) : undefined,
+                customer_id: data.customer,
+                job_name: data.jobName,
+                product_type: data.productType,
+                quantity: data.quantity ? Number(data.quantity) : undefined,
+                completed_qty: data.completed_qty ? Number(data.completed_qty) : undefined,
+                wastage: data.wastage,
+                packing_date: data.packingDate ? toMySQLDateTime(data.packingDate) : undefined,
+                expiry_date: data.expiryDate ? toMySQLDateTime(data.expiryDate) : undefined,
+                tc_no: data.tcNo,
+                batch_ref: data.batchRef,
+                remarks: data.remarks,
+
+                old_plates_quantity: data.oldPlatesQuantity,
+                old_plates_status: data.oldPlatesStatus,
+                old_plates_remarks: data.oldPlatesRemarks,
+                new_plates_quantity: data.newPlatesQuantity,
+                new_plates_status: data.newPlatesStatus,
+                new_plates_remarks: data.newPlatesRemarks,
+
+                raw_materials: data.rawMaterials,
+                inks: data.inks,
+                paper_types: data.paperTypes?.map(p => ({
+                    ...p,
+                    delivery_date: p.delivery_date ? toMySQLDateTime(p.delivery_date) : undefined
+                })),
+
+                status: "PENDING",
+                create_by: "Admin",
+                created_on: new Date(),
+            }
+
+            const response = await jobTicketsApi.create(payload)
+            console.log(response)
+
+            toast.success("Job Ticket Created Successfully")
+
+            setIsLoading(false)
+        } catch (error) {
+            console.error("Failed to submit job ticket:", error)
+            toast.error("Failed to create job ticket")
+        } finally {
+            setIsLoading(false)
+        }
 
     }
+
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const fetchData = async () => {
+        try {
+            setIsLoading(true);
+            const [poResponse, customerResponse] = await Promise.all([
+                purchaseOrderApi.getAll(),
+                CustomerApi.getAll()
+            ]);
+
+            setPurchaseOrderData(poResponse.data);
+            setCustomerData(customerResponse.data);
+        } catch (error) {
+            console.error('Failed to fetch data', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const selectedPoId = form.watch("poNumber");
+    const selectedPoItems = selectedPoDetails?.po_items ?? [];
+
+    useEffect(() => {
+        const fetchPoDetails = async () => {
+            if (!selectedPoId) {
+                setSelectedPoDetails(null);
+                return;
+            }
+            try {
+                setFetchingDetails(true);
+                const response = await purchaseOrderApi.getById(selectedPoId);
+                if (response.status === 200) {
+                    const po = response.data;
+                    console.log("po", po)
+                    setSelectedPoDetails(po);
+
+                    if (po.customer) {
+                        // Find the customer in our list to ensure we have the right value
+                        // or just use the ID if we decide to use IDs as values
+                        form.setValue("customer", String(po.customer.customer_id));
+                    }
+                    if (po.po_date) {
+                        form.setValue("orderReceivedDate", new Date(po.po_date));
+                    }
+                    form.setValue("tcNo", po.TC_E_PR_No);
+                    form.setValue("batchRef", po.batch_ref);
+                }
+            } catch (err) {
+                console.error("Error fetching PO details", err);
+            } finally {
+                setFetchingDetails(false);
+            }
+        };
+
+        fetchPoDetails();
+        form.setValue("item", "");
+    }, [selectedPoId, form]);
+
+
+
+
 
 
     const renderFormField = <TName extends FieldPath<JobTicketFormValues>>(
@@ -206,26 +333,38 @@ function CreateJobTicket() {
                                 {renderFormField("poNumber", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>PO Number</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select PO Number" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="po1">PO-001</SelectItem>
-                                                <SelectItem value="po2">PO-002</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <Combobox
+                                            items={purchaseOrderData.map(po => ({ value: String(po.po_id), label: String(po.po_id) }))}
+                                            value={field.value || ""}
+                                            onValueChange={(value) => {
+                                                field.onChange(value);
+                                                form.setValue("item", "");
+                                            }}
+                                            placeholder="Select PO Number"
+                                            searchPlaceholder="Search PO..."
+                                        />
                                         <FormMessage />
                                     </FormItem>
                                 ))}
                                 {renderFormField("item", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Item</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Item" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="item1">Item 1</SelectItem>
-                                                <SelectItem value="item2">Item 2</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <Combobox
+                                            items={selectedPoItems.map((item: any) => ({ value: item.item_code, label: item.item_code }))}
+                                            value={field.value || ""}
+                                            onValueChange={(value) => {
+                                                field.onChange(value);
+                                                const selectedItem = selectedPoItems.find((i: any) => i.item_code === value);
+                                                if (selectedItem) {
+                                                    form.setValue("quantity", String(selectedItem.quantity));
+                                                    form.setValue("jobName", selectedItem.description);
+                                                }
+                                            }}
+                                            placeholder={fetchingDetails ? "Loading items..." : selectedPoItems.length > 0 ? "Select Item" : "No items found"}
+                                            disabled={!selectedPoId || fetchingDetails}
+                                            searchPlaceholder="Search item..."
+                                            emptyMessage={fetchingDetails ? "Loading..." : "No items found in this PO"}
+                                        />
                                         <FormMessage />
                                     </FormItem>
                                 ))}
@@ -266,27 +405,15 @@ function CreateJobTicket() {
                                         <FormLabel>Job Open Date</FormLabel>
                                         <Popover>
                                             <PopoverTrigger asChild>
-                                                <Button
-                                                    variant="outline"
-                                                    className={cn(
-                                                        "w-full flex items-center justify-between px-3 py-2 text-left font-normal",
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    {field.value ? format(field.value, "PPP") : "Select date"}
-                                                    <CalendarIcon className="h-4 w-4 opacity-50" />
-                                                </Button>
+                                                <FormControl>
+                                                    <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                        {field.value ? format(field.value, "PPP") : format(new Date(), "PPP")}
+                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                    </Button>
+                                                </FormControl>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar
-                                                    mode="single"
-                                                    selected={field.value}
-
-                                                    captionLayout="dropdown"
-
-                                                    onSelect={field.onChange}
-
-                                                />
+                                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus />
                                             </PopoverContent>
                                         </Popover>
                                         <FormMessage />
@@ -295,16 +422,16 @@ function CreateJobTicket() {
                                 {renderFormField("customer", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Customer</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Customer" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                {customerData.map((customer) => (
-                                                    <SelectItem key={customer.customer_id} value={String(customer.customer_id)}>
-                                                        {`Job-${customer.customer_id} (${customer.company_name})`}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <Combobox
+                                            items={customerData.map((customer) => ({
+                                                value: String(customer.customer_id),
+                                                label: `Job-${customer.customer_id} (${customer.company_name})`
+                                            }))}
+                                            value={field.value || ""}
+                                            onValueChange={field.onChange}
+                                            placeholder="Select Customer"
+                                            searchPlaceholder="Search customer..."
+                                        />
                                         <FormMessage />
                                     </FormItem>
                                 ))}
@@ -317,15 +444,18 @@ function CreateJobTicket() {
                                 ))}
                             </div>
                             {/* Product Details */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 {renderFormField("productType", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Product Type <span className="text-red-500">*</span></FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Product Type" /></SelectTrigger></FormControl>
                                             <SelectContent>
-                                                <SelectItem value="pt1">Product Type 1</SelectItem>
-                                                <SelectItem value="pt2">Product Type 2</SelectItem>
+                                                {Object.values(PRODUCT_TYPES).map((productType) => (
+                                                    <SelectItem key={productType} value={productType}>
+                                                        {productType}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
@@ -334,14 +464,21 @@ function CreateJobTicket() {
                                 {renderFormField("quantity", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Quantity <span className="text-red-500">*</span></FormLabel>
-                                        <FormControl><Input placeholder="Enter Quantity" {...field} /></FormControl>
+                                        <FormControl><Input type="number" placeholder="Enter Quantity" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                ))}
+                                {renderFormField("completed_qty", ({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Completed Quantity <span className="text-red-500">*</span></FormLabel>
+                                        <FormControl><Input type="number" placeholder="Enter Completed Quantity" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 ))}
                                 {renderFormField("wastage", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Wastage %</FormLabel>
-                                        <FormControl><Input placeholder="Enter Wastage" {...field} /></FormControl>
+                                        <FormControl><Input type="number" placeholder="Enter Wastage" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 ))}
@@ -354,13 +491,7 @@ function CreateJobTicket() {
                                             {renderFormField(`paperTypes.${index}.paper_type`, ({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Paper Type <span className="text-red-500">*</span></FormLabel>
-                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                        <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Paper Type" /></SelectTrigger></FormControl>
-                                                        <SelectContent>
-                                                            <SelectItem value="p1">Paper 1</SelectItem>
-                                                            <SelectItem value="p2">Paper 2</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
+                                                    <PaperTypeCombobox value={field.value} onChange={field.onChange} />
                                                     <FormMessage className="min-h-[20px]" />
                                                 </FormItem>
                                             ))}
@@ -370,8 +501,11 @@ function CreateJobTicket() {
                                                     <Select onValueChange={field.onChange} value={field.value}>
                                                         <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Coating" /></SelectTrigger></FormControl>
                                                         <SelectContent>
-                                                            <SelectItem value="c1">Coating 1</SelectItem>
-                                                            <SelectItem value="c2">Coating 2</SelectItem>
+                                                            {Object.values(COATING_TYPES).map((coating) => (
+                                                                <SelectItem key={coating} value={coating}>
+                                                                    {coating}
+                                                                </SelectItem>
+                                                            ))}
                                                         </SelectContent>
                                                     </Select>
                                                     <FormMessage className="min-h-[20px]" />
@@ -495,7 +629,7 @@ function CreateJobTicket() {
                                     {renderFormField("oldPlatesQuantity", ({ field }) => (
                                         <FormItem>
                                             <FormLabel>Old Plates Quantity</FormLabel>
-                                            <FormControl><Input placeholder="Quantity" {...field} /></FormControl>
+                                            <FormControl><Input type="number" placeholder="Quantity" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     ))}
@@ -528,7 +662,7 @@ function CreateJobTicket() {
                                     {renderFormField("newPlatesQuantity", ({ field }) => (
                                         <FormItem>
                                             <FormLabel>New Plates Quantity</FormLabel>
-                                            <FormControl><Input placeholder="Quantity" {...field} /></FormControl>
+                                            <FormControl><Input type="number" placeholder="Quantity" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     ))}
@@ -579,7 +713,7 @@ function CreateJobTicket() {
                                             {renderFormField(`rawMaterials.${index}.quantity`, ({ field }) => (
                                                 <FormItem>
                                                     <FormLabel className={index !== 0 ? "sr-only" : ""}>Quantity</FormLabel>
-                                                    <FormControl><Input placeholder="Enter Quantity" {...field} /></FormControl>
+                                                    <FormControl><Input type="number" placeholder="Enter Quantity" {...field} /></FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             ))}
@@ -646,7 +780,7 @@ function CreateJobTicket() {
                                             {renderFormField(`inks.${index}.quantity`, ({ field }) => (
                                                 <FormItem>
                                                     <FormLabel className={index !== 0 ? "sr-only" : ""}>Quantity</FormLabel>
-                                                    <FormControl><Input placeholder="Enter Quantity" {...field} /></FormControl>
+                                                    <FormControl><Input type="number" placeholder="Enter Quantity" {...field} /></FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             ))}

@@ -3,14 +3,14 @@ import { API_ENDPOINTS } from "@/config/api-endpoints";
 import { NextRequest, NextResponse } from "next/server";
 
 
-// GET single purchase order by ID
+// GET single Quotations by ID
 export async function GET(
     request: NextRequest,
     context: { params: Promise<{ id: string }> }
 ) {
     try {
         const { id } = await context.params;
-        const apiUrl = API_ENDPOINTS.PURCHASE_ORDERS.GET(id);
+        const apiUrl = API_ENDPOINTS.QUOTATIONS.GET(id);
 
         const response = await fetch(apiUrl, {
             method: "GET",
@@ -31,7 +31,7 @@ export async function GET(
         const data = await response.json();
         return NextResponse.json(data.data || data);
     } catch (error) {
-        console.error("Purchase Order GET by ID API Error:", error);
+        console.error("Quotations GET by ID API Error:", error);
         return NextResponse.json(
             { message: "Internal server error" },
             { status: 500 }
@@ -39,7 +39,7 @@ export async function GET(
     }
 }
 
-// PUT - Update purchase order
+// PUT - Update Quotations
 export async function PUT(
     request: NextRequest,
     context: { params: Promise<{ id: string }> }
@@ -47,7 +47,7 @@ export async function PUT(
     try {
         const { id } = await context.params;
         const body = await request.json();
-        const apiUrl = API_ENDPOINTS.PURCHASE_ORDERS.UPDATE(id);
+        const apiUrl = API_ENDPOINTS.QUOTATIONS.UPDATE(id);
 
         const response = await fetch(apiUrl, {
             method: "PUT",
@@ -69,7 +69,7 @@ export async function PUT(
         const data = await response.json();
         return NextResponse.json(data.data || data);
     } catch (error) {
-        console.error("Purchase Order UPDATE API Error:", error);
+        console.error("Quotations UPDATE API Error:", error);
         return NextResponse.json(
             { message: "Internal server error" },
             { status: 500 }
@@ -77,14 +77,14 @@ export async function PUT(
     }
 }
 
-// DELETE - Delete purchase order
+// DELETE - Delete Quotations
 export async function DELETE(
     request: NextRequest,
     context: { params: Promise<{ id: string }> }
 ) {
     try {
         const { id } = await context.params;
-        const apiUrl = API_ENDPOINTS.PURCHASE_ORDERS.DELETE(id);
+        const apiUrl = API_ENDPOINTS.QUOTATIONS.DELETE(id);
 
         const response = await fetch(apiUrl, {
             method: "DELETE",
@@ -105,7 +105,7 @@ export async function DELETE(
 
         return NextResponse.json({ message: "Deleted successfully" });
     } catch (error) {
-        console.error("Purchase Order DELETE API Error:", error);
+        console.error("Quotations DELETE API Error:", error);
         return NextResponse.json(
             { message: "Internal server error" },
             { status: 500 }

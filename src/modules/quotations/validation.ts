@@ -1,0 +1,27 @@
+import * as z from "zod"
+export const quotationSchema = z.object({
+    customer_id: z.number(),
+    job_name: z.string(),
+    job_open_date: z.string(),
+    product_type: z.string(),
+    paper_type_id: z.string(),
+    quantity: z.number(),
+    coating: z.string(),
+    packing_date: z.string(),
+    expiry_date: z.string(),
+    description: z.string(),
+    artwork: z.string(),
+    remarks: z.string(),
+    status: z.string(),
+    completed_qty: z.number(),
+    wastage: z.string(),
+    materials: z.array(z.object({
+        item_id: z.number(),
+        material_type: z.string(),
+        material_name: z.string(),
+        material_description: z.string(),
+        quantity: z.number(),
+        status: z.string(),
+        remarks: z.string(),
+    })),
+})

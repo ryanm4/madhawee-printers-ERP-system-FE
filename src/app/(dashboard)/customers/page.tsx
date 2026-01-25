@@ -16,6 +16,7 @@ export default function CRMPage() {
     const [data, setData] = useState<CUSTOMER[]>([])
     const [isLoading, setIsLoading] = useState(false)
     const [deleteId, setDeleteId] = useState<number | null>(null);
+    const [search, setSearch] = useState("")
 
     useEffect(() => {
         fetchData();
@@ -82,6 +83,8 @@ export default function CRMPage() {
                             type="search"
                             placeholder="Customer"
                             className="w-full pl-8"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
 
@@ -95,6 +98,8 @@ export default function CRMPage() {
                 <DataTable
                     columns={columns}
                     data={data}
+                    searchValue={search}
+                    searchColumn="company_name"
                 />
             </div>
             <AlertDeleteDialog

@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { CalendarIcon } from 'lucide-react'
+import { CalendarIcon, Edit2, Loader2, PlusIcon, Trash2 } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
 import { format } from 'date-fns'
 import { PurchaseOrderType } from '@/config/enum'
@@ -24,6 +24,9 @@ import { CustomerApi } from '@/modules/customer/api'
 import { CUSTOMER } from '@/modules/customer/types'
 import { QUOTATIONS } from '@/modules/quotations/types'
 import { quotationApi } from '@/modules/quotations/api'
+import { purchaseOrderApi } from '@/modules/purchase-order/api'
+import { toast } from 'sonner'
+import { CREATE_PURCHASE_ORDER, PURCHASE_ORDER } from '@/modules/purchase-order/types'
 
 
 type PurchaseOrderFormValues = z.infer<typeof purchaseOrderScheme>
@@ -35,12 +38,8 @@ function ViewPurchaseOrder() {
     const [customer, setCustomer] = useState<CUSTOMER[]>([])
     const [quotationList, setQuotationList] = useState<QUOTATIONS[]>([]);
     const [loading, setLoading] = useState(false);
-    const poTypeLabels: Record<PurchaseOrderType, string> = {
-        [PurchaseOrderType.TIEP]: "TIEP",
-        [PurchaseOrderType.NON_TIEP]: "NON-TIEP",
-        [PurchaseOrderType.MP]: "MP",
-    };
-
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const id = params.id as string;
     useEffect(() => {
         getCustomerList();
         getQuotationList();
@@ -71,21 +70,19 @@ function ViewPurchaseOrder() {
         }
     }
 
+
     const baseDefaultValues: PurchaseOrderFormValues = {
-        customer: "po1",
-        customerPhone: "011-2345678",
-        customerAddress: "123 SPA Street, Colombo, Sri Lanka",
-        customerEmail: "sydney.moore@korenspa.com",
-        purchaseOrderNo: "PO-212201",
-        quotationId: "po1",
-        tceprNo: "TC-9988",
+        customer: "",
+        customerAddress: "",
+        customerEmail: "",
+        customerPhone: "",
+        purchaseOrderNo: "",
+        quotationId: "",
+        tceprNo: "",
         purchaseOrderType: PurchaseOrderType.TIEP,
-        batchRef: "BATCH-001",
+        batchRef: "",
         poDate: new Date(),
-        itemDetails: [
-            { itemCode: "ITM-001", description: "Standard Box", quantity: 1000, unit: "pcs", price: 15.50 },
-            { itemCode: "ITM-002", description: "Large Box", quantity: 500, unit: "pcs", price: 25.00 }
-        ]
+        itemDetails: [{ itemCode: "", description: "", quantity: 0, unit: "", price: 0 }]
     }
 
     const form = useForm<PurchaseOrderFormValues>({
@@ -93,10 +90,68 @@ function ViewPurchaseOrder() {
         defaultValues: baseDefaultValues,
     })
 
-    const { fields: itemDetailsFields } = useFieldArray({
+    const { fields: itemDetailsFields, append: appendItemDetails, remove: removeItemDetails } = useFieldArray({
         control: form.control,
         name: "itemDetails",
     })
+
+
+
+
+    async function onSubmit(data: PurchaseOrderFormValues) {
+        try {
+            setIsSubmitting(true);
+            console.log("Submitting PO Data:", data)
+
+            const poTypeMap: Record<PurchaseOrderType, number> = {
+                [PurchaseOrderType.TIEP]: 1,
+                [PurchaseOrderType.NON_TIEP]: 2,
+                [PurchaseOrderType.MP]: 3,
+            };
+            const formatDate = (date: Date) => {
+                return date.toISOString().split('T')[0]; // "YYYY-MM-DD" format
+            };
+
+            const payload: CREATE_PURCHASE_ORDER = {
+                quote_id: data.quotationId ? parseInt(data.quotationId) : 0,
+                customer_id: data.customer ? parseInt(data.customer) : 0,
+                po_type_id: poTypeMap[data.purchaseOrderType] || 1,
+                batch_ref: data.batchRef,
+                po_date: data.poDate instanceof Date ? formatDate(data.poDate) : data.poDate,
+                TC_E_PR_No: data.tceprNo,
+                created_by: "admin", // TODO: Get from auth context
+                updated_by: "admin", // TODO: Get from auth context
+                status: "PENDING",
+                customer_po: data.purchaseOrderNo,
+                po_items: data.itemDetails.map((item: any) => ({
+                    item_code: item.itemCode,
+                    description: item.description,
+                    quantity: String(item.quantity),
+                    uom: item.unit,
+                    price: String(item.price),
+                })),
+            };
+
+            const response = await purchaseOrderApi.update(Number(id), payload)
+
+            toast.success("Purchase Order Created", {
+                description: `Purchase Order ${data.purchaseOrderNo} has been created successfully.`,
+            });
+
+            form.reset(baseDefaultValues)
+            form.clearErrors()
+
+            // Navigate to purchase order list
+            router.push("/purchase-order")
+        } catch (error) {
+            console.error("Failed to submit PO:", error)
+            toast.error("Failed to Create Purchase Order", {
+                description: "An error occurred while creating the purchase order. Please try again.",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
 
 
     // Helper to render FormField with correct typing
@@ -111,11 +166,52 @@ function ViewPurchaseOrder() {
         />
     );
 
+    useEffect(() => {
+        const fetchPurchaseOrder = async () => {
+            try {
+                setLoading(true);
+                const response = await purchaseOrderApi.getById(id);
+                if (response.status === 200) {
+                    const poData = response.data;
+
+                    form.reset({
+                        customer: String(poData.customer.customer_id),
+                        customerPhone: poData.customer.phone,
+                        customerAddress: poData.customer.address,
+                        customerEmail: poData.customer.email,
+                        purchaseOrderNo: String(poData.po_id), // Assuming po_id maps to purchaseOrderNo or similar
+                        quotationId: String(poData.quote_id),
+                        tceprNo: poData.TC_E_PR_No,
+                        purchaseOrderType: poData.po_type_id as PurchaseOrderType,
+                        batchRef: poData.batch_ref,
+                        poDate: new Date(poData.po_date),
+                        itemDetails: poData.po_items.map(item => ({
+                            itemCode: item.item_code,
+                            description: item.description,
+                            quantity: item.quantity,
+                            unit: item.uom,
+                            price: item.price
+                        }))
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to fetch purchase order:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (id) {
+            fetchPurchaseOrder();
+        }
+    }, [id, form]);
+
+
 
     return (
         <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
             <PageTitleWithBreadcrumb
-                title="View Purchase Order Management"
+                title="View Purchase Order"
                 breadcrumbs={[
                     { title: "Dashboard", href: "/dashboard" },
                     { title: "Purchase Order Management", href: "/purchase-order" },
@@ -125,9 +221,9 @@ function ViewPurchaseOrder() {
 
 
             <Form {...form}>
-                <form className='space-y-6  pb-0'>
+                <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6  pb-0'>
                     <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-                        <Button size="lg" variant="outline" type="button" onClick={() => router.push("/purchase-order")}>Back to Purchase Order</Button>
+                        <Button size="lg" variant="outline" type="button" onClick={() => router.push("/purchase-order")}>Back to List</Button>
                     </div>
 
 
@@ -135,7 +231,7 @@ function ViewPurchaseOrder() {
                         <Card className={cn("w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
                             <CardHeader className="flex flex-col gap-[0.5px]">
                                 <h3 className="text-md font-medium mb-2">Customer</h3>
-                                <p className="text-xs text-muted-foreground mb-4">Customer details</p>
+                                <p className="text-xs text-muted-foreground mb-4">View customer details</p>
 
                             </CardHeader>
                             <CardContent className='flex flex-col gap-4'>
@@ -143,10 +239,16 @@ function ViewPurchaseOrder() {
                                 {renderFormField("customer", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Customer</FormLabel>
-                                        <Select value={field.value} disabled={true}>
-                                            <SelectTrigger className="w-full disabled:opacity-100 disabled:text-black disabled:cursor-default">
-                                                <SelectValue placeholder="Select Customer" />
-                                            </SelectTrigger>
+                                        <Select
+                                            value={field.value}
+                                            disabled={true}
+                                        >
+                                            <FormControl>
+                                                <SelectTrigger className="w-full disabled:opacity-100 disabled:text-black disabled:cursor-default">
+                                                    <SelectValue placeholder="Select Customer" />
+                                                </SelectTrigger>
+                                            </FormControl>
+
                                             <SelectContent>
                                                 {customer.map((cust) => (
                                                     <SelectItem key={cust.customer_id} value={String(cust.customer_id)}>
@@ -186,13 +288,13 @@ function ViewPurchaseOrder() {
                         <Card className={cn("w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
                             <CardHeader className="flex flex-col gap-[0.5px]">
                                 <h3 className="text-md font-medium mb-2">Purchase Order</h3>
-                                <p className="text-xs text-muted-foreground mb-4">Purchase order details</p>
+                                <p className="text-xs text-muted-foreground mb-4">View purchase order details</p>
 
                             </CardHeader>
                             <CardContent className='flex flex-col gap-4'>
                                 {renderFormField("purchaseOrderNo", ({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Purchase Order No</FormLabel>
+                                        <FormLabel>Purchase Order No <span className="text-red-500">*</span></FormLabel>
                                         <FormControl><Input placeholder="Enter Purchase Order No" {...field} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -205,7 +307,7 @@ function ViewPurchaseOrder() {
                                             <FormControl><SelectTrigger className="w-full disabled:opacity-100 disabled:text-black disabled:cursor-default"><SelectValue placeholder="Select a Quotation" /></SelectTrigger></FormControl>
                                             <SelectContent>
                                                 {quotationList.map((quote: QUOTATIONS, index: number) => (
-                                                    <SelectItem key={quote.quote_id || index} value={quote.quote_id}>
+                                                    <SelectItem key={quote.quote_id || index} value={String(quote.quote_id)}>
                                                         {quote.quote_id}
                                                     </SelectItem>
                                                 ))}
@@ -217,20 +319,31 @@ function ViewPurchaseOrder() {
 
 
                                 <div className='grid grid-cols-2 md:grid-cols-2 gap-4'>
-                                    {renderFormField("purchaseOrderType", ({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Purchase Order Type</FormLabel>
-                                            <RadioGroup value={String(field.value)} className="flex gap-4" disabled={true}>
-                                                {Object.values(PurchaseOrderType).filter(v => typeof v === 'number').map((type) => (
-                                                    <div key={type as number} className="flex items-center gap-2">
-                                                        <RadioGroupItem value={String(type)} id={String(type)} className="disabled:opacity-100" />
-                                                        <Label htmlFor={String(type)} className="disabled:opacity-100 disabled:text-black">{poTypeLabels[type as PurchaseOrderType]}</Label>
-                                                    </div>
-                                                ))}
-                                            </RadioGroup>
-                                            <FormMessage />
-                                        </FormItem>
-                                    ))}
+                                    {renderFormField("purchaseOrderType", ({ field }) => {
+                                        const poTypeLabels: Record<PurchaseOrderType, string> = {
+                                            [PurchaseOrderType.TIEP]: "TIEP",
+                                            [PurchaseOrderType.NON_TIEP]: "NON-TIEP",
+                                            [PurchaseOrderType.MP]: "MP",
+                                        };
+                                        return (
+                                            <FormItem>
+                                                <FormLabel>Purchase Order Type <span className="text-red-500">*</span></FormLabel>
+                                                <RadioGroup
+                                                    value={String(field.value)}
+                                                    className="flex gap-4"
+                                                    disabled={true}
+                                                >
+                                                    {Object.values(PurchaseOrderType).filter((v): v is PurchaseOrderType => typeof v === 'number').map((type) => (
+                                                        <div key={type} className="flex items-center gap-2">
+                                                            <RadioGroupItem value={String(type)} id={String(type)} className="disabled:opacity-100 text-black" />
+                                                            <Label htmlFor={String(type)} className="disabled:opacity-100 disabled:text-black disabled:cursor-default">{poTypeLabels[type]}</Label>
+                                                        </div>
+                                                    ))}
+                                                </RadioGroup>
+                                                <FormMessage />
+                                            </FormItem>
+                                        );
+                                    })}
                                     {renderFormField("tceprNo", ({ field }) => (
                                         <FormItem>
                                             <FormLabel>TC/E/PR/No</FormLabel>
@@ -249,7 +362,7 @@ function ViewPurchaseOrder() {
 
                                 {renderFormField("poDate", ({ field }) => (
                                     <FormItem>
-                                        <FormLabel>PO Date</FormLabel>
+                                        <FormLabel>PO Date <span className="text-red-500">*</span></FormLabel>
                                         <Popover>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
@@ -260,7 +373,7 @@ function ViewPurchaseOrder() {
                                                 </FormControl>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar mode="single" selected={field.value} captionLayout="dropdown" />
+                                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} captionLayout="dropdown" />
                                             </PopoverContent>
                                         </Popover>
                                         <FormMessage />
@@ -273,13 +386,16 @@ function ViewPurchaseOrder() {
                     <Card className={cn("w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
                         <CardHeader className="flex flex-col gap-[0.5px]">
                             <h3 className="text-md font-medium mb-2">Item Details</h3>
-                            <p className="text-xs text-muted-foreground mb-4">Item details for this purchase order</p>
+                            <p className="text-xs text-muted-foreground mb-4">View Item Details</p>
 
                         </CardHeader>
                         <CardContent className='flex flex-col gap-4'>
+                            <div className="flex justify-end hidden">
+                                <Button type="button" variant="secondary" onClick={() => appendItemDetails({ itemCode: "", description: "", quantity: 0, unit: "", price: 0 })}><PlusIcon />Add More</Button>
+                            </div>
                             <div>
                                 {itemDetailsFields.map((item, index) => (
-                                    <div key={item.id} className="grid grid-cols-1 gap-2 mb-2 items-start">
+                                    <div key={item.id} className="grid grid-cols-[1fr_auto] gap-2 mb-2 items-start">
                                         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1">
                                             {renderFormField(`itemDetails.${index}.itemCode`, ({ field }) => (
                                                 <FormItem>
@@ -290,32 +406,68 @@ function ViewPurchaseOrder() {
                                             ))}
                                             {renderFormField(`itemDetails.${index}.description`, ({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Description</FormLabel>
+                                                    <FormLabel>Description <span className="text-red-500">*</span></FormLabel>
                                                     <FormControl><Input placeholder="Enter Description" {...field} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             ))}
                                             {renderFormField(`itemDetails.${index}.quantity`, ({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Quantity</FormLabel>
-                                                    <FormControl><Input type="number" placeholder="Enter Quantity" value={field.value} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
+                                                    <FormLabel>Quantity <span className="text-red-500">*</span></FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            type="number"
+                                                            placeholder="Enter Quantity"
+                                                            value={field.value}
+                                                            onChange={(e) => field.onChange(Number(e.target.value))}
+                                                            onBlur={field.onBlur}
+                                                            name={field.name}
+                                                            ref={field.ref}
+                                                            disabled={true}
+                                                            className="disabled:opacity-100 disabled:text-black disabled:cursor-default"
+                                                        />
+                                                    </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             ))}
                                             {renderFormField(`itemDetails.${index}.unit`, ({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Unit</FormLabel>
+                                                    <FormLabel>Unit <span className="text-red-500">*</span></FormLabel>
                                                     <FormControl><Input placeholder="Enter Unit" {...field} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             ))}
                                             {renderFormField(`itemDetails.${index}.price`, ({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Price</FormLabel>
-                                                    <FormControl><Input type='number' placeholder="Enter Price" value={field.value} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
+                                                    <FormLabel>Price <span className="text-red-500">*</span></FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            type='number'
+                                                            placeholder="Enter Price"
+                                                            value={field.value}
+                                                            onChange={(e) => field.onChange(Number(e.target.value))}
+                                                            onBlur={field.onBlur}
+                                                            name={field.name}
+                                                            ref={field.ref}
+                                                            disabled={true}
+                                                            className="disabled:opacity-100 disabled:text-black disabled:cursor-default"
+                                                        />
+                                                    </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             ))}
+                                        </div>
+                                        <div className="flex space-x-2 items-start pt-5 hidden">
+                                            <Button type="button" variant="outline" size="icon" onClick={() => { }}><Edit2 className="h-4 w-4" /></Button>
+                                            <Button
+                                                type="button"
+                                                variant="destructive"
+                                                size="icon"
+                                                onClick={() => removeItemDetails(index)}
+                                                disabled={itemDetailsFields.length <= 1} // Disable if only one item
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
                                         </div>
                                     </div>
                                 ))}
