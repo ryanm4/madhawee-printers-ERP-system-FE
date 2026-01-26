@@ -99,6 +99,7 @@ export const purchaseOrderColumns = (
                             <DropdownMenuItem
                                 variant="destructive"
                                 onClick={() => actions.onDelete(po.po_id)}
+                                disabled={po.jobs && po.jobs.length > 0}
                             >
                                 <TrashIcon className="mr-2 h-4 w-4" />
                                 Delete PO

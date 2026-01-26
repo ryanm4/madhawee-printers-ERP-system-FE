@@ -30,6 +30,8 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+import { DataTablePagination } from "@/components/shared/data-table-pagination"
+
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[]
     data: TData[]
@@ -48,6 +50,10 @@ export function DataTable<TData, TValue>({
     const [globalFilter, setGlobalFilter] = useState("")
     const [columnVisibility, setColumnVisibility] =
         useState<VisibilityState>({})
+    const [pagination, setPagination] = useState({
+        pageIndex: 0,
+        pageSize: 10,
+    })
 
     // 🔗 Sync external search with global table filter
     useEffect(() => {
@@ -60,6 +66,7 @@ export function DataTable<TData, TValue>({
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,
         onGlobalFilterChange: setGlobalFilter,
+        onPaginationChange: setPagination,
         getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getSortedRowModel: getSortedRowModel(),
@@ -70,7 +77,8 @@ export function DataTable<TData, TValue>({
             sorting,
             columnFilters,
             globalFilter,
-            columnVisibility
+            columnVisibility,
+            pagination,
         },
     })
 
@@ -150,24 +158,7 @@ export function DataTable<TData, TValue>({
                 </Table>
             </div>
 
-            <div className="flex items-center justify-end space-x-2 py-4">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                >
-                    Previous
-                </Button>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                >
-                    Next
-                </Button>
-            </div>
+            <DataTablePagination table={table} key={`${pagination.pageIndex}-${pagination.pageSize}`} />
         </div>
     )
 }
