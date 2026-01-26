@@ -20,12 +20,27 @@ import {
 } from "@/components/ui/sidebar"
 import { LayoutDashboard, FileText, ShoppingCart, ClipboardCheck, Truck, Warehouse, Users, SquareUser, Settings } from "lucide-react"
 import { NavSecondary } from "./nav-secondary"
+import Image from "next/image"
+import company_logo from "@/assets/Images/company_logo.jpeg"
+
+const LIGHT_AVATAR_COLORS = [
+  "b3e5fc",
+  "c8e6c9",
+  "d1c4e9",
+  "ffe0b2",
+  "ffccbc",
+  "f0f4c3",
+  "bbdefb",
+  "e1bee7",
+]
 
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: "Chathupa",
+    email: "chathupa.d@gmail.com",
+    avatar: `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${encodeURIComponent(
+      "chathupa.d@gmail.com"
+    )}&backgroundColor=${LIGHT_AVATAR_COLORS.join(",")}`,
   },
   navMain: [
     {
@@ -75,23 +90,7 @@ const data = {
     },
   ],
 
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "#",
-      icon: IconSettings,
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: IconHelp,
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: IconSearch,
-    },
-  ],
+
 
 }
 
@@ -105,9 +104,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="#">
-                <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">Madhawee Printers</span>
+              <a href="/dashboard">
+                <div className="flex aspect-square size-8 items-center justify-center   bg-sidebar-primary text-sidebar-primary-foreground">
+                  <Image src={company_logo} alt="Madhawee Printers" width={32} height={32} className="object-contain" />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">Madhawee Printers</span>
+                  <span className="truncate text-xs">ERP System</span>
+                </div>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -115,7 +119,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

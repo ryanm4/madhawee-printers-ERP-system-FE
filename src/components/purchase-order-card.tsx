@@ -102,7 +102,11 @@ export function PurchaseOrderCard({
                                 View Purchase Order
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={() => handleClickDelete()} variant="destructive">
+                            <DropdownMenuItem
+                                onSelect={() => handleClickDelete()}
+                                variant="destructive"
+                                disabled={jobs && jobs.length > 0}
+                            >
                                 <TrashIcon />
                                 Delete Purchase Order
                             </DropdownMenuItem>
@@ -111,10 +115,10 @@ export function PurchaseOrderCard({
                 </CardHeader>
                 <CardContent className="p-6 pt-4">
                     <div className="grid grid-cols-3 gap-2 mb-6">
-                        <Badge className="h-[40px] w-full justify-center rounded-md px-4 bg-black hover:bg-black/90 text-white  text-md font-medium">
+                        <Badge className="h-[40px] w-full justify-center rounded-md px-4 bg-primary hover:bg-primary/90 text-white  text-md font-medium">
                             {totalJobs} Jobs Total
                         </Badge>
-                        <Badge className="h-[40px] w-full justify-center rounded-md px-4 bg-black hover:bg-black/90 text-white text-md font-medium">
+                        <Badge className="h-[40px] w-full justify-center rounded-md px-4 bg-primary hover:bg-primary/90 text-white text-md font-medium">
                             {additionalJobs} Jobs More
                         </Badge>
                         <Badge variant="secondary" className="h-[40px] w-full justify-center rounded-md px-4 font-medium text-md bg-muted hover:bg-muted/80">

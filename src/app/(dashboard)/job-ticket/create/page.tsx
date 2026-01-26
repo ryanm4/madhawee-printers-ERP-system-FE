@@ -319,7 +319,7 @@ function CreateJobTicket() {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-0">
                     <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
                         <Button size="lg" variant="outline" type="button" onClick={() => router.push("/job-ticket")} disabled={isLoading}>Cancel</Button>
-                        <Button size="lg" type="submit" className="bg-black text-white" disabled={isLoading}>
+                        <Button size="lg" type="submit" className="bg-primary text-white" disabled={isLoading}>
                             {isLoading ? "Saving..." : "Save"}
                         </Button>
                     </div>
@@ -547,7 +547,7 @@ function CreateJobTicket() {
                                     </div>
                                 ))}
                                 <div className="flex justify-end mt-2">
-                                    <Button type="button" onClick={() => appendPaperType({ paper_type: "", coating: "", delivery_date: undefined })} className="bg-black text-white hover:bg-gray-800">Add More</Button>
+                                    <Button type="button" onClick={() => appendPaperType({ paper_type: "", coating: "", delivery_date: undefined })} className="bg-primary text-white hover:bg-primary/90">Add More</Button>
                                 </div>
                             </div>
 
@@ -750,7 +750,7 @@ function CreateJobTicket() {
                                     </div>
                                 ))}
                                 <div className="flex justify-end mt-2">
-                                    <Button type="button" onClick={() => appendRawMaterial({ item: "", quantity: "", status: "", remarks: "" })} className="bg-black text-white hover:bg-gray-800">Add More</Button>
+                                    <Button type="button" onClick={() => appendRawMaterial({ item: "", quantity: "", status: "", remarks: "" })} className="bg-primary text-white hover:bg-primary/90">Add More</Button>
                                 </div>
                             </div>
 
@@ -823,7 +823,7 @@ function CreateJobTicket() {
                                     </div>
                                 ))}
                                 <div className="flex justify-end mt-2">
-                                    <Button type="button" onClick={() => appendInk({ ink: "", quantity: "", status: "", remarks: "" })} className="bg-black text-white hover:bg-gray-800">Add More</Button>
+                                    <Button type="button" onClick={() => appendInk({ ink: "", quantity: "", status: "", remarks: "" })} className="bg-primary text-white hover:bg-primary/90">Add More</Button>
                                 </div>
                             </div>
 
