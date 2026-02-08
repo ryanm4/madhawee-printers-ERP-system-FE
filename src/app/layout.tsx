@@ -42,7 +42,7 @@ export default function RootLayout({
             <AppSidebar variant="inset" />
             <SidebarInset>
               <SiteHeader />
-              <Toaster />
+              <Toaster position="top-right" richColors />
               <main className="w-full">{children}</main>
             </SidebarInset>
           </SidebarProvider>

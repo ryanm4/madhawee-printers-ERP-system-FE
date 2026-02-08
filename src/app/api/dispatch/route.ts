@@ -1,8 +1,11 @@
 
 import { API_ENDPOINTS } from '@/config/api-endpoints';
+import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token");
     try {
 
         const apiUrl = API_ENDPOINTS.DISPATCH.LIST;
@@ -11,6 +14,7 @@ export async function GET(request: NextRequest) {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
+                Authorization: `Bearer ${token?.value}`,
             },
             cache: "no-store",
             credentials: "include",
@@ -35,6 +39,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token");
     try {
         const formData = await request.json();
         const apiUrl = API_ENDPOINTS.DISPATCH.CREATE;
@@ -43,6 +49,7 @@ export async function POST(request: NextRequest) {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                Authorization: `Bearer ${token?.value}`,
             },
             body: JSON.stringify(formData),
             cache: "no-store",

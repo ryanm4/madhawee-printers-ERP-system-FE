@@ -9,7 +9,9 @@ import { DataTable } from "./_components/job-ticket-table";
 import { jobTicketColumns } from "./_components/job-ticket-columns";
 import { ALL_TICKETS } from "@/modules/job-tickets/types";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
+import { toast } from "sonner";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
+import { EmptyState } from "@/components/shared/empty-page";
 
 
 
@@ -57,12 +59,15 @@ function JobTicketComponent() {
         try {
             setIsLoading(true);
             await jobTicketsApi.delete(deleteId);
-
-
+            toast("Job Ticket Deleted", {
+                description: "Job Ticket has been deleted successfully."
+            })
             await fetchData();
-
         } catch (error) {
             console.error("Failed to delete inventory item");
+            toast("Failed to Delete Job Ticket", {
+                description: "An error occurred while deleting the job ticket. Please try again."
+            })
         } finally {
             setIsLoading(false);
             setDeleteId(null); // close popup
@@ -96,12 +101,21 @@ function JobTicketComponent() {
                         <PlusIcon /> Create New
                     </Button>
                 </div>
-                <DataTable
-                    columns={columns}
-                    data={data}
-                    searchValue={search}
-                    searchColumn="job_id"
-                />
+                {data.length === 0 && !isLoading ? (
+                    <EmptyState
+                        title="No Job Tickets"
+                        description="You haven't initiated any job tickets yet. Create a job ticket to start the production process."
+                        createLabel="Create New Job Ticket"
+                        createPath="/job-ticket/create"
+                    />
+                ) : (
+                    <DataTable
+                        columns={columns}
+                        data={data}
+                        searchValue={search}
+                        searchColumn="job_id"
+                    />
+                )}
             </div>
             <AlertDeleteDialog
                 isOpen={deleteId !== null}

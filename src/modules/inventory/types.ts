@@ -26,5 +26,7 @@ export interface CREATE_INVENTORY {
     reorder_level: string;
     status: string;
     remarks: string;
+    created_by: string;
+    updated_by: string;
 }
 

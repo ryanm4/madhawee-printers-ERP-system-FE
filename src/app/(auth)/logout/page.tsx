@@ -2,13 +2,14 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { clearAuth } from "@/lib/auth"
 
 export default function LogoutPage() {
     const router = useRouter()
 
     useEffect(() => {
-        // Clear any auth tokens/session data here
-        // For example: localStorage.removeItem('token')
+        // Clear auth cookies
+        clearAuth()
 
         // Redirect to login page
         router.push("/login")

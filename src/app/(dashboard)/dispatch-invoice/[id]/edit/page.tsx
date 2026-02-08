@@ -96,15 +96,15 @@ function EditDispatchandInvoice() {
                 created_on: new Date(),
             }
             const response = await dispatchInventoryApi.create(payload);
-            console.log(response)
 
-            toast.success("Dispatch Updated Successfully");
+
+            toast("Dispatch Updated Successfully");
             form.reset(baseDefaultValues)
             form.clearErrors()
             router.push("/dispatch-invoice")
         } catch (error) {
-            console.error("Failed to submit dispatch:", error)
-            toast.error("Failed to update dispatch");
+
+            toast("Failed to update dispatch");
         } finally {
             setIsLoading(false);
         }

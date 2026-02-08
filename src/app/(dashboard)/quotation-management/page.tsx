@@ -10,6 +10,8 @@ import { quotationColumns } from './_components/quotation_columns';
 import { quotationApi } from '@/modules/quotations/api';
 import { DataTable } from './_components/quotation_table';
 import { AlertDeleteDialog } from '@/components/shared/delete_popup';
+import { toast } from 'sonner';
+import { EmptyState } from '@/components/shared/empty-page';
 
 function QuotationsManagement() {
     const router = useRouter();
@@ -24,6 +26,9 @@ function QuotationsManagement() {
         },
         onDelete: (id) => {
             setDeleteId(Number(id))
+        },
+        onDownload(id) {
+
         },
     })
 
@@ -53,9 +58,15 @@ function QuotationsManagement() {
         try {
             setLoading(true);
             await quotationApi.delete(deleteId);
+            toast("Quotation Deleted", {
+                description: `Quotation has been deleted successfully.`,
+            })
             await fetchData();
         } catch (error) {
             console.error(error);
+            toast("Failed to Delete Quotation", {
+                description: "An error occurred while deleting the quotation. Please try again."
+            })
         } finally {
             setLoading(false);
             setDeleteId(null);
@@ -90,12 +101,21 @@ function QuotationsManagement() {
                     <PlusIcon /> Create New
                 </Button>
             </div>
-            <DataTable
-                columns={columns}
-                data={data}
-                searchValue={search}
-                searchColumn="quote_id"
-            />
+            {data.length === 0 && !loading ? (
+                <EmptyState
+                    title="No Quotations Yet"
+                    description="You haven't created any quotations yet. Get started by creating your first quotation."
+                    createLabel="Create New Quotation"
+                    createPath="/quotation-management/create"
+                />
+            ) : (
+                <DataTable
+                    columns={columns}
+                    data={data}
+                    searchValue={search}
+                    searchColumn="quote_id"
+                />
+            )}
 
             <AlertDeleteDialog
                 isOpen={deleteId !== null}

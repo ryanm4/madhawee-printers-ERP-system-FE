@@ -8,6 +8,7 @@ import { LayoutPanelTop, PlusIcon, Search, Table2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/shared/empty-page";
 
 
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
@@ -44,11 +45,15 @@ function PurchaseOrderPage() {
     try {
       setLoading(true);
       await purchaseOrderApi.delete(id);
-      toast.success("Purchase Order deleted successfully");
+      toast("Purchase Order Deleted", {
+        description: "The purchase order has been deleted successfully."
+      });
       await fetchData();
     } catch (error) {
       console.error('Failed to delete PO:', error);
-      toast.error("Failed to delete Purchase Order");
+      toast("Failed to Delete Purchase Order", {
+        description: "An error occurred while deleting the purchase order. Please try again."
+      });
     } finally {
       setLoading(false);
     }
@@ -92,47 +97,58 @@ function PurchaseOrderPage() {
           </Button>
         </div>
 
-        <TabsContent value="Grid-View">
-          <div className="grid gap-[24px] grid-cols-[repeat(auto-fill,minmax(412px,1fr))]">
-            {data
-              .filter((item) => {
-                if (!search) return true
-                const s = search.toLowerCase()
-                return (
-                  item.po_id.toString().toLowerCase().includes(s) ||
-                  item.customer?.name?.toLowerCase().includes(s) ||
-                  item.status?.toLowerCase().includes(s)
-                )
-              })
-              .map((item: PURCHASE_ORDER) => (
-                <PurchaseOrderCard
-                  key={item.po_id}
-                  po_id={item.po_id}
-                  companyName={item.customer?.name}
-                  contactEmail={item.customer?.email}
-                  poNumber={item.po_id}
-                  poDate={item.po_date}
-                  deliveryDate={item.delivery_date}
-                  jobs={item.jobs}
-                  totalJobs={item.jobs.length}
-                  additionalJobs={item.jobs.length}
-                  status={item.status}
-                  onDelete={handleDelete}
-                  onRefresh={fetchData}
-                />
-              ))}
-          </div>
-          {/* Pagination could be here if needed */}
-        </TabsContent>
-
-        <TabsContent value="Table-View">
-          <DataTable
-            columns={columns}
-            data={data}
-            searchValue={search}
-            searchColumn="po_id"
+        {data.length === 0 && !loading ? (
+          <EmptyState
+            title="No Purchase Orders"
+            description="You haven't received or created any purchase orders yet. Start by creating a NEW PO."
+            createLabel="Create New PO"
+            createPath="/purchase-order/create"
           />
-        </TabsContent>
+        ) : (
+          <>
+            <TabsContent value="Grid-View">
+              <div className="grid gap-[24px] grid-cols-[repeat(auto-fill,minmax(412px,1fr))]">
+                {data
+                  .filter((item) => {
+                    if (!search) return true
+                    const s = search.toLowerCase()
+                    return (
+                      item.po_id.toString().toLowerCase().includes(s) ||
+                      item.customer?.name?.toLowerCase().includes(s) ||
+                      item.status?.toLowerCase().includes(s)
+                    )
+                  })
+                  .map((item: PURCHASE_ORDER) => (
+                    <PurchaseOrderCard
+                      key={item.po_id}
+                      po_id={item.po_id}
+                      companyName={item.customer?.name}
+                      contactEmail={item.customer?.email}
+                      poNumber={item.po_id}
+                      poDate={item.po_date}
+                      deliveryDate={item.delivery_date}
+                      jobs={item.jobs}
+                      totalJobs={item.jobs.length}
+                      additionalJobs={item.jobs.length}
+                      status={item.status}
+                      onDelete={handleDelete}
+                      onRefresh={fetchData}
+                    />
+                  ))}
+              </div>
+              {/* Pagination could be here if needed */}
+            </TabsContent>
+
+            <TabsContent value="Table-View">
+              <DataTable
+                columns={columns}
+                data={data}
+                searchValue={search}
+                searchColumn="po_id"
+              />
+            </TabsContent>
+          </>
+        )}
       </Tabs>
     </div>
   );

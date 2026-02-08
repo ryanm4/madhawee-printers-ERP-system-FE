@@ -33,5 +33,6 @@ export interface CREATE_CUSTOMER {
     contact_person_email: string,
     contact_person_phone: string,
     created_by: string,
+    updated_by: string,
     status: string,
 }

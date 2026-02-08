@@ -28,6 +28,7 @@ import { purchaseOrderApi } from '@/modules/purchase-order/api'
 import { toast } from 'sonner'
 import { CREATE_PURCHASE_ORDER } from '@/modules/purchase-order/types'
 import { Combobox } from '@/components/shared/combobox'
+import { getUser } from '@/lib/auth'
 
 
 type PurchaseOrderFormValues = z.infer<typeof purchaseOrderScheme>
@@ -39,10 +40,19 @@ function CreatePurchaseOrder() {
     const [quotationList, setQuotationList] = useState<QUOTATIONS[]>([]);
     const [loading, setLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [user, setUser] = useState<{ name: string; email: string; avatar: string } | null>(null)
 
     useEffect(() => {
         getCustomerList();
         getQuotationList();
+        const userData = getUser()
+        if (userData) {
+            setUser({
+                name: userData.name || "User",
+                email: userData.email,
+                avatar: "",
+            })
+        }
     }, []);
 
     const getCustomerList = async () => {
@@ -118,8 +128,8 @@ function CreatePurchaseOrder() {
                 batch_ref: data.batchRef,
                 po_date: data.poDate instanceof Date ? formatDate(data.poDate) : data.poDate,
                 TC_E_PR_No: data.tceprNo,
-                created_by: "admin", // TODO: Get from auth context
-                updated_by: "admin", // TODO: Get from auth context
+                created_by: user?.name || "admin",
+                updated_by: user?.name || "admin",
                 status: "CREATED",
                 customer_po: data.purchaseOrderNo,
                 po_items: data.itemDetails.map((item: any) => ({
@@ -133,7 +143,7 @@ function CreatePurchaseOrder() {
 
             const response = await purchaseOrderApi.create(payload)
 
-            toast.success("Purchase Order Created", {
+            toast("Purchase Order Created", {
                 description: `Purchase Order ${data.purchaseOrderNo} has been created successfully.`,
             });
 
@@ -144,7 +154,7 @@ function CreatePurchaseOrder() {
             router.push("/purchase-order")
         } catch (error) {
             console.error("Failed to submit PO:", error)
-            toast.error("Failed to Create Purchase Order", {
+            toast("Failed to Create Purchase Order", {
                 description: "An error occurred while creating the purchase order. Please try again.",
             });
         } finally {

@@ -6,15 +6,17 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ColumnDef } from "@tanstack/react-table"
-import { MoreHorizontal, PencilIcon, TrashIcon } from "lucide-react"
+import { Download, MoreHorizontal, PencilIcon, Printer, TrashIcon } from "lucide-react"
 import { QUOTATIONS } from "@/modules/quotations/types"
 import { ArrowUpDown } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { TaxTypes } from "@/config/enum"
+import { format } from "date-fns"
 
 interface QuotationTableActions {
     onEdit: (id: number) => void
     onDelete: (id: number) => void
+    onDownload: (id: number) => void
 }
 
 export const quotationColumns = (
@@ -94,8 +96,15 @@ export const quotationColumns = (
             header: "Currency",
         },
         {
-            accessorKey: "crated_on",
+            accessorKey: "created_on",
             header: "Created On",
+            cell: ({ getValue }) => {
+                const value = getValue<string | Date>();
+
+                if (!value) return "-";
+
+                return format(new Date(value), "dd MMM yyyy");
+            },
         },
         {
             accessorKey: "created_by",
@@ -104,6 +113,13 @@ export const quotationColumns = (
         {
             accessorKey: "updated_on",
             header: "Updated On",
+            cell: ({ getValue }) => {
+                const value = getValue<string | Date>();
+
+                if (!value) return "-";
+
+                return format(new Date(value), "dd MMM yyyy");
+            },
         },
         {
             accessorKey: "updated_by",
@@ -135,30 +151,36 @@ export const quotationColumns = (
                 const quotation = row.original
 
                 return (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <MoreHorizontal />
-                            </Button>
-                        </DropdownMenuTrigger>
+                    <div className="flex flex-row gap-2 items-center">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <MoreHorizontal />
+                                </Button>
+                            </DropdownMenuTrigger>
 
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                                onClick={() => actions.onEdit(quotation.quote_id)}
-                            >
-                                <PencilIcon className="mr-2 h-4 w-4" />
-                                Edit Quotation
-                            </DropdownMenuItem>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                    onClick={() => actions.onEdit(quotation.quote_id)}
+                                >
+                                    <PencilIcon className="mr-2 h-4 w-4" />
+                                    Edit Quotation
+                                </DropdownMenuItem>
 
-                            <DropdownMenuItem
-                                variant="destructive"
-                                onClick={() => actions.onDelete(quotation.quote_id)}
-                            >
-                                <TrashIcon className="mr-2 h-4 w-4" />
-                                Delete Quotation
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                                <DropdownMenuItem
+                                    variant="destructive"
+                                    onClick={() => actions.onDelete(quotation.quote_id)}
+                                >
+                                    <TrashIcon className="mr-2 h-4 w-4" />
+                                    Delete Quotation
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <Button onClick={() => actions.onDownload(quotation.quote_id)} variant="outline" size="icon" aria-label="Submit">
+                            <Printer />
+                        </Button>
+                    </div>
                 )
             },
         },

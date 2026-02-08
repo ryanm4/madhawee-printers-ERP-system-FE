@@ -1,753 +1,722 @@
 "use client"
-
-import { FieldPath, useFieldArray, useForm } from "react-hook-form"
+import PageTitleWithBreadcrumb from '@/components/shared/page-title-with-breadcrumb'
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardContent } from '@/components/ui/card'
+import { createQuotationSchema } from '@/modules/quotations/validation'
+import { cn } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
+import { FieldPath, useFieldArray, useForm } from 'react-hook-form'
+import { z } from 'zod'
 import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { CalendarIcon, CloudUpload, Plus, Trash2, Edit2, X, FileArchive } from "lucide-react" // Import icons
-import { format } from "date-fns"
-import { useState, useRef, useEffect } from "react"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Label } from '@/components/ui/label'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { CalendarIcon, Check, Loader2, PlusIcon, Trash2 } from 'lucide-react'
+import { Calendar } from '@/components/ui/calendar'
+import { format } from 'date-fns'
+import { useEffect, useState } from 'react'
+import { CustomerApi } from '@/modules/customer/api'
+import { CUSTOMER } from '@/modules/customer/types'
+import { quotationApi } from '@/modules/quotations/api'
+import { toast } from 'sonner'
+import { CREATE_QUOTATION_REQUEST } from '@/modules/quotations/types'
+import { Combobox } from '@/components/shared/combobox'
+import { Checkbox } from '@/components/ui/checkbox'
+import { QuotationType, QuotationTaxType, QuotationStatus } from '@/config/enum'
+import { getUser } from '@/lib/auth'
+import { GET_ALL_INVENTORY } from '@/modules/inventory/types'
+import { inventoryApi } from '@/modules/inventory/api'
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+type QuotationFormValues = z.infer<typeof createQuotationSchema>
 
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { jobTicketSchema } from "@/modules/job-tickets/validation"
-import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
-import { useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { CUSTOMER } from "@/modules/customer/types"
-import { CustomerApi } from "@/modules/customer/api"
-import { INK_STATUS, PAPER_TYPES, PLATES_STATUS } from "@/config/enum"
-import { PaperTypeCombobox } from "../../job-ticket/_components/paper-type-combobox"
-import { Combobox } from "@/components/shared/combobox"
-
-type JobTicketFormValues = z.infer<typeof jobTicketSchema>
+function CreateQuotation({ user: initialUser,
+}: {
+    user: {
+        name: string
+        email: string
+        avatar: string
+    }
+}) {
+    const router = useRouter()
+    const [user, setUser] = useState<{ name: string; email: string; avatar: string }>(initialUser)
 
 
-function CreateQuotation() {
-    const router = useRouter();
-    const [isLoading, setIsLoading] = useState(false);
-    const [customerData, setCustomerData] = useState<CUSTOMER[]>([])
-    const baseDefaultValues = {
-        poNumber: "",
-        item: "",
-        orderReceivedDate: undefined,
-        jobNumber: "",
-        jobOpenDate: undefined,
-        customer: "",
-        jobName: "",
-        productType: "",
-        quantity: "",
-        wastage: "",
-        packingDate: undefined,
-        expiryDate: undefined,
-        tcNo: "",
-        batchRef: "",
-        remarks: "",
-        addAnotherJob: false,
-        oldPlatesQuantity: "",
-        oldPlatesStatus: "",
-        oldPlatesRemarks: "",
-        newPlatesQuantity: "",
-        newPlatesStatus: "",
-        newPlatesRemarks: "",
-        rawMaterials: [{ item: "", quantity: "", status: "", remarks: "" }],
-        inks: [
-            { ink: "Black", quantity: "", status: "", remarks: "" },
-            { ink: "Cyan", quantity: "", status: "", remarks: "" },
-            { ink: "Magenta", quantity: "", status: "", remarks: "" },
-            { ink: "Yellow", quantity: "", status: "", remarks: "" },
-        ],
-        paperTypes: [{ paper_type: "", coating: "", delivery_date: new Date() }],
+    const [customer, setCustomer] = useState<CUSTOMER[]>([])
+    const [loading, setLoading] = useState(false)
+    const [itemList, setItemList] = useState<GET_ALL_INVENTORY[]>([])
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [quoteDate, setQuoteDate] = useState<Date>(new Date())
+    const [showAccountDetails, setShowAccountDetails] = useState(false)
+
+    useEffect(() => {
+        getCustomerList()
+        getItemList();
+    }, [])
+
+    const getCustomerList = async () => {
+        try {
+            setLoading(true)
+            const response = await CustomerApi.getAll()
+            setCustomer(response.data)
+        } catch (error) {
+            console.error('Failed to fetch customers')
+            toast('Failed to load customers')
+        } finally {
+            setLoading(false)
+        }
     }
 
-    const form = useForm<JobTicketFormValues>({
-        resolver: zodResolver(jobTicketSchema),
-        defaultValues: baseDefaultValues,
+    const getItemList = async () => {
+        try {
+            setLoading(true)
+            const response = await inventoryApi.getAll()
+            setItemList(response.data)
+        } catch (error) {
+            console.error('Failed to fetch items')
+            toast('Failed to load items')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+
+    const baseDefaultValues: Partial<QuotationFormValues> = {
+        customer_id: 0,
+        type_id: QuotationType.NORMAL,
+        delivery_days: "",
+        tax_type_id: QuotationTaxType.NONE,
+        currency: "LKR",
+        contact_person: "",
+        notes: "",
+        status: QuotationStatus.PENDING,
+        sub_total: "0",
+        no_of_items: "0",
+        total_without_tax: "0",
+        net_total: "0",
+        created_by: user?.name || "",
+        updated_by: user?.name || "",
+        items: [{
+            item_id: 0,
+            item_category: "",
+            item_qty: "0",
+            item_description: "",
+            item_unit_price: "0",
+            item_unit_discount: "0",
+            item_total_price: "0",
+        }],
+    }
+
+    const form = useForm<QuotationFormValues>({
+        resolver: zodResolver(createQuotationSchema),
+        defaultValues: baseDefaultValues as any,
     })
 
-    const { fields: rawMaterialFields, append: appendRawMaterial, remove: removeRawMaterial } = useFieldArray({
+    useEffect(() => {
+        const userData = getUser()
+        if (userData) {
+            const name = userData.name || "User"
+            setUser({
+                name: name,
+                email: userData.email,
+                avatar: "", // GET_ALL_USER doesn't have avatar
+            })
+            form.setValue("created_by", name)
+            form.setValue("updated_by", name)
+        }
+    }, [form])
+
+    const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({
         control: form.control,
-        name: "rawMaterials",
+        name: "items",
     })
 
-    const { fields: paperTypeFields, append: appendPaperType, remove: removePaperType } = useFieldArray({
-        control: form.control,
-        name: "paperTypes",
-    })
 
-    const { fields: inkFields, append: appendInk, remove: removeInk } = useFieldArray({
-        control: form.control,
-        name: "inks",
-    })
 
-    const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-    const fileInputRef = useRef<HTMLInputElement>(null)
+    const watchTaxType = form.watch("tax_type_id")
 
-    const handleFileSelect = (file: File | null) => {
-        if (file) {
-            const validTypes = ["image/jpeg", "image/png", "image/svg+xml", "application/zip"]
-            const maxSize = 10 * 1024 * 1024 // 10MB
+    // Helper to calculate totals
+    const calculateTotals = (currentItems: any[], taxTypeId: number) => {
+        let subTotal = 0
+        const updatedItems = currentItems.map(item => {
+            const qty = parseFloat(item.item_qty || "0")
+            const price = parseFloat(item.item_unit_price || "0")
+            const total = qty * price
+            subTotal += total
+            return {
+                ...item,
+                item_total_price: total.toFixed(2)
+            }
+        })
 
-            if (validTypes.includes(file.type) && file.size <= maxSize) {
-                setUploadedFile(file)
-            } else {
-                alert("Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB.")
+        // Calculate net total based on tax type
+        let netTotal = subTotal
+        if (taxTypeId === QuotationTaxType.VAT) { // VAT
+            netTotal = subTotal * 1.15
+        }
+
+        return {
+            subTotal: subTotal.toFixed(2),
+            netTotal: netTotal.toFixed(2),
+            noOfItems: String(currentItems.length),
+            totalWithoutTax: subTotal.toFixed(2)
+        }
+    }
+
+    // Handle tax type change with recalculation
+    const handleTaxTypeChange = (value: number) => {
+        form.setValue("tax_type_id", value)
+        const currentItems = form.getValues("items")
+        const totals = calculateTotals(currentItems, value)
+
+        form.setValue("sub_total", totals.subTotal)
+        form.setValue("net_total", totals.netTotal)
+    }
+
+    // Synchronize totals whenever items array structure changes
+    useEffect(() => {
+        const currentItems = form.getValues("items")
+        const currentTaxType = form.getValues("tax_type_id")
+        const totals = calculateTotals(currentItems, currentTaxType)
+
+        form.setValue("sub_total", totals.subTotal)
+        form.setValue("no_of_items", totals.noOfItems)
+        form.setValue("total_without_tax", totals.totalWithoutTax)
+        form.setValue("net_total", totals.netTotal)
+    }, [itemFields.length, watchTaxType]) // Trigger on length change or tax type change
+
+    // Handle item change with recalculation
+    const handleItemChange = (index: number, field: "item_qty" | "item_unit_price", value: string) => {
+
+        let sanitizedValue = value.replace(/^0+(?!$)/, "")
+        if (sanitizedValue === "" && value !== "") sanitizedValue = "0"
+
+        form.setValue(`items.${index}.${field}`, sanitizedValue)
+
+        // Validate qty against inventory stock
+        if (field === "item_qty") {
+            const itemId = form.getValues(`items.${index}.item_id`)
+            const selectedItem = itemList.find(i => i.item_id === itemId)
+
+            if (selectedItem) {
+                const qty = parseFloat(sanitizedValue || "0")
+
+                if (qty > Number(selectedItem.quantity)) {
+                    form.setError(`items.${index}.item_qty` as any, {
+                        type: "manual",
+                        message: `Only ${selectedItem.quantity} items available in stock`
+                    })
+                } else {
+                    form.clearErrors(`items.${index}.item_qty` as any)
+                }
             }
         }
+
+        // Calculate row total immediately
+        const qty = parseFloat(field === "item_qty" ? sanitizedValue : form.getValues(`items.${index}.item_qty`) || "0")
+        const price = parseFloat(field === "item_unit_price" ? sanitizedValue : form.getValues(`items.${index}.item_unit_price`) || "0")
+        const rowTotal = (qty * price).toFixed(2)
+        form.setValue(`items.${index}.item_total_price`, rowTotal)
+
+        // Recalculate global totals
+        const currentItems = form.getValues("items")
+        const currentTaxType = form.getValues("tax_type_id")
+        const totals = calculateTotals(currentItems, currentTaxType)
+
+        form.setValue("sub_total", totals.subTotal)
+        form.setValue("no_of_items", totals.noOfItems)
+        form.setValue("total_without_tax", totals.totalWithoutTax)
+        form.setValue("net_total", totals.netTotal)
     }
 
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault()
-        const file = e.dataTransfer.files[0]
-        handleFileSelect(file)
-    }
+    async function onSubmit(data: QuotationFormValues) {
+        try {
+            setIsSubmitting(true)
 
-    const removeFile = () => {
-        setUploadedFile(null)
-        if (fileInputRef.current) {
-            fileInputRef.current.value = ""
+            const payload: CREATE_QUOTATION_REQUEST = {
+                customer_id: data.customer_id,
+                type_id: data.type_id,
+                delivery_days: data.delivery_days,
+                tax_type_id: data.tax_type_id,
+                currency: data.currency,
+                contact_person: data.contact_person,
+                notes: data.notes || "",
+                status: data.status,
+                sub_total: data.sub_total,
+                no_of_items: data.no_of_items,
+                total_without_tax: data.total_without_tax,
+                net_total: data.net_total,
+                created_by: data.created_by,
+                updated_by: data.updated_by,
+                items: data.items.map((item) => ({
+                    item_id: item.item_id,
+                    item_category: item.item_category,
+                    item_qty: item.item_qty,
+                    item_description: item.item_description,
+                    item_unit_price: item.item_unit_price,
+                    item_unit_discount: item.item_unit_discount || "0",
+                    item_total_price: item.item_total_price,
+                })),
+            }
+
+            const response = await quotationApi.create(payload)
+
+            toast("Quotation Created", {
+                description: `Quotation has been created successfully.`,
+            })
+
+            form.reset(baseDefaultValues as any)
+            form.clearErrors()
+
+            router.push("/quotation-management")
+        } catch (error) {
+            console.error("Failed to submit quotation:", error)
+            toast("Failed to Create Quotation", {
+                description: "An error occurred while creating the quotation. Please try again.",
+            })
+        } finally {
+            setIsSubmitting(false)
         }
     }
 
-    const formatFileSize = (bytes: number) => {
-        if (bytes === 0) return "0 Bytes"
-        const k = 1024
-        const sizes = ["Bytes", "KB", "MB", "GB"]
-        const i = Math.floor(Math.log(bytes) / Math.log(k))
-        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + sizes[i]
-    }
-
-    function onSubmit(data: JobTicketFormValues) {
-        console.log("Submitting Job Ticket:", data)
-        console.log(form.formState.errors)
-
-    }
-
-
-    const renderFormField = <TName extends FieldPath<JobTicketFormValues>>(
+    const renderFormField = <TName extends FieldPath<QuotationFormValues>>(
         name: TName,
-        render: Parameters<typeof FormField<JobTicketFormValues, TName>>["0"]["render"]
+        render: Parameters<typeof FormField<QuotationFormValues, TName>>[0]["render"]
     ) => (
         <FormField
             control={form.control}
             name={name}
             render={render}
         />
-    );
-
-    useEffect(() => {
-        fetchCustomerData();
-    }, []);
-    const fetchCustomerData = async () => {
-        try {
-            setIsLoading(true);
-            const response = await CustomerApi.getAll();
-            console.log(response)
-
-            if (response.status === 200) {
-                setCustomerData(response.data);
-            }
-        } catch (error) {
-            console.error('Failed to fetch inventory');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-
-
-
+    )
 
     return (
         <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
             <PageTitleWithBreadcrumb
-                title="Create Job Ticket"
+                title="Add Quotation"
                 breadcrumbs={[
                     { title: "Dashboard", href: "/dashboard" },
-                    { title: "Job Ticket", href: "/job-ticket" },
-
+                    { title: "Quotation Management", href: "/quotation-management" },
                 ]}
             />
 
-
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-0">
+                <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6 pb-0'>
                     <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-                        <Button size="lg" variant="outline" type="button" onClick={() => router.push("/job-ticket")} disabled={isLoading}>Cancel</Button>
-                        <Button size="lg" type="submit" className="bg-primary text-white" disabled={isLoading}>
-                            {isLoading ? "Saving..." : "Save"}
+                        <Button size="lg" variant="outline" type="button" onClick={() => router.push("/quotation-management")} disabled={isSubmitting}>Cancel</Button>
+                        <Button size="lg" type="submit" className="bg-primary text-white" disabled={isSubmitting}>
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                "Create Quotation"
+                            )}
                         </Button>
                     </div>
-                    <Card className={cn("w-full shdow-sm hover:shadow-md transition-shadow flex flex-col")}>
-                        <CardHeader className="flex flex-col gap-[0.5px]">
-                            <h3 className="text-md font-medium mb-2">Job Ticket Details</h3>
-                            <p className="text-xs text-muted-foreground mb-4">Enter Job Ticket Details</p>
-                        </CardHeader>
-                        <CardContent className="flex flex-col gap-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {renderFormField("poNumber", ({ field }) => (
+
+                    {/* Card 1: Customer Selection */}
+                    <div className='grid grid-cols-2 md:grid-cols-2 gap-4'>
+                        <Card className={cn("w-full shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
+                            <CardHeader className="flex flex-col gap-[0.5px]">
+                                <h3 className="text-md font-medium mb-2">Customer Details</h3>
+                                <p className="text-xs text-muted-foreground mb-4">Select customer and enter details</p>
+                            </CardHeader>
+                            <CardContent className='flex flex-col gap-4'>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Quote Date */}
                                     <FormItem>
-                                        <FormLabel>PO Number</FormLabel>
-                                        <Combobox
-                                            items={[
-                                                { value: "po1", label: "PO-001" },
-                                                { value: "po2", label: "PO-002" }
-                                            ]}
-                                            value={field.value || ""}
-                                            onValueChange={field.onChange}
-                                            placeholder="Select PO Number"
-                                            searchPlaceholder="Search PO..."
-                                        />
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("item", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Item</FormLabel>
-                                        <Combobox
-                                            items={[
-                                                { value: "item1", label: "Item 1" },
-                                                { value: "item2", label: "Item 2" }
-                                            ]}
-                                            value={field.value || ""}
-                                            onValueChange={field.onChange}
-                                            placeholder="Select Item"
-                                            searchPlaceholder="Search item..."
-                                        />
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("jobNumber", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Job Number</FormLabel>
-                                        <FormControl><Input placeholder="MPL/8450/25/TIEP" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("orderReceivedDate", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Order Received Date</FormLabel>
+                                        <FormLabel>Quote Date</FormLabel>
                                         <Popover>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
-                                                    <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                                        {field.value ? format(field.value, "PPP") : format(new Date(), "PPP")}
+                                                    <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal")}>
+                                                        {quoteDate ? format(quoteDate, "PPP") : format(new Date(), "PPP")}
                                                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                                     </Button>
                                                 </FormControl>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus />
+                                                <Calendar mode="single" selected={quoteDate} onSelect={(date) => date && setQuoteDate(date)} captionLayout="dropdown" />
                                             </PopoverContent>
                                         </Popover>
-                                        <FormMessage />
                                     </FormItem>
-                                ))}
 
-
-                            </div>
-
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {renderFormField("jobOpenDate", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Job Open Date</FormLabel>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    variant="outline"
-                                                    className={cn(
-                                                        "w-full flex items-center justify-between px-3 py-2 text-left font-normal",
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    {field.value ? format(field.value, "PPP") : "Select date"}
-                                                    <CalendarIcon className="h-4 w-4 opacity-50" />
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar
-                                                    mode="single"
-                                                    selected={field.value}
-
-                                                    captionLayout="dropdown"
-
-                                                    onSelect={field.onChange}
-
-                                                />
-                                            </PopoverContent>
-                                        </Popover>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("customer", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Customer</FormLabel>
-                                        <Combobox
-                                            items={customerData.map((customer) => ({
-                                                value: String(customer.customer_id),
-                                                label: `Job-${customer.customer_id} (${customer.company_name})`
-                                            }))}
-                                            value={field.value || ""}
-                                            onValueChange={field.onChange}
-                                            placeholder="Select Customer"
-                                            searchPlaceholder="Search customer..."
-                                        />
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("jobName", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Job Name</FormLabel>
-                                        <FormControl><Input placeholder="Enter Job Name" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                            </div>
-                            {/* Product Details */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {renderFormField("productType", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Product Type <span className="text-red-500">*</span></FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Product Type" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="pt1">Product Type 1</SelectItem>
-                                                <SelectItem value="pt2">Product Type 2</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("quantity", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Quantity <span className="text-red-500">*</span></FormLabel>
-                                        <FormControl><Input placeholder="Enter Quantity" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("wastage", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Wastage %</FormLabel>
-                                        <FormControl><Input placeholder="Enter Wastage" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                            </div>
-
-                            <div>
-                                {paperTypeFields.map((field, index) => (
-                                    <div key={field.id} className="grid grid-cols-[1fr_auto] gap-2 mb-2 items-start">
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
-                                            {renderFormField(`paperTypes.${index}.paper_type`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Paper Type <span className="text-red-500">*</span></FormLabel>
-                                                    <PaperTypeCombobox value={field.value} onChange={field.onChange} />
-                                                    <FormMessage className="min-h-[20px]" />
-                                                </FormItem>
-                                            ))}
-                                            {renderFormField(`paperTypes.${index}.coating`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Coating <span className="text-red-500">*</span></FormLabel>
-                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                        <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Coating" /></SelectTrigger></FormControl>
-                                                        <SelectContent>
-                                                            <SelectItem value="c1">Coating 1</SelectItem>
-                                                            <SelectItem value="c2">Coating 2</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <FormMessage className="min-h-[20px]" />
-                                                </FormItem>
-                                            ))}
-                                            {renderFormField(`paperTypes.${index}.delivery_date`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Delivery Date</FormLabel>
-                                                    <Popover>
-                                                        <PopoverTrigger asChild>
-                                                            <FormControl>
-                                                                <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                                                    {field.value ? format(field.value, "PPP") : format(new Date(), "PPP")}
-                                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                                </Button>
-                                                            </FormControl>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-auto p-0" align="start">
-                                                            <Calendar mode="single" captionLayout="dropdown" selected={field.value} onSelect={field.onChange} />
-                                                        </PopoverContent>
-                                                    </Popover>
-                                                    <FormMessage className="min-h-[20px]" />
-                                                </FormItem>
-                                            ))}
-                                        </div>
-                                        <div className="flex space-x-2 items-start pt-6">
-                                            <Button type="button" variant="outline" size="icon" onClick={() => { }}><Edit2 className="h-4 w-4" /></Button>
-                                            <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="icon"
-                                                onClick={() => removePaperType(index)}
-                                                disabled={paperTypeFields.length <= 1} // Disable if only one item
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-
-                                    </div>
-                                ))}
-                                <div className="flex justify-end mt-2">
-                                    <Button type="button" onClick={() => appendPaperType({ paper_type: "", coating: "", delivery_date: undefined })} className="bg-primary text-white hover:bg-primary/90">Add More</Button>
+                                    {/* Customer */}
+                                    {renderFormField("customer_id", ({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Customer (Company) <span className="text-red-500">*</span></FormLabel>
+                                            <Combobox
+                                                items={customer.map(c => ({ value: String(c.customer_id), label: c.company_name }))}
+                                                value={field.value === 0 ? "" : String(field.value)}
+                                                onValueChange={(value) => {
+                                                    field.onChange(parseInt(value))
+                                                    const selectedCustomer = customer.find(c => String(c.customer_id) === value)
+                                                    if (selectedCustomer) {
+                                                        // Auto-populate contact person
+                                                        form.setValue('contact_person', selectedCustomer.contact_person || "")
+                                                    }
+                                                }}
+                                                placeholder="Select company"
+                                                searchPlaceholder="Search customer..."
+                                            />
+                                            <FormMessage />
+                                        </FormItem>
+                                    ))}
                                 </div>
-                            </div>
 
-                            {/* Dates */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                                {renderFormField("packingDate", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Packing Date</FormLabel>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <FormControl>
-                                                    <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                                        {field.value ? format(field.value, "PPP") : format(new Date(), "PPP")}
-                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                    </Button>
-                                                </FormControl>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} captionLayout="dropdown" />
-                                            </PopoverContent>
-                                        </Popover>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("expiryDate", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Expiry Date</FormLabel>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <FormControl>
-                                                    <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                                        {field.value ? format(field.value, "PPP") : format(new Date(), "PPP")}
-                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                    </Button>
-                                                </FormControl>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} captionLayout="dropdown" />
-                                            </PopoverContent>
-                                        </Popover>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                            </div>
-
-                            <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-
-                                {renderFormField("tcNo", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>TC No</FormLabel>
-                                        <FormControl><Input placeholder="Enter TC No" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("batchRef", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Batch Ref</FormLabel>
-                                        <FormControl><Input placeholder="Enter Batch Ref" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                            </div>
-
-                            {renderFormField("remarks", ({ field }) => (
+                                {/* Company Address */}
                                 <FormItem>
-                                    <FormLabel>Remarks</FormLabel>
-                                    <FormControl><Textarea placeholder="Enter Remarks" className="resize-none" {...field} /></FormControl>
+                                    <FormLabel>Company Address</FormLabel>
+                                    <Textarea
+                                        placeholder="Company Address"
+                                        className="resize-none"
+                                        value={customer.find(c => c.customer_id === form.watch("customer_id"))?.address || ""}
+                                        readOnly
+                                    />
+                                </FormItem>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Contact Person */}
+                                    {renderFormField("contact_person", ({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Contact Person</FormLabel>
+                                            <FormControl><Input placeholder="Select contact person" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    ))}
+
+                                    {/* Mobile Number */}
+                                    <FormItem>
+                                        <FormLabel>Mobile Number</FormLabel>
+                                        <Input
+                                            placeholder="Mobile Number"
+                                            value={customer.find(c => c.customer_id === form.watch("customer_id"))?.phone || ""}
+                                            readOnly
+                                        />
+                                    </FormItem>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Card 2: Quotation Overview */}
+                        <Card className={cn("w-full shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
+                            <CardHeader className="flex flex-col gap-[0.5px]">
+                                <h3 className="text-md font-medium mb-2">Quotation Overview</h3>
+                                <p className="text-xs text-muted-foreground mb-4">Configure quotation settings</p>
+                            </CardHeader>
+                            <CardContent className='flex flex-col gap-4'>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Quotation Type */}
+                                    {renderFormField("type_id", ({ field }) => {
+                                        const quotationTypeLabels: Record<QuotationType, string> = {
+                                            [QuotationType.NORMAL]: "Normal",
+                                            [QuotationType.OPTIONAL]: "Optional",
+                                        }
+                                        return (
+                                            <FormItem>
+                                                <FormLabel>Quotation Type <span className="text-red-500">*</span></FormLabel>
+                                                <RadioGroup value={String(field.value)} onValueChange={(val) => field.onChange(Number(val))} className="flex gap-4">
+                                                    {Object.values(QuotationType).filter(v => typeof v === 'number').map((type) => (
+                                                        <div key={type as number} className="flex items-center gap-2">
+                                                            <RadioGroupItem value={String(type)} id={`quotation-type-${type}`} />
+                                                            <Label htmlFor={`quotation-type-${type}`}>{quotationTypeLabels[type as QuotationType]}</Label>
+                                                        </div>
+                                                    ))}
+                                                </RadioGroup>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )
+                                    })}
+
+                                    {/* Delivery Days */}
+                                    {renderFormField("delivery_days", ({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Delivery Days <span className="text-red-500">*</span></FormLabel>
+                                            <FormControl><Input type="number" placeholder="1" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    ))}
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Tax Type */}
+                                    {renderFormField("tax_type_id", ({ field }) => {
+                                        const taxTypeLabels: Record<QuotationTaxType, string> = {
+                                            [QuotationTaxType.NONE]: "None",
+                                            [QuotationTaxType.VAT]: "VAT",
+                                            [QuotationTaxType.SVAT]: "SVAT",
+                                        }
+                                        return (
+                                            <FormItem>
+                                                <FormLabel>Tax Type <span className="text-red-500">*</span></FormLabel>
+                                                <RadioGroup
+                                                    value={String(field.value)}
+                                                    onValueChange={(val) => handleTaxTypeChange(Number(val))}
+                                                    className="flex gap-4"
+                                                >
+                                                    {Object.values(QuotationTaxType).filter(v => typeof v === 'number').map((type) => (
+                                                        <div key={type as number} className="flex items-center gap-2">
+                                                            <RadioGroupItem value={String(type)} id={`tax-type-${type}`} />
+                                                            <Label htmlFor={`tax-type-${type}`}>{taxTypeLabels[type as QuotationTaxType]}</Label>
+                                                        </div>
+                                                    ))}
+                                                </RadioGroup>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )
+                                    })}
+
+
+                                    {/* Currency */}
+                                    {renderFormField("currency", ({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Currency <span className="text-red-500">*</span></FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger className="w-full">
+                                                        <SelectValue placeholder="Select currency" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="LKR">🇱🇰 LKR - Sri Lankan Rupee (Rs)</SelectItem>
+                                                    <SelectItem value="USD">🇺🇸 USD - US Dollar ($)</SelectItem>
+                                                    <SelectItem value="EUR">🇪🇺 EUR - Euro (€)</SelectItem>
+                                                    <SelectItem value="GBP">🇬🇧 GBP - British Pound (£)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    ))}
+                                </div>
+
+                                {/* Show Account Details in PDF */}
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="showAccountDetails"
+                                        checked={showAccountDetails}
+                                        onCheckedChange={(checked) => setShowAccountDetails(checked as boolean)}
+                                    />
+                                    <label
+                                        htmlFor="showAccountDetails"
+                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                    >
+                                        Show Account Details in PDF
+                                    </label>
+                                </div>
+                                <p className="text-xs text-muted-foreground">Include account details in the printed quotation</p>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Card 3: Item Table */}
+                    <Card className={cn("w-full shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
+                        <CardHeader className="flex flex-col gap-[0.5px]">
+                            <h3 className="text-md font-medium mb-2">Items</h3>
+                            <p className="text-xs text-muted-foreground mb-4">Add items to the quotation</p>
+                        </CardHeader>
+                        <CardContent className='flex flex-col gap-4'>
+                            {/* Item Table */}
+                            <div className="overflow-x-auto">
+                                <table className="w-full border-collapse">
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="text-left p-2 text-sm font-medium">Item</th>
+                                            <th className="text-left p-2 text-sm font-medium">Description</th>
+                                            <th className="text-left p-2 text-sm font-medium">Quantity</th>
+                                            <th className="text-left p-2 text-sm font-medium">Rate (Rs)</th>
+                                            <th className="text-left p-2 text-sm font-medium">Total (VAT exclusive) (Rs)</th>
+                                            <th className="text-left p-2 text-sm font-medium">Total (VAT inclusive) (Rs)</th>
+                                            <th className="text-left p-2 text-sm font-medium">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {itemFields.map((item, index) => {
+                                            const qty = parseFloat(form.watch(`items.${index}.item_qty`) || "0")
+                                            const price = parseFloat(form.watch(`items.${index}.item_unit_price`) || "0")
+                                            const totalExclusive = qty * price
+                                            const totalInclusive = watchTaxType === 2 ? totalExclusive * 1.15 : totalExclusive
+
+                                            return (
+                                                <tr key={item.id} className="border-b">
+                                                    <td className="p-2">
+                                                        {renderFormField(`items.${index}.item_category`, ({ field }) => (
+                                                            <FormItem>
+                                                                <Combobox
+                                                                    items={itemList.map(item => ({
+                                                                        value: String(item.item_id),
+                                                                        label: item.item_name
+                                                                    }))}
+                                                                    value={field.value ? String(field.value) : ""}
+                                                                    onValueChange={(value) => {
+                                                                        const selectedItem = itemList.find(i => String(i.item_id) === value)
+
+                                                                        if (selectedItem) {
+                                                                            field.onChange(selectedItem.item_name)
+                                                                            form.setValue(`items.${index}.item_id`, selectedItem.item_id)
+                                                                        }
+                                                                    }}
+                                                                    placeholder="Select Item"
+                                                                    searchPlaceholder="Search item..."
+                                                                />
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        ))}
+                                                    </td>
+                                                    <td className="p-2">
+                                                        {renderFormField(`items.${index}.item_description`, ({ field }) => (
+                                                            <FormItem>
+                                                                <Textarea placeholder="Type your message here." className="resize-none min-w-[200px]" {...field} />
+                                                            </FormItem>
+                                                        ))}
+                                                    </td>
+                                                    <td className="p-2">
+                                                        {renderFormField(`items.${index}.item_qty`, ({ field }) => (
+                                                            <FormItem>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        type="number"
+                                                                        placeholder="0"
+                                                                        className="w-[80px]"
+                                                                        {...field}
+                                                                        onChange={(e) => handleItemChange(index, "item_qty", e.target.value)}
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        ))}
+                                                    </td>
+                                                    <td className="p-2">
+                                                        {renderFormField(`items.${index}.item_unit_price`, ({ field }) => (
+                                                            <FormItem>
+                                                                <Input
+                                                                    type="number"
+                                                                    placeholder="0"
+                                                                    className="w-[100px]"
+                                                                    {...field}
+                                                                    onChange={(e) => handleItemChange(index, "item_unit_price", e.target.value)}
+                                                                />
+                                                            </FormItem>
+                                                        ))}
+                                                    </td>
+                                                    <td className="p-2">
+                                                        <Input
+                                                            type="text"
+                                                            value={`Rs ${totalExclusive.toFixed(2)}`}
+
+                                                            className="w-[120px]"
+                                                        />
+                                                    </td>
+                                                    <td className="p-2">
+                                                        <Input
+                                                            type="text"
+                                                            value={`Rs ${totalInclusive.toFixed(2)}`}
+
+                                                            className="w-[120px]"
+                                                        />
+                                                    </td>
+                                                    <td className="p-2">
+                                                        <div className="flex gap-2">
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="text-green-600"
+                                                                onClick={() => {
+                                                                    // Explicitly trigger recalculation when checked
+                                                                    const currentItems = form.getValues("items")
+                                                                    const currentTaxType = form.getValues("tax_type_id")
+                                                                    const totals = calculateTotals(currentItems, currentTaxType)
+
+                                                                    form.setValue("sub_total", totals.subTotal)
+                                                                    form.setValue("no_of_items", totals.noOfItems)
+                                                                    form.setValue("total_without_tax", totals.totalWithoutTax)
+                                                                    form.setValue("net_total", totals.netTotal)
+                                                                    toast("Totals updated")
+                                                                }}
+                                                            >
+                                                                <Check className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="text-red-600"
+                                                                onClick={() => removeItem(index)}
+                                                                disabled={itemFields.length <= 1}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Add Product Button */}
+                            <div className="flex justify-start">
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={() => appendItem({
+                                        item_id: 0,
+                                        item_category: "",
+                                        item_qty: "0",
+                                        item_description: "",
+                                        item_unit_price: "0",
+                                        item_unit_discount: "0",
+                                        item_total_price: "0",
+                                    })}
+                                    className="bg-primary text-white hover:bg-primary/80"
+                                >
+                                    <PlusIcon className="mr-2 h-4 w-4" />
+                                    Add Product
+                                </Button>
+                            </div>
+
+                            {/* Notes */}
+                            {renderFormField("notes", ({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Notes</FormLabel>
+                                    <Textarea placeholder="Enter note..." className="resize-none" {...field} />
                                     <FormMessage />
                                 </FormItem>
                             ))}
 
-                            {/* CTP Plates */}
-                            <div>
-                                <h3 className="text-sm font-medium mb-2">CTP Plates</h3>
-                                <p className="text-xs text-muted-foreground mb-4">Select the CTP Plates for Old and New Plates.</p>
-                                <div className="grid grid-cols-1 md:grid-cols-3  gap-4 mb-2">
-
-                                    {renderFormField("oldPlatesQuantity", ({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Old Plates Quantity</FormLabel>
-                                            <FormControl><Input placeholder="Quantity" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    ))}
-                                    {renderFormField("oldPlatesStatus", ({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Old Plates Status</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Status" /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    {Object.values(PLATES_STATUS).map((status) => (
-                                                        <SelectItem key={status} value={status}>
-                                                            {status}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    ))}
-                                    {renderFormField("oldPlatesRemarks", ({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Old Plates Remarks</FormLabel>
-                                            <FormControl><Input placeholder="Remarks" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    ))}
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-                                    {renderFormField("newPlatesQuantity", ({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>New Plates Quantity</FormLabel>
-                                            <FormControl><Input placeholder="Quantity" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    ))}
-                                    {renderFormField("newPlatesStatus", ({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>New Plates Status</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Status" /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    {Object.values(PLATES_STATUS).map((status) => (
-                                                        <SelectItem key={status} value={status}>
-                                                            {status}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    ))}
-                                    {renderFormField("newPlatesRemarks", ({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>New Plates Remarks</FormLabel>
-                                            <FormControl><Input placeholder="Remarks" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Raw Material Section with updated delete logic */}
-                            <div>
-                                <h3 className="text-sm font-medium">Raw Material</h3>
-                                <p className="text-xs text-muted-foreground mb-4">Select the Raw Material that best fits your needs.</p>
-
-                                {rawMaterialFields.map((field, index) => (
-                                    <div key={field.id} className="flex gap-2 mb-2">
-                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
-                                            {renderFormField(`rawMaterials.${index}.item`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Raw Material</FormLabel>
-                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                        <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select an item" /></SelectTrigger></FormControl>
-                                                        <SelectContent><SelectItem value="rm1">Material 1</SelectItem></SelectContent>
-                                                    </Select>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            ))}
-                                            {renderFormField(`rawMaterials.${index}.quantity`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Quantity</FormLabel>
-                                                    <FormControl><Input placeholder="Enter Quantity" {...field} /></FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            ))}
-                                            {renderFormField(`rawMaterials.${index}.status`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Status</FormLabel>
-                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                        <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select an Status" /></SelectTrigger></FormControl>
-                                                        <SelectContent><SelectItem value="s1">Status 1</SelectItem></SelectContent>
-                                                    </Select>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            ))}
-                                            {renderFormField(`rawMaterials.${index}.remarks`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Remarks</FormLabel>
-                                                    <FormControl><Input placeholder="Enter Remarks" {...field} /></FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            ))}
-                                        </div>
-                                        <div className="flex space-x-2 items-end pb-2">
-                                            <Button type="button" variant="outline" size="icon" onClick={() => { }}><Edit2 className="h-4 w-4" /></Button>
-                                            <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="icon"
-                                                onClick={() => removeRawMaterial(index)}
-                                                disabled={rawMaterialFields.length <= 1} // Disable if only one item
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
+                            {/* Calculation Summary */}
+                            <div className="flex justify-end">
+                                <div className="w-full md:w-1/2 space-y-2 border-t pt-4">
+                                    <div className="flex justify-between text-sm">
+                                        <span>Sub Total (Without TAX):</span>
+                                        <span className="font-medium">Rs {form.watch("sub_total") || "0"}</span>
                                     </div>
-                                ))}
-                                <div className="flex justify-end mt-2">
-                                    <Button type="button" onClick={() => appendRawMaterial({ item: "", quantity: "", status: "", remarks: "" })} className="bg-primary text-white hover:bg-primary/90">Add More</Button>
-                                </div>
-                            </div>
-
-                            {/* Ink Section with updated delete logic */}
-                            <div>
-                                <h3 className="text-sm font-medium">Ink</h3>
-                                <p className="text-xs text-muted-foreground mb-4">Select the Ink that best fits your needs.</p>
-
-                                {inkFields.map((field, index) => (
-                                    <div key={field.id} className="flex gap-2 mb-2">
-                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
-                                            {renderFormField(`inks.${index}.ink`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Ink</FormLabel>
-                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                        <FormControl><SelectTrigger className="w-full"><SelectValue placeholder={field.value || "Select Ink"} /></SelectTrigger></FormControl>
-                                                        <SelectContent>
-                                                            <SelectItem value="Black">Black</SelectItem>
-                                                            <SelectItem value="Cyan">Cyan</SelectItem>
-                                                            <SelectItem value="Magenta">Magenta</SelectItem>
-                                                            <SelectItem value="Yellow">Yellow</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            ))}
-                                            {renderFormField(`inks.${index}.quantity`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Quantity</FormLabel>
-                                                    <FormControl><Input placeholder="Enter Quantity" {...field} /></FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            ))}
-                                            {renderFormField(`inks.${index}.status`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Status</FormLabel>
-                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                        <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select an Status" /></SelectTrigger></FormControl>
-                                                        <SelectContent>
-                                                            {Object.values(INK_STATUS).map((status) => (
-                                                                <SelectItem key={status} value={status}>
-                                                                    {status}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            ))}
-                                            {renderFormField(`inks.${index}.remarks`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Remarks</FormLabel>
-                                                    <FormControl><Input placeholder="Enter Remarks" {...field} /></FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            ))}
-                                        </div>
-                                        <div className="flex space-x-2 items-end pb-2">
-                                            <Button type="button" variant="outline" size="icon" onClick={() => { }}><Edit2 className="h-4 w-4" /></Button>
-                                            <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="icon"
-                                                onClick={() => removeInk(index)}
-                                                disabled={inkFields.length <= 1} // Disable if only one item
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span>No. of Items:</span>
+                                        <span className="font-medium">{form.watch("no_of_items") || "0"}</span>
                                     </div>
-                                ))}
-                                <div className="flex justify-end mt-2">
-                                    <Button type="button" onClick={() => appendInk({ ink: "", quantity: "", status: "", remarks: "" })} className="bg-primary text-white hover:bg-primary/90">Add More</Button>
-                                </div>
-                            </div>
-
-                            {/* Artwork */}
-                            <div>
-                                <h3 className="text-sm font-medium mb-2">Artwork</h3>
-                                <div
-                                    className="border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center text-center cursor-pointer hover:border-gray-400 transition-colors"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    onDrop={handleDrop}
-                                    onDragOver={(e) => e.preventDefault()}
-                                >
-                                    <CloudUpload className="h-10 w-10 text-muted-foreground mb-2" />
-                                    <p className="text-sm font-medium">
-                                        Drag your file(s) or <span className="font-bold underline">browse</span>
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-1">Max 10 MB files are allowed</p>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept=".jpg,.jpeg,.png,.svg,.zip"
-                                        className="hidden"
-                                        onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
-                                    />
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-2 mb-3">Only support .jpg, .png and .svg and zip files</p>
-
-                                {/* File Preview */}
-                                {uploadedFile && (
-                                    <div className="mt-4 border rounded-lg p-3 flex items-center justify-between bg-gray-50">
-                                        <div className="flex items-center gap-3">
-                                            <div className="bg-blue-100 p-2 rounded">
-                                                <FileArchive className="h-6 w-6 text-blue-600" />
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-medium">{uploadedFile.name}</span>
-                                                <span className="text-xs text-muted-foreground">{formatFileSize(uploadedFile.size)}</span>
-                                            </div>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={removeFile}
-                                            className="p-1 hover:bg-gray-200 rounded-full transition-colors"
-                                        >
-                                            <X className="h-5 w-5 text-gray-600" />
-                                        </button>
+                                    <div className="flex justify-between text-sm">
+                                        <span>Total Amount (Without TAX):</span>
+                                        <span className="font-medium">Rs {form.watch("total_without_tax") || "0"}</span>
                                     </div>
-                                )}
+                                    <div className="flex justify-between text-sm font-bold border-t pt-2">
+                                        <span>Net Total:</span>
+                                        <span>Rs {form.watch("net_total") || "0"}</span>
+                                    </div>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
-
                 </form>
             </Form>
         </div>
     )
 }
 
-export default CreateQuotation;
+export default CreateQuotation

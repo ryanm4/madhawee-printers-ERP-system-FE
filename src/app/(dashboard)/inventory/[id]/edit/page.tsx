@@ -14,6 +14,7 @@ import { inventoryManagementScheme } from '@/modules/inventory/validation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useParams, useRouter } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
+import { getUser } from '@/lib/auth'
 import { FieldPath, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -25,6 +26,7 @@ type InventoryManagementFormValues = z.infer<typeof inventoryManagementScheme>
 function EditInventoryManagement() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
+    const [user, setUser] = useState<{ name: string; email: string; avatar: string } | null>(null)
     const params = useParams(); // ✅ Get params from hook
     const id = params.id as string;
 
@@ -48,6 +50,17 @@ function EditInventoryManagement() {
 
 
     useEffect(() => {
+        const userData = getUser()
+        if (userData) {
+            setUser({
+                name: userData.name || "User",
+                email: userData.email,
+                avatar: "",
+            })
+        }
+    }, [])
+
+    useEffect(() => {
         async function fetchInventoryData() {
             try {
                 setIsLoading(true);
@@ -68,7 +81,7 @@ function EditInventoryManagement() {
                 });
             } catch (error) {
                 console.error("Failed to fetch inventory:", error);
-                toast.error("Failed to load inventory data");
+                toast("Failed to load inventory data");
                 router.push("/inventory");
             } finally {
                 setIsLoading(false);
@@ -95,17 +108,23 @@ function EditInventoryManagement() {
                 reorder_level: data.reorder_level,
                 status: data.status,
                 remarks: data.remarks ?? "",
+                created_by: "Admin", // Fallback, usually fetched from data
+                updated_by: user?.name || "Admin",
             }
             const response = await inventoryApi.update(id, payload);
             console.log(response)
 
-            toast.success("Inventory Updated Successfully");
+            toast("Inventory Item Updated", {
+                description: "The inventory item has been updated successfully."
+            });
             form.reset(baseDefaultValues)
             form.clearErrors()
             router.push("/inventory")
         } catch (error) {
             console.error("Failed to update inventory:", error)
-            toast.error("Failed to update inventory");
+            toast("Failed to Update Inventory Item", {
+                description: "An error occurred while updating the inventory item. Please try again."
+            });
         } finally {
             setIsLoading(false);
         }
@@ -158,9 +177,9 @@ function EditInventoryManagement() {
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Item Category" /></SelectTrigger></FormControl>
                                         <SelectContent>
-                                            {Object.values(ITEM_CATEGORY).map((category) => (
-                                                <SelectItem key={category} value={category}>
-                                                    {category}
+                                            {Object.entries(ITEM_CATEGORY).map(([key, value]) => (
+                                                <SelectItem key={key} value={value}>
+                                                    {value}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -174,9 +193,9 @@ function EditInventoryManagement() {
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Item Sub Category" /></SelectTrigger></FormControl>
                                         <SelectContent>
-                                            {Object.values(ITEM_SUB_CATEGORY).map((category) => (
-                                                <SelectItem key={category} value={category}>
-                                                    {category}
+                                            {Object.entries(ITEM_SUB_CATEGORY).map(([key, value]) => (
+                                                <SelectItem key={key} value={value}>
+                                                    {value}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>

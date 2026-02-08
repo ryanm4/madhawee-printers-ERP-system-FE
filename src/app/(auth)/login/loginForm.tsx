@@ -1,5 +1,5 @@
 "use client"
-import { Eye, EyeOff, GalleryVerticalEnd } from "lucide-react"
+import { Eye, EyeOff, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -7,7 +7,6 @@ import {
   FieldDescription,
   FieldGroup,
   FieldLabel,
-  FieldSeparator,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { useForm } from "react-hook-form"
@@ -18,6 +17,11 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import Image from "next/image"
 import company_logo from "@/assets/Images/company_logo.jpeg"
+import { loginApi } from "@/modules/login/api"
+import { setToken, setUser } from "@/lib/auth"
+import { toast } from "sonner"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+
 type LoginFormValues = z.infer<typeof loginSchema>
 
 
@@ -28,6 +32,9 @@ export function LoginForm({
 
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const baseDefaultValues: LoginFormValues = {
     email: "",
     password: "",
@@ -38,11 +45,41 @@ export function LoginForm({
 
   })
 
-  const onSubmit = async () => {
-    router.push("/dashboard")
+  const onSubmit = async (data: LoginFormValues) => {
+    setError(null);
+    try {
+      setIsLoading(true);
+      const response = await loginApi.login(data);
 
+      // Save token and user to cookies
+      setToken(response.data.token);
+      setUser(response.data.user);
 
+      toast("Login successful!");
+      router.push("/dashboard");
+    } catch (error: any) {
+      console.error("Login failed:", error);
+      let errorMessage = "Invalid email or password";
+
+      if (error.response) {
+        // Handle API error response
+        const data = error.response.data;
+        if (data.error) {
+          errorMessage = data.error;
+        } else if (data.message) {
+          errorMessage = data.message;
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      setError(errorMessage);
+      toast(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -60,12 +97,24 @@ export function LoginForm({
             <h1 className="text-xl font-bold">Welcome to Madhawee Printers</h1>
 
           </div>
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>
+                {error}
+              </AlertDescription>
+            </Alert>
+          )}
+
           <Field>
             <FieldLabel htmlFor="email">Email</FieldLabel>
             <Input
               id="email"
               type="email"
               placeholder="m@example.com"
+              disabled={isLoading}
               {...form.register("email")}
             />
             {form.formState.errors.email && (
@@ -89,6 +138,7 @@ export function LoginForm({
                 placeholder="Enter Your Password"
                 type={showPassword ? "text" : "password"}
                 className="pr-10"
+                disabled={isLoading}
                 {...form.register("password")}
               />
 
@@ -108,7 +158,9 @@ export function LoginForm({
           </Field>
 
           <Field>
-            <Button type="submit">Login</Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Signing in..." : "Login"}
+            </Button>
           </Field>
 
 

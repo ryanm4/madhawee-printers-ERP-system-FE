@@ -19,6 +19,7 @@ import { CustomerType, VatType } from '@/config/enum'
 import { CREATE_CUSTOMER } from '@/modules/customer/types'
 import { CustomerApi } from '@/modules/customer/api'
 import { toast } from 'sonner'
+import { getUser } from '@/lib/auth'
 
 type CustomerFormValues = z.infer<typeof customerSchema>
 
@@ -26,6 +27,7 @@ function CreateCustomerRelationship() {
     const router = useRouter()
     const [uploadedFile, setUploadedFile] = useState<File | null>(null)
     const [isLoading, setIsLoading] = useState(false);
+    const [user, setUser] = useState<{ name: string; email: string; avatar: string } | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const baseDefaultValues: CustomerFormValues = {
@@ -48,8 +50,21 @@ function CreateCustomerRelationship() {
     const form = useForm<CustomerFormValues>({
         resolver: zodResolver(customerSchema),
         defaultValues: baseDefaultValues,
-
     })
+
+    React.useEffect(() => {
+        const userData = getUser()
+        if (userData) {
+            const name = userData.name || "User"
+            setUser({
+                name: name,
+                email: userData.email,
+                avatar: "",
+            })
+            form.setValue("created_by", name)
+            form.setValue("updated_by", name)
+        }
+    }, [form])
 
 
     const handleFileSelect = (file: File | null) => {
@@ -102,19 +117,24 @@ function CreateCustomerRelationship() {
                 contact_person: data.contactPerson ?? "",
                 contact_person_email: data.contactPersonEmail ?? "",
                 contact_person_phone: data.contactPersonPhone ?? "",
-                created_by: data.created_by ?? "Admin",
+                created_by: user?.name || "Admin",
+                updated_by: user?.name || "Admin",
                 status: "Created"
             }
             const response = await CustomerApi.create(payload);
             console.log(response)
 
-            toast.success("Customer Created Successfully");
+            toast("Customer Created", {
+                description: "The customer has been created successfully."
+            });
             form.reset(baseDefaultValues)
             form.clearErrors()
             router.push("/customers")
         } catch (error) {
             console.error("Failed to submit customer:", error)
-            toast.error("Failed to create customer");
+            toast("Failed to Create Customer", {
+                description: "An error occurred while creating the customer. Please try again."
+            });
         } finally {
             setIsLoading(false);
         }

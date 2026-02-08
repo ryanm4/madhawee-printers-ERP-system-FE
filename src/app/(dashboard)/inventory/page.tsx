@@ -10,6 +10,8 @@ import React, { useEffect, useState } from 'react'
 import { DataTable } from './_components/inventory_table'
 import { inventoryColumns } from './_components/inventory_columns'
 import { GET_ALL_INVENTORY } from '@/modules/inventory/types'
+import { toast } from 'sonner'
+import { EmptyState } from '@/components/shared/empty-page'
 
 function InventoryManagement() {
     const router = useRouter()
@@ -55,12 +57,15 @@ function InventoryManagement() {
         try {
             setIsLoading(true);
             await inventoryApi.delete(deleteId);
-
-
+            toast("Inventory Item Deleted", {
+                description: "Inventory item has been deleted successfully."
+            })
             await fetchData();
-
         } catch (error) {
             console.error("Failed to delete inventory item");
+            toast("Failed to Delete Inventory Item", {
+                description: "An error occurred while deleting the inventory item. Please try again."
+            })
         } finally {
             setIsLoading(false);
             setDeleteId(null); // close popup
@@ -94,12 +99,21 @@ function InventoryManagement() {
                         <PlusIcon /> Create New
                     </Button>
                 </div>
-                <DataTable
-                    columns={columns}
-                    data={data}
-                    searchValue={search}
-                    searchColumn="item_name"
-                />
+                {data.length === 0 && !isLoading ? (
+                    <EmptyState
+                        title="Inventory Empty"
+                        description="There are no items in your inventory. Add your stocks and materials to start tracking them."
+                        createLabel="Create New Inventory"
+                        createPath="/inventory/create"
+                    />
+                ) : (
+                    <DataTable
+                        columns={columns}
+                        data={data}
+                        searchValue={search}
+                        searchColumn="item_name"
+                    />
+                )}
             </div>
 
             <AlertDeleteDialog

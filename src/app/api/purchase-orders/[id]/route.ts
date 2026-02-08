@@ -1,5 +1,6 @@
 // app/api/purchase-orders/[id]/route.ts
 import { API_ENDPOINTS } from "@/config/api-endpoints";
+import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 
@@ -8,6 +9,8 @@ export async function GET(
     request: NextRequest,
     context: { params: Promise<{ id: string }> }
 ) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token");
     try {
         const { id } = await context.params;
         const apiUrl = API_ENDPOINTS.PURCHASE_ORDERS.GET(id);
@@ -16,6 +19,7 @@ export async function GET(
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
+                Authorization: `Bearer ${token?.value}`,
             },
             cache: "no-store",
             credentials: "include",
@@ -44,6 +48,8 @@ export async function PUT(
     request: NextRequest,
     context: { params: Promise<{ id: string }> }
 ) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token");
     try {
         const { id } = await context.params;
         const body = await request.json();
@@ -53,6 +59,7 @@ export async function PUT(
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
+                Authorization: `Bearer ${token?.value}`,
             },
             body: JSON.stringify(body),
             cache: "no-store",
@@ -82,6 +89,8 @@ export async function DELETE(
     request: NextRequest,
     context: { params: Promise<{ id: string }> }
 ) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token");
     try {
         const { id } = await context.params;
         const apiUrl = API_ENDPOINTS.PURCHASE_ORDERS.DELETE(id);
@@ -90,6 +99,7 @@ export async function DELETE(
             method: "DELETE",
             headers: {
                 "Content-Type": "application/json",
+                Authorization: `Bearer ${token?.value}`,
             },
             cache: "no-store",
             credentials: "include",

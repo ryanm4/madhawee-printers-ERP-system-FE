@@ -48,6 +48,25 @@ export const API_ENDPOINTS = {
         GET: (customerId: number | string) => `${API_BASE_URL}/customers/${customerId}`,
     },
 
+    USER: {
+        LIST: `${API_BASE_URL}/auth/users`,
+        CREATE: `${API_BASE_URL}/auth/register`,
+        UPDATE: (userID: number | string) => `${API_BASE_URL}/auth/users/${userID}`,
+        DELETE: (userID: number | string) => `${API_BASE_URL}/auth/users/${userID}`,
+        GET: (userID: number | string) => `${API_BASE_URL}/auth/users/${userID}`,
+    },
+
+    AUTH: {
+        LOGIN: `${API_BASE_URL}/auth/login`,
+    },
+
+    DASHBOARD_KPI: {
+        CREATE: `${API_BASE_URL}/reports/dashboard/insights`,
+    },
+    REPORTS: {
+        CREATE: `${API_BASE_URL}/reports`,
+    },
+
 
     RELATIVE: {
         PURCHASE_ORDERS: {
@@ -93,6 +112,27 @@ export const API_ENDPOINTS = {
             DELETE: (customerId: number | string) => `${NEXTJS_API_BASE}/customers/${customerId}`,
             GET: (customerId: number | string) => `${NEXTJS_API_BASE}/customers/${customerId}`,
         },
-    },
+
+        USER: {
+            LIST: `${NEXTJS_API_BASE}/users`,
+            CREATE: `${NEXTJS_API_BASE}/users`,
+            UPDATE: (userID: number | string) => `${NEXTJS_API_BASE}/users/${userID}`,
+            DELETE: (userID: number | string) => `${NEXTJS_API_BASE}/users/${userID}`,
+            GET: (userID: number | string) => `${NEXTJS_API_BASE}/users/${userID}`,
+        },
+
+        AUTH: {
+            LOGIN: `${NEXTJS_API_BASE}/login`,
+        },
+
+        REPORTS: {
+            DASHBOARD_KPI: {
+                CREATE: `${NEXTJS_API_BASE}/reports/dashboard/insights`,
+            },
+            CREATE: `${NEXTJS_API_BASE}/reports`,
+        },
+
+    }
+
 } as const;
 
