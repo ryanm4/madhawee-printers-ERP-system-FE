@@ -204,7 +204,7 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
             const response = await jobTicketsApi.create(payload)
             console.log(response)
 
-            toast.success("Job Ticket Created Successfully")
+            toast("Job Ticket Created Successfully")
 
             if (data.addAnotherJob) {
                 form.reset(
@@ -234,7 +234,7 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
             }
         } catch (error) {
             console.error("Failed to submit job ticket:", error)
-            toast.error("Failed to create job ticket")
+            toast("Failed to create job ticket")
         } finally {
             setLoading(false)
         }
@@ -463,9 +463,9 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Product Type" /></SelectTrigger></FormControl>
                                         <SelectContent>
-                                            {Object.values(PRODUCT_TYPES).map((productType) => (
-                                                <SelectItem key={productType} value={productType}>
-                                                    {productType}
+                                            {Object.entries(PRODUCT_TYPES).map(([key, value]) => (
+                                                <SelectItem key={key} value={value}>
+                                                    {value}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -515,9 +515,9 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
                                                 <Select onValueChange={field.onChange} value={field.value}>
                                                     <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Coating" /></SelectTrigger></FormControl>
                                                     <SelectContent>
-                                                        {Object.values(COATING_TYPES).map((coating) => (
-                                                            <SelectItem key={coating} value={coating}>
-                                                                {coating}
+                                                        {Object.entries(COATING_TYPES).map(([key, value]) => (
+                                                            <SelectItem key={key} value={value}>
+                                                                {value}
                                                             </SelectItem>
                                                         ))}
                                                     </SelectContent>
@@ -792,9 +792,9 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
                                                 <Select onValueChange={field.onChange} value={field.value}>
                                                     <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select an Status" /></SelectTrigger></FormControl>
                                                     <SelectContent>
-                                                        {Object.values(INK_STATUS).map((status) => (
-                                                            <SelectItem key={status} value={status}>
-                                                                {status}
+                                                        {Object.entries(INK_STATUS).map(([key, value]) => (
+                                                            <SelectItem key={key} value={value}>
+                                                                {value}
                                                             </SelectItem>
                                                         ))}
                                                     </SelectContent>

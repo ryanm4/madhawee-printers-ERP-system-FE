@@ -9,7 +9,7 @@ export const inventoryManagementScheme = z.object({
     unit_of_measure: z.string().min(1, "Item UOM Required"),
     reorder_level: z.string().min(1, "Item Recoder Level Required"),
     status: z.string().min(1, "Item Status Required"),
-    remarks: z.string().optional()
-
+    remarks: z.string().optional(),
+    created_by: z.string().optional(),
+    updated_by: z.string().optional(),
 })
-

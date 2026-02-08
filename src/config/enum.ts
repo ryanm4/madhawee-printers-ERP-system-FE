@@ -49,6 +49,18 @@ export enum TaxTypes {
     VAT = "VAT",
 }
 
+export enum QuotationType {
+    NORMAL = 1,
+    OPTIONAL = 2,
+}
+
+export enum QuotationTaxType {
+    VAT = 0,
+    SVAT = 1,
+    NONE = 2,
+}
+
+
 export enum VatType {
     SVAT = "SVAT",
     VAT = "VAT",
@@ -164,4 +176,17 @@ export enum COATING_TYPES {
     EMBOSING = "EMBOSING",
     SAND_UV_VARNISHED = "SAND UV VARNISHED",
 
+}
+
+export enum REPORT_TYPES {
+    JOB_PRODUCTION = "JOB PRODUCTION",
+    QUOTATION_SUMMARY = "QUOTATION SUMMARY",
+    QUOTE_TO_PO_CONVERSION = "QUOTE TO PO CONVERSION",
+    INVENTORY_HEALTH = "INVENTORY HEALTH",
+    DISPATCH_INSIGHTS = "DISPATCH INSIGHTS",
+}
+
+export enum USER_ROLES {
+    USER = "USER",
+    ADMIN = "ADMIN",
 }

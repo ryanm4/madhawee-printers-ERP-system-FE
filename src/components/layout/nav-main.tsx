@@ -1,6 +1,6 @@
 "use client"
 
-import { IconCirclePlusFilled, IconMail, type Icon } from "@tabler/icons-react"
+import type { LucideIcon } from "lucide-react"
 import { usePathname } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
@@ -18,7 +18,7 @@ export function NavMain({
   items: {
     title: string
     url: string
-    icon?: Icon
+    icon?: LucideIcon
   }[]
 }) {
   const pathname = usePathname()

@@ -13,6 +13,10 @@ export interface QUOTATIONS {
     contact_person: string;
     notes: string;
     status: string;
+    sub_total: string;
+    no_of_items: string;
+    total_without_tax: string;
+    net_total: string;
     created_on: string;               // ISO string from API
     created_by: string;
     updated_on: string | null;
@@ -21,57 +25,56 @@ export interface QUOTATIONS {
 
 
 
-export interface Material {
+export interface QuotationItems {
     item_id: number;
-    material_type: string;
-    material_name: string;
-    material_description?: string;
-    quantity: number;
-    status: string;
-    remarks?: string;
+    item_category: string;
+    item_qty: string;
+    item_description?: string;
+    item_unit_price: string;
+    item_unit_discount: string;
+    item_total_price: string;
 }
 
 
 export interface CREATE_QUOTATION_REQUEST {
     customer_id: number;
-    job_name: string;
-    job_open_date: string; // ISO date string
-    product_type: string;
-    paper_type_id: string;
-    quantity: number;
-    coating?: string;
-    packing_date?: string;
-    expiry_date?: string;
-    description?: string;
-    artwork?: string;
-    remarks?: string;
+    type_id: number;
+    delivery_days: string;
+    tax_type_id: number;
+    currency: string;
+    contact_person: string;
+    notes: string;
     status: string;
-    completed_qty?: number;
-    wastage?: string;
-    materials?: Material[];
+    sub_total: string;
+    no_of_items: string;
+    total_without_tax: string;
+    net_total: string;
+    created_by: string;
+    updated_by: string;
+    items: QuotationItems[];
+}
+
+
+export interface UPDATE_QUOTATION_REQUEST {
+    quote_id: number;
+    customer_id?: number;
+    type_id?: number;
+    delivery_days?: string;
+    tax_type_id?: number;
+    currency?: string;
+    contact_person?: string;
+    notes?: string;
+    status?: string;
+    sub_total?: string;
+    no_of_items?: string;
+    total_without_tax?: string;
+    net_total?: string;
+    created_by?: string;
+    updated_by?: string;
+    items?: QuotationItems[];
 }
 
 
 export interface DELETE_QUOTATION_REQUEST {
     quote_id: number;
-}
-
-export interface UPDATE_QUOTATION_REQUEST {
-    quote_id: number;
-    customer_id?: number;
-    job_name?: string;
-    job_open_date?: string;
-    product_type?: string;
-    paper_type_id?: string;
-    quantity?: number;
-    coating?: string;
-    packing_date?: string;
-    expiry_date?: string;
-    description?: string;
-    artwork?: string;
-    remarks?: string;
-    status?: string;
-    completed_qty?: number;
-    wastage?: string;
-    materials?: Material[];
 }

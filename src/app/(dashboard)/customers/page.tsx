@@ -10,6 +10,8 @@ import { useEffect, useState } from "react";
 import { CUSTOMER } from "@/modules/customer/types";
 import { CustomerApi } from "@/modules/customer/api";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
+import { toast } from "sonner";
+import { EmptyState } from "@/components/shared/empty-page";
 
 export default function CRMPage() {
     const router = useRouter();
@@ -56,12 +58,15 @@ export default function CRMPage() {
         try {
             setIsLoading(true);
             await CustomerApi.delete(deleteId);
-
-
+            toast("Customer Deleted", {
+                description: "Customer has been deleted successfully."
+            })
             await fetchData();
-
         } catch (error) {
             console.error("Failed to delete inventory item");
+            toast("Failed to Delete Customer", {
+                description: "An error occurred while deleting the customer. Please try again."
+            })
         } finally {
             setIsLoading(false);
             setDeleteId(null); // close popup
@@ -95,12 +100,21 @@ export default function CRMPage() {
                         <PlusIcon /> Create New
                     </Button>
                 </div>
-                <DataTable
-                    columns={columns}
-                    data={data}
-                    searchValue={search}
-                    searchColumn="company_name"
-                />
+                {data.length === 0 && !isLoading ? (
+                    <EmptyState
+                        title="No Customers Found"
+                        description="You haven't added any customers yet. Start building your customer base by creating your first entry."
+                        createLabel="Create New Customer"
+                        createPath="/customers/create"
+                    />
+                ) : (
+                    <DataTable
+                        columns={columns}
+                        data={data}
+                        searchValue={search}
+                        searchColumn="company_name"
+                    />
+                )}
             </div>
             <AlertDeleteDialog
                 isOpen={deleteId !== null}

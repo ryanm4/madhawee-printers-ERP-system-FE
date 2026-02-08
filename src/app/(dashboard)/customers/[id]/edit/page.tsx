@@ -19,6 +19,7 @@ import { CustomerType, VatType } from '@/config/enum'
 import { CREATE_CUSTOMER } from '@/modules/customer/types'
 import { CustomerApi } from '@/modules/customer/api'
 import { toast } from 'sonner'
+import { getUser } from '@/lib/auth'
 
 type CustomerFormValues = z.infer<typeof customerSchema>
 
@@ -26,6 +27,7 @@ function EditCustomerRelationship() {
     const router = useRouter()
     const [uploadedFile, setUploadedFile] = useState<File | null>(null)
     const [isLoading, setIsLoading] = useState(false);
+    const [user, setUser] = useState<{ name: string; email: string; avatar: string } | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const params = useParams();
     const id = params.id as string;
@@ -50,8 +52,20 @@ function EditCustomerRelationship() {
     const form = useForm<CustomerFormValues>({
         resolver: zodResolver(customerSchema),
         defaultValues: baseDefaultValues,
-
     })
+
+    useEffect(() => {
+        const userData = getUser()
+        if (userData) {
+            const name = userData.name || "User"
+            setUser({
+                name: name,
+                email: userData.email,
+                avatar: "",
+            })
+            form.setValue("updated_by", name)
+        }
+    }, [form])
 
 
 
@@ -83,7 +97,7 @@ function EditCustomerRelationship() {
                 });
             } catch (error) {
                 console.error("Failed to fetch customer:", error);
-                toast.error("Failed to load customer data");
+                toast("Failed to load customer data");
                 router.push("/customers");
             } finally {
                 setIsLoading(false);
@@ -148,18 +162,23 @@ function EditCustomerRelationship() {
                 contact_person_email: data.contactPersonEmail ?? "",
                 contact_person_phone: data.contactPersonPhone ?? "",
                 created_by: data.created_by ?? "Admin",
+                updated_by: user?.name || "Admin",
                 status: "Updated"
             }
             const response = await CustomerApi.update(id, payload);
             console.log(response)
 
-            toast.success("Customer Updated Successfully");
+            toast("Customer Updated", {
+                description: "The customer details have been updated successfully."
+            });
             form.reset(baseDefaultValues)
             form.clearErrors()
             router.push("/customers")
         } catch (error) {
             console.error("Failed to submit customer:", error)
-            toast.error("Failed to update customer");
+            toast("Failed to Update Customer", {
+                description: "An error occurred while updating the customer. Please try again."
+            });
         } finally {
             setIsLoading(false);
         }
@@ -198,8 +217,7 @@ function EditCustomerRelationship() {
 
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
-                    console.log("Form Validation Errors:", errors);
-                    toast.error("Please fill in all required fields correctly");
+                    toast("Please fill in all required fields correctly");
                 })} className='space-y-6  pb-0'>
                     <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
                         <Button size="lg" variant="outline" type="button" onClick={() => router.push("/customers")}>Cancel</Button>

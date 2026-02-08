@@ -10,6 +10,8 @@ import { DispatchColumns } from './_components/dispatch_columns'
 import { AlertDeleteDialog } from '@/components/shared/delete_popup'
 import { DataTable } from './_components/dispatch_table'
 import { dispatchInventoryApi } from '@/modules/dispatch-invoice/api'
+import { toast } from 'sonner'
+import { EmptyState } from '@/components/shared/empty-page'
 
 function DispatchInvoiceManagement() {
     const router = useRouter();
@@ -55,12 +57,14 @@ function DispatchInvoiceManagement() {
         try {
             setIsLoading(true);
             await dispatchInventoryApi.delete(deleteId);
-
-
+            toast("Dispatch Deleted", {
+                description: "Dispatch has been deleted successfully."
+            })
             await fetchData();
-
         } catch (error) {
-            console.error("Failed to delete inventory item");
+            toast("Failed to Delete Dispatch", {
+                description: "An error occurred while deleting the dispatch record. Please try again."
+            })
         } finally {
             setIsLoading(false);
             setDeleteId(null); // close popup
@@ -94,12 +98,21 @@ function DispatchInvoiceManagement() {
                         <PlusIcon /> Create New
                     </Button>
                 </div>
-                <DataTable
-                    columns={columns}
-                    data={data}
-                    searchValue={search}
-                    searchColumn="dispatch_note"
-                />
+                {data.length === 0 && !isLoading ? (
+                    <EmptyState
+                        title="No Dispatch Records"
+                        description="There are no dispatch notes or invoices recorded yet. Start by creating a NEW dispatch note."
+                        createLabel="Create New Dispatch"
+                        createPath="/dispatch-invoice/create"
+                    />
+                ) : (
+                    <DataTable
+                        columns={columns}
+                        data={data}
+                        searchValue={search}
+                        searchColumn="dispatch_note"
+                    />
+                )}
             </div>
 
             <AlertDeleteDialog

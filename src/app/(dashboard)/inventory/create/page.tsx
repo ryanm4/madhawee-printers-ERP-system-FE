@@ -15,7 +15,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { getUser } from '@/lib/auth'
 import { FieldPath, useForm } from 'react-hook-form'
 import { z } from 'zod'
 
@@ -25,6 +26,7 @@ type InventoryManagementFormValues = z.infer<typeof inventoryManagementScheme>
 function CreateInventoryManagement() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
+    const [user, setUser] = useState<{ name: string; email: string; avatar: string } | null>(null)
 
 
     const baseDefaultValues: InventoryManagementFormValues = {
@@ -42,8 +44,18 @@ function CreateInventoryManagement() {
     const form = useForm<InventoryManagementFormValues>({
         resolver: zodResolver(inventoryManagementScheme),
         defaultValues: baseDefaultValues,
-
     })
+
+    useEffect(() => {
+        const userData = getUser()
+        if (userData) {
+            setUser({
+                name: userData.name || "User",
+                email: userData.email,
+                avatar: "",
+            })
+        }
+    }, [])
 
     async function onSubmit(data: InventoryManagementFormValues) {
 
@@ -60,17 +72,23 @@ function CreateInventoryManagement() {
                 reorder_level: data.reorder_level,
                 status: data.status,
                 remarks: data.remarks ?? "",
+                created_by: user?.name || "Admin",
+                updated_by: user?.name || "Admin",
             }
             const response = await inventoryApi.create(payload);
             console.log(response)
 
-            toast.success("Inventory Created Successfully");
+            toast("Inventory Item Created", {
+                description: "The inventory item has been added successfully."
+            });
             form.reset(baseDefaultValues)
             form.clearErrors()
             router.push("/inventory")
         } catch (error) {
             console.error("Failed to submit inventory:", error)
-            toast.error("Failed to create inventory");
+            toast("Failed to Create Inventory Item", {
+                description: "An error occurred while adding the inventory item. Please try again."
+            });
         } finally {
             setIsLoading(false);
         }
@@ -125,9 +143,9 @@ function CreateInventoryManagement() {
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Item Category" /></SelectTrigger></FormControl>
                                         <SelectContent>
-                                            {Object.values(ITEM_CATEGORY).map((category) => (
-                                                <SelectItem key={category} value={category}>
-                                                    {category}
+                                            {Object.entries(ITEM_CATEGORY).map(([key, value]) => (
+                                                <SelectItem key={key} value={value}>
+                                                    {value}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -141,9 +159,9 @@ function CreateInventoryManagement() {
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Item Sub Category" /></SelectTrigger></FormControl>
                                         <SelectContent>
-                                            {Object.values(ITEM_SUB_CATEGORY).map((category) => (
-                                                <SelectItem key={category} value={category}>
-                                                    {category}
+                                            {Object.entries(ITEM_SUB_CATEGORY).map(([key, value]) => (
+                                                <SelectItem key={key} value={value}>
+                                                    {value}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>

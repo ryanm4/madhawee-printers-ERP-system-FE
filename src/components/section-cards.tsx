@@ -1,102 +1,86 @@
-import { IconTrendingDown, IconTrendingUp } from "@tabler/icons-react"
-
+import { IconTrendingUp, IconFileInvoice, IconUsers, IconPackage, IconShoppingCart, IconChartBar } from "@tabler/icons-react"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
-  CardAction,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { KPIItem } from "@/modules/dashboard/types"
+import { FileText, LucideIcon, Truck } from "lucide-react"
 
-export function SectionCards() {
+interface SectionCardsProps {
+  data?: KPIItem[]
+}
+
+const KAR_CONFIG: Record<string, { label: string, icon: any, description: string, isCurrency?: boolean }> = {
+  totalQuotations: {
+    label: "Total Quotations",
+    icon: FileText,
+    description: "Total quotations generated"
+  },
+  approvedQuotations: {
+    label: "Approved Quotations",
+    icon: IconFileInvoice,
+    description: "Quotations approved by customers"
+  },
+  totalRevenue: {
+    label: "Total Revenue",
+    icon: IconChartBar,
+    description: "Total revenue generated",
+    isCurrency: true
+  },
+  avgQuoteValue: {
+    label: "Avg. Quote Value",
+    icon: IconChartBar,
+    description: "Average value per quotation",
+    isCurrency: true
+  },
+}
+
+export function SectionCards({ data = [] }: SectionCardsProps) {
+  if (!data?.length) {
+    return (
+      <div className="grid grid-cols-1 gap-4 px-4 md:grid-cols-2 lg:grid-cols-3">
+        {/* Skeleton or empty state could go here, for now just returning nothing or basic placeholders if needed */}
+        <p className="text-muted-foreground col-span-full">No insights available for the selected period.</p>
+      </div>
+    )
+  }
+
   return (
-    <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
-      <Card className="@container/card">
-        <CardHeader>
-          <CardDescription>Total Revenue</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            $1,250.00
-          </CardTitle>
-          <CardAction>
-            <Badge variant="outline">
-              <IconTrendingUp />
-              +12.5%
-            </Badge>
-          </CardAction>
-        </CardHeader>
-        <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Trending up this month <IconTrendingUp className="size-4" />
-          </div>
-          <div className="text-muted-foreground">
-            Visitors for the last 6 months
-          </div>
-        </CardFooter>
-      </Card>
-      <Card className="@container/card">
-        <CardHeader>
-          <CardDescription>New Customers</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            1,234
-          </CardTitle>
-          <CardAction>
-            <Badge variant="outline">
-              <IconTrendingDown />
-              -20%
-            </Badge>
-          </CardAction>
-        </CardHeader>
-        <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Down 20% this period <IconTrendingDown className="size-4" />
-          </div>
-          <div className="text-muted-foreground">
-            Acquisition needs attention
-          </div>
-        </CardFooter>
-      </Card>
-      <Card className="@container/card">
-        <CardHeader>
-          <CardDescription>Active Accounts</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            45,678
-          </CardTitle>
-          <CardAction>
-            <Badge variant="outline">
-              <IconTrendingUp />
-              +12.5%
-            </Badge>
-          </CardAction>
-        </CardHeader>
-        <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Strong user retention <IconTrendingUp className="size-4" />
-          </div>
-          <div className="text-muted-foreground">Engagement exceed targets</div>
-        </CardFooter>
-      </Card>
-      <Card className="@container/card">
-        <CardHeader>
-          <CardDescription>Growth Rate</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            4.5%
-          </CardTitle>
-          <CardAction>
-            <Badge variant="outline">
-              <IconTrendingUp />
-              +4.5%
-            </Badge>
-          </CardAction>
-        </CardHeader>
-        <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
-            Steady performance increase <IconTrendingUp className="size-4" />
-          </div>
-          <div className="text-muted-foreground">Meets growth projections</div>
-        </CardFooter>
-      </Card>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-4 lg:grid-cols-4 ">
+      {data
+        .filter((item) => KAR_CONFIG[item.key])
+        .map((item) => {
+          const config = KAR_CONFIG[item.key]
+          const Icon = config.icon
+
+          const formattedValue = config.isCurrency
+            ? `Rs. ${Number(item.value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            : Number(item.value).toLocaleString()
+
+          return (
+            <Card key={item.key} className="flex flex-col">
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardDescription>{config.label}</CardDescription>
+                    <CardTitle className="text-2xl font-semibold tabular-nums mt-2">
+                      {formattedValue}
+                    </CardTitle>
+                  </div>
+                  <div className="p-2 bg-primary/10 rounded-full">
+                    <Icon className="size-5 text-primary" />
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground mt-2">
+                  {config.description}
+                </div>
+              </CardHeader>
+            </Card>
+          )
+        })}
     </div>
   )
 }

@@ -134,7 +134,7 @@ function ViewPurchaseOrder() {
 
             const response = await purchaseOrderApi.update(Number(id), payload)
 
-            toast.success("Purchase Order Created", {
+            toast("Purchase Order Created", {
                 description: `Purchase Order ${data.purchaseOrderNo} has been created successfully.`,
             });
 
@@ -145,7 +145,7 @@ function ViewPurchaseOrder() {
             router.push("/purchase-order")
         } catch (error) {
             console.error("Failed to submit PO:", error)
-            toast.error("Failed to Create Purchase Order", {
+            toast("Failed to Create Purchase Order", {
                 description: "An error occurred while creating the purchase order. Please try again.",
             });
         } finally {

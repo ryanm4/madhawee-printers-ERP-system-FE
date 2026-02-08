@@ -183,12 +183,12 @@ function EditJobTicket() {
             const response = await jobTicketsApi.update(id, formattedData as any);
 
             if (response.status === 200) {
-                toast.success("Job Ticket updated successfully");
+                toast("Job Ticket updated successfully");
                 router.push("/job-ticket");
             }
         } catch (error) {
             console.error("Failed to update Job Ticket:", error);
-            toast.error("Failed to update Job Ticket");
+            toast("Failed to update Job Ticket");
         } finally {
             setIsLoading(false);
         }
@@ -269,7 +269,7 @@ function EditJobTicket() {
                 }
             } catch (error) {
                 console.error("Failed to fetch job ticket:", error);
-                toast.error("Failed to load job ticket data");
+                toast("Failed to load job ticket data");
             } finally {
                 setIsLoading(false);
             }
@@ -486,9 +486,9 @@ function EditJobTicket() {
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Product Type" /></SelectTrigger></FormControl>
                                             <SelectContent>
-                                                {Object.values(PRODUCT_TYPES).map((productType) => (
-                                                    <SelectItem key={productType} value={productType}>
-                                                        {productType}
+                                                {Object.entries(PRODUCT_TYPES).map(([key, value]) => (
+                                                    <SelectItem key={key} value={value}>
+                                                        {value}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -536,9 +536,9 @@ function EditJobTicket() {
                                                     <Select onValueChange={field.onChange} value={field.value}>
                                                         <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Coating" /></SelectTrigger></FormControl>
                                                         <SelectContent>
-                                                            {Object.values(COATING_TYPES).map((coating) => (
-                                                                <SelectItem key={coating} value={coating}>
-                                                                    {coating}
+                                                            {Object.entries(COATING_TYPES).map(([key, value]) => (
+                                                                <SelectItem key={key} value={value}>
+                                                                    {value}
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
@@ -674,9 +674,9 @@ function EditJobTicket() {
                                             <Select onValueChange={field.onChange} value={field.value}>
                                                 <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Status" /></SelectTrigger></FormControl>
                                                 <SelectContent>
-                                                    {Object.values(PLATES_STATUS).map((status) => (
-                                                        <SelectItem key={status} value={status}>
-                                                            {status}
+                                                    {Object.entries(PLATES_STATUS).map(([key, value]) => (
+                                                        <SelectItem key={key} value={value}>
+                                                            {value}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -707,9 +707,9 @@ function EditJobTicket() {
                                             <Select onValueChange={field.onChange} value={field.value}>
                                                 <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Status" /></SelectTrigger></FormControl>
                                                 <SelectContent>
-                                                    {Object.values(PLATES_STATUS).map((status) => (
-                                                        <SelectItem key={status} value={status}>
-                                                            {status}
+                                                    {Object.entries(PLATES_STATUS).map(([key, value]) => (
+                                                        <SelectItem key={key} value={value}>
+                                                            {value}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -825,9 +825,9 @@ function EditJobTicket() {
                                                     <Select onValueChange={field.onChange} value={field.value}>
                                                         <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select an Status" /></SelectTrigger></FormControl>
                                                         <SelectContent>
-                                                            {Object.values(INK_STATUS).map((status) => (
-                                                                <SelectItem key={status} value={status}>
-                                                                    {status}
+                                                            {Object.entries(INK_STATUS).map(([key, value]) => (
+                                                                <SelectItem key={key} value={value}>
+                                                                    {value}
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>

@@ -45,6 +45,7 @@ import { toMySQLDateTime } from "@/hooks/sql-date-time"
 import { CREATE_TICKETS } from "@/modules/job-tickets/types"
 import { toast } from "sonner"
 import { jobTicketsApi } from "@/modules/job-tickets/api"
+import { getUser } from "@/lib/auth"
 
 type JobTicketFormValues = z.infer<typeof jobTicketSchema>
 
@@ -56,6 +57,7 @@ function CreateJobTicket() {
     const [purchaseOrderData, setPurchaseOrderData] = useState<PURCHASE_ORDER[]>([]);
     const [selectedPoDetails, setSelectedPoDetails] = useState<PURCHASE_ORDER_ID | null>(null);
     const [fetchingDetails, setFetchingDetails] = useState(false);
+    const [user, setUser] = useState<{ name: string; email: string; avatar: string } | null>(null)
 
     const baseDefaultValues = {
         poNumber: "",
@@ -184,19 +186,23 @@ function CreateJobTicket() {
                 })),
 
                 status: "PENDING",
-                create_by: "Admin",
+                create_by: user?.name || "Admin",
                 created_on: new Date(),
             }
 
             const response = await jobTicketsApi.create(payload)
             console.log(response)
 
-            toast.success("Job Ticket Created Successfully")
+            toast("Job Ticket Created", {
+                description: "The job ticket has been created successfully."
+            })
 
             setIsLoading(false)
         } catch (error) {
             console.error("Failed to submit job ticket:", error)
-            toast.error("Failed to create job ticket")
+            toast("Failed to Create Job Ticket", {
+                description: "An error occurred while creating the job ticket. Please try again."
+            })
         } finally {
             setIsLoading(false)
         }
@@ -206,6 +212,14 @@ function CreateJobTicket() {
 
     useEffect(() => {
         fetchData();
+        const userData = getUser()
+        if (userData) {
+            setUser({
+                name: userData.name || "User",
+                email: userData.email,
+                avatar: "",
+            })
+        }
     }, []);
 
     const fetchData = async () => {
@@ -451,9 +465,9 @@ function CreateJobTicket() {
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Product Type" /></SelectTrigger></FormControl>
                                             <SelectContent>
-                                                {Object.values(PRODUCT_TYPES).map((productType) => (
-                                                    <SelectItem key={productType} value={productType}>
-                                                        {productType}
+                                                {Object.entries(PRODUCT_TYPES).map(([key, value]) => (
+                                                    <SelectItem key={key} value={value}>
+                                                        {value}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -501,9 +515,9 @@ function CreateJobTicket() {
                                                     <Select onValueChange={field.onChange} value={field.value}>
                                                         <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Coating" /></SelectTrigger></FormControl>
                                                         <SelectContent>
-                                                            {Object.values(COATING_TYPES).map((coating) => (
-                                                                <SelectItem key={coating} value={coating}>
-                                                                    {coating}
+                                                            {Object.entries(COATING_TYPES).map(([key, value]) => (
+                                                                <SelectItem key={key} value={value}>
+                                                                    {value}
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
@@ -639,9 +653,9 @@ function CreateJobTicket() {
                                             <Select onValueChange={field.onChange} value={field.value}>
                                                 <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Status" /></SelectTrigger></FormControl>
                                                 <SelectContent>
-                                                    {Object.values(PLATES_STATUS).map((status) => (
-                                                        <SelectItem key={status} value={status}>
-                                                            {status}
+                                                    {Object.entries(PLATES_STATUS).map(([key, value]) => (
+                                                        <SelectItem key={key} value={value}>
+                                                            {value}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -672,9 +686,9 @@ function CreateJobTicket() {
                                             <Select onValueChange={field.onChange} value={field.value}>
                                                 <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Status" /></SelectTrigger></FormControl>
                                                 <SelectContent>
-                                                    {Object.values(PLATES_STATUS).map((status) => (
-                                                        <SelectItem key={status} value={status}>
-                                                            {status}
+                                                    {Object.entries(PLATES_STATUS).map(([key, value]) => (
+                                                        <SelectItem key={key} value={value}>
+                                                            {value}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -790,9 +804,9 @@ function CreateJobTicket() {
                                                     <Select onValueChange={field.onChange} value={field.value}>
                                                         <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select an Status" /></SelectTrigger></FormControl>
                                                         <SelectContent>
-                                                            {Object.values(INK_STATUS).map((status) => (
-                                                                <SelectItem key={status} value={status}>
-                                                                    {status}
+                                                            {Object.entries(INK_STATUS).map(([key, value]) => (
+                                                                <SelectItem key={key} value={value}>
+                                                                    {value}
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>

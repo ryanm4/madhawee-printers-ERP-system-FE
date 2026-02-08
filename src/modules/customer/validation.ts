@@ -20,5 +20,6 @@ export const customerSchema = z.object({
         .optional(),
     contactPersonPhone: z.string().optional(),
     created_by: z.string().optional(),
+    updated_by: z.string().optional(),
     status: z.string().optional(),
 })

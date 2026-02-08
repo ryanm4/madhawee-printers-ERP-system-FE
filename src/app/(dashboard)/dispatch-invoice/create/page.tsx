@@ -26,6 +26,7 @@ import { formatPhone } from '@/hooks/format-phone-no';
 import { CustomerApi } from '@/modules/customer/api';
 import { toMySQLDateTime } from '@/hooks/sql-date-time';
 import { Combobox } from '@/components/shared/combobox';
+import { getUser } from '@/lib/auth';
 
 type DispatchFormValues = z.infer<typeof dispatchInvoiceScheme>
 
@@ -34,6 +35,7 @@ function CreateDispatchandInvoice() {
     const [isLoading, setIsLoading] = useState(false);
     const [isJobLoading, setIsJobLoading] = useState(false);
     const [JobData, setJobData] = useState<ALL_TICKETS[]>([])
+    const [user, setUser] = useState<{ name: string; email: string; avatar: string } | null>(null)
     const baseDefaultValues: DispatchFormValues = {
         job_id: "",
         customer_address: "",
@@ -56,6 +58,14 @@ function CreateDispatchandInvoice() {
 
     useEffect(() => {
         fetchData();
+        const userData = getUser()
+        if (userData) {
+            setUser({
+                name: userData.name || "User",
+                email: userData.email,
+                avatar: "",
+            })
+        }
     }, []);
 
 
@@ -90,19 +100,23 @@ function CreateDispatchandInvoice() {
                 description: data.dispatch_description ?? "",
                 delivery_address: data.delivery_address ?? "",
                 status: "PENDING",
-                create_by: "Admin",
+                create_by: user?.name || "Admin",
                 created_on: new Date(),
             }
             const response = await dispatchInventoryApi.create(payload);
-            console.log(response)
 
-            toast.success("Dispatch Created Successfully");
+
+            toast("Dispatch Created", {
+                description: "The dispatch record has been created successfully."
+            });
             form.reset(baseDefaultValues)
             form.clearErrors()
             router.push("/dispatch-invoice")
         } catch (error) {
-            console.error("Failed to submit dispatch:", error)
-            toast.error("Failed to create dispatch");
+
+            toast("Failed to Create Dispatch", {
+                description: "An error occurred while creating the dispatch record. Please try again."
+            });
         } finally {
             setIsLoading(false);
         }

@@ -18,30 +18,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { LayoutDashboard, FileText, ShoppingCart, ClipboardCheck, Truck, Warehouse, Users, SquareUser, Settings } from "lucide-react"
+import { LayoutDashboard, FileText, ShoppingCart, ClipboardCheck, Truck, Warehouse, Users, SquareUser, Settings, ChartNoAxesCombined } from "lucide-react"
 import { NavSecondary } from "./nav-secondary"
 import Image from "next/image"
 import company_logo from "@/assets/Images/company_logo.jpeg"
 
-const LIGHT_AVATAR_COLORS = [
-  "b3e5fc",
-  "c8e6c9",
-  "d1c4e9",
-  "ffe0b2",
-  "ffccbc",
-  "f0f4c3",
-  "bbdefb",
-  "e1bee7",
-]
-
 const data = {
-  user: {
-    name: "Chathupa",
-    email: "chathupa.d@gmail.com",
-    avatar: `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${encodeURIComponent(
-      "chathupa.d@gmail.com"
-    )}&backgroundColor=${LIGHT_AVATAR_COLORS.join(",")}`,
-  },
+
   navMain: [
     {
       title: "Dashboard",
@@ -84,6 +67,11 @@ const data = {
       url: "/users",
     },
     {
+      title: "Reports",
+      icon: ChartNoAxesCombined,
+      url: "/reports",
+    },
+    {
       title: "Settings",
       icon: Settings,
       url: "/settings",
@@ -122,7 +110,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser />
       </SidebarFooter>
     </Sidebar>
   )
