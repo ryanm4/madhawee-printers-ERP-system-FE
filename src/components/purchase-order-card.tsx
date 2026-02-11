@@ -12,6 +12,10 @@ import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 import { useRouter } from "next/navigation";
 import { PURCHASE_ORDER_JOBS } from "@/modules/purchase-order/types";
 import { format } from "date-fns"
+import { getNextPurchaseOrderStatus } from "@/lib/status-workflow";
+import { JobTicketStatus, PurchaseOrderStatus } from "@/config/enum";
+import { ArrowRightIcon } from "lucide-react";
+import { toast } from "sonner";
 
 
 
@@ -29,6 +33,7 @@ export interface PurchaseOrderCardProps {
     className?: string;
     onDelete: (id: number) => Promise<void>;
     onRefresh?: () => Promise<void>;
+    onStatusChange?: (id: number, status: string) => Promise<void>;
 }
 
 export function PurchaseOrderCard({
@@ -45,9 +50,11 @@ export function PurchaseOrderCard({
     className,
     onDelete,
     onRefresh,
+    onStatusChange,
 }: PurchaseOrderCardProps) {
     const [isJobTicketOpen, setIsJobTicketOpen] = useState(false);
     const [openDelete, setOpenDelete] = useState(false);
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
     const router = useRouter();
     const handleClickDelete = () => {
@@ -87,27 +94,63 @@ export function PurchaseOrderCard({
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-[200px]" align="end">
+                            {(() => {
+                                const nextStatus = getNextPurchaseOrderStatus(status);
+                                if (nextStatus) {
+                                    return (
+                                        <>
+                                            <DropdownMenuItem
+                                                onClick={async () => {
+                                                    if (nextStatus === PurchaseOrderStatus.COMPLETED) {
+                                                        const hasIncompleteJobs = (jobs || []).some(
+                                                            (job) => job.status !== JobTicketStatus.COMPLETED
+                                                        );
+
+                                                        if (hasIncompleteJobs) {
+                                                            toast.warning("Cannot Complete Purchase Order", {
+                                                                description: "This Purchase Order has active Job Tickets. All linked Job Tickets must be COMPLETED first.",
+                                                            });
+                                                            return;
+                                                        }
+                                                    }
+                                                    if (onStatusChange) {
+                                                        setIsUpdatingStatus(true);
+                                                        await onStatusChange(po_id, nextStatus);
+                                                        setIsUpdatingStatus(false);
+                                                    }
+                                                }}
+                                                disabled={isUpdatingStatus}
+                                            >
+                                                <ArrowRightIcon className="mr-2 h-4 w-4" />
+                                                Move Status to {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1).toLowerCase()}
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                        </>
+                                    );
+                                }
+                                return null;
+                            })()}
                             <DropdownMenuItem onSelect={() => setIsJobTicketOpen(true)}>
-                                <PlusIcon />
+                                <PlusIcon className="mr-2 h-4 w-4" />
                                 Create Job Ticket
                             </DropdownMenuItem>
 
                             <DropdownMenuItem onSelect={() => handleEditClick()}>
-                                <PencilIcon />
+                                <PencilIcon className="mr-2 h-4 w-4" />
                                 Edit Purchase Order
                             </DropdownMenuItem>
 
                             <DropdownMenuItem onSelect={() => handleViewClick()}>
-                                <EyeIcon />
+                                <EyeIcon className="mr-2 h-4 w-4" />
                                 View Purchase Order
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                                 onSelect={() => handleClickDelete()}
                                 variant="destructive"
-                                disabled={jobs && jobs.length > 0}
+                                disabled={(jobs && jobs.length > 0) || isUpdatingStatus}
                             >
-                                <TrashIcon />
+                                <TrashIcon className="mr-2 h-4 w-4" />
                                 Delete Purchase Order
                             </DropdownMenuItem>
                         </DropdownMenuContent>
