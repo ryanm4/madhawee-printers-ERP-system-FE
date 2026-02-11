@@ -176,7 +176,7 @@ export const quotationColumns = (
                                                 onClick={() => actions.onStatusChange(quotation.quote_id, nextStatus)}
                                             >
                                                 <ArrowRightIcon className="mr-2 h-4 w-4" />
-                                                Move to {nextStatus}
+                                                Move Status to {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1).toLowerCase()}
                                             </DropdownMenuItem>
                                         );
                                     }

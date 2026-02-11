@@ -38,7 +38,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { jobTicketSchema } from "@/modules/job-tickets/validation"
-import { COATING_TYPES, INK_STATUS, PAPER_TYPES, PRODUCT_TYPES, PurchaseOrderType } from "@/config/enum"
+import { COATING_TYPES, INK_STATUS, JobTicketStatus, PAPER_TYPES, PRODUCT_TYPES, PurchaseOrderType } from "@/config/enum"
 import { PURCHASE_ORDER, PURCHASE_ORDER_ID } from "@/modules/purchase-order/types"
 import { purchaseOrderApi } from "@/modules/purchase-order/api"
 import { CustomerApi } from "@/modules/customer/api"
@@ -169,8 +169,8 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
                 po_id: data.poNumber ? Number(data.poNumber) : undefined,
                 item_code: data.item,
                 job_number: `MPL/####/YY/${PurchaseOrderType[Number(selectedPoDetails?.po_type_id)]}`,
-                order_received_date: data.orderReceivedDate ? toMySQLDateTime(data.orderReceivedDate) : undefined,
-                job_open_date: toMySQLDateTime(new Date()),
+                order_received_date: toMySQLDateTime(data.orderReceivedDate || new Date()),
+                job_open_date: toMySQLDateTime(data.jobOpenDate || new Date()),
                 customer_id: data.customer,
                 job_name: data.jobName,
                 product_type: data.productType,
@@ -183,12 +183,12 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
                 batch_ref: data.batchRef,
                 remarks: data.remarks,
 
-                old_plates_quantity: data.oldPlatesQuantity,
-                old_plates_status: data.oldPlatesStatus,
-                old_plates_remarks: data.oldPlatesRemarks,
-                new_plates_quantity: data.newPlatesQuantity,
-                new_plates_status: data.newPlatesStatus,
-                new_plates_remarks: data.newPlatesRemarks,
+                old_plate_quantity: data.oldPlatesQuantity,
+                old_plate_status: data.oldPlatesStatus,
+                old_plate_remarks: data.oldPlatesRemarks,
+                new_plate_quantity: data.newPlatesQuantity,
+                new_plate_status: data.newPlatesStatus,
+                new_plate_remarks: data.newPlatesRemarks,
 
                 raw_materials: data.rawMaterials,
                 inks: data.inks,
@@ -197,7 +197,7 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
                     delivery_date: p.delivery_date ? toMySQLDateTime(p.delivery_date) : undefined
                 })),
 
-                status: "PENDING",
+                status: JobTicketStatus.CREATED,
                 create_by: user?.name || "Admin",
                 created_on: new Date(),
             }
