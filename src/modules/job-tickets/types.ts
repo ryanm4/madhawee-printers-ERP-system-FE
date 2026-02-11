@@ -64,6 +64,9 @@ export interface CREATE_TICKETS {
   }[];
 
   status?: string;
-  create_by?: string;
+  created_by?: string;
   created_on?: Date;
+
+  updated_by?: string;
+  updated_on?: Date;
 }

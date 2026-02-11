@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/table"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { format } from "date-fns"
+import { utils, writeFile } from "xlsx"
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -29,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { DataTablePagination } from "@/components/shared/data-table-pagination"
+import { FileSpreadsheet } from "lucide-react"
 
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[]
@@ -80,14 +83,65 @@ export function DataTable<TData, TValue>({
         },
     })
 
+    const handleExport = () => {
+        // Prepare data for export
+        const exportData = data.map((item: any) => ({
+            "Job ID": item.job_id,
+            "Job Name": item.job_name,
+            "Job Number": item.job_number,
+            "Job Item": item.job_item,
+            "Description": item.description,
+            "PO ID": item.po_id,
+            "Customer ID": item.customer_id,
+            "Product Type": item.product_type,
+            "Quantity": item.quantity,
+            "Completed Qty": item.completed_qty,
+            "Wastage": item.wastage,
+            "Status": item.status,
+            "Remarks": item.remarks,
+            "Job Open Date": item.job_open_date ? format(new Date(item.job_open_date), "yyyy-MM-dd") : "",
+            "Packing Date": item.packing_date ? format(new Date(item.packing_date), "yyyy-MM-dd") : "",
+            "Expiry Date": item.expiry_date ? format(new Date(item.expiry_date), "yyyy-MM-dd") : "",
+            "Old Plate Qty": item.old_plate_quantity,
+            "Old Plate Status": item.old_plate_status,
+            "Old Plate Remarks": item.old_plate_remarks,
+            "New Plate Qty": item.new_plate_quantity,
+            "New Plate Status": item.new_plate_status,
+            "New Plate Remarks": item.new_plate_remarks,
+            "Created By": item.created_by,
+            "Created On": item.created_on ? format(new Date(item.created_on), "yyyy-MM-dd") : "",
+            "Updated By": item.updated_by,
+            "Updated On": item.updated_on ? format(new Date(item.updated_on), "yyyy-MM-dd") : "",
+        }))
+
+        // Create worksheet
+        const worksheet = utils.json_to_sheet(exportData)
+        const workbook = utils.book_new()
+        utils.book_append_sheet(workbook, worksheet, "Job Tickets")
+
+        // Set column widths
+        const maxWidths = Object.keys(exportData[0] || {}).map(key => ({
+            wch: Math.max(key.length, ...exportData.map(row => String(row[key as keyof typeof row] || "").length)) + 2
+        }))
+        worksheet["!cols"] = maxWidths
+
+        // Export file
+        const date = format(new Date(), "yyyy-MM-dd")
+        writeFile(workbook, `JobTickets_${date}.xlsx`)
+    }
+
     return (
         <div>
-            <div className="pb-3 flex flex-end">
+            <div className="pb-3 flex gap-2">
+                <Button variant="secondary" onClick={handleExport}>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" /> Export as Excel
+                </Button>
                 <DropdownMenu >
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="ml-auto">
                             Columns
                         </Button>
+
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         {table

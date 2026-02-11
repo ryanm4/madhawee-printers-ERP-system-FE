@@ -100,7 +100,7 @@ function CreateDispatchandInvoice() {
                 description: data.dispatch_description ?? "",
                 delivery_address: data.delivery_address ?? "",
                 status: "PENDING",
-                create_by: user?.name || "Admin",
+                created_by: user?.name || "Admin",
                 created_on: new Date(),
             }
             const response = await dispatchInventoryApi.create(payload);

@@ -50,7 +50,7 @@ export interface CREATE_QUOTATION_REQUEST {
     total_without_tax: string;
     net_total: string;
     created_by: string;
-    updated_by: string;
+    created_on: Date;
     items: QuotationItems[];
 }
 
@@ -69,7 +69,7 @@ export interface UPDATE_QUOTATION_REQUEST {
     no_of_items?: string;
     total_without_tax?: string;
     net_total?: string;
-    created_by?: string;
+    updated_on?: Date;
     updated_by?: string;
     items?: QuotationItems[];
 }
