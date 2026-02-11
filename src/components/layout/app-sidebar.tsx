@@ -71,11 +71,7 @@ const data = {
       icon: ChartNoAxesCombined,
       url: "/reports",
     },
-    {
-      title: "Settings",
-      icon: Settings,
-      url: "/settings",
-    },
+
   ],
 
 

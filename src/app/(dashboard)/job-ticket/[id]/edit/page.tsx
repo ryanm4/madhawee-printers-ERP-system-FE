@@ -45,6 +45,7 @@ import { PaperTypeCombobox } from "../../_components/paper-type-combobox"
 import { jobTicketsApi } from "@/modules/job-tickets/api"
 import { toast } from "sonner"
 import { toMySQLDateTime } from "@/hooks/sql-date-time"
+import { getUser } from "@/lib/auth"
 
 type JobTicketFormValues = z.infer<typeof jobTicketSchema>
 
@@ -57,7 +58,7 @@ function EditJobTicket() {
     const [purchaseOrderData, setPurchaseOrderData] = useState<PURCHASE_ORDER[]>([]);
     const [selectedPoDetails, setSelectedPoDetails] = useState<PURCHASE_ORDER_ID | null>(null);
     const [fetchingDetails, setFetchingDetails] = useState(false);
-
+    const [user, setUser] = useState<{ name: string; email: string; avatar: string } | null>(null)
     const baseDefaultValues = {
         poNumber: "",
         item: "",
@@ -152,8 +153,6 @@ function EditJobTicket() {
     async function onSubmit(data: JobTicketFormValues) {
         try {
             setIsLoading(true);
-            console.log("Submitting Job Ticket:", data)
-
             const formattedData = {
                 ...data,
                 order_received_date: data.orderReceivedDate ? toMySQLDateTime(data.orderReceivedDate) : undefined,
@@ -162,7 +161,7 @@ function EditJobTicket() {
                 expiry_date: data.expiryDate ? toMySQLDateTime(data.expiryDate) : undefined,
                 po_id: Number(data.poNumber),
                 customer_id: Number(data.customer),
-                paper_types: data.paperTypes.map(pt => ({
+                paperCoating: data.paperTypes.map(pt => ({
                     ...pt,
                     delivery_date: pt.delivery_date ? toMySQLDateTime(pt.delivery_date) : undefined
                 })),
@@ -177,7 +176,8 @@ function EditJobTicket() {
                     ...ink,
                     ink: ink.ink
                 })),
-                create_by: "Admin", // Should be from auth
+                create_by: user?.name || "Admin",
+                updated_by: user?.name || "Admin",
             }
 
             const response = await jobTicketsApi.update(id, formattedData as any);
@@ -260,11 +260,11 @@ function EditJobTicket() {
                                 { ink: "Magenta", quantity: "", status: "", remarks: "" },
                                 { ink: "Yellow", quantity: "", status: "", remarks: "" },
                             ],
-                        paperTypes: (jt as any).paper_types?.map((pt: any) => ({
-                            paper_type: pt.paper_type,
+                        paperTypes: (jt as any).paperCoatingData?.map((pt: any) => ({
+                            paper: pt.paper,
                             coating: pt.coating,
                             delivery_date: pt.delivery_date ? new Date(pt.delivery_date) : undefined
-                        })) || [{ paper_type: "", coating: "", delivery_date: new Date() }],
+                        })) || [{ paper: "", coating: "", delivery_date: new Date() }],
                     });
                 }
             } catch (error) {
@@ -279,6 +279,18 @@ function EditJobTicket() {
         fetchData();
     }, [id]);
 
+    useEffect(() => {
+
+        const userData = getUser()
+        if (userData) {
+            setUser({
+                name: userData.name || "User",
+                email: userData.email,
+                avatar: "",
+            })
+        }
+    }, []);
+
     const selectedPoId = form.watch("poNumber");
     const selectedPoItems = selectedPoDetails?.po_items ?? [];
 
@@ -287,31 +299,33 @@ function EditJobTicket() {
             if (!selectedPoId) {
                 setSelectedPoDetails(null);
                 return;
-            }
-            try {
-                setFetchingDetails(true);
-                const response = await purchaseOrderApi.getById(selectedPoId);
-                if (response.status === 200) {
-                    const po = response.data;
-                    console.log("po", po)
-                    setSelectedPoDetails(po);
+            } else {
+                try {
+                    setFetchingDetails(true);
+                    const response = await purchaseOrderApi.getById(selectedPoId);
+                    if (response.status === 200) {
+                        const po = response.data;
+                        console.log("po", po)
+                        setSelectedPoDetails(po);
 
-                    if (po.customer) {
-                        // Find the customer in our list to ensure we have the right value
-                        // or just use the ID if we decide to use IDs as values
-                        form.setValue("customer", String(po.customer.customer_id));
+                        if (po.customer) {
+                            // Find the customer in our list to ensure we have the right value
+                            // or just use the ID if we decide to use IDs as values
+                            form.setValue("customer", String(po.customer.customer_id));
+                        }
+                        if (po.po_date) {
+                            form.setValue("orderReceivedDate", new Date(po.po_date));
+                        }
+                        form.setValue("tcNo", po.TC_E_PR_No);
+                        form.setValue("batchRef", po.batch_ref);
                     }
-                    if (po.po_date) {
-                        form.setValue("orderReceivedDate", new Date(po.po_date));
-                    }
-                    form.setValue("tcNo", po.TC_E_PR_No);
-                    form.setValue("batchRef", po.batch_ref);
+                } catch (err) {
+                    console.error("Error fetching PO details", err);
+                } finally {
+                    setFetchingDetails(false);
                 }
-            } catch (err) {
-                console.error("Error fetching PO details", err);
-            } finally {
-                setFetchingDetails(false);
             }
+
         };
 
         fetchPoDetails();
@@ -523,7 +537,7 @@ function EditJobTicket() {
                                 {paperTypeFields.map((field, index) => (
                                     <div key={field.id} className="grid grid-cols-[1fr_auto] gap-2 mb-2 items-start">
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
-                                            {renderFormField(`paperTypes.${index}.paper_type`, ({ field }) => (
+                                            {renderFormField(`paperTypes.${index}.paper`, ({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Paper Type <span className="text-red-500">*</span></FormLabel>
                                                     <PaperTypeCombobox value={field.value} onChange={field.onChange} />
@@ -582,7 +596,7 @@ function EditJobTicket() {
                                     </div>
                                 ))}
                                 <div className="flex justify-end mt-2">
-                                    <Button type="button" onClick={() => appendPaperType({ paper_type: "", coating: "", delivery_date: undefined })} className="bg-primary text-white hover:bg-primary/90">Add More</Button>
+                                    <Button type="button" onClick={() => appendPaperType({ paper: "", coating: "", delivery_date: undefined })} className="bg-primary text-white hover:bg-primary/90">Add More</Button>
                                 </div>
                             </div>
 

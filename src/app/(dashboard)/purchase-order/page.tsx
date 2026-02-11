@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/shared/empty-page";
 
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { PURCHASE_ORDER } from "@/modules/purchase-order/types";
+import { PurchaseOrderStatus, JobTicketStatus } from "@/config/enum";
 import { DataTable } from "./_components/purchase-order-table";
 import { purchaseOrderColumns } from "./_components/purchase-order-columns";
 
@@ -63,6 +64,59 @@ function PurchaseOrderPage() {
     onEdit: (id) => router.push(`/purchase-order/${id}/edit`),
     onDelete: (id) => handleDelete(id),
     onView: (id) => router.push(`/purchase-order/${id}`),
+    onStatusChange: async (id, status) => {
+      try {
+        setLoading(true);
+        const response = await purchaseOrderApi.getById(String(id));
+        if (response.data) {
+          const data = response.data;
+
+          if (status === PurchaseOrderStatus.COMPLETED) {
+            const hasIncompleteJobs = (data.jobs || []).some(
+              (job) => job.status !== JobTicketStatus.COMPLETED
+            );
+
+            if (hasIncompleteJobs) {
+              toast.warning("Cannot Complete Purchase Order", {
+                description: "This Purchase Order has active Job Tickets. All linked Job Tickets must be COMPLETED first.",
+              });
+              setLoading(false);
+              return;
+            }
+          }
+
+          const payload = {
+            quote_id: Number(data.quote_id),
+            customer_id: data.customer ? Number(data.customer.customer_id) : 0,
+            po_type_id: Number(data.po_type_id),
+            batch_ref: data.batch_ref,
+            po_date: data.po_date,
+            delivery_date: data.delivery_date,
+            TC_E_PR_No: data.TC_E_PR_No,
+            updated_by: "admin", // Ideally from user context
+            status: status,
+            customer_po: String(data.po_id), // Or specific field if different
+            po_items: (data.po_items || []).map((item: any) => ({
+              item_code: item.item_code,
+              description: item.description,
+              quantity: String(item.quantity),
+              uom: item.uom,
+              price: String(item.price),
+            })),
+          };
+          await purchaseOrderApi.update(id, payload as any);
+          toast.success(`Purchase Order status updated to ${status}`);
+          await fetchData();
+        } else {
+          toast.error("Failed to fetch PO details for status update");
+        }
+      } catch (error) {
+        console.error("Status Update Error:", error);
+        toast.error("Failed to update status");
+      } finally {
+        setLoading(false);
+      }
+    }
   })
 
   return (

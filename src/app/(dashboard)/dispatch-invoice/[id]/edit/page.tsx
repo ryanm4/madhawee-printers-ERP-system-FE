@@ -86,7 +86,7 @@ function EditDispatchandInvoice() {
                 customer_id: data.customer_phone ?? "", // Assuming customer_phone as id for now or change based on actual mapping
                 job_id: data.job_id,
                 dispatch_note: data.dispatch_note ?? "",
-                dispatch_date: toMySQLDateTime(new Date("2025-01-05")),
+                dispatch_date: toMySQLDateTime(new Date()),
                 dispatch_qty: data.dispatch_quantity ?? "",
                 no_of_bundles: data.dispatch_bundles_qty ?? "",
                 description: data.dispatch_description ?? "",

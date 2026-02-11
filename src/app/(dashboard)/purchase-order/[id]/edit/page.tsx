@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, Edit2, Loader2, PlusIcon, Trash2 } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
 import { format } from 'date-fns'
-import { PurchaseOrderType } from '@/config/enum'
+import { PurchaseOrderStatus, PurchaseOrderType } from '@/config/enum'
 import { useEffect, useState } from 'react'
 import { CustomerApi } from '@/modules/customer/api'
 import { CUSTOMER } from '@/modules/customer/types'
@@ -131,7 +131,7 @@ function EditPurchaseOrder() {
                 TC_E_PR_No: data.tceprNo,
                 created_by: user?.name || "admin",
                 updated_by: user?.name || "admin",
-                status: "CREATED",
+                status: PurchaseOrderStatus.CREATED,
                 customer_po: data.purchaseOrderNo,
                 po_items: data.itemDetails.map((item: any) => ({
                     item_code: item.itemCode,

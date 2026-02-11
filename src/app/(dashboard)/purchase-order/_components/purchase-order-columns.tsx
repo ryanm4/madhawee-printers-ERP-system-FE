@@ -4,14 +4,16 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { PURCHASE_ORDER } from "@/modules/purchase-order/types"
 import { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, EyeIcon, MoreHorizontal, PencilIcon, TrashIcon } from "lucide-react"
+import { ArrowUpDown, EyeIcon, MoreHorizontal, PencilIcon, TrashIcon, ArrowRightIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
+import { getNextPurchaseOrderStatus } from "@/lib/status-workflow"
 
 interface PurchaseOrderTableActions {
     onEdit: (id: number) => void
     onDelete: (id: number) => void
     onView: (id: number) => void
+    onStatusChange: (id: number, status: string) => void
 }
 
 export const purchaseOrderColumns = (
@@ -59,7 +61,7 @@ export const purchaseOrderColumns = (
                 return (
                     <Badge
                         className={`uppercase ${status === "COMPLETED" ? "bg-green-100 text-green-800" :
-                            status === "PENDING" ? "bg-yellow-100 text-yellow-800" :
+                            status === "PENDING" ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-600 hover:text-white" :
                                 "bg-blue-100 text-blue-800"
                             } px-2 py-1 rounded-md text-sm font-medium`}
                     >
@@ -83,6 +85,23 @@ export const purchaseOrderColumns = (
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            {(() => {
+                                const nextStatus = getNextPurchaseOrderStatus(po.status);
+                                if (nextStatus) {
+                                    return (
+                                        <>
+                                            <DropdownMenuItem
+                                                onClick={() => actions.onStatusChange(po.po_id, nextStatus)}
+                                            >
+                                                <ArrowRightIcon className="mr-2 h-4 w-4" />
+                                                Move to {nextStatus}
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                        </>
+                                    );
+                                }
+                                return null;
+                            })()}
                             <DropdownMenuItem
                                 onClick={() => actions.onView(po.po_id)}
                             >

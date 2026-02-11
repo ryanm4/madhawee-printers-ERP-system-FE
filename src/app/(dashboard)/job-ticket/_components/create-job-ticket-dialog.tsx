@@ -38,7 +38,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { jobTicketSchema } from "@/modules/job-tickets/validation"
-import { COATING_TYPES, INK_STATUS, PAPER_TYPES, PRODUCT_TYPES } from "@/config/enum"
+import { COATING_TYPES, INK_STATUS, PAPER_TYPES, PRODUCT_TYPES, PurchaseOrderType } from "@/config/enum"
 import { PURCHASE_ORDER, PURCHASE_ORDER_ID } from "@/modules/purchase-order/types"
 import { purchaseOrderApi } from "@/modules/purchase-order/api"
 import { CustomerApi } from "@/modules/customer/api"
@@ -60,6 +60,7 @@ interface CreateJobTicketDialogProps {
 
 import { PaperTypeCombobox } from "./paper-type-combobox"
 import { Combobox } from "@/components/shared/combobox"
+import { getUser } from "@/lib/auth"
 
 export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSuccess }: CreateJobTicketDialogProps) {
 
@@ -68,7 +69,7 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
     const [selectedPoDetails, setSelectedPoDetails] = useState<PURCHASE_ORDER_ID | null>(null);
     const [loading, setLoading] = useState(false);
     const [fetchingDetails, setFetchingDetails] = useState(false);
-
+    const [user, setUser] = useState<{ name: string; email: string; avatar: string } | null>(null)
     const baseDefaultValues = {
         poNumber: "",
         item: "",
@@ -167,9 +168,9 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
             const payload: CREATE_TICKETS = {
                 po_id: data.poNumber ? Number(data.poNumber) : undefined,
                 item_code: data.item,
-                job_number: data.jobNumber,
+                job_number: `MPL/####/YY/${PurchaseOrderType[Number(selectedPoDetails?.po_type_id)]}`,
                 order_received_date: data.orderReceivedDate ? toMySQLDateTime(data.orderReceivedDate) : undefined,
-                job_open_date: data.jobOpenDate ? toMySQLDateTime(data.jobOpenDate) : undefined,
+                job_open_date: toMySQLDateTime(new Date()),
                 customer_id: data.customer,
                 job_name: data.jobName,
                 product_type: data.productType,
@@ -191,13 +192,13 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
 
                 raw_materials: data.rawMaterials,
                 inks: data.inks,
-                paper_types: data.paperTypes?.map(p => ({
+                paperCoating: data.paperTypes?.map(p => ({
                     ...p,
                     delivery_date: p.delivery_date ? toMySQLDateTime(p.delivery_date) : undefined
                 })),
 
                 status: "PENDING",
-                create_by: "Admin",
+                create_by: user?.name || "Admin",
                 created_on: new Date(),
             }
 
@@ -243,6 +244,14 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
 
     useEffect(() => {
         fetchData();
+        const userData = getUser()
+        if (userData) {
+            setUser({
+                name: userData.name || "User",
+                email: userData.email,
+                avatar: "",
+            })
+        }
     }, []);
 
     const fetchData = async () => {
@@ -483,7 +492,7 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
 
                             {renderFormField("completed_qty", ({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Completed Quantity <span className="text-red-500">*</span></FormLabel>
+                                    <FormLabel>Completed Quantity</FormLabel>
                                     <FormControl><Input type="number" placeholder="Enter Completed Quantity" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -502,7 +511,7 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
                             {paperTypeFields.map((field, index) => (
                                 <div key={field.id} className="grid grid-cols-[1fr_auto] gap-2 mb-2 items-start">
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
-                                        <FormField control={form.control} name={`paperTypes.${index}.paper_type`} render={({ field }) => (
+                                        <FormField control={form.control} name={`paperTypes.${index}.paper`} render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Paper Type <span className="text-red-500">*</span></FormLabel>
                                                 <PaperTypeCombobox value={field.value} onChange={field.onChange} />
@@ -561,7 +570,7 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
                                 </div>
                             ))}
                             <div className="flex justify-end mt-2">
-                                <Button type="button" onClick={() => appendPaperType({ paper_type: "", coating: "", delivery_date: undefined })} className="bg-primary text-white hover:bg-primary/90">Add More</Button>
+                                <Button type="button" onClick={() => appendPaperType({ paper: "", coating: "", delivery_date: undefined })} className="bg-primary text-white hover:bg-primary/90">Add More</Button>
                             </div>
                         </div>
 

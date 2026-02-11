@@ -68,8 +68,8 @@ export const customerColumns = (
                 return (
                     <Badge
                         className={`uppercase ${status === "ACTIVE" ? "bg-green-100 text-green-800" :
-                            status === "INACTIVE" ? "bg-red-100 text-red-800" :
-                                "bg-gray-100 text-gray-800"
+                            status === "INACTIVE" ? "bg-red-100 text-red-800 hover:bg-red-600 hover:text-white" :
+                                "bg-gray-100 text-gray-800 hover:bg-gray-600 hover:text-white"
                             } px-2 py-1 rounded-md text-sm font-medium`}
                     >
                         {status || "N/A"}

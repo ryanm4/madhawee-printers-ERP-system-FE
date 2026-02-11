@@ -57,8 +57,8 @@ export interface CREATE_TICKETS {
     status?: string;
     remarks?: string;
   }[];
-  paper_types?: {
-    paper_type: string;
+  paperCoating?: {
+    paper: string;
     coating: string;
     delivery_date?: Date | string;
   }[];
