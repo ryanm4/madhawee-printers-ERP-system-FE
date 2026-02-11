@@ -156,12 +156,12 @@ function JobViewTicket() {
                         batchRef: data.batch_ref || "",
                         remarks: data.remarks || "",
 
-                        oldPlatesQuantity: data.old_plates_quantity || "",
-                        oldPlatesStatus: data.old_plates_status || "",
-                        oldPlatesRemarks: data.old_plates_remarks || "",
-                        newPlatesQuantity: data.new_plates_quantity || "",
-                        newPlatesStatus: data.new_plates_status || "",
-                        newPlatesRemarks: data.new_plates_remarks || "",
+                        oldPlatesQuantity: data.old_plate_quantity || "",
+                        oldPlatesStatus: data.old_plate_status || "",
+                        oldPlatesRemarks: data.old_plate_remarks || "",
+                        newPlatesQuantity: data.new_plate_quantity || "",
+                        newPlatesStatus: data.new_plate_status || "",
+                        newPlatesRemarks: data.new_plate_remarks || "",
 
                         rawMaterials: data.raw_materials?.length ? data.raw_materials : [{ item: "", quantity: "", status: "", remarks: "" }],
                         inks: data.inks?.length ? data.inks : [

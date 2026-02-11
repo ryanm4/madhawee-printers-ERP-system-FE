@@ -37,12 +37,12 @@ export interface CREATE_TICKETS {
   remarks?: string;
 
   // Plates
-  old_plates_quantity?: string;
-  old_plates_status?: string;
-  old_plates_remarks?: string;
-  new_plates_quantity?: string;
-  new_plates_status?: string;
-  new_plates_remarks?: string;
+  old_plate_quantity?: string;
+  old_plate_status?: string;
+  old_plate_remarks?: string;
+  new_plate_quantity?: string;
+  new_plate_status?: string;
+  new_plate_remarks?: string;
 
   // Arrays
   raw_materials?: {
