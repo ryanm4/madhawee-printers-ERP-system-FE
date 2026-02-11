@@ -249,8 +249,10 @@ function CreateQuotation({ user: initialUser,
                 no_of_items: data.no_of_items,
                 total_without_tax: data.total_without_tax,
                 net_total: data.net_total,
-                created_by: data.created_by,
-                updated_by: data.updated_by,
+                created_by: user?.name || "Admin",
+
+                created_on: new Date(),
+
                 items: data.items.map((item) => ({
                     item_id: item.item_id,
                     item_category: item.item_category,

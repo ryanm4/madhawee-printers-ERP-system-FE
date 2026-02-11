@@ -129,7 +129,7 @@ function CreatePurchaseOrder() {
                 po_date: data.poDate instanceof Date ? formatDate(data.poDate) : data.poDate,
                 TC_E_PR_No: data.tceprNo,
                 created_by: user?.name || "admin",
-                updated_by: user?.name || "admin",
+                created_on: new Date(),
                 status: PurchaseOrderStatus.CREATED,
                 customer_po: data.purchaseOrderNo,
                 po_items: data.itemDetails.map((item: any) => ({

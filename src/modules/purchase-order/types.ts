@@ -47,6 +47,8 @@ export interface CREATE_PURCHASE_ORDER {
     approved_on?: string;
     approved_by?: string;
     created_by?: string;
+    created_on?: Date;
+    updated_on?: Date;
     updated_by?: string;
     status?: string;
     customer_po: string;

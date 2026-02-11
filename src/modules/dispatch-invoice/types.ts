@@ -46,6 +46,8 @@ export interface CREATE_DISPATCH {
     description: string;
     delivery_address: string;
     status: string;
-    create_by: string;
-    created_on: Date;
+    created_by?: string;
+    created_on?: Date;
+    updated_by?: string;
+    updated_on?: Date;
 }

@@ -198,7 +198,7 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
                 })),
 
                 status: JobTicketStatus.CREATED,
-                create_by: user?.name || "Admin",
+                created_by: user?.name || "Admin",
                 created_on: new Date(),
             }
 

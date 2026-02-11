@@ -176,8 +176,8 @@ function EditJobTicket() {
                     ...ink,
                     ink: ink.ink
                 })),
-                create_by: user?.name || "Admin",
                 updated_by: user?.name || "Admin",
+                updated_on: new Date(),
             }
 
             const response = await jobTicketsApi.update(id, formattedData as any);

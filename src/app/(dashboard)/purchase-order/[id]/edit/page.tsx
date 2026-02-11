@@ -129,7 +129,7 @@ function EditPurchaseOrder() {
                 batch_ref: data.batchRef,
                 po_date: data.poDate instanceof Date ? formatDate(data.poDate) : data.poDate,
                 TC_E_PR_No: data.tceprNo,
-                created_by: user?.name || "admin",
+                updated_on: new Date(),
                 updated_by: user?.name || "admin",
                 status: PurchaseOrderStatus.CREATED,
                 customer_po: data.purchaseOrderNo,

@@ -188,7 +188,7 @@ function CreateJobTicket() {
                 })),
 
                 status: JobTicketStatus.CREATED,
-                create_by: user?.name || "Admin",
+                created_by: user?.name || "Admin",
                 created_on: new Date(),
             }
 

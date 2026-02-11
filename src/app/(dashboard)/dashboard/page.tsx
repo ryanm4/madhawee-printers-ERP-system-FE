@@ -81,9 +81,8 @@ function DashboardPage({
     <>
 
       <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-        <PageTitleWithBreadcrumb isDashboard={true} userName={user?.name} />
-
-        <div className="flex items-center justify-end space-x-2">
+        <div className="flex flex-row items-center justify-between">
+          <PageTitleWithBreadcrumb isDashboard={true} userName={user?.name} />
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -120,6 +119,9 @@ function DashboardPage({
               />
             </PopoverContent>
           </Popover>
+        </div>
+        <div className="flex items-center justify-end space-x-2">
+
         </div>
         <div className="flex flex-col gap-4 md:gap-6 md:py-6">
           <SectionCards data={kpiData} />

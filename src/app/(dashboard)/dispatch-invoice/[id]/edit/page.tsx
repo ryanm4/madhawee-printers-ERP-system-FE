@@ -26,6 +26,7 @@ import { formatPhone } from '@/hooks/format-phone-no';
 import { CustomerApi } from '@/modules/customer/api';
 import { toMySQLDateTime } from '@/hooks/sql-date-time';
 import { Combobox } from '@/components/shared/combobox';
+import { getUser } from '@/lib/auth';
 
 type DispatchFormValues = z.infer<typeof dispatchInvoiceScheme>
 
@@ -35,6 +36,7 @@ function EditDispatchandInvoice() {
     const [isJobLoading, setIsJobLoading] = useState(false);
     const [JobData, setJobData] = useState<ALL_TICKETS[]>([])
     const params = useParams();
+    const [user, setUser] = useState<{ name: string; email: string; avatar: string } | null>(null)
     const id = params.id as string;
 
     const baseDefaultValues: DispatchFormValues = {
@@ -58,6 +60,14 @@ function EditDispatchandInvoice() {
 
     useEffect(() => {
         fetchData();
+        const userData = getUser()
+        if (userData) {
+            setUser({
+                name: userData.name || "User",
+                email: userData.email,
+                avatar: "",
+            })
+        }
     }, []);
 
 
@@ -92,8 +102,8 @@ function EditDispatchandInvoice() {
                 description: data.dispatch_description ?? "",
                 delivery_address: data.delivery_address ?? "",
                 status: "PENDING",
-                create_by: "Admin",
-                created_on: new Date(),
+                updated_by: user?.name || "Admin",
+                updated_on: new Date(),
             }
             const response = await dispatchInventoryApi.create(payload);
 

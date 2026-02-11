@@ -71,7 +71,7 @@ export function SectionCards({ data = [] }: SectionCardsProps) {
                     </CardTitle>
                   </div>
                   <div className="p-2 bg-primary/10 rounded-full">
-                    <Icon className="size-5 text-primary" />
+                    <Icon className="size-7 text-primary" />
                   </div>
                 </div>
                 <div className="text-xs text-muted-foreground mt-2">
