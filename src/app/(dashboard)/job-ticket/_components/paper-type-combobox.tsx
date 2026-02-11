@@ -45,7 +45,7 @@ export const PaperTypeCombobox = ({
             )}
           >
             {value
-              ? Object.values(PAPER_TYPES).find((paper) => paper === value)
+              ? Object.values(PAPER_TYPES).find((paper) => paper === value) || value
               : "Select Paper Type"}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>

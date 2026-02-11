@@ -63,9 +63,9 @@ export const DispatchColumns = (
                 const status = row.original.status
                 return (
                     <Badge
-                        className={`uppercase ${status === "COMPLETED" ? "bg-green-100 text-green-800" :
-                            status === "PENDING" ? "bg-yellow-100 text-yellow-800" :
-                                "bg-gray-100 text-gray-800"
+                        className={`uppercase ${status === "COMPLETED" ? "bg-green-100 text-green-800 hover:bg-green-600 hover:text-white" :
+                            status === "PENDING" ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-600 hover:text-white" :
+                                "bg-gray-100 text-gray-800 hover:bg-gray-600 hover:text-white"
                             } px-2 py-1 rounded-md text-sm font-medium`}
                     >
                         {status}

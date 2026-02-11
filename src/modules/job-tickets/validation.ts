@@ -9,7 +9,7 @@ export const jobTicketSchema = z.object({
     jobName: z.string().optional(),
     productType: z.string().min(1, "Product Type is required"),
     quantity: z.string().min(1, "Quantity is required"),
-    completed_qty: z.string().min(1, "Completed Quantity is required"),
+    completed_qty: z.string().optional(),
     wastage: z.string().optional(),
     packingDate: z.date().optional(),
     expiryDate: z.date().optional(),
@@ -43,7 +43,7 @@ export const jobTicketSchema = z.object({
 
     //Paper Types
     paperTypes: z.array(z.object({
-        paper_type: z.string().min(1, "Paper Type is required"),
+        paper: z.string().min(1, "Paper Type is required"),
         coating: z.string().min(1, "Coating is required"),
         delivery_date: z.date().optional(),
     })).min(1),

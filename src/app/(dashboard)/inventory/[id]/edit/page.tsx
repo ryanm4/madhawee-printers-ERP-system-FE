@@ -27,7 +27,7 @@ function EditInventoryManagement() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [user, setUser] = useState<{ name: string; email: string; avatar: string } | null>(null)
-    const params = useParams(); // ✅ Get params from hook
+    const params = useParams();
     const id = params.id as string;
 
     const baseDefaultValues: InventoryManagementFormValues = {
@@ -108,7 +108,7 @@ function EditInventoryManagement() {
                 reorder_level: data.reorder_level,
                 status: data.status,
                 remarks: data.remarks ?? "",
-                created_by: "Admin", // Fallback, usually fetched from data
+                created_by: user?.name || "Admin",
                 updated_by: user?.name || "Admin",
             }
             const response = await inventoryApi.update(id, payload);

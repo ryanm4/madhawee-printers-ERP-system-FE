@@ -119,7 +119,7 @@ function CreateCustomerRelationship() {
                 contact_person_phone: data.contactPersonPhone ?? "",
                 created_by: user?.name || "Admin",
                 updated_by: user?.name || "Admin",
-                status: "Created"
+                status: "CREATED"
             }
             const response = await CustomerApi.create(payload);
             console.log(response)

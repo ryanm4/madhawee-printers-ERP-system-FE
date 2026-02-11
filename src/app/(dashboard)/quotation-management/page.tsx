@@ -8,10 +8,12 @@ import { Button } from '@/components/ui/button';
 import { QUOTATIONS } from '@/modules/quotations/types';
 import { quotationColumns } from './_components/quotation_columns';
 import { quotationApi } from '@/modules/quotations/api';
+import { CustomerApi } from '@/modules/customer/api';
 import { DataTable } from './_components/quotation_table';
 import { AlertDeleteDialog } from '@/components/shared/delete_popup';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/shared/empty-page';
+import { generateQuotationPDF } from '@/components/pdf-generator';
 
 function QuotationsManagement() {
     const router = useRouter();
@@ -27,9 +29,85 @@ function QuotationsManagement() {
         onDelete: (id) => {
             setDeleteId(Number(id))
         },
-        onDownload(id) {
+        async onDownload(id) {
+            try {
+                const response = await quotationApi.getById(Number(id));
+                if (response.data) {
+                    let pdfData = { ...response.data };
 
+                    if (response.data.customer_id) {
+                        try {
+                            const customerRes = await CustomerApi.getById(response.data.customer_id.toString());
+                            if (customerRes.data) {
+                                const customer = customerRes.data;
+                                // Merge customer details into pdfData, preferring customer API data
+                                pdfData = {
+                                    ...pdfData,
+                                    company_name: customer.company_name || pdfData.company_name,
+                                    customer_address: customer.address || pdfData.customer_address,
+                                    customer_phone: customer.phone || pdfData.customer_phone,
+                                    customer_email: customer.email || pdfData.customer_email,
+                                    contact_person: customer.contact_person || pdfData.contact_person,
+                                };
+                            }
+                        } catch (custError) {
+                            console.warn("Failed to fetch customer details for PDF, using quotation data", custError);
+                        }
+                    }
+
+                    await generateQuotationPDF(pdfData);
+                } else {
+                    toast.error("Failed to load quotation details");
+                }
+            } catch (error) {
+                console.error("PDF Download Error:", error);
+                toast.error("Could not download PDF");
+            }
         },
+        async onStatusChange(id, status) {
+            try {
+                setLoading(true);
+                const response = await quotationApi.getById(id);
+                if (response.data) {
+                    const data = response.data as any;
+                    const payload = {
+                        quote_id: Number(data.quote_id),
+                        customer_id: Number(data.customer_id),
+                        type_id: Number(data.type_id),
+                        delivery_days: data.delivery_days,
+                        tax_type_id: Number(data.tax_type_id),
+                        currency: data.currency,
+                        contact_person: data.contact_person,
+                        notes: data.notes || "",
+                        status: status,
+                        sub_total: data.sub_total,
+                        no_of_items: data.no_of_items,
+                        total_without_tax: data.total_without_tax,
+                        net_total: data.net_total,
+                        updated_by: data.updated_by || "admin",
+                        items: (data.items || []).map((item: any) => ({
+                            item_id: item.item_id,
+                            item_category: item.item_category,
+                            item_qty: String(item.item_qty),
+                            item_description: item.item_description,
+                            item_unit_price: String(item.item_unit_price),
+                            item_unit_discount: String(item.item_unit_discount || "0"),
+                            item_total_price: String(item.item_total_price),
+                        })),
+                    };
+                    await quotationApi.update(id, payload as any);
+                    toast.success(`Quotation status updated to ${status}`);
+                    await fetchData();
+                } else {
+                    toast.error("Failed to fetch quotation details for status update");
+                }
+            } catch (error) {
+                console.error("Status Update Error:", error);
+                toast.error("Failed to update status");
+            } finally {
+                setLoading(false);
+            }
+        }
     })
 
 

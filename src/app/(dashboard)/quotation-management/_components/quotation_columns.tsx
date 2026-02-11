@@ -6,17 +6,19 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ColumnDef } from "@tanstack/react-table"
-import { Download, MoreHorizontal, PencilIcon, Printer, TrashIcon } from "lucide-react"
+import { Download, MoreHorizontal, PencilIcon, Printer, TrashIcon, ArrowRightIcon } from "lucide-react"
 import { QUOTATIONS } from "@/modules/quotations/types"
 import { ArrowUpDown } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { TaxTypes } from "@/config/enum"
 import { format } from "date-fns"
+import { getNextQuotationStatus } from "@/lib/status-workflow"
 
 interface QuotationTableActions {
     onEdit: (id: number) => void
     onDelete: (id: number) => void
     onDownload: (id: number) => void
+    onStatusChange: (id: number, status: string) => void
 }
 
 export const quotationColumns = (
@@ -133,14 +135,20 @@ export const quotationColumns = (
                 const status = row.original.status
                 return (
                     <Badge
-                        className={`uppercase ${status === "Created" ? "bg-blue-100 text-blue-800" :
-                            status === "Pending" ? "bg-yellow-100 text-yellow-800" :
-                                status === "Completed" ? "bg-green-100 text-green-800" :
-                                    "bg-gray-100 text-gray-800"
-                            } px-2 py-1 rounded-md text-sm font-medium`}
+                        className={`uppercase px-2 py-1 rounded-md text-sm font-medium transition-colors duration-200
+    ${status === "Created"
+                                ? "bg-blue-100 text-blue-800 hover:bg-blue-600 hover:text-white"
+                                : status === "Pending"
+                                    ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-600 hover:text-white"
+                                    : status === "Completed"
+                                        ? "bg-green-100 text-green-800 hover:bg-green-600 hover:text-white"
+                                        : "bg-gray-100 text-gray-800 hover:bg-gray-600 hover:text-white"
+                            }
+  `}
                     >
                         {status}
                     </Badge>
+
                 )
             },
         },
@@ -160,6 +168,20 @@ export const quotationColumns = (
                             </DropdownMenuTrigger>
 
                             <DropdownMenuContent align="end">
+                                {(() => {
+                                    const nextStatus = getNextQuotationStatus(quotation.status);
+                                    if (nextStatus) {
+                                        return (
+                                            <DropdownMenuItem
+                                                onClick={() => actions.onStatusChange(quotation.quote_id, nextStatus)}
+                                            >
+                                                <ArrowRightIcon className="mr-2 h-4 w-4" />
+                                                Move to {nextStatus}
+                                            </DropdownMenuItem>
+                                        );
+                                    }
+                                    return null;
+                                })()}
                                 <DropdownMenuItem
                                     onClick={() => actions.onEdit(quotation.quote_id)}
                                 >

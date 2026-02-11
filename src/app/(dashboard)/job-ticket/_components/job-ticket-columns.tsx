@@ -4,14 +4,16 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ALL_TICKETS } from "@/modules/job-tickets/types"
 import { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, EyeIcon, MoreHorizontal, PencilIcon, TrashIcon } from "lucide-react"
+import { ArrowUpDown, EyeIcon, MoreHorizontal, PencilIcon, TrashIcon, ArrowRightIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
+import { getNextJobTicketStatus } from "@/lib/status-workflow"
 
 interface JobTicketTableActions {
     onEdit: (id: number) => void
     onDelete: (id: number) => void
     onView: (id: number) => void
+    onStatusChange: (id: number, status: string) => void
 }
 
 
@@ -60,9 +62,9 @@ export const jobTicketColumns = (
                 return (
                     <Badge
                         className={`uppercase ${status === "COMPLETED" ? "bg-green-100 text-green-800" :
-                            status === "PENDING" ? "bg-yellow-100 text-yellow-800" :
-                                status === "ACTIVE" ? "bg-blue-100 text-blue-800" :
-                                    "bg-gray-100 text-gray-800"
+                            status === "PENDING" ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-600 hover:text-white" :
+                                status === "ACTIVE" ? "bg-blue-100 text-blue-800 hover:bg-blue-600 hover:text-white" :
+                                    "bg-gray-100 text-gray-800 hover:bg-gray-600 hover:text-white"
                             } px-2 py-1 rounded-md text-sm font-medium`}
                     >
                         {status || "N/A"}
@@ -84,6 +86,20 @@ export const jobTicketColumns = (
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                            {(() => {
+                                const nextStatus = getNextJobTicketStatus(job_ticket.status);
+                                if (nextStatus) {
+                                    return (
+                                        <DropdownMenuItem
+                                            onClick={() => actions.onStatusChange(job_ticket.job_id, nextStatus)}
+                                        >
+                                            <ArrowRightIcon className="mr-2 h-4 w-4" />
+                                            Move to {nextStatus}
+                                        </DropdownMenuItem>
+                                    );
+                                }
+                                return null;
+                            })()}
                             <DropdownMenuItem
                                 onClick={() => actions.onView(job_ticket.job_id)}
                             >

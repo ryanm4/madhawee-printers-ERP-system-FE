@@ -50,6 +50,64 @@ function JobTicketComponent() {
         },
         onView: (id) => {
             router.push(`/job-ticket/${id}`)
+        },
+        onStatusChange: async (id, status) => {
+            try {
+                setIsLoading(true);
+                const currentTicketResponse = await jobTicketsApi.getById(id);
+                if (currentTicketResponse.status === 200) {
+                    const currentTicket = currentTicketResponse.data as any;
+
+                    // Construct payload matching CREATE_TICKETS interface
+                    const payload = {
+                        po_id: currentTicket.po_id,
+                        item_code: currentTicket.item_code,
+                        job_number: currentTicket.job_number,
+                        order_received_date: currentTicket.order_received_date,
+                        job_open_date: currentTicket.job_open_date,
+                        customer_id: currentTicket.customer_id,
+                        job_name: currentTicket.job_name,
+                        product_type: currentTicket.product_type,
+                        quantity: currentTicket.quantity,
+                        completed_qty: currentTicket.completed_qty,
+                        wastage: currentTicket.wastage,
+                        packing_date: currentTicket.packing_date,
+                        expiry_date: currentTicket.expiry_date,
+                        tc_no: currentTicket.tc_no,
+                        batch_ref: currentTicket.batch_ref,
+                        remarks: currentTicket.remarks,
+
+                        // Plates
+                        old_plates_quantity: currentTicket.old_plates_quantity,
+                        old_plates_status: currentTicket.old_plates_status,
+                        old_plates_remarks: currentTicket.old_plates_remarks,
+                        new_plates_quantity: currentTicket.new_plates_quantity,
+                        new_plates_status: currentTicket.new_plates_status,
+                        new_plates_remarks: currentTicket.new_plates_remarks,
+
+                        // Map Arrays
+                        raw_materials: currentTicket.raw_materials,
+                        inks: currentTicket.inks,
+                        paperCoating: (currentTicket.paperCoating || currentTicket.paper_coating || []).map((p: any) => ({
+                            paper: p.paper || p.paper_type,
+                            coating: p.coating,
+                            delivery_date: p.delivery_date
+                        })),
+
+                        status: status,
+                        create_by: currentTicket.create_by || "Admin"
+                    };
+
+                    await jobTicketsApi.update(id, payload as any);
+                    toast.success(`Job Ticket status updated to ${status}`);
+                    await fetchData();
+                }
+            } catch (error) {
+                console.error("Failed to update status", error);
+                toast.error("Failed to update status");
+            } finally {
+                setIsLoading(false);
+            }
         }
     })
 
