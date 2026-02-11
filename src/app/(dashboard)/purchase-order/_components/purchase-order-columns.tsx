@@ -84,7 +84,7 @@ export const purchaseOrderColumns = (
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+
                             {(() => {
                                 const nextStatus = getNextPurchaseOrderStatus(po.status);
                                 if (nextStatus) {
@@ -96,7 +96,7 @@ export const purchaseOrderColumns = (
                                                 <ArrowRightIcon className="mr-2 h-4 w-4" />
                                                 Move Status to {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1).toLowerCase()}
                                             </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
+
                                         </>
                                     );
                                 }
@@ -108,7 +108,7 @@ export const purchaseOrderColumns = (
                                 <EyeIcon className="mr-2 h-4 w-4" />
                                 View PO
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
+
                             <DropdownMenuItem
                                 onClick={() => actions.onEdit(po.po_id)}
                             >
