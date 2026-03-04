@@ -29,7 +29,7 @@ function DispatchInvoiceManagement() {
         try {
             setIsLoading(true);
             const response = await dispatchInventoryApi.getAll();
-            console.log(response)
+
 
             if (response.status === 200) {
                 setData(response.data);

@@ -73,10 +73,10 @@ function CreateInventoryManagement() {
                 status: data.status,
                 remarks: data.remarks ?? "",
                 created_by: user?.name || "Admin",
-                updated_by: user?.name || "Admin",
+
             }
             const response = await inventoryApi.create(payload);
-            console.log(response)
+
 
             toast("Inventory Item Created", {
                 description: "The inventory item has been added successfully."

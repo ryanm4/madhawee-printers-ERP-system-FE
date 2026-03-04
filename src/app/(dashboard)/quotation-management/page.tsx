@@ -119,7 +119,7 @@ function QuotationsManagement() {
         try {
             setLoading(true);
             const response = await quotationApi.getAll();
-            console.log(response)
+
 
             if (response.status === 200) {
                 setData(response.data);

@@ -166,7 +166,7 @@ function EditCustomerRelationship() {
                 status: "Updated"
             }
             const response = await CustomerApi.update(id, payload);
-            console.log(response)
+
 
             toast("Customer Updated", {
                 description: "The customer details have been updated successfully."

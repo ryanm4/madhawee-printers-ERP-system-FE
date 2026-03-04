@@ -20,7 +20,7 @@ export interface ALL_TICKETS {
 
 export interface CREATE_TICKETS {
   po_id?: number;
-  item_code?: string;
+  job_item?: string;
   job_number?: string;
   order_received_date?: string | Date;
   job_open_date?: string | Date;
@@ -35,32 +35,38 @@ export interface CREATE_TICKETS {
   tc_no?: string;
   batch_ref?: string;
   remarks?: string;
+  artwork?: string;
+  description?: string;
 
   // Plates
-  old_plate_quantity?: string;
+  old_plate_quantity?: number;
   old_plate_status?: string;
   old_plate_remarks?: string;
-  new_plate_quantity?: string;
+  new_plate_quantity?: number;
   new_plate_status?: string;
   new_plate_remarks?: string;
 
   // Arrays
-  raw_materials?: {
-    item?: string;
-    quantity?: string;
-    status?: string;
-    remarks?: string;
+  paperCoating?: {
+    paper: string;
+    coating: string;
+    delivery_date?: Date | string;
+    materials?: {
+      item_id?: number;
+      material_type?: string;
+      material_name?: string;
+      size?: string;
+      material_description?: string;
+      quantity?: number;
+      status?: string;
+      remarks?: string;
+    }[];
   }[];
   inks?: {
     ink?: string;
     quantity?: string;
     status?: string;
     remarks?: string;
-  }[];
-  paperCoating?: {
-    paper: string;
-    coating: string;
-    delivery_date?: Date | string;
   }[];
 
   status?: string;

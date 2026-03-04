@@ -122,7 +122,6 @@ function CreateCustomerRelationship() {
                 status: "CREATED"
             }
             const response = await CustomerApi.create(payload);
-            console.log(response)
 
             toast("Customer Created", {
                 description: "The customer has been created successfully."

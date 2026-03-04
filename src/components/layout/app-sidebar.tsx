@@ -89,8 +89,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
               <a href="/dashboard">
-                <div className="flex aspect-square size-8 items-center justify-center   bg-sidebar-primary text-sidebar-primary-foreground">
-                  <Image src={company_logo} alt="Madhawee Printers" width={32} height={32} className="object-contain" />
+                <div className="flex aspect-square size-8 items-center justify-center    text-sidebar-primary-foreground">
+                  <Image src={company_logo} alt="Madhawee Printers" width={24} height={24} className="object-contain" priority />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Madhawee Printers</span>

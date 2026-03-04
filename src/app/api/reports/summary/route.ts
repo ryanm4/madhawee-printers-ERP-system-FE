@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     const token = cookieStore.get("auth_token");
     try {
         const formData = await request.json();
-        const apiUrl = API_ENDPOINTS.REPORTS.ADVANCED;
+        const apiUrl = API_ENDPOINTS.REPORTS.SUMMARY;
 
         const response = await fetch(apiUrl, {
             method: "POST",
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
         if (!response.ok) {
             return NextResponse.json(
-                { message: "Failed to create quotations" },
+                { message: "Failed to generate report" },
                 { status: response.status }
             );
         }

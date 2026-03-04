@@ -73,7 +73,7 @@ function CreateDispatchandInvoice() {
         try {
             setIsLoading(true);
             const response = await jobTicketsApi.getAll();
-            console.log(response)
+
 
             if (response.status === 200) {
                 const completedJobs = response.data.filter(x => x.status === "COMPLETED")

@@ -6,7 +6,7 @@ export interface GET_ALL_INVENTORY {
     size: string;
     quantity: string;
     unit_of_measure: string;
-    reorder_level: string;
+    reorder_level: Number;
     status: string;
     remarks: string;
     created_on: string;
@@ -23,10 +23,10 @@ export interface CREATE_INVENTORY {
     size: string;
     quantity: string;
     unit_of_measure: string;
-    reorder_level: string;
+    reorder_level: Number;
     status: string;
     remarks: string;
-    created_by: string;
-    updated_by: string;
+    created_by?: string;
+    updated_by?: string;
 }
 

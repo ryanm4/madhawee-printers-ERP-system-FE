@@ -33,7 +33,7 @@ function PurchaseOrderPage() {
     try {
       setLoading(true);
       const response = await purchaseOrderApi.getAll();
-      console.log(response)
+
       setData(response.data);
     } catch (err) {
       console.error('Failed to fetch POs', err);

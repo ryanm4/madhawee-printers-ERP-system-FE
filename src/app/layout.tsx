@@ -19,6 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 
+import { StoreProvider } from "@/store/store-provider";
 export default function RootLayout({
   children,
 }: {
@@ -29,24 +30,21 @@ export default function RootLayout({
 
   return (
     <html lang="en" className={`${manrope.variable} ${geistMono.variable}`}>
-      {/* Global providers (Redux, Toast, etc.) can wrap children here */}
-
       <body className="antialiased font-sans">
-        {" "}
-
-
-        {isLoginPage ? (
-          <>{children}</>
-        ) : (
-          <SidebarProvider>
-            <AppSidebar variant="inset" />
-            <SidebarInset>
-              <SiteHeader />
-              <Toaster position="top-right" richColors />
-              <main className="w-full">{children}</main>
-            </SidebarInset>
-          </SidebarProvider>
-        )}
+        <StoreProvider>
+          {isLoginPage ? (
+            <>{children}</>
+          ) : (
+            <SidebarProvider>
+              <AppSidebar variant="inset" />
+              <SidebarInset>
+                <SiteHeader />
+                <Toaster position="top-right" richColors />
+                <main className="w-full">{children}</main>
+              </SidebarInset>
+            </SidebarProvider>
+          )}
+        </StoreProvider>
       </body>
     </html>
   );

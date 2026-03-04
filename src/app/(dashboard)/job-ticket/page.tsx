@@ -29,7 +29,7 @@ function JobTicketComponent() {
         try {
             setIsLoading(true);
             const response = await jobTicketsApi.getAll();
-            console.log(response)
+
 
             if (response.status === 200) {
                 setData(response.data);

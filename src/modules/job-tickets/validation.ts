@@ -28,12 +28,6 @@ export const jobTicketSchema = z.object({
     newPlatesRemarks: z.string().optional(),
 
     // Dynamic Lists
-    rawMaterials: z.array(z.object({
-        item: z.string().optional(),
-        quantity: z.string().optional(),
-        status: z.string().optional(),
-        remarks: z.string().optional(),
-    })).optional(),
     inks: z.array(z.object({
         ink: z.string().optional(),
         quantity: z.string().optional(),
@@ -41,10 +35,20 @@ export const jobTicketSchema = z.object({
         remarks: z.string().optional(),
     })).optional(),
 
-    //Paper Types
+    //Paper Types with nested Raw Materials
     paperTypes: z.array(z.object({
         paper: z.string().min(1, "Paper Type is required"),
         coating: z.string().min(1, "Coating is required"),
         delivery_date: z.date().optional(),
+        rawMaterials: z.array(z.object({
+            item_id: z.number().optional(),
+            material_name: z.string().optional(),
+            material_type: z.string().optional(),
+            size: z.string().optional(),
+            material_description: z.string().optional(),
+            quantity: z.number().optional(),
+            status: z.string().optional(),
+            remarks: z.string().optional(),
+        })).optional(),
     })).min(1),
 })
