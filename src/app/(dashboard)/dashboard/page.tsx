@@ -58,13 +58,13 @@ function DashboardPage({
 
       const response = await DashboardApi.create(formData)
       if (response && response.data) {
-        console.log(response.data)
+
         setKpiData(response.data?.kpis || [])
         setInsights(response.data?.insights || [])
         setAnalytics(response.data?.analytics || null)
       }
     } catch (error) {
-      console.log(error)
+
       setIsLoading(false)
     } finally {
       setIsLoading(false)

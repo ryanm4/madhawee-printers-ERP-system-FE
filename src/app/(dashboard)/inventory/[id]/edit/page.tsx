@@ -37,7 +37,7 @@ function EditInventoryManagement() {
         size: "",
         quantity: 0,
         unit_of_measure: "",
-        reorder_level: "",
+        reorder_level: 0,
         status: "",
         remarks: "",
     }
@@ -75,7 +75,7 @@ function EditInventoryManagement() {
                     size: data.size,
                     quantity: Number(data.quantity),
                     unit_of_measure: data.unit_of_measure,
-                    reorder_level: data.reorder_level,
+                    reorder_level: Number(data.reorder_level),
                     status: data.status,
                     remarks: data.remarks || "",
                 });
@@ -94,7 +94,6 @@ function EditInventoryManagement() {
     }, [id, form, router]);
 
     async function onSubmit(data: InventoryManagementFormValues) {
-        console.log("Submitting Inventory Data:", data)
 
         try {
             setIsLoading(true);
@@ -108,11 +107,10 @@ function EditInventoryManagement() {
                 reorder_level: data.reorder_level,
                 status: data.status,
                 remarks: data.remarks ?? "",
-                created_by: user?.name || "Admin",
                 updated_by: user?.name || "Admin",
             }
             const response = await inventoryApi.update(id, payload);
-            console.log(response)
+
 
             toast("Inventory Item Updated", {
                 description: "The inventory item has been updated successfully."
@@ -247,7 +245,8 @@ function EditInventoryManagement() {
                             {renderFormField("reorder_level", ({ field }) => (
                                 <FormItem>
                                     <FormLabel>Re-order Level <span className="text-red-500">*</span></FormLabel>
-                                    <FormControl><Input placeholder="Enter Re-order Level" {...field} /></FormControl>
+                                    <FormControl><Input type="number" placeholder="Enter Re-order Level" value={field.value}
+                                        onChange={(e) => field.onChange(Number(e.target.value))} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             ))}

@@ -57,8 +57,11 @@ export async function POST(request: NextRequest) {
         });
 
         if (!response.ok) {
+            const errorData = await response.json();
             return NextResponse.json(
-                { message: "Failed to create job ticket" },
+                {
+                    message: errorData.message
+                },
                 { status: response.status }
             );
         }

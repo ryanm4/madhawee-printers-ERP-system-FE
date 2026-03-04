@@ -101,7 +101,6 @@ function ViewPurchaseOrder() {
     async function onSubmit(data: PurchaseOrderFormValues) {
         try {
             setIsSubmitting(true);
-            console.log("Submitting PO Data:", data)
 
             const poTypeMap: Record<PurchaseOrderType, number> = {
                 [PurchaseOrderType.TIEP]: 1,

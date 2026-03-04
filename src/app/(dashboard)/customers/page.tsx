@@ -27,7 +27,7 @@ export default function CRMPage() {
         try {
             setIsLoading(true);
             const response = await CustomerApi.getAll();
-            console.log(response)
+
 
             if (response.status === 200) {
                 setData(response.data);

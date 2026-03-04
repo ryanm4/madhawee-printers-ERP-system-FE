@@ -20,7 +20,7 @@ function UsersComponent() {
 
     const columns = userColumns({
         onEdit: (user) => {
-            console.log(user)
+
             sessionStorage.setItem('editUser', JSON.stringify(user));
             router.push(`/users/${user.id}/edit`);
         }
@@ -33,7 +33,7 @@ function UsersComponent() {
         try {
             setLoading(true);
             const response = await userApi.getAll();
-            console.log(response)
+
 
             if (response.status === 200) {
 

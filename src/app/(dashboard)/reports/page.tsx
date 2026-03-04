@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PRODUCT_TYPES, REPORT_TYPES } from '@/config/enum'
 import { cn } from '@/lib/utils'
 import { CustomerApi } from '@/modules/customer/api'
@@ -13,6 +12,8 @@ import { CUSTOMER } from '@/modules/customer/types'
 import { ReportsApi } from '@/modules/reports/api'
 import { CREATE_REPORT } from '@/modules/reports/types'
 import { ReportSchema } from '@/modules/reports/validations'
+import { ReportsTable } from './_components/reports-table'
+import { Card, CardContent } from '@/components/ui/card'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { format } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
@@ -37,7 +38,7 @@ function ReportsPage() {
         try {
             setLoading(true);
             const response = await CustomerApi.getAll();
-            console.log(response);
+
             setCustomer(response.data);
 
         } catch (error) {
@@ -77,6 +78,8 @@ function ReportsPage() {
     async function onSubmit(data: ReportsFormValues) {
         try {
             setLoading(true);
+            const isAdvancedReport = Object.keys(REPORT_TYPES).includes(data.reportType);
+
             const payload: CREATE_REPORT = {
                 reportType: data?.reportType,
                 filters: {
@@ -86,19 +89,29 @@ function ReportsPage() {
                     toDate: data.filters.toDate
                         ? new Date(data.filters.toDate)
                         : new Date(),
-                    customer_id: data.filters.customer_id,
-                    status: data.filters.status,
-                    product_type: data.filters.product_type,
+                    ...(isAdvancedReport && {
+                        customer_id: data.filters.customer_id,
+                        status: data.filters.status,
+                        product_type: data.filters.product_type,
+                    })
                 },
             }
 
-            const response = await ReportsApi.create(payload)
+            const response = isAdvancedReport
+                ? await ReportsApi.createAdvanced(payload)
+                : await ReportsApi.createSummary(payload);
+
+            if (response.data) {
+                console.log(response.data)
+                setReportData(response.data as any);
+            }
+
             toast("Report Generated", {
                 description: `Report has been generated successfully.`,
             })
             form.clearErrors()
         } catch (error) {
-            console.error('Failed to fetch POs');
+            console.error('Failed to generate report', error);
             toast("Failed to Create Report", {
                 description: "An error occurred while creating the report. Please try again.",
             })
@@ -119,8 +132,11 @@ function ReportsPage() {
             },
         });
     };
+
+    const selectedReportType = form.watch("reportType");
+    const isAdvancedReport = Object.keys(REPORT_TYPES).includes(selectedReportType);
     return (
-        <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+        <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3 w-full min-w-0 overflow-hidden">
             <PageTitleWithBreadcrumb
                 title="Reports Management"
                 breadcrumbs={[
@@ -138,10 +154,28 @@ function ReportsPage() {
                                 <FormLabel>Report Type</FormLabel>
 
                                 <Combobox
-                                    items={Object.entries(REPORT_TYPES).map(([key, reportType]) => ({
-                                        value: key,   // string ✔
-                                        label: reportType,
-                                    }))}
+                                    groups={[
+                                        {
+                                            label: "General Reports",
+                                            items: [
+                                                { value: "customers", label: "CUSTOMERS" },
+                                                { value: "main_inventory", label: "MAIN INVENTORY" },
+                                                { value: "dispatch", label: "DISPATCH" },
+                                                { value: "jobs", label: "JOBS" },
+                                                { value: "purchase_orders", label: "PURCHASE ORDERS" },
+                                                { value: "quotations", label: "QUOTATIONS" },
+                                            ]
+                                        },
+
+                                        {
+                                            label: "Advanced Report Types",
+                                            items: Object.entries(REPORT_TYPES).map(([key, reportType]) => ({
+                                                value: key,
+                                                label: reportType,
+                                            }))
+                                        },
+
+                                    ]}
                                     value={field.value ?? ""}
                                     onValueChange={(value) => field.onChange(value)}
                                     placeholder="Select Report Type"
@@ -153,27 +187,31 @@ function ReportsPage() {
                         ))}
 
 
-                        {renderFormField("filters.customer_id", ({ field }) => (
-                            <FormItem className="w-[200px]">
-                                <FormLabel>Customer</FormLabel>
-                                <FormControl>
-                                    <Combobox
-                                        items={customer.map(c => ({
-                                            value: String(c.customer_id),
-                                            label: c.company_name,
-                                        }))}
-                                        value={field.value ? String(field.value) : ""}
-                                        onValueChange={(value) => {
-                                            field.onChange(Number(value));
-                                        }}
-                                        placeholder="Select Customer"
-                                        searchPlaceholder="Search customer..."
-                                        className="h-10"
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        ))}
+                        {isAdvancedReport && (
+                            <>
+                                {renderFormField("filters.customer_id", ({ field }) => (
+                                    <FormItem className="w-[200px]">
+                                        <FormLabel>Customer</FormLabel>
+                                        <FormControl>
+                                            <Combobox
+                                                items={customer.map(c => ({
+                                                    value: String(c.customer_id),
+                                                    label: c.company_name,
+                                                }))}
+                                                value={field.value ? String(field.value) : ""}
+                                                onValueChange={(value) => {
+                                                    field.onChange(Number(value));
+                                                }}
+                                                placeholder="Select Customer"
+                                                searchPlaceholder="Search customer..."
+                                                className="h-10"
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                ))}
+                            </>
+                        )}
 
                         {renderFormField("filters.fromDate", ({ field }) => (
                             <FormItem className="w-[200px]">
@@ -249,24 +287,26 @@ function ReportsPage() {
                             </FormItem>
                         ))}
 
-                        {renderFormField("filters.product_type", ({ field }) => (
-                            <FormItem className="w-[200px]">
-                                <FormLabel>Product Type</FormLabel>
+                        {isAdvancedReport && (
+                            renderFormField("filters.product_type", ({ field }) => (
+                                <FormItem className="w-[200px]">
+                                    <FormLabel>Product Type</FormLabel>
 
-                                <Combobox
-                                    items={Object.entries(PRODUCT_TYPES).map(([key, productType]) => ({
-                                        value: key,   // string ✔
-                                        label: productType,
-                                    }))}
-                                    value={field.value ?? ""}
-                                    onValueChange={(value) => field.onChange(value)}
-                                    placeholder="Select Product Type"
-                                    searchPlaceholder="Search product type..."
-                                />
+                                    <Combobox
+                                        items={Object.entries(PRODUCT_TYPES).map(([key, productType]) => ({
+                                            value: key,   // string ✔
+                                            label: productType,
+                                        }))}
+                                        value={field.value ?? ""}
+                                        onValueChange={(value) => field.onChange(value)}
+                                        placeholder="Select Product Type"
+                                        searchPlaceholder="Search product type..."
+                                    />
 
-                                <FormMessage />
-                            </FormItem>
-                        ))}
+                                    <FormMessage />
+                                </FormItem>
+                            ))
+                        )}
 
 
                         <Button variant="outline" type="button" className="h-10" onClick={handleReset}>Reset</Button>
@@ -275,6 +315,14 @@ function ReportsPage() {
 
                 </form>
             </Form>
+
+            {reportData.length > 0 && (
+                <div className="mt-8">
+
+                    <ReportsTable data={reportData} />
+
+                </div>
+            )}
 
         </div>
     )

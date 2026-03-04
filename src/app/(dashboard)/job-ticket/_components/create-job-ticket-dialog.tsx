@@ -38,15 +38,20 @@ import { Textarea } from "@/components/ui/textarea"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { jobTicketSchema } from "@/modules/job-tickets/validation"
-import { COATING_TYPES, INK_STATUS, JobTicketStatus, PAPER_TYPES, PRODUCT_TYPES, PurchaseOrderType } from "@/config/enum"
+import { COATING_TYPES, INK_STATUS, JobTicketStatus, PRODUCT_TYPES, PurchaseOrderType } from "@/config/enum"
 import { PURCHASE_ORDER, PURCHASE_ORDER_ID } from "@/modules/purchase-order/types"
 import { purchaseOrderApi } from "@/modules/purchase-order/api"
 import { CustomerApi } from "@/modules/customer/api"
 import { CUSTOMER } from "@/modules/customer/types"
 import { jobTicketsApi } from "@/modules/job-tickets/api"
-import { CREATE_TICKETS } from "@/modules/job-tickets/types"
+import { ALL_TICKETS, CREATE_TICKETS } from "@/modules/job-tickets/types"
 import { toast } from "sonner"
 import { toMySQLDateTime } from "@/hooks/sql-date-time"
+import { inventoryApi } from "@/modules/inventory/api"
+import { GET_ALL_INVENTORY } from "@/modules/inventory/types"
+import { useDispatch } from "react-redux"
+import { setInventoryList as setReduxInventoryList } from "@/store/inventory-slice"
+import { AppDispatch } from "@/store/store"
 
 type JobTicketFormValues = z.infer<typeof jobTicketSchema>
 
@@ -70,6 +75,10 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
     const [loading, setLoading] = useState(false);
     const [fetchingDetails, setFetchingDetails] = useState(false);
     const [user, setUser] = useState<{ name: string; email: string; avatar: string } | null>(null)
+    const [existingTickets, setExistingTickets] = useState<ALL_TICKETS[]>([])
+    const [inventoryList, setInventoryList] = useState<GET_ALL_INVENTORY[]>([]);
+    const dispatch = useDispatch<AppDispatch>();
+
     const baseDefaultValues = {
         poNumber: "",
         item: "",
@@ -94,14 +103,13 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
         newPlatesQuantity: "",
         newPlatesStatus: "",
         newPlatesRemarks: "",
-        rawMaterials: [{ item: "", quantity: "", status: "", remarks: "" }],
         inks: [
             { ink: "Black", quantity: "", status: "", remarks: "" },
             { ink: "Cyan", quantity: "", status: "", remarks: "" },
             { ink: "Magenta", quantity: "", status: "", remarks: "" },
             { ink: "Yellow", quantity: "", status: "", remarks: "" },
         ],
-        paperTypes: [{ paper_type: "", coating: "", delivery_date: new Date() }],
+        paperTypes: [{ paper: "", coating: "", delivery_date: new Date(), rawMaterials: [{ item_id: undefined, material_name: "", material_type: "", size: "", material_description: "", quantity: 0, status: "", remarks: "" }] }],
     }
 
     const form = useForm<JobTicketFormValues>({
@@ -109,10 +117,7 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
         defaultValues: baseDefaultValues,
     })
 
-    const { fields: rawMaterialFields, append: appendRawMaterial, remove: removeRawMaterial } = useFieldArray({
-        control: form.control,
-        name: "rawMaterials",
-    })
+
 
     const { fields: paperTypeFields, append: appendPaperType, remove: removePaperType } = useFieldArray({
         control: form.control,
@@ -167,7 +172,7 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
             setLoading(true)
             const payload: CREATE_TICKETS = {
                 po_id: data.poNumber ? Number(data.poNumber) : undefined,
-                item_code: data.item,
+                job_item: data.item,
                 job_number: `MPL/####/YY/${PurchaseOrderType[Number(selectedPoDetails?.po_type_id)]}`,
                 order_received_date: toMySQLDateTime(data.orderReceivedDate || new Date()),
                 job_open_date: toMySQLDateTime(data.jobOpenDate || new Date()),
@@ -182,28 +187,39 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
                 tc_no: data.tcNo,
                 batch_ref: data.batchRef,
                 remarks: data.remarks,
+                description: data.remarks,
+                artwork: "",
 
-                old_plate_quantity: data.oldPlatesQuantity,
+                old_plate_quantity: data.oldPlatesQuantity ? Number(data.oldPlatesQuantity) : undefined,
                 old_plate_status: data.oldPlatesStatus,
                 old_plate_remarks: data.oldPlatesRemarks,
-                new_plate_quantity: data.newPlatesQuantity,
+                new_plate_quantity: data.newPlatesQuantity ? Number(data.newPlatesQuantity) : undefined,
                 new_plate_status: data.newPlatesStatus,
                 new_plate_remarks: data.newPlatesRemarks,
 
-                raw_materials: data.rawMaterials,
                 inks: data.inks,
                 paperCoating: data.paperTypes?.map(p => ({
-                    ...p,
-                    delivery_date: p.delivery_date ? toMySQLDateTime(p.delivery_date) : undefined
+                    paper: p.paper,
+                    coating: p.coating,
+                    delivery_date: p.delivery_date ? toMySQLDateTime(p.delivery_date) : undefined,
+                    materials: p.rawMaterials?.map(rm => ({
+                        item_id: rm.item_id,
+                        material_type: rm.material_type,
+                        material_name: rm.material_name,
+                        size: rm.size,
+                        material_description: rm.material_description,
+                        quantity: rm.quantity,
+                        status: rm.status,
+                        remarks: rm.remarks,
+                    })),
                 })),
 
                 status: JobTicketStatus.CREATED,
-                created_by: user?.name || "Admin",
+                created_by: user?.email || "admin@admin.com",
                 created_on: new Date(),
             }
 
             const response = await jobTicketsApi.create(payload)
-            console.log(response)
 
             toast("Job Ticket Created Successfully")
 
@@ -233,9 +249,11 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
                 )
                 form.clearErrors()
             }
-        } catch (error) {
-            console.error("Failed to submit job ticket:", error)
-            toast("Failed to create job ticket")
+        } catch (error: any) {
+            toast("Failed to Create Job Ticket", {
+                description: error?.response?.data?.message ||
+                    "An error occurred while creating the job ticket. Please try again."
+            });
         } finally {
             setLoading(false)
         }
@@ -244,6 +262,7 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
 
     useEffect(() => {
         fetchData();
+        getInventoryList();
         const userData = getUser()
         if (userData) {
             setUser({
@@ -253,6 +272,22 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
             })
         }
     }, []);
+
+    const getInventoryList = async () => {
+        try {
+            setLoading(true);
+            const response = await inventoryApi.getAll();
+
+            if (response.status === 200) {
+                setInventoryList(response.data);
+                dispatch(setReduxInventoryList(response.data));
+            }
+        } catch (error) {
+            console.error('Failed to fetch inventory');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const fetchData = async () => {
         try {
@@ -285,7 +320,7 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
                 const response = await purchaseOrderApi.getById(selectedPoId);
                 if (response.status === 200) {
                     const po = response.data;
-                    console.log("po", po)
+
                     setSelectedPoDetails(po);
 
                     if (po.customer) {
@@ -508,69 +543,188 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
                         </div>
 
                         <div>
-                            {paperTypeFields.map((field, index) => (
-                                <div key={field.id} className="grid grid-cols-[1fr_auto] gap-2 mb-2 items-start">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
-                                        <FormField control={form.control} name={`paperTypes.${index}.paper`} render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Paper Type <span className="text-red-500">*</span></FormLabel>
-                                                <PaperTypeCombobox value={field.value} onChange={field.onChange} />
-                                                <FormMessage className="min-h-[20px]" />
-                                            </FormItem>
-                                        )} />
-                                        <FormField control={form.control} name={`paperTypes.${index}.coating`} render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Coating <span className="text-red-500">*</span></FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value}>
-                                                    <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Coating" /></SelectTrigger></FormControl>
-                                                    <SelectContent>
-                                                        {Object.entries(COATING_TYPES).map(([key, value]) => (
-                                                            <SelectItem key={key} value={value}>
-                                                                {value}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage className="min-h-[20px]" />
-                                            </FormItem>
-                                        )} />
-                                        <FormField control={form.control} name={`paperTypes.${index}.delivery_date`} render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Delivery Date</FormLabel>
-                                                <Popover>
-                                                    <PopoverTrigger asChild>
-                                                        <FormControl>
-                                                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                                                {field.value ? format(field.value, "PPP") : format(new Date(), "PPP")}
-                                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                            </Button>
-                                                        </FormControl>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-auto p-0" align="start">
-                                                        <Calendar mode="single" captionLayout="dropdown" selected={field.value} onSelect={field.onChange} />
-                                                    </PopoverContent>
-                                                </Popover>
-                                                <FormMessage className="min-h-[20px]" />
-                                            </FormItem>
-                                        )} />
-                                    </div>
-                                    <div className="flex space-x-2 items-start pt-6">
-                                        <Button type="button" variant="outline" size="icon" onClick={() => { }}><Edit2 className="h-4 w-4" /></Button>
-                                        <Button
-                                            type="button"
-                                            variant="destructive"
-                                            size="icon"
-                                            onClick={() => removePaperType(index)}
-                                            disabled={paperTypeFields.length <= 1} // Disable if only one item
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
+                            <h3 className="text-sm font-medium mb-2">Paper & Raw Material</h3>
+                            <p className="text-xs text-muted-foreground mb-4">Select the Paper Type and corresponding Raw Material for this job.</p>
 
-                                </div>
-                            ))}
+                            {paperTypeFields.map((field, index) => {
+                                const rawMaterials = form.watch(`paperTypes.${index}.rawMaterials`) || [];
+                                return (
+                                    <div key={field.id} className="border rounded-lg p-4 mb-4 bg-muted/20">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h4 className="text-sm font-semibold">Set {index + 1}</h4>
+                                            <div className="flex space-x-2">
+                                                <Button type="button" variant="outline" size="icon" onClick={() => { }}><Edit2 className="h-4 w-4" /></Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    onClick={() => removePaperType(index)}
+                                                    disabled={paperTypeFields.length <= 1}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                            <FormField control={form.control} name={`paperTypes.${index}.paper`} render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Paper Type <span className="text-red-500">*</span></FormLabel>
+                                                    <PaperTypeCombobox
+                                                        value={field.value}
+                                                        onChange={(val) => {
+                                                            field.onChange(val);
+                                                            if (val) {
+                                                                const selectedPaper = inventoryList.find(item =>
+                                                                    `${item.item_sub_category} ${item.item_name}` === val
+                                                                );
+                                                                if (selectedPaper) {
+                                                                    const rawMaterials = form.getValues(`paperTypes.${index}.rawMaterials`);
+                                                                    rawMaterials?.forEach((_, rmIndex) => {
+                                                                        form.setValue(`paperTypes.${index}.rawMaterials.${rmIndex}.size`, selectedPaper.size);
+                                                                    });
+                                                                }
+                                                            }
+                                                        }}
+                                                    />
+                                                    <FormMessage className="min-h-[20px]" />
+                                                </FormItem>
+                                            )} />
+                                            <FormField control={form.control} name={`paperTypes.${index}.coating`} render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Coating <span className="text-red-500">*</span></FormLabel>
+                                                    <Select onValueChange={field.onChange} value={field.value}>
+                                                        <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Coating" /></SelectTrigger></FormControl>
+                                                        <SelectContent>
+                                                            {Object.entries(COATING_TYPES).map(([key, value]) => (
+                                                                <SelectItem key={key} value={value}>
+                                                                    {value}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage className="min-h-[20px]" />
+                                                </FormItem>
+                                            )} />
+                                            <FormField control={form.control} name={`paperTypes.${index}.delivery_date`} render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Delivery Date</FormLabel>
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <FormControl>
+                                                                <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                                    {field.value ? format(field.value, "PPP") : format(new Date(), "PPP")}
+                                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                                </Button>
+                                                            </FormControl>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-auto p-0" align="start">
+                                                            <Calendar mode="single" captionLayout="dropdown" selected={field.value} onSelect={field.onChange} />
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                    <FormMessage className="min-h-[20px]" />
+                                                </FormItem>
+                                            )} />
+                                        </div>
+
+                                        {/* Raw Materials for this Paper Type */}
+                                        <h5 className="text-xs font-medium mb-2 mt-2">Raw Materials</h5>
+                                        {rawMaterials.map((_rm: any, rmIndex: number) => (
+                                            <div key={rmIndex} className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-2">
+                                                <FormField control={form.control} name={`paperTypes.${index}.rawMaterials.${rmIndex}.size`} render={({ field }) => {
+                                                    const selectedPaperName = form.watch(`paperTypes.${index}.paper`);
+                                                    const filteredInventory = inventoryList.filter(item =>
+                                                        `${item.item_sub_category} ${item.item_name}` === selectedPaperName
+                                                    );
+
+                                                    return (
+                                                        <FormItem>
+                                                            <FormLabel className={rmIndex !== 0 ? "sr-only" : ""}>Raw Material</FormLabel>
+                                                            <Select
+                                                                onValueChange={(val) => {
+                                                                    field.onChange(val);
+                                                                    const selectedMaterial = filteredInventory.find(item => item.size === val);
+                                                                    if (selectedMaterial) {
+                                                                        form.setValue(`paperTypes.${index}.rawMaterials.${rmIndex}.item_id`, selectedMaterial.item_id);
+                                                                        form.setValue(`paperTypes.${index}.rawMaterials.${rmIndex}.material_type`, selectedMaterial.item_sub_category);
+                                                                        form.setValue(`paperTypes.${index}.rawMaterials.${rmIndex}.material_name`, selectedMaterial.item_name);
+                                                                    }
+                                                                }}
+                                                                value={field.value}
+                                                            >
+                                                                <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Size" /></SelectTrigger></FormControl>
+                                                                <SelectContent>
+                                                                    {filteredInventory.map((item) => (
+                                                                        <SelectItem key={item.item_id} value={item.size}>
+                                                                            {item.size}
+                                                                        </SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                            <FormMessage className="min-h-[20px]" />
+                                                        </FormItem>
+                                                    )
+                                                }} />
+                                                <FormField control={form.control} name={`paperTypes.${index}.rawMaterials.${rmIndex}.quantity`} render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className={rmIndex !== 0 ? "sr-only" : ""}>Quantity</FormLabel>
+                                                        <FormControl><Input type="number" placeholder="Enter Quantity" {...field} onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))} /></FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )} />
+                                                <FormField control={form.control} name={`paperTypes.${index}.rawMaterials.${rmIndex}.status`} render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className={rmIndex !== 0 ? "sr-only" : ""}>Status</FormLabel>
+                                                        <Select onValueChange={field.onChange} value={field.value}>
+                                                            <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Status" /></SelectTrigger></FormControl>
+                                                            <SelectContent><SelectItem value="s1">Status 1</SelectItem></SelectContent>
+                                                        </Select>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )} />
+                                                <FormField control={form.control} name={`paperTypes.${index}.rawMaterials.${rmIndex}.remarks`} render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className={rmIndex !== 0 ? "sr-only" : ""}>Remarks</FormLabel>
+                                                        <FormControl><Input placeholder="Enter Remarks" {...field} /></FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )} />
+                                                <div className="flex items-end pb-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant="destructive"
+                                                        size="icon"
+                                                        onClick={() => {
+                                                            const current = form.getValues(`paperTypes.${index}.rawMaterials`) || [];
+                                                            if (current.length > 1) {
+                                                                form.setValue(`paperTypes.${index}.rawMaterials`, current.filter((_: any, i: number) => i !== rmIndex));
+                                                            }
+                                                        }}
+                                                        disabled={rawMaterials.length <= 1}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        <div className="flex justify-end mt-1 mb-2">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const current = form.getValues(`paperTypes.${index}.rawMaterials`) || [];
+                                                    form.setValue(`paperTypes.${index}.rawMaterials`, [...current, { item_id: undefined, material_name: "", material_type: "", size: "", material_description: "", quantity: 0, status: "", remarks: "" }]);
+                                                }}
+                                            >
+                                                <Plus className="h-4 w-4 mr-1" /> Add Material
+                                            </Button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                             <div className="flex justify-end mt-2">
-                                <Button type="button" onClick={() => appendPaperType({ paper: "", coating: "", delivery_date: undefined })} className="bg-primary text-white hover:bg-primary/90">Add More</Button>
+                                <Button type="button" onClick={() => appendPaperType({ paper: "", coating: "", delivery_date: undefined, rawMaterials: [{ item_id: undefined, material_name: "", material_type: "", size: "", material_description: "", quantity: 0, status: "", remarks: "" }] })} className="bg-primary text-white hover:bg-primary/90">Add More Sets</Button>
                             </div>
                         </div>
 
@@ -704,66 +858,7 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
                         </div>
 
                         {/* Raw Material Section with updated delete logic */}
-                        <div>
-                            <h3 className="text-sm font-medium">Raw Material</h3>
-                            <p className="text-xs text-muted-foreground mb-4">Select the Raw Material that best fits your needs.</p>
 
-                            {rawMaterialFields.map((field, index) => (
-                                <div key={field.id} className="flex gap-2 mb-2">
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
-                                        <FormField control={form.control} name={`rawMaterials.${index}.item`} render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel className={index !== 0 ? "sr-only" : ""}>Raw Material</FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value}>
-                                                    <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select an item" /></SelectTrigger></FormControl>
-                                                    <SelectContent><SelectItem value="rm1">Material 1</SelectItem></SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )} />
-                                        <FormField control={form.control} name={`rawMaterials.${index}.quantity`} render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel className={index !== 0 ? "sr-only" : ""}>Quantity</FormLabel>
-                                                <FormControl><Input type="number" placeholder="Enter Quantity" {...field} /></FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )} />
-                                        <FormField control={form.control} name={`rawMaterials.${index}.status`} render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel className={index !== 0 ? "sr-only" : ""}>Status</FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value}>
-                                                    <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select an Status" /></SelectTrigger></FormControl>
-                                                    <SelectContent><SelectItem value="s1">Status 1</SelectItem></SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )} />
-                                        <FormField control={form.control} name={`rawMaterials.${index}.remarks`} render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel className={index !== 0 ? "sr-only" : ""}>Remarks</FormLabel>
-                                                <FormControl><Input placeholder="Enter Remarks" {...field} /></FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )} />
-                                    </div>
-                                    <div className="flex space-x-2 items-end pb-2">
-                                        <Button type="button" variant="outline" size="icon" onClick={() => { }}><Edit2 className="h-4 w-4" /></Button>
-                                        <Button
-                                            type="button"
-                                            variant="destructive"
-                                            size="icon"
-                                            onClick={() => removeRawMaterial(index)}
-                                            disabled={rawMaterialFields.length <= 1} // Disable if only one item
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            ))}
-                            <div className="flex justify-end mt-2">
-                                <Button type="button" onClick={() => appendRawMaterial({ item: "", quantity: "", status: "", remarks: "" })} className="bg-primary text-white hover:bg-primary/90">Add More</Button>
-                            </div>
-                        </div>
 
                         {/* Ink Section with updated delete logic */}
                         <div>

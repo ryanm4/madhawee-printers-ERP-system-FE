@@ -77,14 +77,13 @@ function JobViewTicket() {
         newPlatesQuantity: "",
         newPlatesStatus: "",
         newPlatesRemarks: "",
-        rawMaterials: [{ item: "", quantity: "", status: "", remarks: "" }],
         inks: [
             { ink: "Black", quantity: "", status: "", remarks: "" },
             { ink: "Cyan", quantity: "", status: "", remarks: "" },
             { ink: "Magenta", quantity: "", status: "", remarks: "" },
             { ink: "Yellow", quantity: "", status: "", remarks: "" },
         ],
-        paperTypes: [{ paper: "", coating: "", delivery_date: undefined }] as any[],
+        paperTypes: [{ paper: "", coating: "", delivery_date: undefined, rawMaterials: [{ item_id: undefined, material_name: "", material_type: "", size: "", material_description: "", quantity: 0, status: "", remarks: "" }] }] as any[],
     }
 
     const form = useForm<JobTicketFormValues>({
@@ -92,10 +91,7 @@ function JobViewTicket() {
         defaultValues: baseDefaultValues,
     })
 
-    const { fields: rawMaterialFields } = useFieldArray({
-        control: form.control,
-        name: "rawMaterials",
-    })
+
 
     const { fields: paperTypeFields } = useFieldArray({
         control: form.control,
@@ -163,7 +159,7 @@ function JobViewTicket() {
                         newPlatesStatus: data.new_plate_status || "",
                         newPlatesRemarks: data.new_plate_remarks || "",
 
-                        rawMaterials: data.raw_materials?.length ? data.raw_materials : [{ item: "", quantity: "", status: "", remarks: "" }],
+                        rawMaterials: undefined,
                         inks: data.inks?.length ? data.inks : [
                             { ink: "Black", quantity: "", status: "", remarks: "" },
                             { ink: "Cyan", quantity: "", status: "", remarks: "" },
@@ -173,8 +169,18 @@ function JobViewTicket() {
                         paperTypes: data.paperCoatingData?.map((p: any) => ({
                             paper: p.paper,
                             coating: p.coating,
-                            delivery_date: p.delivery_date ? new Date(p.delivery_date) : undefined
-                        })) || [{ paper: "", coating: "", delivery_date: undefined }],
+                            delivery_date: p.delivery_date ? new Date(p.delivery_date) : undefined,
+                            rawMaterials: p.materials?.map((rm: any) => ({
+                                item_id: rm.item_id,
+                                material_name: rm.material_name,
+                                material_type: rm.material_type,
+                                size: rm.size || "",
+                                material_description: rm.material_description,
+                                quantity: rm.quantity,
+                                status: rm.status,
+                                remarks: rm.remarks,
+                            })) || [{ item_id: undefined, material_name: "", material_type: "", size: "", material_description: "", quantity: 0, status: "", remarks: "" }],
+                        })) || [{ paper: "", coating: "", delivery_date: undefined, rawMaterials: [{ item_id: undefined, material_name: "", material_type: "", size: "", material_description: "", quantity: 0, status: "", remarks: "" }] }],
                     };
 
                     form.reset(formValues);
@@ -394,49 +400,89 @@ function JobViewTicket() {
                             </div>
 
                             <div>
-                                {paperTypeFields.map((field, index) => (
-                                    <div key={field.id} className="grid grid-cols-[1fr_auto] gap-2 mb-2 items-start">
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
-                                            {renderFormField(`paperTypes.${index}.paper`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Paper Type</FormLabel>
-                                                    <div className="pointer-events-none opacity-50">
-                                                        <PaperTypeCombobox value={field.value} onChange={() => { }} />
-                                                    </div>
-                                                    <FormMessage className="min-h-[20px]" />
-                                                </FormItem>
-                                            ))}
-                                            {renderFormField(`paperTypes.${index}.coating`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Coating</FormLabel>
-                                                    <Select value={field.value} disabled>
-                                                        <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Coating" /></SelectTrigger></FormControl>
-                                                        <SelectContent>
-                                                            {Object.entries(COATING_TYPES).map(([key, value]) => (
-                                                                <SelectItem key={key} value={value}>
-                                                                    {value}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <FormMessage className="min-h-[20px]" />
-                                                </FormItem>
-                                            ))}
-                                            {renderFormField(`paperTypes.${index}.delivery_date`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Delivery Date</FormLabel>
-                                                    <FormControl>
-                                                        <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled>
-                                                            {field.value ? format(field.value, "PPP") : "No Date"}
-                                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                        </Button>
-                                                    </FormControl>
-                                                    <FormMessage className="min-h-[20px]" />
-                                                </FormItem>
+                                <h3 className="text-sm font-medium mb-2">Paper & Raw Material</h3>
+                                {paperTypeFields.map((field, index) => {
+                                    const rawMaterials = form.watch(`paperTypes.${index}.rawMaterials`) || [];
+                                    return (
+                                        <div key={field.id} className="border rounded-lg p-4 mb-4 bg-muted/20">
+                                            <h4 className="text-sm font-semibold mb-4">Set {index + 1}</h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                                {renderFormField(`paperTypes.${index}.paper`, ({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Paper Type</FormLabel>
+                                                        <div className="pointer-events-none opacity-50">
+                                                            <PaperTypeCombobox value={field.value} onChange={() => { }} />
+                                                        </div>
+                                                        <FormMessage className="min-h-[20px]" />
+                                                    </FormItem>
+                                                ))}
+                                                {renderFormField(`paperTypes.${index}.coating`, ({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Coating</FormLabel>
+                                                        <Select value={field.value} disabled>
+                                                            <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Coating" /></SelectTrigger></FormControl>
+                                                            <SelectContent>
+                                                                {Object.entries(COATING_TYPES).map(([key, value]) => (
+                                                                    <SelectItem key={key} value={value}>
+                                                                        {value}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <FormMessage className="min-h-[20px]" />
+                                                    </FormItem>
+                                                ))}
+                                                {renderFormField(`paperTypes.${index}.delivery_date`, ({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Delivery Date</FormLabel>
+                                                        <FormControl>
+                                                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled>
+                                                                {field.value ? format(field.value, "PPP") : "No Date"}
+                                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                            </Button>
+                                                        </FormControl>
+                                                        <FormMessage className="min-h-[20px]" />
+                                                    </FormItem>
+                                                ))}
+                                            </div>
+
+                                            {/* Raw Materials for this Paper Type */}
+                                            <h5 className="text-xs font-medium mb-2 mt-2">Raw Materials</h5>
+                                            {rawMaterials.map((_rm: any, rmIndex: number) => (
+                                                <div key={rmIndex} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2">
+                                                    {renderFormField(`paperTypes.${index}.rawMaterials.${rmIndex}.material_name`, ({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel className={rmIndex !== 0 ? "sr-only" : ""}>Raw Material</FormLabel>
+                                                            <FormControl><Input placeholder="Material" {...field} value={field.value as string || ""} readOnly /></FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    ))}
+                                                    {renderFormField(`paperTypes.${index}.rawMaterials.${rmIndex}.quantity`, ({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel className={rmIndex !== 0 ? "sr-only" : ""}>Quantity</FormLabel>
+                                                            <FormControl><Input type="number" placeholder="Quantity" {...field} value={field.value as number || 0} readOnly /></FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    ))}
+                                                    {renderFormField(`paperTypes.${index}.rawMaterials.${rmIndex}.status`, ({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel className={rmIndex !== 0 ? "sr-only" : ""}>Status</FormLabel>
+                                                            <FormControl><Input placeholder="Status" {...field} value={field.value as string || ""} readOnly /></FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    ))}
+                                                    {renderFormField(`paperTypes.${index}.rawMaterials.${rmIndex}.remarks`, ({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel className={rmIndex !== 0 ? "sr-only" : ""}>Remarks</FormLabel>
+                                                            <FormControl><Input placeholder="Remarks" {...field} value={field.value as string || ""} readOnly /></FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    ))}
+                                                </div>
                                             ))}
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
 
                             {/* Dates */}
@@ -495,7 +541,7 @@ function JobViewTicket() {
                             {/* CTP Plates */}
                             <div>
                                 <h3 className="text-sm font-medium mb-2">CTP Plates</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-3  gap-4 mb-2">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
                                     {renderFormField("oldPlatesQuantity", ({ field }) => (
                                         <FormItem>
                                             <FormLabel>Old Plates Quantity</FormLabel>
@@ -559,51 +605,6 @@ function JobViewTicket() {
                                         </FormItem>
                                     ))}
                                 </div>
-                            </div>
-
-                            {/* Raw Material Section */}
-                            <div>
-                                <h3 className="text-sm font-medium">Raw Material</h3>
-                                {rawMaterialFields.map((field, index) => (
-                                    <div key={field.id} className="flex gap-2 mb-2">
-                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
-                                            {renderFormField(`rawMaterials.${index}.item`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Raw Material</FormLabel>
-                                                    <Select value={field.value} disabled>
-                                                        <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select an item" /></SelectTrigger></FormControl>
-                                                        <SelectContent><SelectItem value="rm1">Material 1</SelectItem></SelectContent>
-                                                    </Select>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            ))}
-                                            {renderFormField(`rawMaterials.${index}.quantity`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Quantity</FormLabel>
-                                                    <FormControl><Input type="number" placeholder="Enter Quantity" {...field} readOnly /></FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            ))}
-                                            {renderFormField(`rawMaterials.${index}.status`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Status</FormLabel>
-                                                    <Select value={field.value} disabled>
-                                                        <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select an Status" /></SelectTrigger></FormControl>
-                                                        <SelectContent><SelectItem value="s1">Status 1</SelectItem></SelectContent>
-                                                    </Select>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            ))}
-                                            {renderFormField(`rawMaterials.${index}.remarks`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Remarks</FormLabel>
-                                                    <FormControl><Input placeholder="Enter Remarks" {...field} readOnly /></FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
                             </div>
 
                             {/* Ink Section */}

@@ -59,7 +59,7 @@ function CreatePurchaseOrder() {
         try {
             setLoading(true);
             const response = await CustomerApi.getAll();
-            console.log(response);
+
             setCustomer(response.data);
 
         } catch (error) {
@@ -72,7 +72,7 @@ function CreatePurchaseOrder() {
         try {
             setLoading(true);
             const response = await quotationApi.getAll();
-            console.log(response);
+
             setQuotationList(response.data);
 
         } catch (error) {
@@ -110,7 +110,7 @@ function CreatePurchaseOrder() {
     async function onSubmit(data: PurchaseOrderFormValues) {
         try {
             setIsSubmitting(true);
-            console.log("Submitting PO Data:", data)
+
 
             const poTypeMap: Record<PurchaseOrderType, number> = {
                 [PurchaseOrderType.TIEP]: 1,

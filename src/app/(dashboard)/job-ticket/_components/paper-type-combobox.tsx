@@ -18,7 +18,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { FormControl } from "@/components/ui/form";
-import { PAPER_TYPES } from "@/config/enum";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
 
 interface PaperTypeComboboxProps {
   value: string;
@@ -30,6 +31,22 @@ export const PaperTypeCombobox = ({
   onChange,
 }: PaperTypeComboboxProps) => {
   const [open, setOpen] = useState(false);
+  const { inventoryList } = useSelector((state: RootState) => state.inventory);
+
+  const paperTypes = Array.from(
+    new Map(
+      inventoryList
+        .filter((item) => item.item_category === "Paper")
+        .map((item) => [
+          `${item.item_sub_category} ${item.item_name}`,
+          {
+            label: `${item.item_sub_category} ${item.item_name}`,
+            value: `${item.item_sub_category} ${item.item_name}`,
+            id: item.item_id,
+          },
+        ])
+    ).values()
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -45,7 +62,7 @@ export const PaperTypeCombobox = ({
             )}
           >
             {value
-              ? Object.values(PAPER_TYPES).find((paper) => paper === value) || value
+              ? paperTypes.find((paper) => paper.value === value)?.label || value
               : "Select Paper Type"}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -57,10 +74,10 @@ export const PaperTypeCombobox = ({
           <CommandList>
             <CommandEmpty>No paper type found.</CommandEmpty>
             <CommandGroup>
-              {Object.entries(PAPER_TYPES).map(([key, itemValue]) => (
+              {paperTypes.map((item) => (
                 <CommandItem
-                  key={key}
-                  value={itemValue}
+                  key={item.id}
+                  value={item.value}
                   onSelect={(currentValue) => {
                     onChange(currentValue === value ? "" : currentValue);
                     setOpen(false);
@@ -69,10 +86,10 @@ export const PaperTypeCombobox = ({
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      itemValue === value ? "opacity-100" : "opacity-0"
+                      item.value === value ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  {itemValue}
+                  {item.label}
                 </CommandItem>
               ))}
             </CommandGroup>

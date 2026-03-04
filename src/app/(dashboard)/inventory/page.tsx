@@ -29,7 +29,7 @@ function InventoryManagement() {
         try {
             setIsLoading(true);
             const response = await inventoryApi.getAll();
-            console.log(response)
+
 
             if (response.status === 200) {
                 setData(response.data);

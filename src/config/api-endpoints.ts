@@ -64,7 +64,8 @@ export const API_ENDPOINTS = {
         CREATE: `${API_BASE_URL}/reports/dashboard/insights`,
     },
     REPORTS: {
-        CREATE: `${API_BASE_URL}/reports`,
+        ADVANCED: `${API_BASE_URL}/reports`,
+        SUMMARY: `${API_BASE_URL}/reports/summary`,
     },
 
 
@@ -129,7 +130,9 @@ export const API_ENDPOINTS = {
             DASHBOARD_KPI: {
                 CREATE: `${NEXTJS_API_BASE}/reports/dashboard/insights`,
             },
-            CREATE: `${NEXTJS_API_BASE}/reports`,
+            ADVANCED: `${NEXTJS_API_BASE}/reports`,
+            SUMMARY: `${NEXTJS_API_BASE}/reports/summary`,
+
         },
 
     }

@@ -26,15 +26,7 @@ apiClient.interceptors.request.use(
             config.headers.Authorization = `Bearer ${token}`;
         }
 
-        // Log request in development
-        if (process.env.NODE_ENV === 'development') {
-            console.log('🚀 Request:', {
-                method: config.method?.toUpperCase(),
-                url: config.url,
-                headers: config.headers,
-                data: config.data,
-            });
-        }
+
 
         return config;
     },
@@ -48,13 +40,7 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
     (response) => {
         // Log response in development
-        if (process.env.NODE_ENV === 'development') {
-            console.log('✅ Response:', {
-                status: response.status,
-                url: response.config.url,
-                data: response.data,
-            });
-        }
+
 
         return response;
     },

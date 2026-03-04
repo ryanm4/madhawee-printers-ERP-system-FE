@@ -20,8 +20,19 @@ import {
 } from "@/components/ui/popover"
 import { FormControl } from "@/components/ui/form"
 
+interface ComboboxItem {
+    value: string;
+    label: string;
+}
+
+interface ComboboxGroup {
+    label: string;
+    items: ComboboxItem[];
+}
+
 interface ComboboxProps {
-    items: { value: string; label: string }[]
+    items?: ComboboxItem[]
+    groups?: ComboboxGroup[]
     value: string
     onValueChange: (value: string) => void
     placeholder?: string
@@ -33,6 +44,7 @@ interface ComboboxProps {
 
 export function Combobox({
     items,
+    groups,
     value,
     onValueChange,
     placeholder = "Select item...",
@@ -42,6 +54,13 @@ export function Combobox({
     disabled = false,
 }: ComboboxProps) {
     const [open, setOpen] = React.useState(false)
+
+    const allItems = React.useMemo(() => {
+        const result: ComboboxItem[] = [];
+        if (items) result.push(...items);
+        if (groups) result.push(...groups.flatMap(group => group.items));
+        return result;
+    }, [items, groups]);
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -55,7 +74,7 @@ export function Combobox({
                         disabled={disabled}
                     >
                         {value
-                            ? items.find((item) => item.value === value)?.label || value
+                            ? allItems.find((item) => item.value === value)?.label || value
                             : placeholder}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -66,29 +85,55 @@ export function Combobox({
                     <CommandInput placeholder={searchPlaceholder} />
                     <CommandList>
                         <CommandEmpty>{emptyMessage}</CommandEmpty>
-                        <CommandGroup>
-                            {items.map((item) => (
-                                <CommandItem
-                                    key={item.value}
-                                    value={item.label}
-                                    onSelect={(currentValue) => {
-                                        // Match by label to find the correct value because CommandItem value filtering is by text
-                                        const selectedItem = items.find(i => i.label.toLowerCase() === currentValue.toLowerCase())
-                                        const newValue = selectedItem ? selectedItem.value : ""
-                                        onValueChange(newValue === value ? "" : newValue)
-                                        setOpen(false)
-                                    }}
-                                >
-                                    <Check
-                                        className={cn(
-                                            "mr-2 h-4 w-4",
-                                            value === item.value ? "opacity-100" : "opacity-0"
-                                        )}
-                                    />
-                                    {item.label}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
+                        {groups ? (
+                            groups.map((group) => (
+                                <CommandGroup key={group.label} heading={group.label}>
+                                    {group.items.map((item) => (
+                                        <CommandItem
+                                            key={item.value}
+                                            value={item.label}
+                                            onSelect={(currentValue) => {
+                                                const selectedItem = allItems.find(i => i.label.toLowerCase() === currentValue.toLowerCase())
+                                                const newValue = selectedItem ? selectedItem.value : ""
+                                                onValueChange(newValue === value ? "" : newValue)
+                                                setOpen(false)
+                                            }}
+                                        >
+                                            <Check
+                                                className={cn(
+                                                    "mr-2 h-4 w-4",
+                                                    value === item.value ? "opacity-100" : "opacity-0"
+                                                )}
+                                            />
+                                            {item.label}
+                                        </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                            ))
+                        ) : (
+                            <CommandGroup>
+                                {allItems.map((item) => (
+                                    <CommandItem
+                                        key={item.value}
+                                        value={item.label}
+                                        onSelect={(currentValue) => {
+                                            const selectedItem = allItems.find(i => i.label.toLowerCase() === currentValue.toLowerCase())
+                                            const newValue = selectedItem ? selectedItem.value : ""
+                                            onValueChange(newValue === value ? "" : newValue)
+                                            setOpen(false)
+                                        }}
+                                    >
+                                        <Check
+                                            className={cn(
+                                                "mr-2 h-4 w-4",
+                                                value === item.value ? "opacity-100" : "opacity-0"
+                                            )}
+                                        />
+                                        {item.label}
+                                    </CommandItem>
+                                ))}
+                            </CommandGroup>
+                        )}
                     </CommandList>
                 </Command>
             </PopoverContent>
