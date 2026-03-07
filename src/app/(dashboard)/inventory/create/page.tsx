@@ -17,7 +17,7 @@ import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
 import { getUser } from '@/lib/auth'
-import { FieldPath, useForm } from 'react-hook-form'
+import { FieldPath, useForm, ControllerProps } from 'react-hook-form'
 import { z } from 'zod'
 
 type InventoryManagementFormValues = z.infer<typeof inventoryManagementScheme>
@@ -97,9 +97,9 @@ function CreateInventoryManagement() {
 
     const renderFormField = <TName extends FieldPath<InventoryManagementFormValues>>(
         name: TName,
-        render: Parameters<typeof FormField<InventoryManagementFormValues, TName>>["0"]["render"]
+        render: ControllerProps<InventoryManagementFormValues, TName>["render"]
     ) => (
-        <FormField
+        <FormField<InventoryManagementFormValues, TName>
             control={form.control}
             name={name}
             render={render}
