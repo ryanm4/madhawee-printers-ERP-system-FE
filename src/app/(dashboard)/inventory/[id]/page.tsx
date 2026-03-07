@@ -12,7 +12,7 @@ import { inventoryManagementScheme } from '@/modules/inventory/validation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useParams, useRouter } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
-import { FieldPath, useForm } from 'react-hook-form'
+import { FieldPath, useForm, ControllerProps } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { cn } from '@/lib/utils'
@@ -32,8 +32,7 @@ function ViewInventoryItem() {
             item_sub_category: "",
             item_name: "",
             size: "",
-            // @ts-ignore
-            quantity: "",
+            quantity: 0,
             unit_of_measure: "",
             reorder_level: "",
             status: "",
@@ -79,9 +78,9 @@ function ViewInventoryItem() {
 
     const renderFormField = <TName extends FieldPath<InventoryFormValues>>(
         name: TName,
-        render: Parameters<typeof FormField<InventoryFormValues, TName>>["0"]["render"]
+        render: ControllerProps<InventoryFormValues, TName>["render"]
     ) => (
-        <FormField
+        <FormField<InventoryFormValues, TName>
             control={form.control}
             name={name}
             render={render}

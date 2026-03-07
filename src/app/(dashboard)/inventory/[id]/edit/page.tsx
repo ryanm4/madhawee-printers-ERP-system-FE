@@ -15,7 +15,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useParams, useRouter } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
 import { getUser } from '@/lib/auth'
-import { FieldPath, useForm } from 'react-hook-form'
+import { FieldPath, useForm, ControllerProps } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
@@ -37,7 +37,7 @@ function EditInventoryManagement() {
         size: "",
         quantity: 0,
         unit_of_measure: "",
-        reorder_level: 0,
+        reorder_level: "",
         status: "",
         remarks: "",
     }
@@ -75,7 +75,7 @@ function EditInventoryManagement() {
                     size: data.size,
                     quantity: Number(data.quantity),
                     unit_of_measure: data.unit_of_measure,
-                    reorder_level: Number(data.reorder_level),
+                    reorder_level: data.reorder_level,
                     status: data.status,
                     remarks: data.remarks || "",
                 });
@@ -131,9 +131,9 @@ function EditInventoryManagement() {
 
     const renderFormField = <TName extends FieldPath<InventoryManagementFormValues>>(
         name: TName,
-        render: Parameters<typeof FormField<InventoryManagementFormValues, TName>>["0"]["render"]
+        render: ControllerProps<InventoryManagementFormValues, TName>["render"]
     ) => (
-        <FormField
+        <FormField<InventoryManagementFormValues, TName>
             control={form.control}
             name={name}
             render={render}
