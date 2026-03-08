@@ -12,6 +12,7 @@ import { inventoryColumns } from './_components/inventory_columns'
 import { GET_ALL_INVENTORY } from '@/modules/inventory/types'
 import { toast } from 'sonner'
 import { EmptyState } from '@/components/shared/empty-page'
+import { ExportButton } from '@/components/shared/export-button'
 
 function InventoryManagement() {
     const router = useRouter()
@@ -95,6 +96,7 @@ function InventoryManagement() {
 
 
 
+                    <ExportButton data={data} filename="inventory-list" />
                     <Button onClick={() => router.push("/inventory/create")}>
                         <PlusIcon /> Create New
                     </Button>

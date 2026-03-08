@@ -83,7 +83,7 @@ function ViewCustomerRelationship() {
                 });
             } catch (error) {
                 console.error("Failed to fetch customer:", error);
-                toast("Failed to load customer data");
+                ("Failed to load customer data");
                 router.push("/customers");
             } finally {
                 setIsLoading(false);

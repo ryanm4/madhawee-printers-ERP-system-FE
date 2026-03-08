@@ -12,6 +12,7 @@ import { DataTable } from './_components/dispatch_table'
 import { dispatchInventoryApi } from '@/modules/dispatch-invoice/api'
 import { toast } from 'sonner'
 import { EmptyState } from '@/components/shared/empty-page'
+import { ExportButton } from '@/components/shared/export-button'
 
 function DispatchInvoiceManagement() {
     const router = useRouter();
@@ -94,6 +95,7 @@ function DispatchInvoiceManagement() {
 
 
 
+                    <ExportButton data={data} filename="dispatch-invoices" />
                     <Button onClick={() => router.push("/dispatch-invoice/create")}>
                         <PlusIcon /> Create New
                     </Button>

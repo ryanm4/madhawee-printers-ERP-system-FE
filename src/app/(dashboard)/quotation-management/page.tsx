@@ -14,6 +14,7 @@ import { AlertDeleteDialog } from '@/components/shared/delete_popup';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/shared/empty-page';
 import { generateQuotationPDF } from '@/components/pdf-generator';
+import { ExportButton } from '@/components/shared/export-button';
 
 function QuotationsManagement() {
     const router = useRouter();
@@ -175,6 +176,8 @@ function QuotationsManagement() {
 
 
 
+
+                <ExportButton data={data} filename="quotations-list" />
                 <Button onClick={() => router.push("/quotation-management/create")}>
                     <PlusIcon /> Create New
                 </Button>

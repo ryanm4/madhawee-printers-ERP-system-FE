@@ -9,6 +9,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-page";
+import { ExportButton } from "@/components/shared/export-button";
 
 
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
@@ -148,6 +149,7 @@ function PurchaseOrderPage() {
             <TabsTrigger value="Grid-View"><LayoutPanelTop /></TabsTrigger>
             <TabsTrigger value="Table-View"><Table2 /></TabsTrigger>
           </TabsList>
+          <ExportButton data={data} filename="purchase-orders" />
           <Button onClick={() => router.push("/purchase-order/create")} disabled={loading}>
             <PlusIcon /> Create New
           </Button>
