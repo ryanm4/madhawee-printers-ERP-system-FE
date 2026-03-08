@@ -12,6 +12,7 @@ import { CustomerApi } from "@/modules/customer/api";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-page";
+import { ExportButton } from "@/components/shared/export-button";
 
 export default function CRMPage() {
     const router = useRouter();
@@ -96,6 +97,7 @@ export default function CRMPage() {
 
 
 
+                    <ExportButton data={data} filename="customers-list" />
                     <Button onClick={() => router.push("/customers/create")}>
                         <PlusIcon /> Create New
                     </Button>

@@ -12,6 +12,7 @@ import { jobTicketsApi } from "@/modules/job-tickets/api";
 import { toast } from "sonner";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 import { EmptyState } from "@/components/shared/empty-page";
+import { ExportButton } from "@/components/shared/export-button";
 
 
 
@@ -155,6 +156,7 @@ function JobTicketComponent() {
 
 
 
+                    <ExportButton data={data} filename="job-tickets" />
                     <Button onClick={() => router.push("/job-ticket/create")}>
                         <PlusIcon /> Create New
                     </Button>
