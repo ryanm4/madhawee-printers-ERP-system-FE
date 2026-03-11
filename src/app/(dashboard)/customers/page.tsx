@@ -13,6 +13,7 @@ import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
+import { PageLoader } from "@/components/shared/loader";
 
 export default function CRMPage() {
     const router = useRouter();
@@ -102,7 +103,9 @@ export default function CRMPage() {
                         <PlusIcon /> Create New
                     </Button>
                 </div>
-                {data.length === 0 && !isLoading ? (
+                {isLoading ? (
+                    <PageLoader />
+                ) : data.length === 0 ? (
                     <EmptyState
                         title="No Customers Found"
                         description="You haven't added any customers yet. Start building your customer base by creating your first entry."

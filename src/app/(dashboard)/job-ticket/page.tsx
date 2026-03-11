@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
+import { PageLoader } from "@/components/shared/loader";
 
 
 
@@ -161,7 +162,9 @@ function JobTicketComponent() {
                         <PlusIcon /> Create New
                     </Button>
                 </div>
-                {data.length === 0 && !isLoading ? (
+                {isLoading ? (
+                    <PageLoader />
+                ) : data.length === 0 ? (
                     <EmptyState
                         title="No Job Tickets"
                         description="You haven't initiated any job tickets yet. Create a job ticket to start the production process."

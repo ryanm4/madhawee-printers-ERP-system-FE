@@ -14,6 +14,7 @@ import { CREATE_REPORT } from '@/modules/reports/types'
 import { ReportSchema } from '@/modules/reports/validations'
 import { ReportsTable } from './_components/reports-table'
 import { Card, CardContent } from '@/components/ui/card'
+import { PageLoader } from '@/components/shared/loader'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { format } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
@@ -316,11 +317,11 @@ function ReportsPage() {
                 </form>
             </Form>
 
-            {reportData.length > 0 && (
+            {loading ? (
+                <PageLoader />
+            ) : reportData.length > 0 && (
                 <div className="mt-8">
-
                     <ReportsTable data={reportData} />
-
                 </div>
             )}
 

@@ -45,7 +45,8 @@ import { toMySQLDateTime } from "@/hooks/sql-date-time"
 import { CREATE_TICKETS } from "@/modules/job-tickets/types"
 import { toast } from "sonner"
 import { jobTicketsApi } from "@/modules/job-tickets/api"
-import { getUser } from "@/lib/auth"
+import { getUser } from '@/lib/auth'
+import { FullPageLoader } from '@/components/shared/loader'
 import { se } from "date-fns/locale"
 
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types"
@@ -357,6 +358,7 @@ function CreateJobTicket() {
 
     return (
         <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+            {isLoading && <FullPageLoader />}
             <PageTitleWithBreadcrumb
                 title="Create Job Ticket"
                 breadcrumbs={[

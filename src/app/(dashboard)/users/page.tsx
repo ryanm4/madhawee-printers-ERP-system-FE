@@ -9,6 +9,7 @@ import { DataTable } from './_components/user-table';
 import { PlusIcon, Search } from 'lucide-react';
 import PageTitleWithBreadcrumb from '@/components/shared/page-title-with-breadcrumb';
 import { Input } from '@/components/ui/input';
+import { PageLoader } from '@/components/shared/loader';
 
 function UsersComponent() {
     const router = useRouter();
@@ -75,12 +76,16 @@ function UsersComponent() {
                     <PlusIcon /> Create New
                 </Button>
             </div>
-            <DataTable
-                columns={columns}
-                data={data}
-                searchValue={search}
-                searchColumn="quote_id"
-            />
+            {loading ? (
+                <PageLoader />
+            ) : (
+                <DataTable
+                    columns={columns}
+                    data={data}
+                    searchValue={search}
+                    searchColumn="quote_id"
+                />
+            )}
 
 
         </div>

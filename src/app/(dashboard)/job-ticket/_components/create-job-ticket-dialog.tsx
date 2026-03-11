@@ -261,17 +261,19 @@ export function CreateJobTicketDialog({ open, onOpenChange, initialPoId, onSucce
 
 
     useEffect(() => {
-        fetchData();
-        getInventoryList();
-        const userData = getUser()
-        if (userData) {
-            setUser({
-                name: userData.name || "User",
-                email: userData.email,
-                avatar: "",
-            })
+        if (open) {
+            fetchData();
+            getInventoryList();
+            const userData = getUser()
+            if (userData) {
+                setUser({
+                    name: userData.name || "User",
+                    email: userData.email,
+                    avatar: "",
+                })
+            }
         }
-    }, []);
+    }, [open]);
 
     const getInventoryList = async () => {
         try {

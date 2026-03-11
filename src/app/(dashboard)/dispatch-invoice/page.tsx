@@ -13,6 +13,7 @@ import { dispatchInventoryApi } from '@/modules/dispatch-invoice/api'
 import { toast } from 'sonner'
 import { EmptyState } from '@/components/shared/empty-page'
 import { ExportButton } from '@/components/shared/export-button'
+import { PageLoader } from '@/components/shared/loader'
 
 function DispatchInvoiceManagement() {
     const router = useRouter();
@@ -100,7 +101,9 @@ function DispatchInvoiceManagement() {
                         <PlusIcon /> Create New
                     </Button>
                 </div>
-                {data.length === 0 && !isLoading ? (
+                {isLoading ? (
+                    <PageLoader />
+                ) : data.length === 0 ? (
                     <EmptyState
                         title="No Dispatch Records"
                         description="There are no dispatch notes or invoices recorded yet. Start by creating a NEW dispatch note."

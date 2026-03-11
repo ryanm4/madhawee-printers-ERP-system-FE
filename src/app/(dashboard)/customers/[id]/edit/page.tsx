@@ -20,6 +20,7 @@ import { CREATE_CUSTOMER } from '@/modules/customer/types'
 import { CustomerApi } from '@/modules/customer/api'
 import { toast } from 'sonner'
 import { getUser } from '@/lib/auth'
+import { FullPageLoader } from '@/components/shared/loader'
 
 type CustomerFormValues = z.infer<typeof customerSchema>
 
@@ -206,6 +207,7 @@ function EditCustomerRelationship() {
     }, [supplierType, form]);
     return (
         <div className='flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3'>
+            {isLoading && <FullPageLoader />}
             <PageTitleWithBreadcrumb
                 title="Edit Customer"
                 breadcrumbs={[

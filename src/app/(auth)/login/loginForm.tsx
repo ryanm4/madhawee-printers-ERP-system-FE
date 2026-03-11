@@ -1,49 +1,46 @@
-"use client"
-import { Eye, EyeOff, AlertCircle } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+"use client";
+import { Eye, EyeOff, AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { loginSchema } from "@/modules/login/validation"
-import z from "zod"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import Image from "next/image"
-import company_logo from "@/assets/Images/company_logo.jpeg"
-import { loginApi } from "@/modules/login/api"
-import { setToken, setUser } from "@/lib/auth"
-import { toast } from "sonner"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { loginSchema } from "@/modules/login/validation";
+import z from "zod";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import Image from "next/image";
+import company_logo from "@/assets/Images/company_logo.jpeg";
+import { loginApi } from "@/modules/login/api";
+import { setToken, setUser } from "@/lib/auth";
+import { toast } from "sonner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-type LoginFormValues = z.infer<typeof loginSchema>
-
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-
-  const router = useRouter()
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const baseDefaultValues: LoginFormValues = {
-    email: "",
+    name: "",
     password: "",
-  }
+  };
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: baseDefaultValues,
-
-  })
+  });
 
   const onSubmit = async (data: LoginFormValues) => {
     setError(null);
@@ -59,7 +56,7 @@ export function LoginForm({
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Login failed:", error);
-      let errorMessage = "Invalid email or password";
+      let errorMessage = "Invalid username or password";
 
       if (error.response) {
         // Handle API error response
@@ -90,35 +87,40 @@ export function LoginForm({
               className="flex flex-col items-center gap-2 font-medium"
             >
               <div className="flex h-20 w-auto items-center justify-center">
-                <Image src={company_logo} alt="madhawee printers" width={200} height={80} className="h-full w-auto object-contain" />
+                <Image
+                  src={company_logo}
+                  alt="madhawee printers"
+                  width={200}
+                  height={80}
+                  className="h-full w-auto object-contain"
+                />
               </div>
               <span className="sr-only">Madhawee Printers</span>
             </a>
             <h1 className="text-xl font-bold">Welcome to Madhawee Printers</h1>
-
           </div>
 
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Error</AlertTitle>
-              <AlertDescription>
-                {error}
-              </AlertDescription>
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
           <Field>
-            <FieldLabel htmlFor="email">Email</FieldLabel>
+            <FieldLabel htmlFor="name">User name</FieldLabel>
             <Input
-              id="email"
-              type="email"
-              placeholder="m@example.com"
+              id="name"
+              type="text"
+              placeholder="Enter your username"
               disabled={isLoading}
-              {...form.register("email")}
+              {...form.register("name")}
             />
-            {form.formState.errors.email && (
-              <p className="text-sm text-red-500">{form.formState.errors.email.message}</p>
+            {form.formState.errors.name && (
+              <p className="text-sm text-red-500">
+                {form.formState.errors.name.message}
+              </p>
             )}
           </Field>
           <Field>
@@ -153,7 +155,9 @@ export function LoginForm({
               </Button>
             </div>
             {form.formState.errors.password && (
-              <p className="text-sm text-red-500 mt-1">{form.formState.errors.password.message}</p>
+              <p className="text-sm text-red-500 mt-1">
+                {form.formState.errors.password.message}
+              </p>
             )}
           </Field>
 
@@ -162,8 +166,6 @@ export function LoginForm({
               {isLoading ? "Signing in..." : "Login"}
             </Button>
           </Field>
-
-
         </FieldGroup>
       </form>
       <FieldDescription className="px-6 text-center">
@@ -171,5 +173,5 @@ export function LoginForm({
         and <a href="#">Privacy Policy</a>.
       </FieldDescription>
     </div>
-  )
+  );
 }

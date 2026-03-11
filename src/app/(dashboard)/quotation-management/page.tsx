@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { EmptyState } from '@/components/shared/empty-page';
 import { generateQuotationPDF } from '@/components/pdf-generator';
 import { ExportButton } from '@/components/shared/export-button';
+import { PageLoader } from '@/components/shared/loader';
 
 function QuotationsManagement() {
     const router = useRouter();
@@ -182,7 +183,9 @@ function QuotationsManagement() {
                     <PlusIcon /> Create New
                 </Button>
             </div>
-            {data.length === 0 && !loading ? (
+            {loading ? (
+                <PageLoader />
+            ) : data.length === 0 ? (
                 <EmptyState
                     title="No Quotations Yet"
                     description="You haven't created any quotations yet. Get started by creating your first quotation."

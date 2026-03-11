@@ -40,7 +40,7 @@ export default function RootLayout({
               <SidebarInset>
                 <SiteHeader />
                 <Toaster position="top-right" richColors />
-                <main className="w-full">{children}</main>
+                <main className="w-full relative flex-1 flex flex-col">{children}</main>
               </SidebarInset>
             </SidebarProvider>
           )}

@@ -26,7 +26,8 @@ import { formatPhone } from '@/hooks/format-phone-no';
 import { CustomerApi } from '@/modules/customer/api';
 import { toMySQLDateTime } from '@/hooks/sql-date-time';
 import { Combobox } from '@/components/shared/combobox';
-import { getUser } from '@/lib/auth';
+import { getUser } from '@/lib/auth'
+import { FullPageLoader } from '@/components/shared/loader';
 
 type DispatchFormValues = z.infer<typeof dispatchInvoiceScheme>
 
@@ -212,6 +213,7 @@ function EditDispatchandInvoice() {
 
     return (
         <div className='flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3'>
+            {isLoading && <FullPageLoader />}
             <PageTitleWithBreadcrumb
                 title="Edit Dispatch and Invoice Management"
                 breadcrumbs={[

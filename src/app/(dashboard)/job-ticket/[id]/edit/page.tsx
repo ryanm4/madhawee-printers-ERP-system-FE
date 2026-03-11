@@ -47,7 +47,8 @@ import { CREATE_TICKETS } from "@/modules/job-tickets/types"
 import { toast } from "sonner"
 
 import { toMySQLDateTime } from "@/hooks/sql-date-time"
-import { getUser } from "@/lib/auth"
+import { getUser } from '@/lib/auth'
+import { FullPageLoader } from '@/components/shared/loader'
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types"
 import { inventoryApi } from "@/modules/inventory/api"
 import { useDispatch } from "react-redux"
@@ -400,6 +401,7 @@ function EditJobTicket() {
 
     return (
         <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+            {isLoading && <FullPageLoader />}
             <PageTitleWithBreadcrumb
                 title="Edit Job Ticket"
                 breadcrumbs={[

@@ -28,6 +28,7 @@ import { Combobox } from '@/components/shared/combobox'
 import { Checkbox } from '@/components/ui/checkbox'
 import { QuotationType, QuotationTaxType, QuotationStatus } from '@/config/enum'
 import { getUser } from '@/lib/auth'
+import { FullPageLoader } from '@/components/shared/loader'
 
 type QuotationFormValues = z.infer<typeof createQuotationSchema>
 
@@ -308,6 +309,7 @@ function EditQuotation({ user: initialUser,
 
     return (
         <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+            {loading && <FullPageLoader />}
             <PageTitleWithBreadcrumb
                 title="Edit Quotation"
                 breadcrumbs={[

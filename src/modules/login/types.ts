@@ -1,7 +1,7 @@
 import { GET_ALL_USER } from "@/modules/users/types";
 
 export interface LoginForm {
-    email: string;
+    name: string;
     password: string;
 }
 

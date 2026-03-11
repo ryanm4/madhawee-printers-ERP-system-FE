@@ -16,6 +16,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { CalendarIcon, Edit2, Loader2, PlusIcon, Trash2 } from 'lucide-react'
+import { FullPageLoader } from '@/components/shared/loader'
 import { Calendar } from '@/components/ui/calendar'
 import { format } from 'date-fns'
 import { PurchaseOrderStatus, PurchaseOrderType } from '@/config/enum'
@@ -178,6 +179,7 @@ function CreatePurchaseOrder() {
 
     return (
         <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+            {loading && <FullPageLoader />}
             <PageTitleWithBreadcrumb
                 title="Create Purchase Order Management"
                 breadcrumbs={[

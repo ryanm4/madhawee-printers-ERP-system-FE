@@ -19,6 +19,7 @@ import React, { useEffect, useState } from 'react'
 import { getUser } from '@/lib/auth'
 import { FieldPath, useForm, ControllerProps } from 'react-hook-form'
 import { z } from 'zod'
+import { FullPageLoader } from '@/components/shared/loader'
 
 type InventoryManagementFormValues = z.infer<typeof inventoryManagementScheme>
 
@@ -111,6 +112,7 @@ function CreateInventoryManagement() {
 
     return (
         <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+            {isLoading && <FullPageLoader />}
             <PageTitleWithBreadcrumb
                 title="Create Inventory Management"
                 breadcrumbs={[

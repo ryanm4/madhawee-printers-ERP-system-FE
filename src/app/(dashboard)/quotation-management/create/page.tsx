@@ -30,6 +30,7 @@ import { QuotationType, QuotationTaxType, QuotationStatus } from '@/config/enum'
 import { getUser } from '@/lib/auth'
 import { GET_ALL_INVENTORY } from '@/modules/inventory/types'
 import { inventoryApi } from '@/modules/inventory/api'
+import { FullPageLoader } from '@/components/shared/loader'
 
 type QuotationFormValues = z.infer<typeof createQuotationSchema>
 
@@ -297,6 +298,7 @@ function CreateQuotation({ user: initialUser,
 
     return (
         <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+            {loading && <FullPageLoader />}
             <PageTitleWithBreadcrumb
                 title="Add Quotation"
                 breadcrumbs={[

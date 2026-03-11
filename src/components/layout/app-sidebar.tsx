@@ -37,27 +37,27 @@ const data = {
       icon: FileText,
     },
     {
-      title: "Purchase Orders Management",
+      title: "Purchase Orders",
       url: "/purchase-order",
       icon: ShoppingCart,
     },
     {
-      title: "Job Ticket Management",
+      title: "Job Tickets",
       url: "/job-ticket",
       icon: ClipboardCheck,
     },
     {
-      title: "Dispatch and Invoice Management",
+      title: "Dispatch and Invoice",
       url: "/dispatch-invoice",
       icon: Truck,
     },
     {
-      title: "Inventory Management",
+      title: "Inventory",
       icon: Warehouse,
       url: "/inventory",
     },
     {
-      title: "Customer Module",
+      title: "Customers",
       icon: Users,
       url: "/customers",
     },

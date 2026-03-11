@@ -7,12 +7,12 @@ export async function POST(request: NextRequest) {
     try {
         // Parse request body
         const body = await request.json();
-        const { email, password } = body;
+        const { name, password } = body;
 
         // Validate input
-        if (!email || !password) {
+        if (!name || !password) {
             return NextResponse.json(
-                { message: "Email and password are required" },
+                { message: "Username and password are required" },
                 { status: 400 }
             );
         }
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ name, password }),
             cache: "no-store",
         });
 
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     message: errorData.message || `Authentication failed: ${response.status}`,
-                    error: "Unable to sign in. Please check your email and password."
+                    error: "Unable to sign in. Please check your username and password."
                 },
                 { status: response.status }
             );
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         // Log successful login in development
         if (process.env.NODE_ENV === 'development') {
             console.log('✅ Login successful:', {
-                email,
+                name,
                 user: data.user || data.data?.user,
             });
         }

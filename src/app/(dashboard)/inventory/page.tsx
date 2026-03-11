@@ -13,6 +13,7 @@ import { GET_ALL_INVENTORY } from '@/modules/inventory/types'
 import { toast } from 'sonner'
 import { EmptyState } from '@/components/shared/empty-page'
 import { ExportButton } from '@/components/shared/export-button'
+import { PageLoader } from '@/components/shared/loader'
 
 function InventoryManagement() {
     const router = useRouter()
@@ -101,7 +102,9 @@ function InventoryManagement() {
                         <PlusIcon /> Create New
                     </Button>
                 </div>
-                {data.length === 0 && !isLoading ? (
+                {isLoading ? (
+                    <PageLoader />
+                ) : data.length === 0 ? (
                     <EmptyState
                         title="Inventory Empty"
                         description="There are no items in your inventory. Add your stocks and materials to start tracking them."

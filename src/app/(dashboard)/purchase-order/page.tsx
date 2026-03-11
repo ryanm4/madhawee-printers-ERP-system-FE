@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
+import { PageLoader } from "@/components/shared/loader";
 
 
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
@@ -155,7 +156,9 @@ function PurchaseOrderPage() {
           </Button>
         </div>
 
-        {data.length === 0 && !loading ? (
+        {loading ? (
+          <PageLoader />
+        ) : data.length === 0 ? (
           <EmptyState
             title="No Purchase Orders"
             description="You haven't received or created any purchase orders yet. Start by creating a NEW PO."
