@@ -123,7 +123,7 @@ export const API_ENDPOINTS = {
         },
 
         AUTH: {
-            LOGIN: `${NEXTJS_API_BASE}/login`,
+            LOGIN: `/api/login`,
         },
 
         REPORTS: {
