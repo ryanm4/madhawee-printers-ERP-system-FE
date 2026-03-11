@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { PurchaseOrderCard } from "@/components/purchase-order-card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
-
+import { PageLoader } from "@/components/shared/loader";
 
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { PURCHASE_ORDER } from "@/modules/purchase-order/types";
@@ -18,13 +18,11 @@ import { PurchaseOrderStatus, JobTicketStatus } from "@/config/enum";
 import { DataTable } from "./_components/purchase-order-table";
 import { purchaseOrderColumns } from "./_components/purchase-order-columns";
 
-
 function PurchaseOrderPage() {
-
   const [data, setData] = useState<PURCHASE_ORDER[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const router = useRouter()
+  const router = useRouter();
 
   useEffect(() => {
     fetchData();
@@ -37,7 +35,7 @@ function PurchaseOrderPage() {
 
       setData(response.data);
     } catch (err) {
-      console.error('Failed to fetch POs', err);
+      console.error("Failed to fetch POs", err);
     } finally {
       setLoading(false);
     }
@@ -48,13 +46,14 @@ function PurchaseOrderPage() {
       setLoading(true);
       await purchaseOrderApi.delete(id);
       toast("Purchase Order Deleted", {
-        description: "The purchase order has been deleted successfully."
+        description: "The purchase order has been deleted successfully.",
       });
       await fetchData();
     } catch (error) {
-      console.error('Failed to delete PO:', error);
+      console.error("Failed to delete PO:", error);
       toast("Failed to Delete Purchase Order", {
-        description: "An error occurred while deleting the purchase order. Please try again."
+        description:
+          "An error occurred while deleting the purchase order. Please try again.",
       });
     } finally {
       setLoading(false);
@@ -75,7 +74,8 @@ function PurchaseOrderPage() {
 
           if (hasIncompleteJobs) {
             toast.warning("Cannot Complete Purchase Order", {
-              description: "This Purchase Order has active Job Tickets. All linked Job Tickets must be COMPLETED first.",
+              description:
+                "This Purchase Order has active Job Tickets. All linked Job Tickets must be COMPLETED first.",
             });
             setLoading(false);
             return;
@@ -119,18 +119,19 @@ function PurchaseOrderPage() {
     onEdit: (id) => router.push(`/purchase-order/${id}/edit`),
     onDelete: (id) => handleDelete(id),
     onView: (id) => router.push(`/purchase-order/${id}`),
-    onStatusChange: handleStatusChange
+    onStatusChange: handleStatusChange,
   });
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3" >
+    <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       <PageTitleWithBreadcrumb
         title="Purchase Order Management"
-        breadcrumbs={[
-          { title: "Dashboard", href: "/dashboard" }
-        ]}
+        breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
       />
-      <Tabs defaultValue="Grid-View" className="w-full flex-1 flex flex-col gap-4">
+      <Tabs
+        defaultValue="Grid-View"
+        className="w-full flex-1 flex flex-col gap-4"
+      >
         <div className="flex flex-row justify-end gap-[24px]">
           <div className="relative w-[320px]">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -143,19 +144,26 @@ function PurchaseOrderPage() {
             />
           </div>
 
-
-
           <TabsList>
-            <TabsTrigger value="Grid-View"><LayoutPanelTop /></TabsTrigger>
-            <TabsTrigger value="Table-View"><Table2 /></TabsTrigger>
+            <TabsTrigger value="Grid-View">
+              <LayoutPanelTop />
+            </TabsTrigger>
+            <TabsTrigger value="Table-View">
+              <Table2 />
+            </TabsTrigger>
           </TabsList>
           <ExportButton data={data} filename="purchase-orders" />
-          <Button onClick={() => router.push("/purchase-order/create")} disabled={loading}>
+          <Button
+            onClick={() => router.push("/purchase-order/create")}
+            disabled={loading}
+          >
             <PlusIcon /> Create New
           </Button>
         </div>
 
-        {data.length === 0 && !loading ? (
+        {loading ? (
+          <PageLoader />
+        ) : data.length === 0 ? (
           <EmptyState
             title="No Purchase Orders"
             description="You haven't received or created any purchase orders yet. Start by creating a NEW PO."
@@ -168,13 +176,13 @@ function PurchaseOrderPage() {
               <div className="grid gap-[24px] grid-cols-[repeat(auto-fill,minmax(412px,1fr))]">
                 {data
                   .filter((item) => {
-                    if (!search) return true
-                    const s = search.toLowerCase()
+                    if (!search) return true;
+                    const s = search.toLowerCase();
                     return (
                       item.po_id.toString().toLowerCase().includes(s) ||
                       item.customer?.name?.toLowerCase().includes(s) ||
                       item.status?.toLowerCase().includes(s)
-                    )
+                    );
                   })
                   .map((item: PURCHASE_ORDER) => (
                     <PurchaseOrderCard
@@ -209,7 +217,7 @@ function PurchaseOrderPage() {
           </>
         )}
       </Tabs>
-    </div >
+    </div>
   );
 }
 

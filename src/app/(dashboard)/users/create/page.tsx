@@ -28,6 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { FullPageLoader } from "@/components/shared/loader";
 
 type UserFormValues = z.infer<typeof userSchema>;
 
@@ -64,7 +65,6 @@ function CreateUser() {
       form.clearErrors();
       router.push("/users");
     } catch (error) {
-
       toast("Failed to Create User", {
         description:
           "An error occurred while creating the user record. Please try again.",
@@ -80,6 +80,7 @@ function CreateUser() {
   ) => <FormField control={form.control} name={name} render={render} />;
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+      {isLoading && <FullPageLoader />}
       <PageTitleWithBreadcrumb
         title="Create User"
         breadcrumbs={[

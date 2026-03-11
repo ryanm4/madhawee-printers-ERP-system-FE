@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   IconHelp,
   IconInnerShadowTop,
   IconSearch,
   IconSettings,
-} from "@tabler/icons-react"
-import { NavMain } from "@/components/layout/nav-main"
-import { NavUser } from "@/components/layout/nav-user"
+} from "@tabler/icons-react";
+import { NavMain } from "@/components/layout/nav-main";
+import { NavUser } from "@/components/layout/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -17,14 +17,24 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
-import { LayoutDashboard, FileText, ShoppingCart, ClipboardCheck, Truck, Warehouse, Users, SquareUser, Settings, ChartNoAxesCombined } from "lucide-react"
-import { NavSecondary } from "./nav-secondary"
-import Image from "next/image"
-import company_logo from "@/assets/Images/company_logo.jpeg"
+} from "@/components/ui/sidebar";
+import {
+  LayoutDashboard,
+  FileText,
+  ShoppingCart,
+  ClipboardCheck,
+  Truck,
+  Warehouse,
+  Users,
+  SquareUser,
+  Settings,
+  ChartNoAxesCombined,
+} from "lucide-react";
+import { NavSecondary } from "./nav-secondary";
+import Image from "next/image";
+import company_logo from "@/assets/Images/company_logo.jpeg";
 
 const data = {
-
   navMain: [
     {
       title: "Dashboard",
@@ -37,27 +47,27 @@ const data = {
       icon: FileText,
     },
     {
-      title: "Purchase Orders Management",
+      title: "Purchase Orders",
       url: "/purchase-order",
       icon: ShoppingCart,
     },
     {
-      title: "Job Ticket Management",
+      title: "Job Tickets",
       url: "/job-ticket",
       icon: ClipboardCheck,
     },
     {
-      title: "Dispatch and Invoice Management",
+      title: "Dispatch and Invoice",
       url: "/dispatch-invoice",
       icon: Truck,
     },
     {
-      title: "Inventory Management",
+      title: "Inventory",
       icon: Warehouse,
       url: "/inventory",
     },
     {
-      title: "Customer Module",
+      title: "Customers",
       icon: Users,
       url: "/customers",
     },
@@ -71,12 +81,8 @@ const data = {
       icon: ChartNoAxesCombined,
       url: "/reports",
     },
-
   ],
-
-
-
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
@@ -90,10 +96,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <a href="/dashboard">
                 <div className="flex aspect-square size-8 items-center justify-center    text-sidebar-primary-foreground">
-                  <Image src={company_logo} alt="Madhawee Printers" width={24} height={24} className="object-contain" priority />
+                  <Image
+                    src={company_logo}
+                    alt="Madhawee Printers"
+                    width={24}
+                    height={24}
+                    className="object-contain"
+                    priority
+                  />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Madhawee Printers</span>
+                  <span className="truncate font-semibold">
+                    Madhawee Printers
+                  </span>
                   <span className="truncate text-xs">ERP System</span>
                 </div>
               </a>
@@ -103,11 +118,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-
       </SidebarContent>
       <SidebarFooter>
         <NavUser />
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }
