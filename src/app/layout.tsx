@@ -18,7 +18,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-
 import { StoreProvider } from "@/store/store-provider";
 export default function RootLayout({
   children,
@@ -40,7 +39,9 @@ export default function RootLayout({
               <SidebarInset>
                 <SiteHeader />
                 <Toaster position="top-right" richColors />
-                <main className="w-full relative flex-1 flex flex-col">{children}</main>
+                <main className="w-full relative flex-1 flex flex-col">
+                  {children}
+                </main>
               </SidebarInset>
             </SidebarProvider>
           )}

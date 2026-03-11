@@ -38,7 +38,6 @@ function CreateUser() {
   const baseDefaultValues: UserFormValues = {
     user_role: "",
     name: "",
-
     email: "",
     password: "",
   };
@@ -54,7 +53,6 @@ function CreateUser() {
       const payload: CREATE_USER = {
         user_role: data.user_role,
         name: data.name,
-
         email: data.email,
         password: data.password,
       };
@@ -148,7 +146,6 @@ function CreateUser() {
                   <FormMessage />
                 </FormItem>
               ))}
-
               {renderFormField("email", ({ field }) => (
                 <FormItem>
                   <FormLabel>Email</FormLabel>
