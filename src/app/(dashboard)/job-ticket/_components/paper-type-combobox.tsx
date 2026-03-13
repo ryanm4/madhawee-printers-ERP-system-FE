@@ -36,7 +36,12 @@ export const PaperTypeCombobox = ({
   const paperTypes = Array.from(
     new Map(
       inventoryList
-        .filter((item) => item.item_category === "Paper")
+        .filter(
+          (item) =>
+            item.item_category &&
+            (item.item_category.toUpperCase() === "PAPER" ||
+              item.item_category.toUpperCase() === "BOARD")
+        )
         .map((item) => [
           `${item.item_sub_category} ${item.item_name}`,
           {

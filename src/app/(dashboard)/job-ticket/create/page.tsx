@@ -571,7 +571,7 @@ function CreateJobTicket() {
                                                             value={field.value}
                                                             onChange={(val) => {
                                                                 field.onChange(val);
-                                                                if (val) {
+                                                                 if (val) {
                                                                     const selectedPaper = inventoryList.find(item =>
                                                                         `${item.item_sub_category} ${item.item_name}` === val
                                                                     );
