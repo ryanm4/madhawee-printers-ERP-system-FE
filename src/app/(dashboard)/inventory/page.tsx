@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { inventoryApi } from "@/modules/inventory/api";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
-import { PlusIcon, Search } from "lucide-react";
+import { Check, ChevronsUpDown, PlusIcon, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { DataTable } from "./_components/inventory_table";
@@ -14,15 +14,19 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 function InventoryManagement() {
   const router = useRouter();
   const [data, setData] = useState<GET_ALL_INVENTORY[]>([]);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
+  const [sizeFilter, setSizeFilter] = useState("all");
   const [search, setSearch] = useState("");
-
+  const [sizeOpen, setSizeOpen] = useState(false);
   useEffect(() => {
     fetchData();
   }, []);
@@ -72,6 +76,10 @@ function InventoryManagement() {
       setDeleteId(null); // close popup
     }
   };
+
+  const sizeOptions = Array.from(
+    new Set(data.map((item) => item.size).filter(Boolean))
+  ).sort();
   return (
     <>
       <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
@@ -90,6 +98,64 @@ function InventoryManagement() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <Popover open={sizeOpen} onOpenChange={setSizeOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={sizeOpen}
+                className="w-[200px] justify-between"
+              >
+                {sizeFilter !== "all" ? sizeFilter : "All Sizes"}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[200px] p-0">
+              <Command>
+                <CommandInput placeholder="Search size..." />
+                <CommandList>
+                  <CommandEmpty>No size found.</CommandEmpty>
+                  <CommandGroup>
+                    {/* "All Sizes" reset option */}
+                    <CommandItem
+                      value="all"
+                      onSelect={() => {
+                        setSizeFilter("all");
+                        setSizeOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          sizeFilter === "all" ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      All Sizes
+                    </CommandItem>
+
+                    {sizeOptions.map((size) => (
+                      <CommandItem
+                        key={size}
+                        value={size}
+                        onSelect={(current) => {
+                          setSizeFilter(current === sizeFilter ? "all" : current);
+                          setSizeOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            sizeFilter === size ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {size}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
 
           <ExportButton data={data} filename="inventory-list" />
           <Button onClick={() => router.push("/inventory/create")}>

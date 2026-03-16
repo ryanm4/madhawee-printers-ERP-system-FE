@@ -115,8 +115,18 @@ function DashboardPage({
               <Calendar
                 mode="range"
                 defaultMonth={date?.from}
+                onSelect={(range) => {
+                  if (
+                    range?.from &&
+                    range?.to &&
+                    range.from.getTime() === range.to.getTime()
+                  ) {
+                    setDate({ from: range.from, to: undefined });
+                  } else {
+                    setDate(range);
+                  }
+                }}
                 selected={date}
-                onSelect={setDate}
                 numberOfMonths={2}
               />
             </PopoverContent>
@@ -146,9 +156,8 @@ function DashboardPage({
                 label="Dispatches"
                 color="#223F7A"
                 footerTitle="Dispatch Efficiency"
-                footerDescription={`Completed: ${
-                  analytics?.dispatchStats?.completed_dispatches || 0
-                } / Total: ${analytics?.dispatchStats?.total_dispatches || 0}`}
+                footerDescription={`Completed: ${analytics?.dispatchStats?.completed_dispatches || 0
+                  } / Total: ${analytics?.dispatchStats?.total_dispatches || 0}`}
               />
               <ChartRadialShape
                 title="Job Status"
@@ -158,9 +167,8 @@ function DashboardPage({
                 label="Jobs"
                 color="#223F7A"
                 footerTitle="Production Efficiency"
-                footerDescription={`Completed: ${
-                  analytics?.jobStats?.completed_jobs || 0
-                } / Total: ${analytics?.jobStats?.total_jobs || 0}`}
+                footerDescription={`Completed: ${analytics?.jobStats?.completed_jobs || 0
+                  } / Total: ${analytics?.jobStats?.total_jobs || 0}`}
               />
             </div>
 
