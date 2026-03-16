@@ -34,7 +34,8 @@ interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[]
     data: TData[]
     searchValue?: string
-    searchColumn?: string
+    searchColumn?: string;
+    filters?: { id: string; value: string }[]
 }
 
 export function DataTable<TData, TValue>({
@@ -42,6 +43,7 @@ export function DataTable<TData, TValue>({
     data,
     searchValue = "",
     searchColumn,
+    filters = [],
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = useState<SortingState>([])
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -57,6 +59,14 @@ export function DataTable<TData, TValue>({
     useEffect(() => {
         setGlobalFilter(searchValue)
     }, [searchValue])
+
+    useEffect(() => {
+        setColumnFilters(
+            filters
+                .filter((f) => f.value !== "" && f.value !== "all")
+                .map((f) => ({ id: f.id, value: f.value }))
+        )
+    }, [filters])
 
     const table = useReactTable({
         data,

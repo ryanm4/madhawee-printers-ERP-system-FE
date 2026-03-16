@@ -46,6 +46,7 @@ export const inventoryColumns = (
         },
         {
             accessorKey: "size",
+            id: "size",
             header: "Item Size",
         },
         {
