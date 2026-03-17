@@ -177,6 +177,7 @@ function InventoryManagement() {
             data={data}
             searchValue={search}
             searchColumn="item_name"
+            filters={[{ id: "size", value: sizeFilter }]}
           />
         )}
       </div>
