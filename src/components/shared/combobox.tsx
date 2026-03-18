@@ -85,6 +85,10 @@ export function Combobox({
                     <CommandInput placeholder={searchPlaceholder} />
                     <CommandList>
                         <CommandEmpty>{emptyMessage}</CommandEmpty>
+                        <div
+                            style={{ maxHeight: "240px", overflowY: "auto" }}
+                            onWheel={(e) => e.stopPropagation()}
+                        >
                         {groups ? (
                             groups.map((group) => (
                                 <CommandGroup key={group.label} heading={group.label}>
@@ -134,6 +138,7 @@ export function Combobox({
                                 ))}
                             </CommandGroup>
                         )}
+                        </div>
                     </CommandList>
                 </Command>
             </PopoverContent>

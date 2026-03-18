@@ -116,41 +116,46 @@ function InventoryManagement() {
                 <CommandList>
                   <CommandEmpty>No size found.</CommandEmpty>
                   <CommandGroup>
-                    {/* "All Sizes" reset option */}
-                    <CommandItem
-                      value="all"
-                      onSelect={() => {
-                        setSizeFilter("all");
-                        setSizeOpen(false);
-                      }}
+                    <div
+                      style={{ maxHeight: "240px", overflowY: "auto" }}
+                      onWheel={(e) => e.stopPropagation()}
                     >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          sizeFilter === "all" ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      All Sizes
-                    </CommandItem>
-
-                    {sizeOptions.map((size) => (
+                      {/* "All Sizes" reset option */}
                       <CommandItem
-                        key={size}
-                        value={size}
-                        onSelect={(current) => {
-                          setSizeFilter(current === sizeFilter ? "all" : current);
+                        value="all"
+                        onSelect={() => {
+                          setSizeFilter("all");
                           setSizeOpen(false);
                         }}
                       >
                         <Check
                           className={cn(
                             "mr-2 h-4 w-4",
-                            sizeFilter === size ? "opacity-100" : "opacity-0"
+                            sizeFilter === "all" ? "opacity-100" : "opacity-0"
                           )}
                         />
-                        {size}
+                        All Sizes
                       </CommandItem>
-                    ))}
+
+                      {sizeOptions.map((size) => (
+                        <CommandItem
+                          key={size}
+                          value={size}
+                          onSelect={(current) => {
+                            setSizeFilter(current === sizeFilter ? "all" : current);
+                            setSizeOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              sizeFilter === size ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {size}
+                        </CommandItem>
+                      ))}
+                    </div>
                   </CommandGroup>
                 </CommandList>
               </Command>

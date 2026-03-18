@@ -92,6 +92,7 @@ interface CreateJobTicketDialogProps {
 import { PaperTypeCombobox } from "./paper-type-combobox";
 import { Combobox } from "@/components/shared/combobox";
 import { getUser } from "@/lib/auth";
+import { JobTicketPrintDialog, JobTicketPrintData } from "./job-ticket-print-dialog";
 
 export function CreateJobTicketDialog({
   open,
@@ -114,6 +115,8 @@ export function CreateJobTicketDialog({
   } | null>(null);
   const [existingTickets, setExistingTickets] = useState<ALL_TICKETS[]>([]);
   const [inventoryList, setInventoryList] = useState<GET_ALL_INVENTORY[]>([]);
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
+  const [printData, setPrintData] = useState<JobTicketPrintData | null>(null);
   const dispatch = useDispatch<AppDispatch>();
 
   const baseDefaultValues = {
@@ -306,6 +309,33 @@ export function CreateJobTicketDialog({
 
       toast("Job Ticket Created Successfully");
 
+      // Build print data from submitted form values
+      const firstPaperType = data.paperTypes?.[0];
+      const allRawMaterials = data.paperTypes?.flatMap((p) => p.rawMaterials || []) || [];
+      const pd: JobTicketPrintData = {
+        jobNumber: payload.job_number,
+        productType: data.productType,
+        orderReceivedDate: data.orderReceivedDate,
+        quantity: data.quantity,
+        jobOpenDate: data.jobOpenDate,
+        paperType: firstPaperType?.paper,
+        customer: customerData.find((c) => String(c.customer_id) === data.customer)?.company_name || data.customer,
+        coating: firstPaperType?.coating,
+        jobName: data.jobName,
+        customerDeliveryDate: firstPaperType?.delivery_date,
+        packingDate: data.packingDate,
+        expiryDate: data.expiryDate,
+        poNo: selectedPoDetails ? String(data.poNumber) : data.poNumber,
+        tcNo: data.tcNo,
+        batchRef: data.batchRef,
+        remarks: data.remarks,
+        oldPlatesQuantity: data.oldPlatesQuantity,
+        newPlatesQuantity: data.newPlatesQuantity,
+        inks: (data.inks || []).map((i) => ({ ...i, ink: i.ink || "" })),
+        rawMaterials: allRawMaterials,
+      };
+      setPrintData(pd);
+
       if (data.addAnotherJob) {
         form.reset(
           {
@@ -318,19 +348,8 @@ export function CreateJobTicketDialog({
         );
         form.clearErrors();
       } else {
-        onOpenChange(false);
-        onSuccess?.();
-
-        form.reset(
-          {
-            ...baseDefaultValues,
-            addAnotherJob: false,
-          },
-          {
-            keepDefaultValues: false,
-          }
-        );
-        form.clearErrors();
+        // Show print dialog; actual close/reset happens after it's dismissed
+        setShowPrintDialog(true);
       }
     } catch (error: any) {
       toast("Failed to Create Job Ticket", {
@@ -444,7 +463,8 @@ export function CreateJobTicketDialog({
   ) => <FormField control={form.control} name={name} render={render} />;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto w-full p-0 gap-0">
         <DialogHeader className="px-6 py-4 border-b">
           <div className="flex justify-between items-center">
@@ -1517,6 +1537,33 @@ export function CreateJobTicketDialog({
           </form>
         </Form>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+
+      {/* Print dialog — shown after successful save */}
+      {printData && (
+        <JobTicketPrintDialog
+          open={showPrintDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowPrintDialog(false);
+              setPrintData(null);
+              onOpenChange(false);
+              onSuccess?.();
+              form.reset({ ...baseDefaultValues, addAnotherJob: false }, { keepDefaultValues: false });
+              form.clearErrors();
+            }
+          }}
+          data={printData}
+          onDecline={() => {
+            setShowPrintDialog(false);
+            setPrintData(null);
+            onOpenChange(false);
+            onSuccess?.();
+            form.reset({ ...baseDefaultValues, addAnotherJob: false }, { keepDefaultValues: false });
+            form.clearErrors();
+          }}
+        />
+      )}
+    </>
   );
 }

@@ -211,7 +211,7 @@ function EditInventoryManagement() {
                   <FormLabel>
                     Item Category <span className="text-red-500">*</span>
                   </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value || undefined}>
                     <FormControl>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select Item Category" />
@@ -233,7 +233,7 @@ function EditInventoryManagement() {
                   <FormLabel>
                     Item Sub Category <span className="text-red-500">*</span>
                   </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value || undefined}>
                     <FormControl>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select Item Sub Category" />
@@ -302,7 +302,7 @@ function EditInventoryManagement() {
                     Unit of Measure <span className="text-red-500">*</span>
                   </FormLabel>
                   <FormControl>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select Unit of Meassure" />
@@ -341,7 +341,7 @@ function EditInventoryManagement() {
                   <FormLabel>
                     Status <span className="text-red-500">*</span>
                   </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value || undefined}>
                     <FormControl>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select Status" />

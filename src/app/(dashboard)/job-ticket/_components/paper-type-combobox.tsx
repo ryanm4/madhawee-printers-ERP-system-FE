@@ -17,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { FormControl } from "@/components/ui/form";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
@@ -79,24 +80,29 @@ export const PaperTypeCombobox = ({
           <CommandList>
             <CommandEmpty>No paper type found.</CommandEmpty>
             <CommandGroup>
-              {paperTypes.map((item) => (
-                <CommandItem
-                  key={item.id}
-                  value={item.value}
-                  onSelect={(currentValue) => {
-                    onChange(currentValue === value ? "" : currentValue);
-                    setOpen(false);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      item.value === value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {item.label}
-                </CommandItem>
-              ))}
+              <div
+                style={{ maxHeight: "240px", overflowY: "auto" }}
+                onWheel={(e) => e.stopPropagation()}
+              >
+                {paperTypes.map((item) => (
+                  <CommandItem
+                    key={item.id}
+                    value={item.value}
+                    onSelect={(currentValue) => {
+                      onChange(currentValue === value ? "" : currentValue);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        item.value === value ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {item.label}
+                  </CommandItem>
+                ))}
+              </div>
             </CommandGroup>
           </CommandList>
         </Command>
