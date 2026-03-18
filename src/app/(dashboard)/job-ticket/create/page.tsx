@@ -47,7 +47,7 @@ import { toast } from "sonner"
 import { jobTicketsApi } from "@/modules/job-tickets/api"
 import { getUser } from '@/lib/auth'
 import { FullPageLoader } from '@/components/shared/loader'
-import { se } from "date-fns/locale"
+import { JobTicketPrintDialog, JobTicketPrintData } from '../_components/job-ticket-print-dialog'
 
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types"
 import { inventoryApi } from "@/modules/inventory/api"
@@ -68,6 +68,8 @@ function CreateJobTicket() {
     const [fetchingDetails, setFetchingDetails] = useState(false);
     const [user, setUser] = useState<{ name: string; email: string; avatar: string } | null>(null);
     const [inventoryList, setInventoryList] = useState<GET_ALL_INVENTORY[]>([]);
+    const [showPrintDialog, setShowPrintDialog] = useState(false);
+    const [printData, setPrintData] = useState<JobTicketPrintData | null>(null);
 
     const baseDefaultValues = {
         poNumber: "",
@@ -211,12 +213,37 @@ function CreateJobTicket() {
 
             const response = await jobTicketsApi.create(payload)
 
-
             toast("Job Ticket Created", {
                 description: "The job ticket has been created successfully."
             })
 
-            router.push("/job-ticket")
+            // Build print data and show print dialog
+            const firstPaperType = data.paperTypes?.[0];
+            const allRawMaterials = data.paperTypes?.flatMap((p) => p.rawMaterials || []) || [];
+            const pd: JobTicketPrintData = {
+                jobNumber: payload.job_number,
+                productType: data.productType,
+                orderReceivedDate: data.orderReceivedDate,
+                quantity: data.quantity,
+                jobOpenDate: data.jobOpenDate,
+                paperType: firstPaperType?.paper,
+                customer: customerData.find((c) => String(c.customer_id) === data.customer)?.company_name || data.customer,
+                coating: firstPaperType?.coating,
+                jobName: data.jobName,
+                customerDeliveryDate: firstPaperType?.delivery_date,
+                packingDate: data.packingDate,
+                expiryDate: data.expiryDate,
+                poNo: String(data.poNumber),
+                tcNo: data.tcNo,
+                batchRef: data.batchRef,
+                remarks: data.remarks,
+                oldPlatesQuantity: data.oldPlatesQuantity,
+                newPlatesQuantity: data.newPlatesQuantity,
+                inks: (data.inks || []).map((i) => ({ ...i, ink: i.ink || "" })),
+                rawMaterials: allRawMaterials,
+            };
+            setPrintData(pd);
+            setShowPrintDialog(true);
             setIsLoading(false)
         } catch (error: any) {
             toast("Failed to Create Job Ticket", {
@@ -357,6 +384,7 @@ function CreateJobTicket() {
 
 
     return (
+        <>
         <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
             {isLoading && <FullPageLoader />}
             <PageTitleWithBreadcrumb
@@ -1006,6 +1034,27 @@ function CreateJobTicket() {
                 </form>
             </Form>
         </div>
+
+        {/* Print dialog — shown after successful save */}
+        {printData && (
+            <JobTicketPrintDialog
+                open={showPrintDialog}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setShowPrintDialog(false);
+                        setPrintData(null);
+                        router.push("/job-ticket");
+                    }
+                }}
+                data={printData}
+                onDecline={() => {
+                    setShowPrintDialog(false);
+                    setPrintData(null);
+                    router.push("/job-ticket");
+                }}
+            />
+        )}
+    </>
     )
 }
 
