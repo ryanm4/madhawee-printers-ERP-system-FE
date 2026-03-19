@@ -30,7 +30,12 @@ export interface JobTicketPrintData {
   remarks?: string;
   oldPlatesQuantity?: string;
   newPlatesQuantity?: string;
-  inks?: { ink: string; quantity?: string; status?: string; remarks?: string }[];
+  inks?: {
+    ink: string;
+    quantity?: string;
+    status?: string;
+    remarks?: string;
+  }[];
   rawMaterials?: {
     material_name?: string;
     size?: string;
@@ -136,10 +141,18 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
     .map(
       (ink) => `
     <tr>
-      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${ink.ink || ""}</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${ink.quantity || ""}</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${ink.status || ""}</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${ink.remarks || ""}</td>
+      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${
+        ink.ink || ""
+      }</td>
+      <td style="border:1px solid #333;padding:5px 8px;">${
+        ink.quantity || ""
+      }</td>
+      <td style="border:1px solid #333;padding:5px 8px;">${
+        ink.status || ""
+      }</td>
+      <td style="border:1px solid #333;padding:5px 8px;">${
+        ink.remarks || ""
+      }</td>
     </tr>`
     )
     .join("");
@@ -149,10 +162,16 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
     .map(
       (rm) => `
     <tr>
-      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${rm.material_name || ""} ${rm.size ? "- " + rm.size : ""}</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${rm.quantity || ""}</td>
+      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${
+        rm.material_name || ""
+      } ${rm.size ? "- " + rm.size : ""}</td>
+      <td style="border:1px solid #333;padding:5px 8px;">${
+        rm.quantity || ""
+      }</td>
       <td style="border:1px solid #333;padding:5px 8px;">${rm.status || ""}</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${rm.remarks || ""}</td>
+      <td style="border:1px solid #333;padding:5px 8px;">${
+        rm.remarks || ""
+      }</td>
     </tr>`
     )
     .join("");
@@ -322,35 +341,56 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
     <!-- CTP Plates -->
     <tr>
       <td rowspan="2" class="group-label" style="border:1px solid #333;">CTP Plates</td>
-      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">Old Plates${data.oldPlatesQuantity ? " (" + data.oldPlatesQuantity + ")" : ""}</td>
+      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">Old Plates${
+        data.oldPlatesQuantity ? " (" + data.oldPlatesQuantity + ")" : ""
+      }</td>
       <td style="border:1px solid #333;padding:5px 8px;"></td>
       <td style="border:1px solid #333;padding:5px 8px;"></td>
     </tr>
     <tr>
-      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">New Plates${data.newPlatesQuantity ? " (" + data.newPlatesQuantity + ")" : ""}</td>
+      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">New Plates${
+        data.newPlatesQuantity ? " (" + data.newPlatesQuantity + ")" : ""
+      }</td>
       <td style="border:1px solid #333;padding:5px 8px;"></td>
       <td style="border:1px solid #333;padding:5px 8px;"></td>
     </tr>
 
     <!-- Raw Materials -->
-    ${(data.rawMaterials || []).length > 0
-      ? `<tr>
-      <td rowspan="${data.rawMaterials!.length}" class="group-label" style="border:1px solid #333;">Raw Material</td>
-      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${data.rawMaterials![0].material_name || ""} ${data.rawMaterials![0].size ? "- " + data.rawMaterials![0].size : ""}</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${data.rawMaterials![0].quantity || ""}</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${data.rawMaterials![0].remarks || ""}</td>
+    ${
+      (data.rawMaterials || []).length > 0
+        ? `<tr>
+      <td rowspan="${
+        data.rawMaterials!.length
+      }" class="group-label" style="border:1px solid #333;">Raw Material</td>
+      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${
+        data.rawMaterials![0].material_name || ""
+      } ${
+            data.rawMaterials![0].size ? "- " + data.rawMaterials![0].size : ""
+          }</td>
+      <td style="border:1px solid #333;padding:5px 8px;">${
+        data.rawMaterials![0].quantity || ""
+      }</td>
+      <td style="border:1px solid #333;padding:5px 8px;">${
+        data.rawMaterials![0].remarks || ""
+      }</td>
     </tr>${(data.rawMaterials || [])
-        .slice(1)
-        .map(
-          (rm) => `
+      .slice(1)
+      .map(
+        (rm) => `
     <tr>
-      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${rm.material_name || ""} ${rm.size ? "- " + rm.size : ""}</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${rm.quantity || ""}</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${rm.remarks || ""}</td>
+      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${
+        rm.material_name || ""
+      } ${rm.size ? "- " + rm.size : ""}</td>
+      <td style="border:1px solid #333;padding:5px 8px;">${
+        rm.quantity || ""
+      }</td>
+      <td style="border:1px solid #333;padding:5px 8px;">${
+        rm.remarks || ""
+      }</td>
     </tr>`
-        )
-        .join("")}`
-      : `<tr>
+      )
+      .join("")}`
+        : `<tr>
       <td class="group-label" style="border:1px solid #333;">Raw Material</td>
       <td style="border:1px solid #333;padding:5px 8px;"></td>
       <td style="border:1px solid #333;padding:5px 8px;"></td>
@@ -359,24 +399,39 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
     }
 
     <!-- Ink -->
-    ${(data.inks || []).length > 0
-      ? `<tr>
-      <td rowspan="${data.inks!.length}" class="group-label" style="border:1px solid #333;">Ink</td>
-      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${data.inks![0].ink || ""}</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${data.inks![0].quantity || ""}</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${data.inks![0].remarks || ""}</td>
+    ${
+      (data.inks || []).length > 0
+        ? `<tr>
+      <td rowspan="${
+        data.inks!.length
+      }" class="group-label" style="border:1px solid #333;">Ink</td>
+      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${
+        data.inks![0].ink || ""
+      }</td>
+      <td style="border:1px solid #333;padding:5px 8px;">${
+        data.inks![0].quantity || ""
+      }</td>
+      <td style="border:1px solid #333;padding:5px 8px;">${
+        data.inks![0].remarks || ""
+      }</td>
     </tr>${(data.inks || [])
-        .slice(1)
-        .map(
-          (ink) => `
+      .slice(1)
+      .map(
+        (ink) => `
     <tr>
-      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${ink.ink || ""}</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${ink.quantity || ""}</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${ink.remarks || ""}</td>
+      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${
+        ink.ink || ""
+      }</td>
+      <td style="border:1px solid #333;padding:5px 8px;">${
+        ink.quantity || ""
+      }</td>
+      <td style="border:1px solid #333;padding:5px 8px;">${
+        ink.remarks || ""
+      }</td>
     </tr>`
-        )
-        .join("")}`
-      : `<tr>
+      )
+      .join("")}`
+        : `<tr>
       <td class="group-label" style="border:1px solid #333;">Ink</td>
       <td style="border:1px solid #333;padding:5px 8px;"></td>
       <td style="border:1px solid #333;padding:5px 8px;"></td>

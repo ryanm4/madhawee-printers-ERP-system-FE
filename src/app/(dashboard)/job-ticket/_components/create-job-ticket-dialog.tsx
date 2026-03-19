@@ -92,7 +92,10 @@ interface CreateJobTicketDialogProps {
 import { PaperTypeCombobox } from "./paper-type-combobox";
 import { Combobox } from "@/components/shared/combobox";
 import { getUser } from "@/lib/auth";
-import { JobTicketPrintDialog, JobTicketPrintData } from "./job-ticket-print-dialog";
+import {
+  JobTicketPrintDialog,
+  JobTicketPrintData,
+} from "./job-ticket-print-dialog";
 
 export function CreateJobTicketDialog({
   open,
@@ -242,8 +245,9 @@ export function CreateJobTicketDialog({
       const payload: CREATE_TICKETS = {
         po_id: data.poNumber ? Number(data.poNumber) : undefined,
         job_item: data.item,
-        job_number: `MPL/####/YY/${PurchaseOrderType[Number(selectedPoDetails?.po_type_id)]
-          }`,
+        job_number: `MPL/####/YY/${
+          PurchaseOrderType[Number(selectedPoDetails?.po_type_id)]
+        }`,
         order_received_date: toMySQLDateTime(
           data.orderReceivedDate || new Date()
         ),
@@ -306,7 +310,8 @@ export function CreateJobTicketDialog({
 
       // Build print data from submitted form values
       const firstPaperType = data.paperTypes?.[0];
-      const allRawMaterials = data.paperTypes?.flatMap((p) => p.rawMaterials || []) || [];
+      const allRawMaterials =
+        data.paperTypes?.flatMap((p) => p.rawMaterials || []) || [];
       const pd: JobTicketPrintData = {
         jobNumber: payload.job_number,
         productType: data.productType,
@@ -314,7 +319,9 @@ export function CreateJobTicketDialog({
         quantity: data.quantity,
         jobOpenDate: data.jobOpenDate || new Date(),
         paperType: firstPaperType?.paper,
-        customer: customerData.find((c) => String(c.customer_id) === data.customer)?.company_name || data.customer,
+        customer:
+          customerData.find((c) => String(c.customer_id) === data.customer)
+            ?.company_name || data.customer,
         coating: firstPaperType?.coating,
         jobName: data.jobName,
         customerDeliveryDate: data.deliveryDate,
@@ -528,8 +535,8 @@ export function CreateJobTicketDialog({
                         fetchingDetails
                           ? "Loading items..."
                           : selectedPoItems.length > 0
-                            ? "Select Item"
-                            : "No items found"
+                          ? "Select Item"
+                          : "No items found"
                       }
                       disabled={!selectedPoId || fetchingDetails}
                       searchPlaceholder="Search item..."
@@ -634,17 +641,17 @@ export function CreateJobTicketDialog({
                           label: cust.company_name,
                         })),
                         ...(field.value &&
-                          !customerData.some(
-                            (c) => String(c.customer_id) === field.value
-                          )
+                        !customerData.some(
+                          (c) => String(c.customer_id) === field.value
+                        )
                           ? [
-                            {
-                              value: field.value,
-                              label:
-                                selectedPoDetails?.customer?.name ||
-                                field.value,
-                            },
-                          ]
+                              {
+                                value: field.value,
+                                label:
+                                  selectedPoDetails?.customer?.name ||
+                                  field.value,
+                              },
+                            ]
                           : []),
                       ]}
                       value={field.value || ""}
@@ -735,7 +742,9 @@ export function CreateJobTicketDialog({
               </div>
 
               <div>
-                <h3 className="text-sm font-medium mb-2">Paper & Raw Material</h3>
+                <h3 className="text-sm font-medium mb-2">
+                  Paper & Raw Material
+                </h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Select the Paper Type and corresponding Raw Material for this
                   job.
@@ -750,13 +759,15 @@ export function CreateJobTicketDialog({
                       className="border rounded-lg p-4 mb-4 bg-muted/20"
                     >
                       <div className="flex justify-between items-center mb-4">
-                        <h4 className="text-sm font-semibold">Set {index + 1}</h4>
+                        <h4 className="text-sm font-semibold">
+                          Set {index + 1}
+                        </h4>
                         <div className="flex space-x-2">
                           <Button
                             type="button"
                             variant="outline"
                             size="icon"
-                            onClick={() => { }}
+                            onClick={() => {}}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
@@ -779,7 +790,8 @@ export function CreateJobTicketDialog({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>
-                                Paper Type <span className="text-red-500">*</span>
+                                Paper Type{" "}
+                                <span className="text-red-500">*</span>
                               </FormLabel>
                               <PaperTypeCombobox
                                 value={field.value}
@@ -982,7 +994,10 @@ export function CreateJobTicketDialog({
                                   Remarks
                                 </FormLabel>
                                 <FormControl>
-                                  <Input placeholder="Enter Remarks" {...field} />
+                                  <Input
+                                    placeholder="Enter Remarks"
+                                    {...field}
+                                  />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -1187,7 +1202,11 @@ export function CreateJobTicketDialog({
                     <FormItem>
                       <FormLabel>Old Plates Quantity</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="Quantity" {...field} />
+                        <Input
+                          type="number"
+                          placeholder="Quantity"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1195,7 +1214,10 @@ export function CreateJobTicketDialog({
                   {renderFormField("oldPlatesStatus", ({ field }) => (
                     <FormItem>
                       <FormLabel>Old Plates Status</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="Status" />
@@ -1223,7 +1245,11 @@ export function CreateJobTicketDialog({
                     <FormItem>
                       <FormLabel>New Plates Quantity</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="Quantity" {...field} />
+                        <Input
+                          type="number"
+                          placeholder="Quantity"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1231,7 +1257,10 @@ export function CreateJobTicketDialog({
                   {renderFormField("newPlatesStatus", ({ field }) => (
                     <FormItem>
                       <FormLabel>New Plates Status</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="Status" />
@@ -1367,7 +1396,7 @@ export function CreateJobTicketDialog({
                         type="button"
                         variant="outline"
                         size="icon"
-                        onClick={() => { }}
+                        onClick={() => {}}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
@@ -1502,7 +1531,10 @@ export function CreateJobTicketDialog({
               setPrintData(null);
               onOpenChange(false);
               onSuccess?.();
-              form.reset({ ...baseDefaultValues, addAnotherJob: false }, { keepDefaultValues: false });
+              form.reset(
+                { ...baseDefaultValues, addAnotherJob: false },
+                { keepDefaultValues: false }
+              );
               form.clearErrors();
             }
           }}
@@ -1512,7 +1544,10 @@ export function CreateJobTicketDialog({
             setPrintData(null);
             onOpenChange(false);
             onSuccess?.();
-            form.reset({ ...baseDefaultValues, addAnotherJob: false }, { keepDefaultValues: false });
+            form.reset(
+              { ...baseDefaultValues, addAnotherJob: false },
+              { keepDefaultValues: false }
+            );
             form.clearErrors();
           }}
         />
