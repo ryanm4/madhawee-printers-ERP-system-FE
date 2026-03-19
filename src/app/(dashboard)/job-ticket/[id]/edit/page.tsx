@@ -62,6 +62,7 @@ import {
 } from "@/modules/purchase-order/types";
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { PaperTypeCombobox } from "../../_components/paper-type-combobox";
+import { JobTicketPrintDialog, JobTicketPrintData } from "../../_components/job-ticket-print-dialog";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
 import { CREATE_TICKETS } from "@/modules/job-tickets/types";
 import { toast } from "sonner";
@@ -95,6 +96,9 @@ function EditJobTicket() {
   } | null>(null);
   const [inventoryList, setInventoryList] = useState<GET_ALL_INVENTORY[]>([]);
   const dispatch = useDispatch<AppDispatch>();
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
+  const [printData, setPrintData] = useState<JobTicketPrintData | null>(null);
+
   const baseDefaultValues = {
     poNumber: "",
     item: "",
@@ -104,9 +108,9 @@ function EditJobTicket() {
     customer: "",
     jobName: "",
     productType: "",
-    completed_qty: "",
     quantity: "",
     wastage: "",
+    deliveryDate: undefined,
     packingDate: undefined,
     expiryDate: undefined,
     tcNo: "",
@@ -129,7 +133,6 @@ function EditJobTicket() {
       {
         paper: "",
         coating: "",
-        delivery_date: new Date(),
         rawMaterials: [
           {
             item_id: undefined,
@@ -218,12 +221,14 @@ function EditJobTicket() {
       setIsLoading(true);
       const formattedData: Partial<CREATE_TICKETS> = {
         po_id: Number(data.poNumber),
+        job_item: data.item,
+        job_number: data.jobNumber,
         customer_id: Number(data.customer),
         job_name: data.jobName,
         product_type: data.productType,
         quantity: data.quantity ? Number(data.quantity) : undefined,
-        completed_qty: data.completed_qty
-          ? Number(data.completed_qty)
+        delivery_date: data.deliveryDate
+          ? toMySQLDateTime(data.deliveryDate)
           : undefined,
         wastage: data.wastage,
         order_received_date: data.orderReceivedDate
@@ -257,9 +262,6 @@ function EditJobTicket() {
         paperCoating: data.paperTypes.map((pt) => ({
           paper: pt.paper,
           coating: pt.coating,
-          delivery_date: pt.delivery_date
-            ? toMySQLDateTime(pt.delivery_date)
-            : undefined,
           materials: pt.rawMaterials?.map((rm) => ({
             item_id: rm.item_id,
             material_type: rm.material_type,
@@ -283,7 +285,34 @@ function EditJobTicket() {
 
       if (response.status === 200) {
         toast("Job Ticket updated successfully");
-        router.push("/job-ticket");
+
+        // Build print data and show print dialog
+        const firstPaperType = data.paperTypes?.[0];
+        const allRawMaterials = data.paperTypes?.flatMap((p) => p.rawMaterials || []) || [];
+        const pd: JobTicketPrintData = {
+          jobNumber: data.jobNumber,
+          productType: data.productType,
+          orderReceivedDate: data.orderReceivedDate,
+          quantity: data.quantity,
+          jobOpenDate: data.jobOpenDate || new Date(),
+          paperType: firstPaperType?.paper,
+          customer: customerData.find((c) => String(c.customer_id) === data.customer)?.company_name || data.customer,
+          coating: firstPaperType?.coating,
+          jobName: data.jobName,
+          customerDeliveryDate: data.deliveryDate,
+          packingDate: data.packingDate,
+          expiryDate: data.expiryDate,
+          poNo: String(data.poNumber),
+          tcNo: data.tcNo,
+          batchRef: data.batchRef,
+          remarks: data.remarks,
+          oldPlatesQuantity: data.oldPlatesQuantity,
+          newPlatesQuantity: data.newPlatesQuantity,
+          inks: (data.inks || []).map((i) => ({ ...i, ink: i.ink || "" })),
+          rawMaterials: allRawMaterials,
+        };
+        setPrintData(pd);
+        setShowPrintDialog(true);
       }
     } catch (error) {
       console.error("Failed to update Job Ticket:", error);
@@ -333,80 +362,63 @@ function EditJobTicket() {
         setIsLoading(true);
         const response = await jobTicketsApi.getById(id);
         if (response.status === 200) {
+
           const jt = response.data;
           form.reset({
             poNumber: String(jt.po_id),
-            item: (jt as any).item_code || "",
-            orderReceivedDate: (jt as any).order_received_date
-              ? new Date((jt as any).order_received_date)
+            item: String(jt.job_item),
+            orderReceivedDate: jt.created_on
+              ? new Date(jt.created_on)
               : undefined,
-            jobNumber: (jt as any).job_number || String(jt.job_id),
+            jobNumber: jt.job_number || String(jt.job_id),
             jobOpenDate: jt.job_open_date
               ? new Date(jt.job_open_date)
-              : undefined,
+              : jt.created_on
+                ? new Date(jt.created_on)
+                : undefined,
             customer: String(jt.customer_id),
             jobName: jt.job_name,
             productType: jt.product_type,
-            completed_qty: String(jt.completed_qty),
             quantity: String(jt.quantity),
-            wastage: jt.wastage,
+            deliveryDate: jt.delivery_date ? new Date(jt.delivery_date) : undefined,
+            wastage: jt.wastage || "",
             packingDate: jt.packing_date
               ? new Date(jt.packing_date)
               : undefined,
             expiryDate: jt.expiry_date ? new Date(jt.expiry_date) : undefined,
-            tcNo: (jt as any).tc_no,
-            batchRef: (jt as any).batch_ref,
+            tcNo: jt.job_number,
+            batchRef: jt.remarks,
             remarks: jt.remarks,
-            oldPlatesQuantity: (jt as any).old_plate_quantity,
-            oldPlatesStatus: (jt as any).old_plate_status,
-            oldPlatesRemarks: (jt as any).old_plate_remarks,
-            newPlatesQuantity: (jt as any).new_plate_quantity,
-            newPlatesStatus: (jt as any).new_plate_status,
-            newPlatesRemarks: (jt as any).new_plate_remarks,
-            inks: (jt as any).inks?.map((ink: any) => ({
+            oldPlatesQuantity: jt.old_plate_quantity ? String(jt.old_plate_quantity) : "",
+            oldPlatesStatus: jt.old_plate_status || "",
+            oldPlatesRemarks: jt.old_plate_remarks || "",
+            newPlatesQuantity: jt.new_plate_quantity ? String(jt.new_plate_quantity) : "",
+            newPlatesStatus: jt.new_plate_status || "",
+            newPlatesRemarks: jt.new_plate_remarks || "",
+            inks: jt.inks?.map((ink) => ({
               ink: ink.ink,
-              quantity: String(ink.quantity),
-              status: ink.status,
-              remarks: ink.remarks,
+              quantity: String(ink.quantity || ""),
+              status: ink.status || "",
+              remarks: ink.remarks || "",
             })) || [
-              { ink: "Black", quantity: "", status: "", remarks: "" },
-              { ink: "Cyan", quantity: "", status: "", remarks: "" },
-              { ink: "Magenta", quantity: "", status: "", remarks: "" },
-              { ink: "Yellow", quantity: "", status: "", remarks: "" },
-            ],
-            paperTypes: (jt as any).paperCoatingData?.map((pt: any) => ({
+                { ink: "Black", quantity: "", status: "", remarks: "" },
+                { ink: "Cyan", quantity: "", status: "", remarks: "" },
+                { ink: "Magenta", quantity: "", status: "", remarks: "" },
+                { ink: "Yellow", quantity: "", status: "", remarks: "" },
+              ],
+            paperTypes: jt.paperCoating?.map((pt) => ({
               paper: pt.paper,
               coating: pt.coating,
-              delivery_date: pt.delivery_date
-                ? new Date(pt.delivery_date)
-                : undefined,
-              rawMaterials: pt.materials?.map((rm: any) => ({
+              rawMaterials: pt.materials?.map((rm) => ({
                 item_id: rm.item_id,
                 material_name: rm.material_name,
                 material_type: rm.material_type,
                 size: rm.size || "",
-                material_description: rm.material_description,
+                material_description: rm.material_description || "",
                 quantity: rm.quantity,
-                status: rm.status,
-                remarks: rm.remarks,
+                status: rm.status || "",
+                remarks: rm.remarks || "",
               })) || [
-                {
-                  item_id: undefined,
-                  material_name: "",
-                  material_type: "",
-                  size: "",
-                  material_description: "",
-                  quantity: 0,
-                  status: "",
-                  remarks: "",
-                },
-              ],
-            })) || [
-              {
-                paper: "",
-                coating: "",
-                delivery_date: new Date(),
-                rawMaterials: [
                   {
                     item_id: undefined,
                     material_name: "",
@@ -418,8 +430,24 @@ function EditJobTicket() {
                     remarks: "",
                   },
                 ],
-              },
-            ],
+            })) || [
+                {
+                  paper: "",
+                  coating: "",
+                  rawMaterials: [
+                    {
+                      item_id: undefined,
+                      material_name: "",
+                      material_type: "",
+                      size: "",
+                      material_description: "",
+                      quantity: 0,
+                      status: "",
+                      remarks: "",
+                    },
+                  ],
+                },
+              ],
           });
         }
       } catch (error) {
@@ -483,7 +511,6 @@ function EditJobTicket() {
     };
 
     fetchPoDetails();
-    form.setValue("item", "");
   }, [selectedPoId, form]);
 
   const renderFormField = <TName extends FieldPath<JobTicketFormValues>>(
@@ -561,10 +588,17 @@ function EditJobTicket() {
                   <FormItem>
                     <FormLabel>Item</FormLabel>
                     <Combobox
-                      items={selectedPoItems.map((item: any) => ({
-                        value: item.item_code,
-                        label: item.item_code,
-                      }))}
+                      items={(() => {
+                        const baseItems = selectedPoItems.map((item: any) => ({
+                          value: String(item.item_code),
+                          label: String(item.item_code),
+                        }));
+                        const currentValue = String(field.value || "");
+                        if (currentValue && !baseItems.some(i => i.value === currentValue)) {
+                          return [{ value: currentValue, label: currentValue }, ...baseItems];
+                        }
+                        return baseItems;
+                      })()}
                       value={field.value || ""}
                       onValueChange={(value) => {
                         field.onChange(value);
@@ -583,8 +617,8 @@ function EditJobTicket() {
                         fetchingDetails
                           ? "Loading items..."
                           : selectedPoItems.length > 0
-                          ? "Select Item"
-                          : "No items found"
+                            ? "Select Item"
+                            : "No items found"
                       }
                       disabled={!selectedPoId || fetchingDetails}
                       searchPlaceholder="Search item..."
@@ -744,18 +778,38 @@ function EditJobTicket() {
                     <FormMessage />
                   </FormItem>
                 ))}
-                {renderFormField("completed_qty", ({ field }) => (
+                {renderFormField("deliveryDate", ({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      Completed Quantity <span className="text-red-500">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Enter Completed Quantity"
-                        {...field}
-                      />
-                    </FormControl>
+                    <FormLabel>Delivery Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value
+                              ? format(field.value, "PPP")
+                              : format(new Date(), "PPP")}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date < new Date("1900-01-01")
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 ))}
@@ -800,7 +854,7 @@ function EditJobTicket() {
                             type="button"
                             variant="outline"
                             size="icon"
-                            onClick={() => {}}
+                            onClick={() => { }}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
@@ -881,44 +935,6 @@ function EditJobTicket() {
                                   )}
                                 </SelectContent>
                               </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )
-                        )}
-                        {renderFormField(
-                          `paperTypes.${index}.delivery_date`,
-                          ({ field }) => (
-                            <FormItem>
-                              <FormLabel>Delivery Date</FormLabel>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <FormControl>
-                                    <Button
-                                      variant={"outline"}
-                                      className={cn(
-                                        "w-full pl-3 text-left font-normal",
-                                        !field.value && "text-muted-foreground"
-                                      )}
-                                    >
-                                      {field.value
-                                        ? format(field.value, "PPP")
-                                        : format(new Date(), "PPP")}
-                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                  </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                  className="w-auto p-0"
-                                  align="start"
-                                >
-                                  <Calendar
-                                    mode="single"
-                                    captionLayout="dropdown"
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                  />
-                                </PopoverContent>
-                              </Popover>
                               <FormMessage />
                             </FormItem>
                           )
@@ -1140,7 +1156,6 @@ function EditJobTicket() {
                       appendPaperType({
                         paper: "",
                         coating: "",
-                        delivery_date: undefined,
                         rawMaterials: [
                           {
                             item_id: undefined,
@@ -1222,6 +1237,8 @@ function EditJobTicket() {
                           selected={field.value}
                           onSelect={field.onChange}
                           captionLayout="dropdown"
+                          startMonth={new Date(2026, 0)}
+                          endMonth={new Date(2045, 11)}
                         />
                       </PopoverContent>
                     </Popover>
@@ -1382,24 +1399,22 @@ function EditJobTicket() {
                           <FormLabel className={index !== 0 ? "sr-only" : ""}>
                             Ink
                           </FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="w-full">
-                                <SelectValue
-                                  placeholder={field.value || "Select Ink"}
-                                />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Black">Black</SelectItem>
-                              <SelectItem value="Cyan">Cyan</SelectItem>
-                              <SelectItem value="Magenta">Magenta</SelectItem>
-                              <SelectItem value="Yellow">Yellow</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <div>
+                              <Input
+                                list={`ink-options-${index}`}
+                                placeholder="Enter or select Ink"
+                                {...field}
+                                value={field.value || ""}
+                              />
+                              <datalist id={`ink-options-${index}`}>
+                                <option value="Black" />
+                                <option value="Cyan" />
+                                <option value="Magenta" />
+                                <option value="Yellow" />
+                              </datalist>
+                            </div>
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       ))}
@@ -1465,7 +1480,7 @@ function EditJobTicket() {
                         type="button"
                         variant="outline"
                         size="icon"
-                        onClick={() => {}}
+                        onClick={() => { }}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
@@ -1560,6 +1575,26 @@ function EditJobTicket() {
           </Card>
         </form>
       </Form>
+
+      {/* Print dialog — shown after successful save */}
+      {printData && (
+        <JobTicketPrintDialog
+          open={showPrintDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowPrintDialog(false);
+              setPrintData(null);
+              router.push("/job-ticket");
+            }
+          }}
+          data={printData}
+          onDecline={() => {
+            setShowPrintDialog(false);
+            setPrintData(null);
+            router.push("/job-ticket");
+          }}
+        />
+      )}
     </div>
   );
 }

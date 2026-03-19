@@ -65,6 +65,23 @@ function formatMonthYear(date?: Date | string): string {
   }
 }
 
+export function handleJobTicketPrint(data: JobTicketPrintData) {
+  // Build the printable HTML that matches the reference layout
+  const printContent = buildPrintHTML(data);
+  const printWindow = window.open("", "_blank", "width=900,height=700");
+  if (!printWindow) return;
+
+  printWindow.document.write(printContent);
+  printWindow.document.close();
+  printWindow.focus();
+
+  // Give fonts/images time to load then print
+  setTimeout(() => {
+    printWindow.print();
+    printWindow.close();
+  }, 400);
+}
+
 export function JobTicketPrintDialog({
   open,
   onOpenChange,
@@ -72,21 +89,7 @@ export function JobTicketPrintDialog({
   onDecline,
 }: JobTicketPrintDialogProps) {
   const handlePrint = () => {
-    // Build the printable HTML that matches the reference layout
-    const printContent = buildPrintHTML(data);
-    const printWindow = window.open("", "_blank", "width=900,height=700");
-    if (!printWindow) return;
-
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.focus();
-
-    // Give fonts/images time to load then print
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 400);
-
+    handleJobTicketPrint(data);
     onOpenChange(false);
   };
 
@@ -122,7 +125,7 @@ export function JobTicketPrintDialog({
   );
 }
 
-function buildPrintHTML(data: JobTicketPrintData): string {
+export function buildPrintHTML(data: JobTicketPrintData): string {
   const td = (content: string, style = "") =>
     `<td style="border:1px solid #333;padding:5px 8px;${style}">${content}</td>`;
   const tdLabel = (content: string, style = "") =>
@@ -311,8 +314,8 @@ function buildPrintHTML(data: JobTicketPrintData): string {
   <table>
     <tr class="materials-header">
       <td style="width:35%;">Materials</td>
-      <td style="width:22%;">Quantity</td>
-      <td style="width:18%;">Status</td>
+      <td style="width:22%;">Items</td>
+      <td style="width:18%;">Quantity</td>
       <td style="width:25%;">Remarks</td>
     </tr>
 
@@ -330,25 +333,24 @@ function buildPrintHTML(data: JobTicketPrintData): string {
     </tr>
 
     <!-- Raw Materials -->
-    ${
-      (data.rawMaterials || []).length > 0
-        ? `<tr>
+    ${(data.rawMaterials || []).length > 0
+      ? `<tr>
       <td rowspan="${data.rawMaterials!.length}" class="group-label" style="border:1px solid #333;">Raw Material</td>
       <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${data.rawMaterials![0].material_name || ""} ${data.rawMaterials![0].size ? "- " + data.rawMaterials![0].size : ""}</td>
       <td style="border:1px solid #333;padding:5px 8px;">${data.rawMaterials![0].quantity || ""}</td>
       <td style="border:1px solid #333;padding:5px 8px;">${data.rawMaterials![0].remarks || ""}</td>
     </tr>${(data.rawMaterials || [])
-      .slice(1)
-      .map(
-        (rm) => `
+        .slice(1)
+        .map(
+          (rm) => `
     <tr>
       <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${rm.material_name || ""} ${rm.size ? "- " + rm.size : ""}</td>
       <td style="border:1px solid #333;padding:5px 8px;">${rm.quantity || ""}</td>
       <td style="border:1px solid #333;padding:5px 8px;">${rm.remarks || ""}</td>
     </tr>`
-      )
-      .join("")}`
-        : `<tr>
+        )
+        .join("")}`
+      : `<tr>
       <td class="group-label" style="border:1px solid #333;">Raw Material</td>
       <td style="border:1px solid #333;padding:5px 8px;"></td>
       <td style="border:1px solid #333;padding:5px 8px;"></td>
@@ -357,25 +359,24 @@ function buildPrintHTML(data: JobTicketPrintData): string {
     }
 
     <!-- Ink -->
-    ${
-      (data.inks || []).length > 0
-        ? `<tr>
+    ${(data.inks || []).length > 0
+      ? `<tr>
       <td rowspan="${data.inks!.length}" class="group-label" style="border:1px solid #333;">Ink</td>
       <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${data.inks![0].ink || ""}</td>
       <td style="border:1px solid #333;padding:5px 8px;">${data.inks![0].quantity || ""}</td>
       <td style="border:1px solid #333;padding:5px 8px;">${data.inks![0].remarks || ""}</td>
     </tr>${(data.inks || [])
-      .slice(1)
-      .map(
-        (ink) => `
+        .slice(1)
+        .map(
+          (ink) => `
     <tr>
       <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${ink.ink || ""}</td>
       <td style="border:1px solid #333;padding:5px 8px;">${ink.quantity || ""}</td>
       <td style="border:1px solid #333;padding:5px 8px;">${ink.remarks || ""}</td>
     </tr>`
-      )
-      .join("")}`
-        : `<tr>
+        )
+        .join("")}`
+      : `<tr>
       <td class="group-label" style="border:1px solid #333;">Ink</td>
       <td style="border:1px solid #333;padding:5px 8px;"></td>
       <td style="border:1px solid #333;padding:5px 8px;"></td>
@@ -383,19 +384,7 @@ function buildPrintHTML(data: JobTicketPrintData): string {
     </tr>`
     }
 
-    <!-- Extra blank rows -->
-    <tr>
-      <td style="border:1px solid #333;padding:5px 8px;height:24px;"></td>
-      <td style="border:1px solid #333;"></td>
-      <td style="border:1px solid #333;"></td>
-      <td style="border:1px solid #333;"></td>
-    </tr>
-    <tr>
-      <td style="border:1px solid #333;padding:5px 8px;height:24px;"></td>
-      <td style="border:1px solid #333;"></td>
-      <td style="border:1px solid #333;"></td>
-      <td style="border:1px solid #333;"></td>
-    </tr>
+    
   </table>
 
 </body>

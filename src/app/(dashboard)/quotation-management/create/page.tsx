@@ -718,26 +718,36 @@ function CreateQuotation({
                           <td className="p-2">
                             {renderFormField(
                               `items.${index}.item_category`,
-                              ({ field }) => (
+                              ({ field }) => {
+                                const groupedItems = Array.from(
+                                  new Map(
+                                    itemList.map((item) => [
+                                      `${item.item_sub_category} ${item.item_name}`,
+                                      {
+                                        value: String(item.item_id),
+                                        label: `${item.item_sub_category || ''} ${item.item_name || ''}`.trim(),
+                                      },
+                                    ])
+                                  ).values()
+                                );
+
+                                return (
                                 <FormItem>
                                   <Combobox
-                                    items={itemList.map((item) => ({
-                                      value: String(item.item_id),
-                                      label: item.item_name,
-                                    }))}
+                                    items={groupedItems}
                                     value={
-                                      field.value ? String(field.value) : ""
+                                      field.value ? String(groupedItems.find(i => i.label === field.value)?.value || "") : ""
                                     }
                                     onValueChange={(value) => {
-                                      const selectedItem = itemList.find(
-                                        (i) => String(i.item_id) === value
+                                      const selectedGroupItem = groupedItems.find(
+                                        (i) => i.value === value
                                       );
 
-                                      if (selectedItem) {
-                                        field.onChange(selectedItem.item_name);
+                                      if (selectedGroupItem) {
+                                        field.onChange(selectedGroupItem.label);
                                         form.setValue(
                                           `items.${index}.item_id`,
-                                          selectedItem.item_id
+                                          parseInt(selectedGroupItem.value, 10)
                                         );
                                       }
                                     }}
@@ -746,7 +756,8 @@ function CreateQuotation({
                                   />
                                   <FormMessage />
                                 </FormItem>
-                              )
+                                );
+                              }
                             )}
                           </td>
                           <td className="p-2">
