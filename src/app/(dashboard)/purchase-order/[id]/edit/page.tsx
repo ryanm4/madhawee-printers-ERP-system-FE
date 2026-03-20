@@ -116,7 +116,7 @@ function EditPurchaseOrder() {
     batchRef: "",
     poDate: new Date(),
     itemDetails: [
-      { itemCode: "", description: "", quantity: 0, unit: "", price: 0 },
+      { itemCode: "", description: "", quantity: "", unit: "", price: "" },
     ],
   };
 
@@ -219,9 +219,9 @@ function EditPurchaseOrder() {
             itemDetails: poData.po_items.map((item) => ({
               itemCode: item.item_code,
               description: item.description,
-              quantity: item.quantity,
+              quantity: String(item.quantity),
               unit: item.uom,
-              price: item.price,
+              price: String(item.price),
             })),
           });
         }
@@ -530,9 +530,9 @@ function EditPurchaseOrder() {
                     appendItemDetails({
                       itemCode: "",
                       description: "",
-                      quantity: 0,
+                      quantity: "",
                       unit: "",
-                      price: 0,
+                      price: "",
                     })
                   }
                 >
@@ -590,7 +590,7 @@ function EditPurchaseOrder() {
                                 placeholder="Enter Quantity"
                                 value={field.value}
                                 onChange={(e) =>
-                                  field.onChange(Number(e.target.value))
+                                  field.onChange(e.target.value)
                                 }
                                 onBlur={field.onBlur}
                                 name={field.name}
@@ -628,7 +628,7 @@ function EditPurchaseOrder() {
                                 placeholder="Enter Price"
                                 value={field.value}
                                 onChange={(e) =>
-                                  field.onChange(Number(e.target.value))
+                                  field.onChange(e.target.value)
                                 }
                                 onBlur={field.onBlur}
                                 name={field.name}

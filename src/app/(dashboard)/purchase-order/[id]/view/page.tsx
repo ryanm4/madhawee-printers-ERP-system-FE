@@ -82,7 +82,7 @@ function ViewPurchaseOrder() {
         purchaseOrderType: PurchaseOrderType.TIEP,
         batchRef: "",
         poDate: new Date(),
-        itemDetails: [{ itemCode: "", description: "", quantity: 0, unit: "", price: 0 }]
+        itemDetails: [{ itemCode: "", description: "", quantity: "", unit: "", price: "" }]
     }
 
     const form = useForm<PurchaseOrderFormValues>({
@@ -178,7 +178,7 @@ function ViewPurchaseOrder() {
                         customerPhone: poData.customer.phone,
                         customerAddress: poData.customer.address,
                         customerEmail: poData.customer.email,
-                        customer_po: String(poData.po_id), // Assuming po_id maps to purchaseOrderNo or similar
+                        customer_po: String(poData.customer_po), // Assuming po_id maps to purchaseOrderNo or similar
                         quotationId: String(poData.quote_id),
                         tceprNo: poData.TC_E_PR_No,
                         purchaseOrderType: poData.po_type_id as PurchaseOrderType,
@@ -187,9 +187,9 @@ function ViewPurchaseOrder() {
                         itemDetails: poData.po_items.map(item => ({
                             itemCode: item.item_code,
                             description: item.description,
-                            quantity: item.quantity,
+                            quantity: String(item.quantity),
                             unit: item.uom,
-                            price: item.price
+                            price: String(item.price)
                         }))
                     });
                 }
@@ -390,7 +390,7 @@ function ViewPurchaseOrder() {
                         </CardHeader>
                         <CardContent className='flex flex-col gap-4'>
                             <div className="flex justify-end hidden">
-                                <Button type="button" variant="secondary" onClick={() => appendItemDetails({ itemCode: "", description: "", quantity: 0, unit: "", price: 0 })}><PlusIcon />Add More</Button>
+                                <Button type="button" variant="secondary" onClick={() => appendItemDetails({ itemCode: "", description: "", quantity: "", unit: "", price: "" })}><PlusIcon />Add More</Button>
                             </div>
                             <div>
                                 {itemDetailsFields.map((item, index) => (
@@ -418,7 +418,7 @@ function ViewPurchaseOrder() {
                                                             type="number"
                                                             placeholder="Enter Quantity"
                                                             value={field.value}
-                                                            onChange={(e) => field.onChange(Number(e.target.value))}
+                                                            onChange={(e) => field.onChange(e.target.value)}
                                                             onBlur={field.onBlur}
                                                             name={field.name}
                                                             ref={field.ref}
@@ -444,7 +444,7 @@ function ViewPurchaseOrder() {
                                                             type='number'
                                                             placeholder="Enter Price"
                                                             value={field.value}
-                                                            onChange={(e) => field.onChange(Number(e.target.value))}
+                                                            onChange={(e) => field.onChange(e.target.value)}
                                                             onBlur={field.onBlur}
                                                             name={field.name}
                                                             ref={field.ref}
