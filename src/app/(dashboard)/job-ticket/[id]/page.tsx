@@ -54,7 +54,7 @@ function JobViewTicket() {
     const [selectedPoDetails, setSelectedPoDetails] = useState<PURCHASE_ORDER_ID | null>(null);
 
     const baseDefaultValues = {
-        poNumber: "",
+        customer_po: "",
         item: "",
         orderReceivedDate: undefined,
         jobNumber: "",
@@ -135,8 +135,8 @@ function JobViewTicket() {
 
                     // Map API data to form values
                     const formValues: any = {
-                        poNumber: data.po_id ? String(data.po_id) : "",
-                        item: data.item_code || "",
+                        customer_po: data.customer_po ? String(data.customer_po) : (data.po_id ? String(data.po_id) : ""),
+                        item: data.item_code ? String(data.item_code) : "",
                         jobNumber: data.job_number || "",
                         orderReceivedDate: data.order_received_date ? new Date(data.order_received_date) : undefined,
                         jobOpenDate: data.created_on ? new Date(data.created_on) : undefined,
@@ -185,8 +185,16 @@ function JobViewTicket() {
                     form.reset(formValues);
 
                     // If PO is selected, fetch PO details to populate item options (though read-only)
-                    if (data.po_id) {
-                        const poResponse = await purchaseOrderApi.getById(data.po_id);
+                    const poIdentifier = data.po_id || data.customer_po;
+                    if (poIdentifier) {
+                        // If it's a string name, find the ID first
+                        let poIdToFetch = String(poIdentifier);
+                        if (isNaN(Number(poIdToFetch))) {
+                            const match = purchaseOrderData.find(p => String(p.customer_po) === poIdToFetch);
+                            if (match) poIdToFetch = String(match.po_id);
+                        }
+
+                        const poResponse = await purchaseOrderApi.getById(poIdToFetch);
                         if (poResponse.status === 200) {
                             setSelectedPoDetails(poResponse.data);
                         }
@@ -202,16 +210,30 @@ function JobViewTicket() {
         fetchJobTicket();
     }, [id, form]);
 
-    const selectedPoId = form.watch("poNumber");
+    const selectedPoId = form.watch("customer_po");
 
     useEffect(() => {
         const fetchPoDetails = async () => {
-            if (!selectedPoId) {
+            if (!selectedPoId || selectedPoId === "undefined") {
                 setSelectedPoDetails(null);
                 return;
             }
+
+            // Map display string to internal ID if needed
+            let internalId = selectedPoId;
+            if (isNaN(Number(selectedPoId)) && purchaseOrderData.length > 0) {
+                const matchingPo = purchaseOrderData.find(
+                    (po) => String(po.customer_po) === selectedPoId
+                );
+                if (matchingPo) {
+                    internalId = String(matchingPo.po_id);
+                    // Sync form state to the ID so ComboBox highlights correctly
+                    form.setValue("customer_po", internalId);
+                }
+            }
+
             try {
-                const response = await purchaseOrderApi.getById(selectedPoId);
+                const response = await purchaseOrderApi.getById(internalId);
                 if (response.status === 200) {
                     const po = response.data;
                     setSelectedPoDetails(po);
@@ -269,11 +291,11 @@ function JobViewTicket() {
                         </CardHeader>
                         <CardContent className="flex flex-col gap-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {renderFormField("poNumber", ({ field }) => (
+                                {renderFormField("customer_po", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>PO Number</FormLabel>
                                         <Combobox
-                                            items={purchaseOrderData.map(po => ({ value: String(po.po_id), label: String(po.po_id) }))}
+                                            items={purchaseOrderData.map(po => ({ value: String(po.po_id), label: String(po.customer_po) }))}
                                             value={field.value || ""}
                                             onValueChange={() => { }}
                                             placeholder="Select PO Number"

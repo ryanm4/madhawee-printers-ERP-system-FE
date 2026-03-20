@@ -70,7 +70,7 @@ import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { CustomerApi } from "@/modules/customer/api";
 import { CUSTOMER } from "@/modules/customer/types";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
-import { ALL_TICKETS, CREATE_TICKETS } from "@/modules/job-tickets/types";
+import { ALL_TICKETS, CREATE_TICKETS, JobTicketPrintData } from "@/modules/job-tickets/types";
 import { toast } from "sonner";
 import { toMySQLDateTime } from "@/hooks/sql-date-time";
 import { inventoryApi } from "@/modules/inventory/api";
@@ -94,7 +94,6 @@ import { Combobox } from "@/components/shared/combobox";
 import { getUser } from "@/lib/auth";
 import {
   JobTicketPrintDialog,
-  JobTicketPrintData,
 } from "./job-ticket-print-dialog";
 
 export function CreateJobTicketDialog({
@@ -242,12 +241,23 @@ export function CreateJobTicketDialog({
   async function onSubmit(data: JobTicketFormValues) {
     try {
       setLoading(true);
+
+      // Find numeric PO ID from customer_po string if necessary
+      let poIdValue = data.customer_po ? Number(data.customer_po) : undefined;
+      if (data.customer_po && isNaN(Number(data.customer_po))) {
+        const matchingPo = purchaseOrderData.find(
+          (po) => String(po.customer_po) === data.customer_po
+        );
+        if (matchingPo) {
+          poIdValue = matchingPo.po_id;
+        }
+      }
+
       const payload: CREATE_TICKETS = {
-        po_id: data.poNumber ? Number(data.poNumber) : undefined,
+        po_id: data.customer_po ? Number(data.customer_po) : undefined,
         job_item: data.item,
-        job_number: `MPL/####/YY/${
-          PurchaseOrderType[Number(selectedPoDetails?.po_type_id)]
-        }`,
+        job_number: `MPL/####/YY/${PurchaseOrderType[Number(selectedPoDetails?.po_type_id)]
+          }`,
         order_received_date: toMySQLDateTime(
           data.orderReceivedDate || new Date()
         ),
@@ -300,7 +310,7 @@ export function CreateJobTicketDialog({
         })),
 
         status: JobTicketStatus.CREATED,
-        created_by: user?.email || "admin@admin.com",
+        created_by: user?.name || "admin@admin.com",
         created_on: new Date(),
       };
 
@@ -327,7 +337,7 @@ export function CreateJobTicketDialog({
         customerDeliveryDate: data.deliveryDate,
         packingDate: data.packingDate,
         expiryDate: data.expiryDate,
-        poNo: selectedPoDetails ? String(data.poNumber) : data.poNumber,
+        poNo: selectedPoDetails ? String(data.customer_po) : data.customer_po,
         tcNo: data.tcNo,
         batchRef: data.batchRef,
         remarks: data.remarks,
@@ -336,6 +346,7 @@ export function CreateJobTicketDialog({
         inks: (data.inks || []).map((i) => ({ ...i, ink: i.ink || "" })),
         rawMaterials: allRawMaterials,
       };
+
       setPrintData(pd);
 
       if (data.addAnotherJob) {
@@ -412,7 +423,7 @@ export function CreateJobTicketDialog({
     }
   };
 
-  const selectedPoId = form.watch("poNumber");
+  const selectedPoId = form.watch("customer_po");
   const selectedPoItems = selectedPoDetails?.po_items ?? [];
 
   useEffect(() => {
@@ -421,6 +432,7 @@ export function CreateJobTicketDialog({
         setSelectedPoDetails(null);
         return;
       }
+
       try {
         setFetchingDetails(true);
         const response = await purchaseOrderApi.getById(selectedPoId);
@@ -449,11 +461,11 @@ export function CreateJobTicketDialog({
 
     fetchPoDetails();
     form.setValue("item", "");
-  }, [selectedPoId, form]);
+  }, [selectedPoId, form, purchaseOrderData]);
 
   useEffect(() => {
     if (open && initialPoId) {
-      form.setValue("poNumber", initialPoId);
+      form.setValue("customer_po", initialPoId);
     }
   }, [open, initialPoId, form]);
 
@@ -490,13 +502,13 @@ export function CreateJobTicketDialog({
               </p>
               {/* General Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {renderFormField("poNumber", ({ field }) => (
+                {renderFormField("customer_po", ({ field }) => (
                   <FormItem>
                     <FormLabel>PO Number</FormLabel>
                     <Combobox
                       items={purchaseOrderData.map((po) => ({
                         value: String(po.po_id),
-                        label: String(po.po_id),
+                        label: String(po.customer_po),
                       }))}
                       value={field.value || ""}
                       onValueChange={(value) => {
@@ -528,15 +540,18 @@ export function CreateJobTicketDialog({
                             "quantity",
                             String(selectedItem.quantity)
                           );
-                          form.setValue("jobName", selectedItem.description);
+                          form.setValue(
+                            "jobName",
+                            selectedItem.description + " " + selectedItem.item_code
+                          );
                         }
                       }}
                       placeholder={
                         fetchingDetails
                           ? "Loading items..."
                           : selectedPoItems.length > 0
-                          ? "Select Item"
-                          : "No items found"
+                            ? "Select Item"
+                            : "No items found"
                       }
                       disabled={!selectedPoId || fetchingDetails}
                       searchPlaceholder="Search item..."
@@ -641,17 +656,17 @@ export function CreateJobTicketDialog({
                           label: cust.company_name,
                         })),
                         ...(field.value &&
-                        !customerData.some(
-                          (c) => String(c.customer_id) === field.value
-                        )
+                          !customerData.some(
+                            (c) => String(c.customer_id) === field.value
+                          )
                           ? [
-                              {
-                                value: field.value,
-                                label:
-                                  selectedPoDetails?.customer?.name ||
-                                  field.value,
-                              },
-                            ]
+                            {
+                              value: field.value,
+                              label:
+                                selectedPoDetails?.customer?.name ||
+                                field.value,
+                            },
+                          ]
                           : []),
                       ]}
                       value={field.value || ""}
@@ -767,7 +782,7 @@ export function CreateJobTicketDialog({
                             type="button"
                             variant="outline"
                             size="icon"
-                            onClick={() => {}}
+                            onClick={() => { }}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
@@ -1396,7 +1411,7 @@ export function CreateJobTicketDialog({
                         type="button"
                         variant="outline"
                         size="icon"
-                        onClick={() => {}}
+                        onClick={() => { }}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>

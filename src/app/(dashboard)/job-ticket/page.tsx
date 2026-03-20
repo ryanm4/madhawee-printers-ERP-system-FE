@@ -7,15 +7,16 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { DataTable } from "./_components/job-ticket-table";
 import { jobTicketColumns } from "./_components/job-ticket-columns";
-import { ALL_TICKETS } from "@/modules/job-tickets/types";
+import { ALL_TICKETS, JobTicketPrintData } from "@/modules/job-tickets/types";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
 import { toast } from "sonner";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
-import { JobTicketPrintDialog, JobTicketPrintData, handleJobTicketPrint } from "./_components/job-ticket-print-dialog";
+import { JobTicketPrintDialog, handleJobTicketPrint } from "./_components/job-ticket-print-dialog";
 import { CustomerApi } from "@/modules/customer/api";
+import { purchaseOrderApi } from "@/modules/purchase-order/api";
 
 function JobTicketComponent() {
   const router = useRouter();
@@ -65,7 +66,20 @@ function JobTicketComponent() {
         if (ticketResponse.status === 200) {
           const ticket = ticketResponse.data as any;
           const customers = customersResponse.data;
-          
+
+          // Also fetch PO details to get TC/Batch if they aren't on the ticket
+          let poDetails = null;
+          if (ticket.po_id) {
+            try {
+              const poResponse = await purchaseOrderApi.getById(ticket.po_id);
+              if (poResponse.status === 200) {
+                poDetails = poResponse.data;
+              }
+            } catch (poErr) {
+              console.error("Failed to fetch PO for printing", poErr);
+            }
+          }
+
           const customerName = customers.find(
             (c: any) => String(c.customer_id) === String(ticket.customer_id)
           )?.company_name || ticket.customer_id;
@@ -86,16 +100,16 @@ function JobTicketComponent() {
             customerDeliveryDate: ticket.delivery_date,
             packingDate: ticket.packing_date,
             expiryDate: ticket.expiry_date,
-            poNo: String(ticket.po_id),
-            tcNo: ticket.tc_no,
-            batchRef: ticket.batch_ref,
+            poNo: ticket.customer_po || poDetails?.customer_po || String(ticket.po_id),
+            tcNo: ticket.tc_no || poDetails?.TC_E_PR_No,
+            batchRef: ticket.batch_ref || poDetails?.batch_ref,
             remarks: ticket.remarks,
             oldPlatesQuantity: ticket.old_plate_quantity,
             newPlatesQuantity: ticket.new_plate_quantity,
             inks: (ticket.inks || []).map((i: any) => ({ ...i, ink: i.ink || "" })),
             rawMaterials: allRawMaterials,
           };
-
+          console.log(pd)
           handleJobTicketPrint(pd);
         }
       } catch (error) {

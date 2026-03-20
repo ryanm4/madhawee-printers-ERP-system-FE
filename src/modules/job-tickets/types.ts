@@ -1,6 +1,8 @@
 export interface ALL_TICKETS {
   job_id: number;
   po_id: number;
+  customer_po?: string;
+  job_number?: string;
   customer_id: string;
   job_name: string;
   job_open_date: Date;
@@ -21,6 +23,7 @@ export interface ALL_TICKETS {
 
 export interface JOB_TICKET_DETAIL {
   job_id: number;
+  customer_po: string;
   po_id: number;
   customer_id: string;
   job_item: string;
@@ -39,6 +42,8 @@ export interface JOB_TICKET_DETAIL {
   status: string;
   wastage: string;
   job_number: string;
+  tc_no?: string;
+  batch_ref?: string;
 
   // Plates
   old_plate_quantity?: number;
@@ -155,4 +160,39 @@ export interface CREATE_TICKETS {
 
   updated_by?: string;
   updated_on?: Date;
+}
+
+
+export interface JobTicketPrintData {
+  jobNumber?: string;
+  productType?: string;
+  orderReceivedDate?: Date | string;
+  quantity?: string | number;
+  jobOpenDate?: Date | string;
+  paperType?: string;
+  customer?: string;
+  coating?: string;
+  jobName?: string;
+  customerDeliveryDate?: Date | string;
+  packingDate?: Date | string;
+  expiryDate?: Date | string;
+  poNo?: string;
+  tcNo?: string;
+  batchRef?: string;
+  remarks?: string;
+  oldPlatesQuantity?: string;
+  newPlatesQuantity?: string;
+  inks?: {
+    ink: string;
+    quantity?: string;
+    status?: string;
+    remarks?: string;
+  }[];
+  rawMaterials?: {
+    material_name?: string;
+    size?: string;
+    quantity?: number | string;
+    status?: string;
+    remarks?: string;
+  }[];
 }

@@ -1,6 +1,7 @@
 import * as z from "zod"
 export const jobTicketSchema = z.object({
-    poNumber: z.string().optional(),
+    customer_po: z.string().optional(),
+    po_id: z.number().optional(),
     item: z.string().optional(),
     orderReceivedDate: z.date().optional(),
     jobNumber: z.string().optional(),

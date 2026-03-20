@@ -1,5 +1,7 @@
 "use client";
 
+import { getErrorMessage } from "@/lib/error-utils";
+
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { customerSchema } from "@/modules/customer/validation";
 import { useRouter } from "next/navigation";
@@ -156,8 +158,7 @@ function CreateCustomerRelationship() {
     } catch (error) {
       console.error("Failed to submit customer:", error);
       toast("Failed to Create Customer", {
-        description:
-          "An error occurred while creating the customer. Please try again.",
+        description: getErrorMessage(error, "An error occurred while creating the customer. Please try again."),
       });
     } finally {
       setIsLoading(false);

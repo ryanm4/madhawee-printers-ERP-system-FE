@@ -10,6 +10,8 @@ import { Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/error-utils";
 
 interface ExportButtonProps {
     data: any[];
@@ -65,6 +67,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ data, filename }) =>
             doc.save(`${filename}.pdf`);
         } catch (error) {
             console.error("Error generating PDF:", error);
+            toast.error(getErrorMessage(error, "Failed to generate PDF"));
         }
     };
 

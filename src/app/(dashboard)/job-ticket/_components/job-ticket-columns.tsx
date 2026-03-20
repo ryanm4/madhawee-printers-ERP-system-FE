@@ -35,7 +35,7 @@ export const jobTicketColumns = (
             },
         },
         {
-            accessorKey: "po_id",
+            accessorKey: "customer_po",
             header: "Purchase Order Number",
         },
         {

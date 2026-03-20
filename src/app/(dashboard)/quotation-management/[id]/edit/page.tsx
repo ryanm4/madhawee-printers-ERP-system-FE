@@ -1,5 +1,6 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { createQuotationSchema } from "@/modules/quotations/validation";
@@ -89,8 +90,8 @@ function EditQuotation({
       const response = await CustomerApi.getAll();
       setCustomer(response.data);
     } catch (error) {
-      console.error("Failed to fetch customers");
-      toast("Failed to load customers");
+      console.error("Failed to fetch customers", error);
+      toast(getErrorMessage(error, "Failed to load customers"));
     } finally {
       setLoading(false);
     }
@@ -285,9 +286,8 @@ function EditQuotation({
       router.push("/quotation-management");
     } catch (error) {
       console.error("Failed to submit quotation:", error);
-      toast("Failed to Create Quotation", {
-        description:
-          "An error occurred while creating the quotation. Please try again.",
+      toast("Failed to Update Quotation", {
+        description: getErrorMessage(error, "An error occurred while updating the quotation. Please try again."),
       });
     } finally {
       setIsSubmitting(false);
@@ -339,6 +339,7 @@ function EditQuotation({
         }
       } catch (err) {
         console.error("Failed to fetch quotation:", err);
+        toast(getErrorMessage(err, "Failed to load quotation data"));
       } finally {
         setLoading(false);
       }

@@ -1,5 +1,6 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { purchaseOrderScheme } from "@/modules/purchase-order/validation";
@@ -105,14 +106,14 @@ function CreatePurchaseOrder() {
     customerAddress: "",
     customerEmail: "",
     customerPhone: "",
-    purchaseOrderNo: "",
+    customer_po: "",
     quotationId: "",
     tceprNo: "",
     purchaseOrderType: PurchaseOrderType.TIEP,
     batchRef: "",
     poDate: new Date(),
     itemDetails: [
-      { itemCode: "", description: "", quantity: 0, unit: "", price: 0 },
+      { itemCode: "", description: "", quantity: "", unit: "", price: "" },
     ],
   };
 
@@ -153,7 +154,7 @@ function CreatePurchaseOrder() {
         created_by: user?.name || "admin",
         created_on: new Date(),
         status: PurchaseOrderStatus.CREATED,
-        customer_po: data.purchaseOrderNo,
+        customer_po: data.customer_po,
         po_items: data.itemDetails.map((item: any) => ({
           item_code: item.itemCode,
           description: item.description,
@@ -166,7 +167,7 @@ function CreatePurchaseOrder() {
       const response = await purchaseOrderApi.create(payload);
 
       toast("Purchase Order Created", {
-        description: `Purchase Order ${data.purchaseOrderNo} has been created successfully.`,
+        description: `Purchase Order ${data.customer_po} has been created successfully.`,
       });
 
       form.reset(baseDefaultValues);
@@ -177,8 +178,7 @@ function CreatePurchaseOrder() {
     } catch (error) {
       console.error("Failed to submit PO:", error);
       toast("Failed to Create Purchase Order", {
-        description:
-          "An error occurred while creating the purchase order. Please try again.",
+        description: getErrorMessage(error, "An error occurred while creating the purchase order. Please try again."),
       });
     } finally {
       setIsSubmitting(false);
@@ -334,7 +334,7 @@ function CreatePurchaseOrder() {
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                {renderFormField("purchaseOrderNo", ({ field }) => (
+                {renderFormField("customer_po", ({ field }) => (
                   <FormItem>
                     <FormLabel>
                       Purchase Order No <span className="text-red-500">*</span>
@@ -483,9 +483,9 @@ function CreatePurchaseOrder() {
                     appendItemDetails({
                       itemCode: "",
                       description: "",
-                      quantity: 0,
+                      quantity: "",
                       unit: "",
-                      price: 0,
+                      price: "",
                     })
                   }
                 >
@@ -598,7 +598,7 @@ function CreatePurchaseOrder() {
                         type="button"
                         variant="outline"
                         size="icon"
-                        onClick={() => {}}
+                        onClick={() => { }}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>

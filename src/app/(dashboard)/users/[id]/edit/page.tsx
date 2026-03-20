@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { FieldPath, SubmitHandler, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/error-utils";
 import {
   Form,
   FormControl,
@@ -91,9 +92,9 @@ function EditUser() {
       sessionStorage.removeItem("editUser");
       router.push("/users");
     } catch (error) {
-      console.error(error);
+      console.error("Failed to update user:", error);
       toast("Failed to Update User", {
-        description: "An error occurred while updating the user.",
+        description: getErrorMessage(error, "An error occurred while updating the user record. Please try again."),
       });
     } finally {
       setIsLoading(false);

@@ -1,6 +1,7 @@
 "use client";
 import { Combobox } from "@/components/shared/combobox";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -51,7 +52,8 @@ function ReportsPage() {
 
       setCustomer(response.data);
     } catch (error) {
-      console.error("Failed to fetch POs");
+      console.error("Failed to fetch customers", error);
+      toast(getErrorMessage(error, "Failed to fetch customers"));
     } finally {
       setLoading(false);
     }
@@ -120,8 +122,7 @@ function ReportsPage() {
     } catch (error) {
       console.error("Failed to generate report", error);
       toast("Failed to Create Report", {
-        description:
-          "An error occurred while creating the report. Please try again.",
+        description: getErrorMessage(error, "An error occurred while creating the report. Please try again."),
       });
     } finally {
       setLoading(false);

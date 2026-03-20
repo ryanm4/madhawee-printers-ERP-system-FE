@@ -1,5 +1,7 @@
 "use client";
 
+import { getErrorMessage } from "@/lib/error-utils";
+
 import { FieldPath, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -64,14 +66,14 @@ import {
 } from "@/modules/purchase-order/types";
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { toMySQLDateTime } from "@/hooks/sql-date-time";
-import { CREATE_TICKETS } from "@/modules/job-tickets/types";
+import { CREATE_TICKETS, JobTicketPrintData } from "@/modules/job-tickets/types";
 import { toast } from "sonner";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
 import {
   JobTicketPrintDialog,
-  JobTicketPrintData,
+
 } from "../_components/job-ticket-print-dialog";
 
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
@@ -226,11 +228,10 @@ function CreateJobTicket() {
     try {
       setIsLoading(true);
       const payload: CREATE_TICKETS = {
-        po_id: data.poNumber ? Number(data.poNumber) : undefined,
+        po_id: data.customer_po ? Number(data.customer_po) : undefined,
         job_item: data.item,
-        job_number: `MPL/####/YY/${
-          PurchaseOrderType[Number(selectedPoDetails?.po_type_id)]
-        }`,
+        job_number: `MPL/####/YY/${PurchaseOrderType[Number(selectedPoDetails?.po_type_id)]
+          }`,
         order_received_date: toMySQLDateTime(
           data.orderReceivedDate || new Date()
         ),
@@ -279,7 +280,7 @@ function CreateJobTicket() {
         })),
 
         status: JobTicketStatus.CREATED,
-        created_by: user?.email || "admin@admin.com",
+        created_by: user?.name || "admin@admin.com",
       };
 
       const response = await jobTicketsApi.create(payload);
@@ -307,7 +308,7 @@ function CreateJobTicket() {
         customerDeliveryDate: data.deliveryDate,
         packingDate: data.packingDate,
         expiryDate: data.expiryDate,
-        poNo: String(data.poNumber),
+        poNo: selectedPoDetails?.customer_po || String(data.customer_po),
         tcNo: data.tcNo,
         batchRef: data.batchRef,
         remarks: data.remarks,
@@ -319,11 +320,9 @@ function CreateJobTicket() {
       setPrintData(pd);
       setShowPrintDialog(true);
       setIsLoading(false);
-    } catch (error: any) {
+    } catch (error) {
       toast("Failed to Create Job Ticket", {
-        description:
-          error?.response?.data?.message ||
-          "An error occurred while creating the job ticket. Please try again.",
+        description: getErrorMessage(error, "An error occurred while creating the job ticket. Please try again."),
       });
     } finally {
       setIsLoading(false);
@@ -334,6 +333,7 @@ function CreateJobTicket() {
     fetchData();
     getInventoryList();
     const userData = getUser();
+    console.log(userData)
     if (userData) {
       setUser({
         name: userData.name || "User",
@@ -355,6 +355,7 @@ function CreateJobTicket() {
       setCustomerData(customerResponse.data);
     } catch (error) {
       console.error("Failed to fetch data", error);
+      toast(getErrorMessage(error, "Failed to fetch data"));
     } finally {
       setIsLoading(false);
     }
@@ -376,8 +377,8 @@ function CreateJobTicket() {
     }
   };
 
-  const selectedPoId = form.watch("poNumber");
-  const selectedPoItems = selectedPoDetails?.po_items ?? [];
+  const selectedPoId = form.watch("customer_po");
+
 
   useEffect(() => {
     const fetchPoDetails = async () => {
@@ -414,7 +415,8 @@ function CreateJobTicket() {
     fetchPoDetails();
     form.setValue("item", "");
   }, [selectedPoId, form]);
-
+  const selectedPoItems = selectedPoDetails?.po_items ?? [];
+  console.log(selectedPoItems)
   const renderFormField = <TName extends FieldPath<JobTicketFormValues>>(
     name: TName,
     render: Parameters<
@@ -489,13 +491,13 @@ function CreateJobTicket() {
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {renderFormField("poNumber", ({ field }) => (
+                  {renderFormField("customer_po", ({ field }) => (
                     <FormItem>
                       <FormLabel>PO Number</FormLabel>
                       <Combobox
                         items={purchaseOrderData.map((po) => ({
                           value: String(po.po_id),
-                          label: String(po.po_id),
+                          label: String(po.customer_po),
                         }))}
                         value={field.value || ""}
                         onValueChange={(value) => {
@@ -526,8 +528,8 @@ function CreateJobTicket() {
                             form.setValue(
                               "jobName",
                               selectedItem.description +
-                                " " +
-                                selectedItem.item_code
+                              " " +
+                              selectedItem.item_code
                             );
                           }
                         }}
@@ -535,8 +537,8 @@ function CreateJobTicket() {
                           fetchingDetails
                             ? "Loading items..."
                             : selectedPoItems.length > 0
-                            ? "Select Item"
-                            : "No items found"
+                              ? "Select Item"
+                              : "No items found"
                         }
                         disabled={!selectedPoId || fetchingDetails}
                         searchPlaceholder="Search item..."
@@ -553,7 +555,7 @@ function CreateJobTicket() {
                     <FormItem>
                       <FormLabel>Job Number</FormLabel>
                       <FormControl>
-                        <Input placeholder="MPL/####/YY/TIEP" {...field} />
+                        <Input readOnly placeholder="MPL/####/YY/TIEP" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -772,7 +774,7 @@ function CreateJobTicket() {
                               type="button"
                               variant="outline"
                               size="icon"
-                              onClick={() => {}}
+                              onClick={() => { }}
                             >
                               <Edit2 className="h-4 w-4" />
                             </Button>
@@ -1172,7 +1174,7 @@ function CreateJobTicket() {
                     <FormItem>
                       <FormLabel>TC No</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter TC No" {...field} />
+                        <Input readOnly placeholder="Enter TC No" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1181,7 +1183,7 @@ function CreateJobTicket() {
                     <FormItem>
                       <FormLabel>Batch Ref</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter Batch Ref" {...field} />
+                        <Input readOnly placeholder="Enter Batch Ref" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1416,7 +1418,7 @@ function CreateJobTicket() {
                           type="button"
                           variant="outline"
                           size="icon"
-                          onClick={() => {}}
+                          onClick={() => { }}
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>

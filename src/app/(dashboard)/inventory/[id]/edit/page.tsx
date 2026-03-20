@@ -1,5 +1,6 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -99,7 +100,7 @@ function EditInventoryManagement() {
         });
       } catch (error) {
         console.error("Failed to fetch inventory:", error);
-        toast("Failed to load inventory data");
+        toast(getErrorMessage(error, "Failed to load inventory data"));
         router.push("/inventory");
       } finally {
         setIsLoading(false);
@@ -137,8 +138,7 @@ function EditInventoryManagement() {
     } catch (error) {
       console.error("Failed to update inventory:", error);
       toast("Failed to Update Inventory Item", {
-        description:
-          "An error occurred while updating the inventory item. Please try again.",
+        description: getErrorMessage(error, "An error occurred while updating the inventory item. Please try again."),
       });
     } finally {
       setIsLoading(false);

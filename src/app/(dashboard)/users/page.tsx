@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "./_components/user-table";
 import { PlusIcon, Search } from "lucide-react";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { getErrorMessage } from "@/lib/error-utils";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { PageLoader } from "@/components/shared/loader";
 
@@ -37,7 +39,8 @@ function UsersComponent() {
         setData(response?.data?.users);
       }
     } catch (error) {
-      console.error("Failed to fetch quotation");
+      console.error("Failed to fetch users", error);
+      toast(getErrorMessage(error, "Failed to fetch users"));
     } finally {
       setLoading(false);
     }

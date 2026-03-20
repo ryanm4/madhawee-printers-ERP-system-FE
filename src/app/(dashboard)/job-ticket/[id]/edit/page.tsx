@@ -1,5 +1,8 @@
 "use client";
 
+import { getErrorMessage } from "@/lib/error-utils";
+import axios from "axios";
+
 import { FieldPath, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -51,6 +54,7 @@ import { CustomerApi } from "@/modules/customer/api";
 import {
   COATING_TYPES,
   INK_STATUS,
+  JobTicketStatus,
   PLATES_STATUS,
   PRODUCT_TYPES,
 } from "@/config/enum";
@@ -62,9 +66,9 @@ import {
 } from "@/modules/purchase-order/types";
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { PaperTypeCombobox } from "../../_components/paper-type-combobox";
-import { JobTicketPrintDialog, JobTicketPrintData } from "../../_components/job-ticket-print-dialog";
+import { JobTicketPrintDialog } from "../../_components/job-ticket-print-dialog";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
-import { CREATE_TICKETS } from "@/modules/job-tickets/types";
+import { CREATE_TICKETS, JobTicketPrintData } from "@/modules/job-tickets/types";
 import { toast } from "sonner";
 
 import { toMySQLDateTime } from "@/hooks/sql-date-time";
@@ -220,7 +224,7 @@ function EditJobTicket() {
     try {
       setIsLoading(true);
       const formattedData: Partial<CREATE_TICKETS> = {
-        po_id: Number(data.poNumber),
+        po_id: Number(data.customer_po),
         job_item: data.item,
         job_number: data.jobNumber,
         customer_id: Number(data.customer),
@@ -277,8 +281,9 @@ function EditJobTicket() {
           ...ink,
           ink: ink.ink,
         })),
-        updated_by: user?.email || "admin@admin.com",
+        updated_by: user?.name || "admin@admin.com",
         updated_on: new Date(),
+        status: JobTicketStatus.CREATED,
       };
 
       const response = await jobTicketsApi.update(id, formattedData as any);
@@ -289,6 +294,7 @@ function EditJobTicket() {
         // Build print data and show print dialog
         const firstPaperType = data.paperTypes?.[0];
         const allRawMaterials = data.paperTypes?.flatMap((p) => p.rawMaterials || []) || [];
+        const matchingPo = purchaseOrderData.find((po) => String(po.po_id) === data.customer_po);
         const pd: JobTicketPrintData = {
           jobNumber: data.jobNumber,
           productType: data.productType,
@@ -302,9 +308,9 @@ function EditJobTicket() {
           customerDeliveryDate: data.deliveryDate,
           packingDate: data.packingDate,
           expiryDate: data.expiryDate,
-          poNo: String(data.poNumber),
-          tcNo: data.tcNo,
-          batchRef: data.batchRef,
+          poNo: matchingPo?.customer_po || String(data.customer_po),
+          tcNo: data.tcNo || matchingPo?.TC_E_PR_No,
+          batchRef: data.batchRef || matchingPo?.batch_ref,
           remarks: data.remarks,
           oldPlatesQuantity: data.oldPlatesQuantity,
           newPlatesQuantity: data.newPlatesQuantity,
@@ -316,57 +322,46 @@ function EditJobTicket() {
       }
     } catch (error) {
       console.error("Failed to update Job Ticket:", error);
-      toast("Failed to update Job Ticket");
+      toast(getErrorMessage(error, "Failed to update Job Ticket"));
     } finally {
       setIsLoading(false);
     }
   }
 
-  const fetchData = async () => {
-    try {
-      setIsLoading(true);
-      const [poResponse, customerResponse] = await Promise.all([
-        purchaseOrderApi.getAll(),
-        CustomerApi.getAll(),
-      ]);
-
-      setPurchaseOrderData(poResponse.data);
-      setCustomerData(customerResponse.data);
-    } catch (error) {
-      console.error("Failed to fetch data", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getInventoryList = async () => {
-    try {
-      setIsLoading(true);
-      const response = await inventoryApi.getAll();
-
-      if (response.status === 200) {
-        setInventoryList(response.data);
-        dispatch(setReduxInventoryList(response.data));
-      }
-    } catch (error) {
-      console.error("Failed to fetch inventory");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   useEffect(() => {
-    const fetchJobTicketDetail = async () => {
-      if (!id) return;
+    const fetchDataAndTicket = async () => {
       try {
         setIsLoading(true);
-        const response = await jobTicketsApi.getById(id);
-        if (response.status === 200) {
 
-          const jt = response.data;
+        // 1. Fetch reference data first
+        const [poResponse, customerResponse, inventoryResponse] = await Promise.all([
+          purchaseOrderApi.getAll(),
+          CustomerApi.getAll(),
+          inventoryApi.getAll(),
+        ]);
+
+        const pos = poResponse.data;
+        const customers = customerResponse.data;
+        const inventory = inventoryResponse.data;
+
+        setPurchaseOrderData(pos);
+        setCustomerData(customers);
+        setInventoryList(inventory);
+        dispatch(setReduxInventoryList(inventory));
+
+        // 2. Now fetch the ticket detail
+        const ticketResponse = await jobTicketsApi.getById(id);
+        if (ticketResponse.status === 200) {
+          const jt = ticketResponse.data;
+          
+          // Find the matching PO for fallbacks
+          const matchingPo = pos.find((p: any) => String(p.po_id) === String(jt.po_id));
+
           form.reset({
-            poNumber: String(jt.po_id),
             item: String(jt.job_item),
+            customer_po: String(jt.po_id),
+            po_id: Number(jt.po_id),
             orderReceivedDate: jt.created_on
               ? new Date(jt.created_on)
               : undefined,
@@ -386,8 +381,9 @@ function EditJobTicket() {
               ? new Date(jt.packing_date)
               : undefined,
             expiryDate: jt.expiry_date ? new Date(jt.expiry_date) : undefined,
-            tcNo: jt.job_number,
-            batchRef: jt.remarks,
+            // Prioritize JT data, fallback to PO data if missing
+            tcNo: jt.tc_no || matchingPo?.TC_E_PR_No || "",
+            batchRef: jt.batch_ref || matchingPo?.batch_ref || "",
             remarks: jt.remarks,
             oldPlatesQuantity: jt.old_plate_quantity ? String(jt.old_plate_quantity) : "",
             oldPlatesStatus: jt.old_plate_status || "",
@@ -449,19 +445,20 @@ function EditJobTicket() {
                 },
               ],
           });
+          
+          // Mark initial load as complete after setting form data
+          isInitialLoad.current = false;
         }
       } catch (error) {
-        console.error("Failed to fetch job ticket:", error);
-        toast("Failed to load job ticket data");
+        console.error("Failed to fetch initial data or job ticket:", error);
+        toast(getErrorMessage(error, "Failed to load job ticket data"));
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchJobTicketDetail();
-    fetchData();
-    getInventoryList();
-  }, [id]);
+    fetchDataAndTicket();
+  }, [id, form, dispatch]);
 
   useEffect(() => {
     const userData = getUser();
@@ -474,9 +471,11 @@ function EditJobTicket() {
     }
   }, []);
 
-  const selectedPoId = form.watch("poNumber");
+  const selectedPoId = form.watch("customer_po");
   const selectedPoItems = selectedPoDetails?.po_items ?? [];
 
+
+  const isInitialLoad = useRef(true);
   useEffect(() => {
     const fetchPoDetails = async () => {
       if (!selectedPoId) {
@@ -492,15 +491,20 @@ function EditJobTicket() {
             setSelectedPoDetails(po);
 
             if (po.customer) {
-              // Find the customer in our list to ensure we have the right value
-              // or just use the ID if we decide to use IDs as values
-              form.setValue("customer", String(po.customer.customer_id));
+              // Only auto-fill customer if not already set or it's a manual change
+              if (!isInitialLoad.current || !form.getValues("customer")) {
+                form.setValue("customer", String(po.customer.customer_id));
+              }
             }
-            if (po.po_date) {
+            if (po.po_date && (!isInitialLoad.current || !form.getValues("orderReceivedDate"))) {
               form.setValue("orderReceivedDate", new Date(po.po_date));
             }
+
             form.setValue("tcNo", po.TC_E_PR_No);
             form.setValue("batchRef", po.batch_ref);
+            isInitialLoad.current = false;
+
+            isInitialLoad.current = false;
           }
         } catch (err) {
           console.error("Error fetching PO details", err);
@@ -565,13 +569,13 @@ function EditJobTicket() {
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {renderFormField("poNumber", ({ field }) => (
+                {renderFormField("customer_po", ({ field }) => (
                   <FormItem>
                     <FormLabel>PO Number</FormLabel>
                     <Combobox
                       items={purchaseOrderData.map((po) => ({
                         value: String(po.po_id),
-                        label: String(po.po_id),
+                        label: String(po.customer_po),
                       }))}
                       value={field.value || ""}
                       onValueChange={(value) => {
@@ -1252,7 +1256,7 @@ function EditJobTicket() {
                   <FormItem>
                     <FormLabel>TC No</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter TC No" {...field} />
+                      <Input readOnly placeholder="Enter TC No" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1261,7 +1265,7 @@ function EditJobTicket() {
                   <FormItem>
                     <FormLabel>Batch Ref</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter Batch Ref" {...field} />
+                      <Input readOnly placeholder="Enter Batch Ref" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

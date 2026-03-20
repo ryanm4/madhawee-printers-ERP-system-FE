@@ -31,6 +31,7 @@ export default function RootLayout({
     <html lang="en" className={`${manrope.variable} ${geistMono.variable}`}>
       <body className="antialiased font-sans">
         <StoreProvider>
+          <Toaster position="top-right" richColors />
           {isLoginPage ? (
             <>{children}</>
           ) : (
@@ -38,7 +39,6 @@ export default function RootLayout({
               <AppSidebar variant="inset" />
               <SidebarInset>
                 <SiteHeader />
-                <Toaster position="top-right" richColors />
                 <main className="w-full relative flex-1 flex flex-col">
                   {children}
                 </main>

@@ -1,5 +1,6 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { inventoryApi } from "@/modules/inventory/api";
@@ -57,7 +58,8 @@ function InventoryManagement() {
         setData(response.data);
       }
     } catch (error) {
-      console.error("Failed to fetch inventory");
+      console.error("Failed to fetch inventory", error);
+      toast(getErrorMessage(error, "Failed to fetch inventory"));
     } finally {
       setIsLoading(false);
     }
@@ -83,10 +85,9 @@ function InventoryManagement() {
       });
       await fetchData();
     } catch (error) {
-      console.error("Failed to delete inventory item");
+      console.error("Failed to delete inventory item", error);
       toast("Failed to Delete Inventory Item", {
-        description:
-          "An error occurred while deleting the inventory item. Please try again.",
+        description: getErrorMessage(error, "An error occurred while deleting the inventory item. Please try again."),
       });
     } finally {
       setIsLoading(false);
