@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { getErrorMessage } from "@/lib/error-utils";
 import { Input } from "@/components/ui/input";
 import { PlusIcon, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -70,7 +71,7 @@ function QuotationsManagement() {
         }
       } catch (error) {
         console.error("PDF Download Error:", error);
-        toast.error("Could not download PDF");
+        toast.error(getErrorMessage(error, "Could not download PDF"));
       }
     },
     async onStatusChange(id, status) {
@@ -112,7 +113,7 @@ function QuotationsManagement() {
         }
       } catch (error) {
         console.error("Status Update Error:", error);
-        toast.error("Failed to update status");
+        toast.error(getErrorMessage(error, "Failed to update status"));
       } finally {
         setLoading(false);
       }
@@ -132,7 +133,8 @@ function QuotationsManagement() {
         setData(response.data);
       }
     } catch (error) {
-      console.error("Failed to fetch quotation");
+      console.error("Failed to fetch quotation", error);
+      toast(getErrorMessage(error, "Failed to fetch quotation"));
     } finally {
       setLoading(false);
     }
@@ -150,8 +152,7 @@ function QuotationsManagement() {
     } catch (error) {
       console.error(error);
       toast("Failed to Delete Quotation", {
-        description:
-          "An error occurred while deleting the quotation. Please try again.",
+        description: getErrorMessage(error, "An error occurred while deleting the quotation. Please try again."),
       });
     } finally {
       setLoading(false);

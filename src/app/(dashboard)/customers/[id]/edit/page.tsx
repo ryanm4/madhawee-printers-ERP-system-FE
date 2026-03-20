@@ -1,5 +1,7 @@
 "use client";
 
+import { getErrorMessage } from "@/lib/error-utils";
+
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { customerSchema } from "@/modules/customer/validation";
 import { useParams, useRouter } from "next/navigation";
@@ -110,7 +112,7 @@ function EditCustomerRelationship() {
         });
       } catch (error) {
         console.error("Failed to fetch customer:", error);
-        toast("Failed to load customer data");
+        toast(getErrorMessage(error, "Failed to load customer data"));
         router.push("/customers");
       } finally {
         setIsLoading(false);
@@ -194,8 +196,7 @@ function EditCustomerRelationship() {
     } catch (error) {
       console.error("Failed to submit customer:", error);
       toast("Failed to Update Customer", {
-        description:
-          "An error occurred while updating the customer. Please try again.",
+        description: getErrorMessage(error, "An error occurred while updating the customer. Please try again."),
       });
     } finally {
       setIsLoading(false);

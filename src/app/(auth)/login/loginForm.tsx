@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-utils";
 import { Eye, EyeOff, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -54,22 +55,9 @@ export function LoginForm({
 
       toast("Login successful!");
       router.push("/dashboard");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Login failed:", error);
-      let errorMessage = "Invalid username or password";
-
-      if (error.response) {
-        // Handle API error response
-        const data = error.response.data;
-        if (data.error) {
-          errorMessage = data.error;
-        } else if (data.message) {
-          errorMessage = data.message;
-        }
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-
+      const errorMessage = getErrorMessage(error, "Invalid username or password");
       setError(errorMessage);
       toast(errorMessage);
     } finally {

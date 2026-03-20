@@ -3,6 +3,8 @@ import {
     formatCurrency,
     Currency,
 } from "@/lib/currencyUtils";
+import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/error-utils";
 import { companyData as mockCompanyData } from "@/modules/quotations/mockData";
 import CompanyLogo from "../assets/Images/company_logo.jpeg";
 
@@ -467,6 +469,6 @@ export const generateQuotationPDF = async (data: any) => {
 
     } catch (error) {
         console.error("Error generating PDF:", error);
-        alert("Failed to generate PDF. Please check the console for details.");
+        toast.error(getErrorMessage(error, "Failed to generate PDF. Please check the console for details."));
     }
 };

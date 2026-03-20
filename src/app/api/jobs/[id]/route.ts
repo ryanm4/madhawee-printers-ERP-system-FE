@@ -26,8 +26,9 @@ export async function GET(
         });
 
         if (!response.ok) {
+            const errorData = await response.json();
             return NextResponse.json(
-                { message: `Backend error: ${response.status}` },
+                { message: errorData.message || `Backend error: ${response.status}` },
                 { status: response.status }
             );
         }
@@ -67,8 +68,9 @@ export async function PUT(
         });
 
         if (!response.ok) {
+            const errorData = await response.json();
             return NextResponse.json(
-                { message: `Backend error: ${response.status}` },
+                { message: errorData.message || `Backend error: ${response.status}` },
                 { status: response.status }
             );
         }
@@ -106,8 +108,9 @@ export async function DELETE(
         });
 
         if (!response.ok) {
+            const errorData = await response.json();
             return NextResponse.json(
-                { message: `Backend error: ${response.status}` },
+                { message: errorData.message || `Backend error: ${response.status}` },
                 { status: response.status }
             );
         }

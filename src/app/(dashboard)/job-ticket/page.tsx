@@ -7,13 +7,16 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { DataTable } from "./_components/job-ticket-table";
 import { jobTicketColumns } from "./_components/job-ticket-columns";
-import { ALL_TICKETS } from "@/modules/job-tickets/types";
+import { ALL_TICKETS, JobTicketPrintData } from "@/modules/job-tickets/types";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
 import { toast } from "sonner";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
+import { JobTicketPrintDialog, handleJobTicketPrint } from "./_components/job-ticket-print-dialog";
+import { CustomerApi } from "@/modules/customer/api";
+import { purchaseOrderApi } from "@/modules/purchase-order/api";
 
 function JobTicketComponent() {
   const router = useRouter();
@@ -21,6 +24,8 @@ function JobTicketComponent() {
   const [isLoading, setIsLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
+  const [printData, setPrintData] = useState<JobTicketPrintData | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -49,6 +54,70 @@ function JobTicketComponent() {
     },
     onView: (id) => {
       router.push(`/job-ticket/${id}`);
+    },
+    onDownload: async (id) => {
+      try {
+        setIsLoading(true);
+        const [ticketResponse, customersResponse] = await Promise.all([
+          jobTicketsApi.getById(id),
+          CustomerApi.getAll(),
+        ]);
+
+        if (ticketResponse.status === 200) {
+          const ticket = ticketResponse.data as any;
+          const customers = customersResponse.data;
+
+          // Also fetch PO details to get TC/Batch if they aren't on the ticket
+          let poDetails = null;
+          if (ticket.po_id) {
+            try {
+              const poResponse = await purchaseOrderApi.getById(ticket.po_id);
+              if (poResponse.status === 200) {
+                poDetails = poResponse.data;
+              }
+            } catch (poErr) {
+              console.error("Failed to fetch PO for printing", poErr);
+            }
+          }
+
+          const customerName = customers.find(
+            (c: any) => String(c.customer_id) === String(ticket.customer_id)
+          )?.company_name || ticket.customer_id;
+
+          const firstPaperType = ticket.paperCoating?.[0] || ticket.paper_coating?.[0];
+          const allRawMaterials = (ticket.paperCoating || ticket.paper_coating || []).flatMap((p: any) => p.materials || p.raw_materials || []);
+
+          const pd: JobTicketPrintData = {
+            jobNumber: ticket.job_number,
+            productType: ticket.product_type,
+            orderReceivedDate: ticket.order_received_date,
+            quantity: ticket.quantity,
+            jobOpenDate: ticket.job_open_date || ticket.created_on,
+            paperType: firstPaperType?.paper || firstPaperType?.paper_type,
+            customer: customerName,
+            coating: firstPaperType?.coating,
+            jobName: ticket.job_name,
+            customerDeliveryDate: ticket.delivery_date,
+            packingDate: ticket.packing_date,
+            expiryDate: ticket.expiry_date,
+            poNo: ticket.customer_po || poDetails?.customer_po || String(ticket.po_id),
+            tcNo: ticket.tc_no || poDetails?.TC_E_PR_No,
+            batchRef: ticket.batch_ref || poDetails?.batch_ref,
+            remarks: ticket.remarks,
+            oldPlatesQuantity: ticket.old_plate_quantity,
+            newPlatesQuantity: ticket.new_plate_quantity,
+            inks: (ticket.inks || []).map((i: any) => ({ ...i, ink: i.ink || "" })),
+            rawMaterials: allRawMaterials,
+          };
+          console.log(pd)
+          handleJobTicketPrint(pd);
+        }
+      } catch (error) {
+        console.error("Failed to fetch ticket for printing", error);
+        toast.error("Failed to load ticket details for printing");
+      } finally {
+        setIsLoading(false);
+      }
     },
     onStatusChange: async (id, status) => {
       try {
@@ -182,6 +251,18 @@ function JobTicketComponent() {
         onClose={() => setDeleteId(null)}
         handleSubmit={handleDelete}
       />
+
+      {printData && (
+        <JobTicketPrintDialog
+          open={showPrintDialog}
+          onOpenChange={setShowPrintDialog}
+          data={printData}
+          onDecline={() => {
+            setShowPrintDialog(false);
+            setPrintData(null);
+          }}
+        />
+      )}
     </>
   );
 }

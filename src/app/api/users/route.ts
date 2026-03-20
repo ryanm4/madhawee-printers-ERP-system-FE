@@ -19,8 +19,9 @@ export async function GET(request: NextRequest) {
     });
 
     if (!response.ok) {
+      const errorData = await response.json();
       return NextResponse.json(
-        { message: `Backend error: ${response.status}` },
+        { message: errorData.message || `Backend error: ${response.status}` },
         { status: response.status }
       );
     }

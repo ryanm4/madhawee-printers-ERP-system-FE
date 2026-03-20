@@ -54,7 +54,7 @@ function JobViewTicket() {
     const [selectedPoDetails, setSelectedPoDetails] = useState<PURCHASE_ORDER_ID | null>(null);
 
     const baseDefaultValues = {
-        poNumber: "",
+        customer_po: "",
         item: "",
         orderReceivedDate: undefined,
         jobNumber: "",
@@ -62,9 +62,9 @@ function JobViewTicket() {
         customer: "",
         jobName: "",
         productType: "",
-        completed_qty: "",
         quantity: "",
         wastage: "",
+        deliveryDate: undefined,
         packingDate: undefined,
         expiryDate: undefined,
         tcNo: "",
@@ -83,7 +83,7 @@ function JobViewTicket() {
             { ink: "Magenta", quantity: "", status: "", remarks: "" },
             { ink: "Yellow", quantity: "", status: "", remarks: "" },
         ],
-        paperTypes: [{ paper: "", coating: "", delivery_date: undefined, rawMaterials: [{ item_id: undefined, material_name: "", material_type: "", size: "", material_description: "", quantity: 0, status: "", remarks: "" }] }] as any[],
+        paperTypes: [{ paper: "", coating: "", rawMaterials: [{ item_id: undefined, material_name: "", material_type: "", size: "", material_description: "", quantity: 0, status: "", remarks: "" }] }] as any[],
     }
 
     const form = useForm<JobTicketFormValues>({
@@ -135,16 +135,16 @@ function JobViewTicket() {
 
                     // Map API data to form values
                     const formValues: any = {
-                        poNumber: data.po_id ? String(data.po_id) : "",
-                        item: data.item_code || "",
+                        customer_po: data.customer_po ? String(data.customer_po) : (data.po_id ? String(data.po_id) : ""),
+                        item: data.item_code ? String(data.item_code) : "",
                         jobNumber: data.job_number || "",
                         orderReceivedDate: data.order_received_date ? new Date(data.order_received_date) : undefined,
-                        jobOpenDate: data.job_open_date ? new Date(data.job_open_date) : undefined,
+                        jobOpenDate: data.created_on ? new Date(data.created_on) : undefined,
                         customer: data.customer_id ? String(data.customer_id) : "",
                         jobName: data.job_name || "",
                         productType: data.product_type || "",
                         quantity: data.quantity ? String(data.quantity) : "",
-                        completed_qty: data.completed_qty ? String(data.completed_qty) : "",
+                        deliveryDate: data.delivery_date ? new Date(data.delivery_date) : undefined,
                         wastage: data.wastage ? String(data.wastage) : "",
                         packingDate: data.packing_date ? new Date(data.packing_date) : undefined,
                         expiryDate: data.expiry_date ? new Date(data.expiry_date) : undefined,
@@ -169,7 +169,6 @@ function JobViewTicket() {
                         paperTypes: data.paperCoatingData?.map((p: any) => ({
                             paper: p.paper,
                             coating: p.coating,
-                            delivery_date: p.delivery_date ? new Date(p.delivery_date) : undefined,
                             rawMaterials: p.materials?.map((rm: any) => ({
                                 item_id: rm.item_id,
                                 material_name: rm.material_name,
@@ -180,14 +179,22 @@ function JobViewTicket() {
                                 status: rm.status,
                                 remarks: rm.remarks,
                             })) || [{ item_id: undefined, material_name: "", material_type: "", size: "", material_description: "", quantity: 0, status: "", remarks: "" }],
-                        })) || [{ paper: "", coating: "", delivery_date: undefined, rawMaterials: [{ item_id: undefined, material_name: "", material_type: "", size: "", material_description: "", quantity: 0, status: "", remarks: "" }] }],
+                        })) || [{ paper: "", coating: "", rawMaterials: [{ item_id: undefined, material_name: "", material_type: "", size: "", material_description: "", quantity: 0, status: "", remarks: "" }] }],
                     };
 
                     form.reset(formValues);
 
                     // If PO is selected, fetch PO details to populate item options (though read-only)
-                    if (data.po_id) {
-                        const poResponse = await purchaseOrderApi.getById(data.po_id);
+                    const poIdentifier = data.po_id || data.customer_po;
+                    if (poIdentifier) {
+                        // If it's a string name, find the ID first
+                        let poIdToFetch = String(poIdentifier);
+                        if (isNaN(Number(poIdToFetch))) {
+                            const match = purchaseOrderData.find(p => String(p.customer_po) === poIdToFetch);
+                            if (match) poIdToFetch = String(match.po_id);
+                        }
+
+                        const poResponse = await purchaseOrderApi.getById(poIdToFetch);
                         if (poResponse.status === 200) {
                             setSelectedPoDetails(poResponse.data);
                         }
@@ -203,16 +210,30 @@ function JobViewTicket() {
         fetchJobTicket();
     }, [id, form]);
 
-    const selectedPoId = form.watch("poNumber");
+    const selectedPoId = form.watch("customer_po");
 
     useEffect(() => {
         const fetchPoDetails = async () => {
-            if (!selectedPoId) {
+            if (!selectedPoId || selectedPoId === "undefined") {
                 setSelectedPoDetails(null);
                 return;
             }
+
+            // Map display string to internal ID if needed
+            let internalId = selectedPoId;
+            if (isNaN(Number(selectedPoId)) && purchaseOrderData.length > 0) {
+                const matchingPo = purchaseOrderData.find(
+                    (po) => String(po.customer_po) === selectedPoId
+                );
+                if (matchingPo) {
+                    internalId = String(matchingPo.po_id);
+                    // Sync form state to the ID so ComboBox highlights correctly
+                    form.setValue("customer_po", internalId);
+                }
+            }
+
             try {
-                const response = await purchaseOrderApi.getById(selectedPoId);
+                const response = await purchaseOrderApi.getById(internalId);
                 if (response.status === 200) {
                     const po = response.data;
                     setSelectedPoDetails(po);
@@ -270,11 +291,11 @@ function JobViewTicket() {
                         </CardHeader>
                         <CardContent className="flex flex-col gap-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {renderFormField("poNumber", ({ field }) => (
+                                {renderFormField("customer_po", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>PO Number</FormLabel>
                                         <Combobox
-                                            items={purchaseOrderData.map(po => ({ value: String(po.po_id), label: String(po.po_id) }))}
+                                            items={purchaseOrderData.map(po => ({ value: String(po.po_id), label: String(po.customer_po) }))}
                                             value={field.value || ""}
                                             onValueChange={() => { }}
                                             placeholder="Select PO Number"
@@ -383,13 +404,19 @@ function JobViewTicket() {
                                         <FormMessage />
                                     </FormItem>
                                 ))}
-                                {renderFormField("completed_qty", ({ field }) => (
+                                {renderFormField("deliveryDate", ({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Completed Quantity</FormLabel>
-                                        <FormControl><Input type="number" placeholder="Enter Completed Quantity" {...field} readOnly /></FormControl>
+                                        <FormLabel>Delivery Date</FormLabel>
+                                        <FormControl>
+                                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled>
+                                                {field.value ? format(field.value, "PPP") : "No Date"}
+                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 ))}
+
                                 {renderFormField("wastage", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Wastage %</FormLabel>
@@ -429,18 +456,6 @@ function JobViewTicket() {
                                                                 ))}
                                                             </SelectContent>
                                                         </Select>
-                                                        <FormMessage className="min-h-[20px]" />
-                                                    </FormItem>
-                                                ))}
-                                                {renderFormField(`paperTypes.${index}.delivery_date`, ({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Delivery Date</FormLabel>
-                                                        <FormControl>
-                                                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled>
-                                                                {field.value ? format(field.value, "PPP") : "No Date"}
-                                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                            </Button>
-                                                        </FormControl>
                                                         <FormMessage className="min-h-[20px]" />
                                                     </FormItem>
                                                 ))}
@@ -616,15 +631,7 @@ function JobViewTicket() {
                                             {renderFormField(`inks.${index}.ink`, ({ field }) => (
                                                 <FormItem>
                                                     <FormLabel className={index !== 0 ? "sr-only" : ""}>Ink</FormLabel>
-                                                    <Select value={field.value} disabled>
-                                                        <FormControl><SelectTrigger className="w-full"><SelectValue placeholder={field.value || "Select Ink"} /></SelectTrigger></FormControl>
-                                                        <SelectContent>
-                                                            <SelectItem value="Black">Black</SelectItem>
-                                                            <SelectItem value="Cyan">Cyan</SelectItem>
-                                                            <SelectItem value="Magenta">Magenta</SelectItem>
-                                                            <SelectItem value="Yellow">Yellow</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
+                                                    <FormControl><Input placeholder="Ink Name" {...field} value={field.value || ""} readOnly /></FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             ))}

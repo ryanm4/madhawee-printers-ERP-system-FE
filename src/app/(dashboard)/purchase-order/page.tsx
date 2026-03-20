@@ -1,5 +1,6 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { getErrorMessage } from "@/lib/error-utils";
 import { PurchaseOrderCard } from "@/components/purchase-order-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ function PurchaseOrderPage() {
       setData(response.data);
     } catch (err) {
       console.error("Failed to fetch POs", err);
+      toast(getErrorMessage(err, "Failed to fetch purchase orders"));
     } finally {
       setLoading(false);
     }
@@ -52,8 +54,7 @@ function PurchaseOrderPage() {
     } catch (error) {
       console.error("Failed to delete PO:", error);
       toast("Failed to Delete Purchase Order", {
-        description:
-          "An error occurred while deleting the purchase order. Please try again.",
+        description: getErrorMessage(error, "An error occurred while deleting the purchase order. Please try again."),
       });
     } finally {
       setLoading(false);
@@ -109,7 +110,7 @@ function PurchaseOrderPage() {
       }
     } catch (error) {
       console.error("Status Update Error:", error);
-      toast.error("Failed to update status");
+      toast.error(getErrorMessage(error, "Failed to update status"));
     } finally {
       setLoading(false);
     }
@@ -188,6 +189,7 @@ function PurchaseOrderPage() {
                     <PurchaseOrderCard
                       key={item.po_id}
                       po_id={item.po_id}
+                      customer_po={item.customer_po}
                       companyName={item.customer?.name}
                       contactEmail={item.customer?.email}
                       poNumber={item.po_id}

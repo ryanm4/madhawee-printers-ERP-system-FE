@@ -1,5 +1,6 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { createQuotationSchema } from "@/modules/quotations/validation";
@@ -89,8 +90,8 @@ function CreateQuotation({
       const response = await CustomerApi.getAll();
       setCustomer(response.data);
     } catch (error) {
-      console.error("Failed to fetch customers");
-      toast("Failed to load customers");
+      console.error("Failed to fetch customers", error);
+      toast(getErrorMessage(error, "Failed to load customers"));
     } finally {
       setLoading(false);
     }
@@ -102,8 +103,8 @@ function CreateQuotation({
       const response = await inventoryApi.getAll();
       setItemList(response.data);
     } catch (error) {
-      console.error("Failed to fetch items");
-      toast("Failed to load items");
+      console.error("Failed to fetch items", error);
+      toast(getErrorMessage(error, "Failed to load items"));
     } finally {
       setLoading(false);
     }
@@ -318,8 +319,7 @@ function CreateQuotation({
     } catch (error) {
       console.error("Failed to submit quotation:", error);
       toast("Failed to Create Quotation", {
-        description:
-          "An error occurred while creating the quotation. Please try again.",
+        description: getErrorMessage(error, "An error occurred while creating the quotation. Please try again."),
       });
     } finally {
       setIsSubmitting(false);
@@ -718,26 +718,36 @@ function CreateQuotation({
                           <td className="p-2">
                             {renderFormField(
                               `items.${index}.item_category`,
-                              ({ field }) => (
+                              ({ field }) => {
+                                const groupedItems = Array.from(
+                                  new Map(
+                                    itemList.map((item) => [
+                                      `${item.item_sub_category} ${item.item_name}`,
+                                      {
+                                        value: String(item.item_id),
+                                        label: `${item.item_sub_category || ''} ${item.item_name || ''}`.trim(),
+                                      },
+                                    ])
+                                  ).values()
+                                );
+
+                                return (
                                 <FormItem>
                                   <Combobox
-                                    items={itemList.map((item) => ({
-                                      value: String(item.item_id),
-                                      label: item.item_name,
-                                    }))}
+                                    items={groupedItems}
                                     value={
-                                      field.value ? String(field.value) : ""
+                                      field.value ? String(groupedItems.find(i => i.label === field.value)?.value || "") : ""
                                     }
                                     onValueChange={(value) => {
-                                      const selectedItem = itemList.find(
-                                        (i) => String(i.item_id) === value
+                                      const selectedGroupItem = groupedItems.find(
+                                        (i) => i.value === value
                                       );
 
-                                      if (selectedItem) {
-                                        field.onChange(selectedItem.item_name);
+                                      if (selectedGroupItem) {
+                                        field.onChange(selectedGroupItem.label);
                                         form.setValue(
                                           `items.${index}.item_id`,
-                                          selectedItem.item_id
+                                          parseInt(selectedGroupItem.value, 10)
                                         );
                                       }
                                     }}
@@ -746,7 +756,8 @@ function CreateQuotation({
                                   />
                                   <FormMessage />
                                 </FormItem>
-                              )
+                                );
+                              }
                             )}
                           </td>
                           <td className="p-2">

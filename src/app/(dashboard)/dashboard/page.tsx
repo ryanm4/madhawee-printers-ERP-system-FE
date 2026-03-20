@@ -1,5 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { getErrorMessage } from "@/lib/error-utils";
+import { toast } from "sonner";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { getUser } from "@/lib/auth";
 import {
@@ -71,6 +73,8 @@ function DashboardPage({
         setAnalytics(response.data?.analytics || null);
       }
     } catch (error) {
+      console.error("Dashboard data fetch failed:", error);
+      toast.error(getErrorMessage(error, "Failed to load dashboard data"));
       setIsLoading(false);
     } finally {
       setIsLoading(false);

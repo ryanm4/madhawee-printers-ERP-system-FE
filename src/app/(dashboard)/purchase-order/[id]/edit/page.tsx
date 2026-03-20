@@ -1,5 +1,6 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { purchaseOrderScheme } from "@/modules/purchase-order/validation";
@@ -108,7 +109,7 @@ function EditPurchaseOrder() {
     customerAddress: "",
     customerEmail: "",
     customerPhone: "",
-    purchaseOrderNo: "",
+    customer_po: "",
     quotationId: "",
     tceprNo: "",
     purchaseOrderType: PurchaseOrderType.TIEP,
@@ -157,7 +158,7 @@ function EditPurchaseOrder() {
         updated_on: new Date(),
         updated_by: user?.name || "admin",
         status: PurchaseOrderStatus.CREATED,
-        customer_po: data.purchaseOrderNo,
+        customer_po: data.customer_po,
         po_items: data.itemDetails.map((item: any) => ({
           item_code: item.itemCode,
           description: item.description,
@@ -169,8 +170,8 @@ function EditPurchaseOrder() {
 
       const response = await purchaseOrderApi.update(Number(id), payload);
 
-      toast("Purchase Order Created", {
-        description: `Purchase Order ${data.purchaseOrderNo} has been created successfully.`,
+      toast("Purchase Order Updated", {
+        description: `Purchase Order ${data.customer_po} has been updated successfully.`,
       });
 
       form.reset(baseDefaultValues);
@@ -180,9 +181,8 @@ function EditPurchaseOrder() {
       router.push("/purchase-order");
     } catch (error) {
       console.error("Failed to submit PO:", error);
-      toast("Failed to Create Purchase Order", {
-        description:
-          "An error occurred while creating the purchase order. Please try again.",
+      toast("Failed to Update Purchase Order", {
+        description: getErrorMessage(error, "An error occurred while updating the purchase order. Please try again."),
       });
     } finally {
       setIsSubmitting(false);
@@ -210,7 +210,7 @@ function EditPurchaseOrder() {
             customerPhone: poData.customer.phone,
             customerAddress: poData.customer.address,
             customerEmail: poData.customer.email,
-            purchaseOrderNo: String(poData.po_id), // Assuming po_id maps to purchaseOrderNo or similar
+            customer_po: String(poData.customer_po), // Assuming po_id maps to purchaseOrderNo or similar
             quotationId: String(poData.quote_id),
             tceprNo: poData.TC_E_PR_No,
             purchaseOrderType: poData.po_type_id as PurchaseOrderType,
@@ -227,6 +227,7 @@ function EditPurchaseOrder() {
         }
       } catch (err) {
         console.error("Failed to fetch purchase order:", err);
+        toast(getErrorMessage(err, "Failed to load purchase order data"));
       } finally {
         setLoading(false);
       }
@@ -378,7 +379,7 @@ function EditPurchaseOrder() {
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                {renderFormField("purchaseOrderNo", ({ field }) => (
+                {renderFormField("customer_po", ({ field }) => (
                   <FormItem>
                     <FormLabel>
                       Purchase Order No <span className="text-red-500">*</span>
@@ -644,7 +645,7 @@ function EditPurchaseOrder() {
                         type="button"
                         variant="outline"
                         size="icon"
-                        onClick={() => {}}
+                        onClick={() => { }}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>

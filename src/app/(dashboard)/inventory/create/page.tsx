@@ -1,5 +1,6 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -103,8 +104,7 @@ function CreateInventoryManagement() {
     } catch (error) {
       console.error("Failed to submit inventory:", error);
       toast("Failed to Create Inventory Item", {
-        description:
-          "An error occurred while adding the inventory item. Please try again.",
+        description: getErrorMessage(error, "An error occurred while adding the inventory item. Please try again."),
       });
     } finally {
       setIsLoading(false);

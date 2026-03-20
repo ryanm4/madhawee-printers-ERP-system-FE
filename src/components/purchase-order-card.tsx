@@ -30,6 +30,7 @@ export interface PurchaseOrderCardProps {
     additionalJobs: number;
     status: string;
     po_id: number;
+    customer_po: string;
     className?: string;
     onDelete: (id: number) => Promise<void>;
     onRefresh?: () => Promise<void>;
@@ -47,6 +48,7 @@ export function PurchaseOrderCard({
     additionalJobs,
     status,
     po_id,
+    customer_po,
     className,
     onDelete,
     onRefresh,
@@ -174,7 +176,7 @@ export function PurchaseOrderCard({
                             <span className="text-sm text-muted-foreground flex items-center gap-2">
                                 PO Number <span className="font-mono tracking-widest text-md"><Barcode className="h-5 w-5" /></span>
                             </span>
-                            <span className="font-semibold text-sm">{poNumber}</span>
+                            <span className="font-semibold text-sm">{customer_po}</span>
                         </div>
                         <div className="flex flex-col gap-1">
                             <span className="text-md text-muted-foreground flex items-center gap-2">

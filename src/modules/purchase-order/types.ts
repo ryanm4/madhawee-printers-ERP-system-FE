@@ -1,6 +1,7 @@
 export interface PURCHASE_ORDER {
     po_id: number,
     quote_id: number,
+    customer_po: string,
     po_type_id: number,
     batch_ref: string,
     po_date: Date,
@@ -75,6 +76,7 @@ export interface PURCHASE_ORDER_ID {
     po_type_id: number,
     batch_ref: string,
     po_date: Date,
+    customer_po: string;
     delivery_date: Date,
     TC_E_PR_No: string,
     approved_on: Date,

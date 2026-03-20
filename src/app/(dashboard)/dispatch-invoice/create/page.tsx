@@ -1,6 +1,7 @@
 "use client";
 import { dispatchInvoiceScheme } from "@/modules/dispatch-invoice/validation";
 import { useRouter } from "next/navigation";
+import { getErrorMessage } from "@/lib/error-utils";
 import React, { useEffect, useState } from "react";
 import { FieldPath, useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -102,7 +103,8 @@ function CreateDispatchandInvoice() {
         setJobData(completedJobs);
       }
     } catch (error) {
-      console.error("Failed to fetch inventory");
+      console.error("Failed to fetch jobs", error);
+      toast(getErrorMessage(error, "Failed to fetch jobs"));
     } finally {
       setIsLoading(false);
     }
@@ -133,9 +135,9 @@ function CreateDispatchandInvoice() {
       form.clearErrors();
       router.push("/dispatch-invoice");
     } catch (error) {
+      console.error("Failed to create dispatch record:", error);
       toast("Failed to Create Dispatch", {
-        description:
-          "An error occurred while creating the dispatch record. Please try again.",
+        description: getErrorMessage(error, "An error occurred while creating the dispatch record. Please try again."),
       });
     } finally {
       setIsLoading(false);
@@ -180,6 +182,7 @@ function CreateDispatchandInvoice() {
         }
       } catch (err) {
         console.error("Failed to fetch customer:", err);
+        toast(getErrorMessage(err, "Failed to fetch customer details"));
         form.setValue("customer_name", "");
         form.setValue("customer_phone", "");
         form.setValue("customer_address", "");

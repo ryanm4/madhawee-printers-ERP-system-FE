@@ -1,5 +1,6 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ALL_DISPATCH } from "@/modules/dispatch-invoice/types";
@@ -36,7 +37,8 @@ function DispatchInvoiceManagement() {
         setData(response.data);
       }
     } catch (error) {
-      console.error("Failed to fetch inventory");
+      console.error("Failed to fetch dispatch records", error);
+      toast(getErrorMessage(error, "Failed to fetch dispatch records"));
     } finally {
       setIsLoading(false);
     }
@@ -62,9 +64,9 @@ function DispatchInvoiceManagement() {
       });
       await fetchData();
     } catch (error) {
+      console.error("Failed to delete dispatch:", error);
       toast("Failed to Delete Dispatch", {
-        description:
-          "An error occurred while deleting the dispatch record. Please try again.",
+        description: getErrorMessage(error, "An error occurred while deleting the dispatch record. Please try again."),
       });
     } finally {
       setIsLoading(false);

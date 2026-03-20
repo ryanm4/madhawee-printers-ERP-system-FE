@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { CREATE_USER } from "@/modules/users/types";
 import { userApi } from "@/modules/users/api";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/error-utils";
 import {
   Form,
   FormControl,
@@ -65,9 +66,9 @@ function CreateUser() {
       form.clearErrors();
       router.push("/users");
     } catch (error) {
+      console.error("Failed to create user:", error);
       toast("Failed to Create User", {
-        description:
-          "An error occurred while creating the user record. Please try again.",
+        description: getErrorMessage(error, "An error occurred while creating the user record. Please try again."),
       });
     } finally {
       setIsLoading(false);
