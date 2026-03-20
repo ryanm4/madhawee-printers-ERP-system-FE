@@ -1,3 +1,4 @@
+
 src/
 │
 ├── app/ # Next.js routing layer
