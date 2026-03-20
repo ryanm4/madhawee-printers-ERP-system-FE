@@ -543,7 +543,7 @@ function CreatePurchaseOrder() {
                                 placeholder="Enter Quantity"
                                 value={field.value}
                                 onChange={(e) =>
-                                  field.onChange(Number(e.target.value))
+                                  field.onChange(e.target.value)
                                 }
                                 onBlur={field.onBlur}
                                 name={field.name}
@@ -581,7 +581,7 @@ function CreatePurchaseOrder() {
                                 placeholder="Enter Price"
                                 value={field.value}
                                 onChange={(e) =>
-                                  field.onChange(Number(e.target.value))
+                                  field.onChange(e.target.value)
                                 }
                                 onBlur={field.onBlur}
                                 name={field.name}
