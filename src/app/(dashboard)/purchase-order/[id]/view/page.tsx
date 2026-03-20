@@ -76,7 +76,7 @@ function ViewPurchaseOrder() {
         customerAddress: "",
         customerEmail: "",
         customerPhone: "",
-        purchaseOrderNo: "",
+        customer_po: "",
         quotationId: "",
         tceprNo: "",
         purchaseOrderType: PurchaseOrderType.TIEP,
@@ -121,7 +121,7 @@ function ViewPurchaseOrder() {
                 created_by: "admin", // TODO: Get from auth context
                 updated_by: "admin", // TODO: Get from auth context
                 status: "PENDING",
-                customer_po: data.purchaseOrderNo,
+                customer_po: data.customer_po,
                 po_items: data.itemDetails.map((item: any) => ({
                     item_code: item.itemCode,
                     description: item.description,
@@ -134,7 +134,7 @@ function ViewPurchaseOrder() {
             const response = await purchaseOrderApi.update(Number(id), payload)
 
             toast("Purchase Order Created", {
-                description: `Purchase Order ${data.purchaseOrderNo} has been created successfully.`,
+                description: `Purchase Order ${data.customer_po} has been created successfully.`,
             });
 
             form.reset(baseDefaultValues)
@@ -178,7 +178,7 @@ function ViewPurchaseOrder() {
                         customerPhone: poData.customer.phone,
                         customerAddress: poData.customer.address,
                         customerEmail: poData.customer.email,
-                        purchaseOrderNo: String(poData.po_id), // Assuming po_id maps to purchaseOrderNo or similar
+                        customer_po: String(poData.po_id), // Assuming po_id maps to purchaseOrderNo or similar
                         quotationId: String(poData.quote_id),
                         tceprNo: poData.TC_E_PR_No,
                         purchaseOrderType: poData.po_type_id as PurchaseOrderType,
@@ -291,7 +291,7 @@ function ViewPurchaseOrder() {
 
                             </CardHeader>
                             <CardContent className='flex flex-col gap-4'>
-                                {renderFormField("purchaseOrderNo", ({ field }) => (
+                                {renderFormField("customer_po", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Purchase Order No <span className="text-red-500">*</span></FormLabel>
                                         <FormControl><Input placeholder="Enter Purchase Order No" {...field} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>

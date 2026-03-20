@@ -113,7 +113,7 @@ function CreatePurchaseOrder() {
     batchRef: "",
     poDate: new Date(),
     itemDetails: [
-      { itemCode: "", description: "", quantity: "", unit: "", price: "" },
+      { itemCode: "", description: "", quantity: 0, unit: "", price: 0 },
     ],
   };
 
@@ -483,9 +483,9 @@ function CreatePurchaseOrder() {
                     appendItemDetails({
                       itemCode: "",
                       description: "",
-                      quantity: "",
+                      quantity: 0,
                       unit: "",
-                      price: "",
+                      price: 0,
                     })
                   }
                 >
