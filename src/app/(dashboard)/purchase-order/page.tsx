@@ -174,7 +174,7 @@ function PurchaseOrderPage() {
         ) : (
           <>
             <TabsContent value="Grid-View">
-              <div className="grid gap-[24px] grid-cols-[repeat(auto-fill,minmax(412px,1fr))]">
+              <div className="grid gap-[24px] grid-cols-[repeat(auto-fill,minmax(450px,1fr))]">
                 {data
                   .filter((item) => {
                     if (!search) return true;

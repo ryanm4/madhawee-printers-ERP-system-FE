@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { getErrorMessage } from "@/lib/error-utils";
 import { Input } from "@/components/ui/input";
-import { PlusIcon, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QUOTATIONS } from "@/modules/quotations/types";
 import { quotationColumns } from "./_components/quotation_columns";
@@ -12,6 +11,9 @@ import { quotationApi } from "@/modules/quotations/api";
 import { CustomerApi } from "@/modules/customer/api";
 import { DataTable } from "./_components/quotation_table";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LayoutPanelTop, PlusIcon, Search, Table2 } from "lucide-react";
+import { QuotationCard } from "@/components/quotation-card";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-page";
 import { generateQuotationPDF } from "@/components/pdf-generator";
@@ -25,14 +27,14 @@ function QuotationsManagement() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
 
-  const columns = quotationColumns({
-    onEdit: (id) => {
+  const handlers = {
+    onEdit: (id: string | number) => {
       router.push(`/quotation-management/${id}/edit`);
     },
-    onDelete: (id) => {
+    onDelete: (id: string | number) => {
       setDeleteId(Number(id));
     },
-    async onDownload(id) {
+    async onDownload(id: string | number) {
       try {
         const response = await quotationApi.getById(Number(id));
         if (response.data) {
@@ -74,10 +76,10 @@ function QuotationsManagement() {
         toast.error(getErrorMessage(error, "Could not download PDF"));
       }
     },
-    async onStatusChange(id, status) {
+    async onStatusChange(id: string | number, status: string) {
       try {
         setLoading(true);
-        const response = await quotationApi.getById(id);
+        const response = await quotationApi.getById(Number(id));
         if (response.data) {
           const data = response.data as any;
           const payload = {
@@ -105,7 +107,7 @@ function QuotationsManagement() {
               item_total_price: String(item.item_total_price),
             })),
           };
-          await quotationApi.update(id, payload as any);
+          await quotationApi.update(Number(id), payload as any);
           toast.success(`Quotation status updated to ${status}`);
           await fetchData();
         } else {
@@ -118,7 +120,9 @@ function QuotationsManagement() {
         setLoading(false);
       }
     },
-  });
+  };
+
+  const columns = quotationColumns(handlers);
 
   useEffect(() => {
     fetchData();
@@ -166,41 +170,81 @@ function QuotationsManagement() {
         title="Quotations Management"
         breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
       />
-      <div className="flex flex-row justify-end gap-[24px]">
-        <div className="relative w-[320px]">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Quotation Number"
-            className="w-full pl-8"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+      <Tabs
+        defaultValue="Grid-View"
+        className="w-full flex-1 flex flex-col gap-4"
+      >
+        <div className="flex flex-row justify-end gap-[24px]">
+          <div className="relative w-[320px]">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Quotation Number"
+              className="w-full pl-8"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          <TabsList>
+            <TabsTrigger value="Grid-View">
+              <LayoutPanelTop />
+            </TabsTrigger>
+            <TabsTrigger value="Table-View">
+              <Table2 />
+            </TabsTrigger>
+          </TabsList>
+          <ExportButton data={data} filename="quotations-list" />
+          <Button onClick={() => router.push("/quotation-management/create")}>
+            <PlusIcon /> Create New
+          </Button>
         </div>
-
-        <ExportButton data={data} filename="quotations-list" />
-        <Button onClick={() => router.push("/quotation-management/create")}>
-          <PlusIcon /> Create New
-        </Button>
-      </div>
-      {loading ? (
-        <PageLoader />
-      ) : data.length === 0 ? (
-        <EmptyState
-          title="No Quotations Yet"
-          description="You haven't created any quotations yet. Get started by creating your first quotation."
-          createLabel="Create New Quotation"
-          createPath="/quotation-management/create"
-        />
-      ) : (
-        <DataTable
-          columns={columns}
-          data={data}
-          searchValue={search}
-          searchColumn="quote_id"
-        />
-      )}
-
+        {loading ? (
+          <PageLoader />
+        ) : data.length === 0 ? (
+          <EmptyState
+            title="No Quotations Yet"
+            description="You haven't created any quotations yet. Get started by creating your first quotation."
+            createLabel="Create New Quotation"
+            createPath="/quotation-management/create"
+          />
+        ) : (
+          <>
+            <TabsContent value="Grid-View">
+              <div className="grid gap-[24px] grid-cols-[repeat(auto-fill,minmax(450px,1fr))]">
+                {data
+                  .filter((item) => {
+                    if (!search) return true;
+                    const s = search.toLowerCase();
+                    return (
+                      item.quote_id.toString().toLowerCase().includes(s) ||
+                      item.company_name?.toLowerCase().includes(s) ||
+                      item.status?.toLowerCase().includes(s)
+                    );
+                  })
+                  .map((item: QUOTATIONS) => (
+                    <QuotationCard
+                      key={item.quote_id}
+                      quotation={item}
+                      onEdit={handlers.onEdit}
+                      onDelete={handlers.onDelete}
+                      onDownload={handlers.onDownload}
+                      onStatusChange={handlers.onStatusChange}
+                    />
+                  ))}
+              </div>
+            </TabsContent>
+            <TabsContent value="Table-View">
+              <DataTable
+                columns={columns}
+                data={data}
+                searchValue={search}
+                searchColumn="quote_id"
+              />
+            </TabsContent>
+          </>
+        )}
+      </Tabs>
       <AlertDeleteDialog
         isOpen={deleteId !== null}
         onClose={() => setDeleteId(null)}

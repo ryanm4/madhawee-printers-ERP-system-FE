@@ -76,7 +76,7 @@ export function PurchaseOrderCard({
 
     return (
         <>
-            <Card className={cn("w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col", className)}>
+            <Card className={cn("w-full shadow-sm hover:shadow-md transition-shadow flex flex-col", className)}>
                 <CardHeader className="flex flex-row items-start justify-between space-y-0 p-6 pb-2 shrink-0">
                     <div className="flex items-center gap-4">
                         <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -172,23 +172,23 @@ export function PurchaseOrderCard({
                     </div>
 
                     <div className="grid grid-cols-3 gap-4 mb-8">
-                        <div className="flex flex-col gap-1">
-                            <span className="text-sm text-muted-foreground flex items-center gap-2">
+                        <div className="flex flex-col gap-1 min-w-0">
+                            <span className="text-sm text-muted-foreground flex items-center gap-2 whitespace-nowrap">
                                 PO Number <span className="font-mono tracking-widest text-md"><Barcode className="h-5 w-5" /></span>
                             </span>
-                            <span className="font-semibold text-sm">{customer_po}</span>
+                            <span className="font-semibold text-sm truncate" title={customer_po}>{customer_po}</span>
                         </div>
-                        <div className="flex flex-col gap-1">
-                            <span className="text-md text-muted-foreground flex items-center gap-2">
+                        <div className="flex flex-col gap-1 min-w-0">
+                            <span className="text-md text-muted-foreground flex items-center gap-2 whitespace-nowrap">
                                 PO Date <Calendar className="h-5 w-5" />
                             </span>
-                            <span className="font-semibold text-sm">{new Date(poDate).toLocaleDateString()}</span>
+                            <span className="font-semibold text-sm truncate">{new Date(poDate).toLocaleDateString()}</span>
                         </div>
-                        <div className="flex flex-col gap-1">
-                            <span className="text-md text-muted-foreground flex items-center gap-2">
+                        <div className="flex flex-col gap-1 min-w-0">
+                            <span className="text-md text-muted-foreground flex items-center gap-2 whitespace-nowrap">
                                 Delivery Date <Truck className="h-5 w-5" />
                             </span>
-                            <span className="font-semibold text-sm">{new Date(deliveryDate).toLocaleDateString()}</span>
+                            <span className="font-semibold text-sm truncate">{new Date(deliveryDate).toLocaleDateString()}</span>
                         </div>
                     </div>
 
@@ -199,16 +199,16 @@ export function PurchaseOrderCard({
 
                                     <Ticket className="h-8 w-8" />
 
-                                    <div className="flex flex-col gap-0.5">
-                                        <span className="text-[14px] text-muted-foreground line-clamp-1">
+                                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                                        <span className="text-[14px] text-muted-foreground truncate">
                                             {job.job_id}
                                         </span>
-                                        <span className="text-[16px] font-medium leading-none">
+                                        <span className="text-[16px] font-medium leading-none truncate" title={job.job_name}>
                                             {job.job_name}
                                         </span>
                                     </div>
                                 </div>
-                                <div className="flex flex-col items-end gap-0.5">
+                                <div className="flex flex-col items-end gap-0.5 shrink-0 min-w-fit">
                                     <span className="text-[14px] text-muted-foreground">{format(new Date(job.job_open_date), "dd MMM yyyy")}</span>
                                     <span className="text-[18px] font-light text-muted-foreground">{job.status}</span>
                                 </div>

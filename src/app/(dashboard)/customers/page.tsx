@@ -14,6 +14,9 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LayoutPanelTop, Table2 } from "lucide-react";
+import { CustomerCard } from "@/components/customer-card";
 
 export default function CRMPage() {
   const router = useRouter();
@@ -40,17 +43,19 @@ export default function CRMPage() {
     }
   };
 
-  const columns = customerColumns({
-    onEdit: (id) => {
+  const handlers = {
+    onEdit: (id: number) => {
       router.push(`/customers/${id}/edit`);
     },
-    onDelete: (id) => {
+    onDelete: (id: number) => {
       setDeleteId(id);
     },
-    onView: (id) => {
+    onView: (id: number) => {
       router.push(`/customers/${id}`);
     },
-  });
+  };
+
+  const columns = customerColumns(handlers);
 
   const handleDelete = async () => {
     if (deleteId === null) return;
@@ -75,22 +80,35 @@ export default function CRMPage() {
   };
   return (
     <>
-      <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-        <PageTitleWithBreadcrumb
-          title="Customer  Management"
-          breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
-        />
+    <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+      <PageTitleWithBreadcrumb
+        title="Customer Management"
+        breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
+      />
+      <Tabs
+        defaultValue="Grid-View"
+        className="w-full flex-1 flex flex-col gap-4"
+      >
         <div className="flex flex-row justify-end gap-[24px]">
           <div className="relative w-[320px]">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Customer"
+              placeholder="Customer Name"
               className="w-full pl-8"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+
+          <TabsList>
+            <TabsTrigger value="Grid-View">
+              <LayoutPanelTop />
+            </TabsTrigger>
+            <TabsTrigger value="Table-View">
+              <Table2 />
+            </TabsTrigger>
+          </TabsList>
 
           <ExportButton data={data} filename="customers-list" />
           <Button onClick={() => router.push("/customers/create")}>
@@ -107,14 +125,42 @@ export default function CRMPage() {
             createPath="/customers/create"
           />
         ) : (
-          <DataTable
-            columns={columns}
-            data={data}
-            searchValue={search}
-            searchColumn="company_name"
-          />
+          <>
+            <TabsContent value="Grid-View">
+              <div className="grid gap-[24px] grid-cols-[repeat(auto-fill,minmax(350px,1fr))]">
+                {data
+                  .filter((item) => {
+                    if (!search) return true;
+                    const s = search.toLowerCase();
+                    return (
+                      item.company_name?.toLowerCase().includes(s) ||
+                      item.email?.toLowerCase().includes(s) ||
+                      item.phone?.toLowerCase().includes(s)
+                    );
+                  })
+                  .map((item: CUSTOMER) => (
+                    <CustomerCard
+                      key={item.customer_id}
+                      customer={item}
+                      onEdit={handlers.onEdit}
+                      onDelete={handlers.onDelete}
+                      onView={handlers.onView}
+                    />
+                  ))}
+              </div>
+            </TabsContent>
+            <TabsContent value="Table-View">
+              <DataTable
+                columns={columns}
+                data={data}
+                searchValue={search}
+                searchColumn="company_name"
+              />
+            </TabsContent>
+          </>
         )}
-      </div>
+      </Tabs>
+    </div>
       <AlertDeleteDialog
         isOpen={deleteId !== null}
         onClose={() => setDeleteId(null)}
