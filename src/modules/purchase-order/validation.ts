@@ -13,6 +13,7 @@ export const purchaseOrderScheme = z.object({
     tceprNo: z.string().optional(),
     purchaseOrderType: z.nativeEnum(PurchaseOrderType),
     batchRef: z.string().optional(),
+    salesRef: z.string().optional(),
     poDate: z.date(),
 
     itemDetails: z

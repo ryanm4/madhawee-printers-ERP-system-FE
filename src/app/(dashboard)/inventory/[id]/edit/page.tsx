@@ -34,7 +34,7 @@ import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { getUser } from "@/lib/auth";
 import { FieldPath, useForm, ControllerProps } from "react-hook-form";
-import { toast } from "sonner";
+import { appToast } from "@/lib/toast-utils";
 import { z } from "zod";
 import { FullPageLoader } from "@/components/shared/loader";
 
@@ -100,7 +100,7 @@ function EditInventoryManagement() {
         });
       } catch (error) {
         console.error("Failed to fetch inventory:", error);
-        toast(getErrorMessage(error, "Failed to load inventory data"));
+        appToast.error("Failed to load inventory data", getErrorMessage(error));
         router.push("/inventory");
       } finally {
         setIsLoading(false);
@@ -129,17 +129,13 @@ function EditInventoryManagement() {
       };
       const response = await inventoryApi.update(id, payload);
 
-      toast("Inventory Item Updated", {
-        description: "The inventory item has been updated successfully.",
-      });
+      appToast.updated("Inventory Item Updated", "The inventory item has been updated successfully.");
       form.reset(baseDefaultValues);
       form.clearErrors();
       router.push("/inventory");
     } catch (error) {
       console.error("Failed to update inventory:", error);
-      toast("Failed to Update Inventory Item", {
-        description: getErrorMessage(error, "An error occurred while updating the inventory item. Please try again."),
-      });
+      appToast.error("Failed to Update Inventory Item", getErrorMessage(error, "An error occurred while updating the inventory item. Please try again."));
     } finally {
       setIsLoading(false);
     }

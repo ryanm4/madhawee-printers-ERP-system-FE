@@ -14,7 +14,7 @@ import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutPanelTop, PlusIcon, Search, Table2 } from "lucide-react";
 import { QuotationCard } from "@/components/quotation-card";
-import { toast } from "sonner";
+import { appToast } from "@/lib/toast-utils";
 import { EmptyState } from "@/components/shared/empty-page";
 import { generateQuotationPDF } from "@/components/pdf-generator";
 import { ExportButton } from "@/components/shared/export-button";
@@ -69,11 +69,11 @@ function QuotationsManagement() {
 
           await generateQuotationPDF(pdfData);
         } else {
-          toast.error("Failed to load quotation details");
+          appToast.error("Data Error", "Failed to load quotation details");
         }
       } catch (error) {
         console.error("PDF Download Error:", error);
-        toast.error(getErrorMessage(error, "Could not download PDF"));
+        appToast.error("Download Error", getErrorMessage(error));
       }
     },
     async onStatusChange(id: string | number, status: string) {
@@ -108,14 +108,14 @@ function QuotationsManagement() {
             })),
           };
           await quotationApi.update(Number(id), payload as any);
-          toast.success(`Quotation status updated to ${status}`);
+          appToast.success("Status Updated", `Quotation status updated to ${status}`);
           await fetchData();
         } else {
-          toast.error("Failed to fetch quotation details for status update");
+          appToast.error("Update Error", "Failed to fetch quotation details for status update");
         }
       } catch (error) {
         console.error("Status Update Error:", error);
-        toast.error(getErrorMessage(error, "Failed to update status"));
+        appToast.error("Update Failed", getErrorMessage(error));
       } finally {
         setLoading(false);
       }
@@ -138,7 +138,7 @@ function QuotationsManagement() {
       }
     } catch (error) {
       console.error("Failed to fetch quotation", error);
-      toast(getErrorMessage(error, "Failed to fetch quotation"));
+      appToast.error("Fetch Error", getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -149,15 +149,11 @@ function QuotationsManagement() {
     try {
       setLoading(true);
       await quotationApi.delete(deleteId);
-      toast("Quotation Deleted", {
-        description: `Quotation has been deleted successfully.`,
-      });
+      appToast.success("Quotation Deleted", "Quotation has been deleted successfully.");
       await fetchData();
     } catch (error) {
       console.error(error);
-      toast("Failed to Delete Quotation", {
-        description: getErrorMessage(error, "An error occurred while deleting the quotation. Please try again."),
-      });
+      appToast.error("Delete Failed", getErrorMessage(error));
     } finally {
       setLoading(false);
       setDeleteId(null);
@@ -170,81 +166,40 @@ function QuotationsManagement() {
         title="Quotations Management"
         breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
       />
-      <Tabs
-        defaultValue="Grid-View"
-        className="w-full flex-1 flex flex-col gap-4"
-      >
-        <div className="flex flex-row justify-end gap-[24px]">
-          <div className="relative w-[320px]">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Quotation Number"
-              className="w-full pl-8"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <TabsList>
-            <TabsTrigger value="Grid-View">
-              <LayoutPanelTop />
-            </TabsTrigger>
-            <TabsTrigger value="Table-View">
-              <Table2 />
-            </TabsTrigger>
-          </TabsList>
-          <ExportButton data={data} filename="quotations-list" />
-          <Button onClick={() => router.push("/quotation-management/create")}>
-            <PlusIcon /> Create New
-          </Button>
-        </div>
-        {loading ? (
-          <PageLoader />
-        ) : data.length === 0 ? (
-          <EmptyState
-            title="No Quotations Yet"
-            description="You haven't created any quotations yet. Get started by creating your first quotation."
-            createLabel="Create New Quotation"
-            createPath="/quotation-management/create"
+      <div className="flex flex-row justify-end gap-[24px]">
+        <div className="relative w-[320px]">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Quotation Number"
+            className="w-full pl-8"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
-        ) : (
-          <>
-            <TabsContent value="Grid-View">
-              <div className="grid gap-[24px] grid-cols-[repeat(auto-fill,minmax(450px,1fr))]">
-                {data
-                  .filter((item) => {
-                    if (!search) return true;
-                    const s = search.toLowerCase();
-                    return (
-                      item.quote_id.toString().toLowerCase().includes(s) ||
-                      item.company_name?.toLowerCase().includes(s) ||
-                      item.status?.toLowerCase().includes(s)
-                    );
-                  })
-                  .map((item: QUOTATIONS) => (
-                    <QuotationCard
-                      key={item.quote_id}
-                      quotation={item}
-                      onEdit={handlers.onEdit}
-                      onDelete={handlers.onDelete}
-                      onDownload={handlers.onDownload}
-                      onStatusChange={handlers.onStatusChange}
-                    />
-                  ))}
-              </div>
-            </TabsContent>
-            <TabsContent value="Table-View">
-              <DataTable
-                columns={columns}
-                data={data}
-                searchValue={search}
-                searchColumn="quote_id"
-              />
-            </TabsContent>
-          </>
-        )}
-      </Tabs>
+        </div>
+
+        <ExportButton data={data} filename="quotations-list" />
+        <Button onClick={() => router.push("/quotation-management/create")}>
+          <PlusIcon /> Create New
+        </Button>
+      </div>
+      {loading ? (
+        <PageLoader />
+      ) : data.length === 0 ? (
+        <EmptyState
+          title="No Quotations Yet"
+          description="You haven't created any quotations yet. Get started by creating your first quotation."
+          createLabel="Create New Quotation"
+          createPath="/quotation-management/create"
+        />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={data}
+          searchValue={search}
+          searchColumn="quote_id"
+        />
+      )}
       <AlertDeleteDialog
         isOpen={deleteId !== null}
         onClose={() => setDeleteId(null)}

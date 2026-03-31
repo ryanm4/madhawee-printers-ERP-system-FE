@@ -49,7 +49,7 @@ export function SectionCards({ data = [] }: SectionCardsProps) {
   }
 
   return (
-    <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(280px,1fr))] ">
+    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
       {data
         .filter((item) => KAR_CONFIG[item.key])
         .map((item) => {

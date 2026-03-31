@@ -27,6 +27,7 @@ import { quotationApi } from '@/modules/quotations/api'
 import { purchaseOrderApi } from '@/modules/purchase-order/api'
 import { toast } from 'sonner'
 import { CREATE_PURCHASE_ORDER, PURCHASE_ORDER } from '@/modules/purchase-order/types'
+import { FullPageLoader } from "@/components/shared/loader";
 
 
 type PurchaseOrderFormValues = z.infer<typeof purchaseOrderScheme>
@@ -43,7 +44,6 @@ function ViewPurchaseOrder() {
     useEffect(() => {
         getCustomerList();
         getQuotationList();
-        // TODO: Fetch existing PO data by params.id and populate form
     }, []);
 
     const getCustomerList = async () => {
@@ -81,6 +81,7 @@ function ViewPurchaseOrder() {
         tceprNo: "",
         purchaseOrderType: PurchaseOrderType.TIEP,
         batchRef: "",
+        salesRef: "",
         poDate: new Date(),
         itemDetails: [{ itemCode: "", description: "", quantity: "", unit: "", price: "" }]
     }
@@ -99,57 +100,7 @@ function ViewPurchaseOrder() {
 
 
     async function onSubmit(data: PurchaseOrderFormValues) {
-        try {
-            setIsSubmitting(true);
-
-            const poTypeMap: Record<PurchaseOrderType, number> = {
-                [PurchaseOrderType.TIEP]: 1,
-                [PurchaseOrderType.NON_TIEP]: 2,
-                [PurchaseOrderType.MP]: 3,
-            };
-            const formatDate = (date: Date) => {
-                return date.toISOString().split('T')[0]; // "YYYY-MM-DD" format
-            };
-
-            const payload: CREATE_PURCHASE_ORDER = {
-                quote_id: data.quotationId ? parseInt(data.quotationId) : 0,
-                customer_id: data.customer ? parseInt(data.customer) : 0,
-                po_type_id: poTypeMap[data.purchaseOrderType] || 1,
-                batch_ref: data.batchRef,
-                po_date: data.poDate instanceof Date ? formatDate(data.poDate) : data.poDate,
-                TC_E_PR_No: data.tceprNo,
-                created_by: "admin", // TODO: Get from auth context
-                updated_by: "admin", // TODO: Get from auth context
-                status: "PENDING",
-                customer_po: data.customer_po,
-                po_items: data.itemDetails.map((item: any) => ({
-                    item_code: item.itemCode,
-                    description: item.description,
-                    quantity: String(item.quantity),
-                    uom: item.unit,
-                    price: String(item.price),
-                })),
-            };
-
-            const response = await purchaseOrderApi.update(Number(id), payload)
-
-            toast("Purchase Order Created", {
-                description: `Purchase Order ${data.customer_po} has been created successfully.`,
-            });
-
-            form.reset(baseDefaultValues)
-            form.clearErrors()
-
-            // Navigate to purchase order list
-            router.push("/purchase-order")
-        } catch (error) {
-            console.error("Failed to submit PO:", error)
-            toast("Failed to Create Purchase Order", {
-                description: "An error occurred while creating the purchase order. Please try again.",
-            });
-        } finally {
-            setIsSubmitting(false);
-        }
+        // This is a view page, onSubmit won't be called, but we keep it for form compatibility
     }
 
 
@@ -178,11 +129,12 @@ function ViewPurchaseOrder() {
                         customerPhone: poData.customer.phone,
                         customerAddress: poData.customer.address,
                         customerEmail: poData.customer.email,
-                        customer_po: String(poData.customer_po), // Assuming po_id maps to purchaseOrderNo or similar
+                        customer_po: String(poData.customer_po),
                         quotationId: String(poData.quote_id),
                         tceprNo: poData.TC_E_PR_No,
                         purchaseOrderType: poData.po_type_id as PurchaseOrderType,
                         batchRef: poData.batch_ref,
+                        salesRef: (poData as any).sales_ref || "",
                         poDate: new Date(poData.po_date),
                         itemDetails: poData.po_items.map(item => ({
                             itemCode: item.item_code,
@@ -205,10 +157,9 @@ function ViewPurchaseOrder() {
         }
     }, [id, form]);
 
-
-
     return (
         <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+            {loading && <FullPageLoader />}
             <PageTitleWithBreadcrumb
                 title="View Purchase Order"
                 breadcrumbs={[
@@ -223,11 +174,14 @@ function ViewPurchaseOrder() {
                 <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6  pb-0'>
                     <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
                         <Button size="lg" variant="outline" type="button" onClick={() => router.push("/purchase-order")}>Back to List</Button>
+                        <Button size="lg" type="button" className="bg-primary hover:bg-primary/90" onClick={() => router.push(`/purchase-order/${id}/edit`)}>
+                            <Edit2 className="mr-2 h-4 w-4" /> Edit Purchase Order
+                        </Button>
                     </div>
 
 
                     <div className='grid grid-cols-2 md:grid-cols-2 gap-4'>
-                        <Card className={cn("w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
+                        <Card className={cn("w-full shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
                             <CardHeader className="flex flex-col gap-[0.5px]">
                                 <h3 className="text-md font-medium mb-2">Customer</h3>
                                 <p className="text-xs text-muted-foreground mb-4">View customer details</p>
@@ -284,7 +238,7 @@ function ViewPurchaseOrder() {
 
                             </CardContent>
                         </Card>
-                        <Card className={cn("w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
+                        <Card className={cn("w-full shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
                             <CardHeader className="flex flex-col gap-[0.5px]">
                                 <h3 className="text-md font-medium mb-2">Purchase Order</h3>
                                 <p className="text-xs text-muted-foreground mb-4">View purchase order details</p>
@@ -351,13 +305,22 @@ function ViewPurchaseOrder() {
                                         </FormItem>
                                     ))}
                                 </div>
-                                {renderFormField("batchRef", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Batch Ref</FormLabel>
-                                        <FormControl><Input placeholder="Enter Batch Ref" {...field} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
+                                <div className='grid grid-cols-2 md:grid-cols-2 gap-4'>
+                                    {renderFormField("batchRef", ({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Batch Ref</FormLabel>
+                                            <FormControl><Input placeholder="Enter Batch Ref" {...field} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    ))}
+                                    {renderFormField("salesRef", ({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Sales Ref</FormLabel>
+                                            <FormControl><Input placeholder="Enter Sales Ref" {...field} disabled={true} className="disabled:opacity-100 disabled:text-black disabled:cursor-default" /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    ))}
+                                </div>
 
                                 {renderFormField("poDate", ({ field }) => (
                                     <FormItem>
@@ -382,16 +345,13 @@ function ViewPurchaseOrder() {
                         </Card>
                     </div>
 
-                    <Card className={cn("w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
+                    <Card className={cn("w-full shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
                         <CardHeader className="flex flex-col gap-[0.5px]">
                             <h3 className="text-md font-medium mb-2">Item Details</h3>
                             <p className="text-xs text-muted-foreground mb-4">View Item Details</p>
 
                         </CardHeader>
                         <CardContent className='flex flex-col gap-4'>
-                            <div className="flex justify-end hidden">
-                                <Button type="button" variant="secondary" onClick={() => appendItemDetails({ itemCode: "", description: "", quantity: "", unit: "", price: "" })}><PlusIcon />Add More</Button>
-                            </div>
                             <div>
                                 {itemDetailsFields.map((item, index) => (
                                     <div key={item.id} className="grid grid-cols-[1fr_auto] gap-2 mb-2 items-start">
@@ -455,18 +415,6 @@ function ViewPurchaseOrder() {
                                                     <FormMessage />
                                                 </FormItem>
                                             ))}
-                                        </div>
-                                        <div className="flex space-x-2 items-start pt-5 hidden">
-                                            <Button type="button" variant="outline" size="icon" onClick={() => { }}><Edit2 className="h-4 w-4" /></Button>
-                                            <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="icon"
-                                                onClick={() => removeItemDetails(index)}
-                                                disabled={itemDetailsFields.length <= 1} // Disable if only one item
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
                                         </div>
                                     </div>
                                 ))}

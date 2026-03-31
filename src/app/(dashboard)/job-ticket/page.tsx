@@ -9,7 +9,8 @@ import { DataTable } from "./_components/job-ticket-table";
 import { jobTicketColumns } from "./_components/job-ticket-columns";
 import { ALL_TICKETS, JobTicketPrintData } from "@/modules/job-tickets/types";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
-import { toast } from "sonner";
+import { appToast } from "@/lib/toast-utils";
+import { getErrorMessage } from "@/lib/error-utils";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/shared/empty-page";
@@ -116,7 +117,7 @@ function JobTicketComponent() {
         }
       } catch (error) {
         console.error("Failed to fetch ticket for printing", error);
-        toast.error("Failed to load ticket details for printing");
+        appToast.error("Print Error", "Failed to load ticket details for printing");
       } finally {
         setIsLoading(false);
       }
@@ -173,12 +174,12 @@ function JobTicketComponent() {
           };
 
           await jobTicketsApi.update(id, payload as any);
-          toast.success(`Job Ticket status updated to ${status}`);
+          appToast.success("Status Updated", `Job Ticket status updated to ${status}`);
           await fetchData();
         }
       } catch (error) {
         console.error("Failed to update status", error);
-        toast.error("Failed to update status");
+        appToast.error("Update Failed", getErrorMessage(error));
       } finally {
         setIsLoading(false);
       }
@@ -193,16 +194,11 @@ function JobTicketComponent() {
     try {
       setIsLoading(true);
       await jobTicketsApi.delete(deleteId);
-      toast("Job Ticket Deleted", {
-        description: "Job Ticket has been deleted successfully.",
-      });
+      appToast.success("Job Ticket Deleted", "Job Ticket has been deleted successfully.");
       await fetchData();
     } catch (error) {
       console.error("Failed to delete inventory item");
-      toast("Failed to Delete Job Ticket", {
-        description:
-          "An error occurred while deleting the job ticket. Please try again.",
-      });
+      appToast.error("Delete Failed", getErrorMessage(error));
     } finally {
       setIsLoading(false);
       setDeleteId(null); // close popup
@@ -215,82 +211,40 @@ function JobTicketComponent() {
           title="Job Ticket Management"
           breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
         />
-        <Tabs
-          defaultValue="Grid-View"
-          className="w-full flex-1 flex flex-col gap-4"
-        >
-          <div className="flex flex-row justify-end gap-[24px]">
-            <div className="relative w-[320px]">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Job Number"
-                className="w-full pl-8"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-
-            <TabsList>
-              <TabsTrigger value="Grid-View">
-                <LayoutPanelTop />
-              </TabsTrigger>
-              <TabsTrigger value="Table-View">
-                <Table2 />
-              </TabsTrigger>
-            </TabsList>
-            <ExportButton data={data} filename="job-tickets" />
-            <Button onClick={() => router.push("/job-ticket/create")}>
-              <PlusIcon /> Create New
-            </Button>
-          </div>
-          {isLoading ? (
-            <PageLoader />
-          ) : data.length === 0 ? (
-            <EmptyState
-              title="No Job Tickets"
-              description="You haven't initiated any job tickets yet. Create a job ticket to start the production process."
-              createLabel="Create New Job Ticket"
-              createPath="/job-ticket/create"
+        <div className="flex flex-row justify-end gap-[24px]">
+          <div className="relative w-[320px]">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Job Number"
+              className="w-full pl-8"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
-          ) : (
-            <>
-              <TabsContent value="Grid-View">
-                <div className="grid gap-[24px] grid-cols-[repeat(auto-fill,minmax(450px,1fr))]">
-                  {data
-                    .filter((item) => {
-                      if (!search) return true;
-                      const s = search.toLowerCase();
-                      return (
-                        item.job_number?.toLowerCase().includes(s) ||
-                        item.job_name?.toLowerCase().includes(s) ||
-                        item.status?.toLowerCase().includes(s)
-                      );
-                    })
-                    .map((item: ALL_TICKETS) => (
-                      <JobTicketCard
-                        key={item.job_id}
-                        ticket={item}
-                        onEdit={handlers.onEdit}
-                        onDelete={handlers.onDelete}
-                        onView={handlers.onView}
-                        onDownload={handlers.onDownload}
-                        onStatusChange={handlers.onStatusChange}
-                      />
-                    ))}
-                </div>
-              </TabsContent>
-              <TabsContent value="Table-View">
-                <DataTable
-                  columns={columns}
-                  data={data}
-                  searchValue={search}
-                  searchColumn="job_id"
-                />
-              </TabsContent>
-            </>
-          )}
-        </Tabs>
+          </div>
+
+          <ExportButton data={data} filename="job-tickets" />
+          <Button onClick={() => router.push("/job-ticket/create")}>
+            <PlusIcon /> Create New
+          </Button>
+        </div>
+        {isLoading ? (
+          <PageLoader />
+        ) : data.length === 0 ? (
+          <EmptyState
+            title="No Job Tickets"
+            description="You haven't initiated any job tickets yet. Create a job ticket to start the production process."
+            createLabel="Create New Job Ticket"
+            createPath="/job-ticket/create"
+          />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={data}
+            searchValue={search}
+            searchColumn="job_id"
+          />
+        )}
       </div>
       <AlertDeleteDialog
         isOpen={deleteId !== null}

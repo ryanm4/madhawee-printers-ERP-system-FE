@@ -38,12 +38,14 @@ interface DataTableProps<TData, TValue> {
     filters?: { id: string; value: string }[]
 }
 
+const DEFAULT_FILTERS: { id: string; value: string }[] = []
+
 export function DataTable<TData, TValue>({
     columns,
     data,
     searchValue = "",
     searchColumn,
-    filters = [],
+    filters = DEFAULT_FILTERS,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = useState<SortingState>([])
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -61,11 +63,13 @@ export function DataTable<TData, TValue>({
     }, [searchValue])
 
     useEffect(() => {
-        setColumnFilters(
-            filters
-                .filter((f) => f.value !== "" && f.value !== "all")
-                .map((f) => ({ id: f.id, value: f.value }))
-        )
+        const nextFilters = filters
+            .filter((f) => f.value !== "" && f.value !== "all")
+            .map((f) => ({ id: f.id, value: f.value }))
+
+        if (JSON.stringify(columnFilters) !== JSON.stringify(nextFilters)) {
+            setColumnFilters(nextFilters)
+        }
     }, [filters])
 
     const table = useReactTable({

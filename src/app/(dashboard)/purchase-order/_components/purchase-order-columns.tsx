@@ -5,7 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { PURCHASE_ORDER } from "@/modules/purchase-order/types"
 import { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown, EyeIcon, MoreHorizontal, PencilIcon, TrashIcon, ArrowRightIcon } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/shared/status-badge"
 import { format } from "date-fns"
 import { getNextPurchaseOrderStatus } from "@/lib/status-workflow"
 
@@ -34,8 +34,28 @@ export const purchaseOrderColumns = (
             },
         },
         {
+            accessorKey: "customer_po",
+            header: "PO Number",
+            cell: ({ row }) => {
+                const po = row.original.customer_po;
+                return (
+                    <div className="font-semibold" title={po}>
+                        {po}
+                    </div>
+                )
+            }
+        },
+        {
             accessorKey: "customer.name",
             header: "Customer",
+            cell: ({ row }) => {
+                const name = row.original.customer?.name || "N/A";
+                return (
+                    <div className="max-w-[180px] truncate" title={name}>
+                        {name}
+                    </div>
+                )
+            }
         },
         {
             accessorKey: "po_date",
@@ -59,14 +79,7 @@ export const purchaseOrderColumns = (
             cell: ({ row }) => {
                 const status = row.original.status
                 return (
-                    <Badge
-                        className={`uppercase ${status === "COMPLETED" ? "bg-green-100 text-green-800" :
-                            status === "PENDING" ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-600 hover:text-white" :
-                                "bg-blue-100 text-blue-800"
-                            } px-2 py-1 rounded-md text-sm font-medium`}
-                    >
-                        {status || "N/A"}
-                    </Badge>
+                    <StatusBadge status={status || "N/A"} type="PURCHASE_ORDER" />
                 )
             },
         },

@@ -1,4 +1,5 @@
 "use client"
+import { StatusBadge } from "./shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -50,7 +51,7 @@ export function QuotationCard({
                         <FileText className="h-6 w-6" />
                     </div>
                     <div className="flex flex-col gap-1 min-w-0">
-                        <h3 className="font-medium leading-none tracking-tight truncate" title={quotation.company_name}>
+                        <h3 className="font-medium leading-tight line-clamp-2" title={quotation.company_name}>
                             {quotation.company_name}
                         </h3>
                         <p className="text-sm text-muted-foreground truncate">Ref: {quotation.quote_id}</p>
@@ -87,9 +88,9 @@ export function QuotationCard({
                     <Badge className="h-[32px] w-full justify-center rounded-md px-3 bg-primary hover:bg-primary/90 text-white text-sm font-medium">
                         {quotation.currency} {Number(quotation.net_total).toLocaleString()}
                     </Badge>
-                    <Badge variant="secondary" className="h-[32px] w-full justify-center rounded-md px-3 font-medium text-sm bg-muted hover:bg-muted/80 truncate">
-                        {quotation.status}
-                    </Badge>
+                    <div className="flex items-center justify-center h-[32px] w-full rounded-md px-3 bg-muted border border-border">
+                        <StatusBadge status={quotation.status} type="QUOTATION" />
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">

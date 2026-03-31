@@ -1,4 +1,4 @@
-"use client"
+import { StatusBadge } from "./shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -49,7 +49,7 @@ export function InventoryCard({
                         <Package className="h-6 w-6" />
                     </div>
                     <div className="flex flex-col gap-1 min-w-0">
-                        <h3 className="font-medium leading-none tracking-tight truncate" title={item.item_name}>
+                        <h3 className="font-medium leading-tight line-clamp-2" title={item.item_name}>
                             {item.item_name}
                         </h3>
                         <p className="text-sm text-muted-foreground truncate">{item.item_category} / {item.item_sub_category}</p>
@@ -85,9 +85,9 @@ export function InventoryCard({
                     )}>
                         {item.quantity} {item.unit_of_measure}
                     </Badge>
-                    <Badge variant="secondary" className="h-[32px] w-full justify-center rounded-md px-3 font-medium text-sm bg-muted hover:bg-muted/80 truncate">
-                        {item.status}
-                    </Badge>
+                    <div className="flex items-center justify-center h-[32px] w-full rounded-md px-3 bg-muted border border-border">
+                        <StatusBadge status={item.status} type="INVENTORY" />
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">

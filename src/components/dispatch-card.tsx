@@ -1,5 +1,5 @@
-"use client"
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "./shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -49,7 +49,7 @@ export function DispatchCard({
                         <Truck className="h-6 w-6" />
                     </div>
                     <div className="flex flex-col gap-1 min-w-0">
-                        <h3 className="font-medium leading-none tracking-tight truncate" title={dispatch.customer_name}>
+                        <h3 className="font-medium leading-tight line-clamp-2" title={dispatch.customer_name}>
                             {dispatch.customer_name}
                         </h3>
                         <p className="text-sm text-muted-foreground truncate">Note: #{dispatch.dispatch_id}</p>
@@ -86,9 +86,9 @@ export function DispatchCard({
                     <Badge className="h-[32px] w-full justify-center rounded-md px-3 bg-primary hover:bg-primary/90 text-white text-sm font-medium">
                         Qty: {dispatch.dispatch_qty}
                     </Badge>
-                    <Badge variant="secondary" className="h-[32px] w-full justify-center rounded-md px-3 font-medium text-sm bg-muted hover:bg-muted/80 truncate">
-                        {dispatch.status}
-                    </Badge>
+                    <div className="flex items-center justify-center h-[32px] w-full rounded-md px-3 bg-muted border border-border">
+                        <StatusBadge status={dispatch.status} type="DISPATCH_INVOICE" />
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">

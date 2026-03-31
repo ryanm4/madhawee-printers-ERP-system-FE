@@ -5,7 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { CUSTOMER } from "@/modules/customer/types"
 import { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown, EyeIcon, MoreHorizontal, PencilIcon, TrashIcon } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/shared/status-badge"
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
@@ -66,14 +66,7 @@ export const customerColumns = (
             cell: ({ row }) => {
                 const status = row.original.status
                 return (
-                    <Badge
-                        className={`uppercase ${status === "ACTIVE" ? "bg-green-100 text-green-800" :
-                            status === "INACTIVE" ? "bg-red-100 text-red-800 hover:bg-red-600 hover:text-white" :
-                                "bg-gray-100 text-gray-800 hover:bg-gray-600 hover:text-white"
-                            } px-2 py-1 rounded-md text-sm font-medium`}
-                    >
-                        {status || "N/A"}
-                    </Badge>
+                    <StatusBadge status={status || "N/A"} type="CUSTOMER" />
                 )
             },
         },

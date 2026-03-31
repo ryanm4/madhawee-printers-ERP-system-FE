@@ -9,7 +9,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Download, MoreHorizontal, PencilIcon, Printer, TrashIcon, ArrowRightIcon } from "lucide-react"
 import { QUOTATIONS } from "@/modules/quotations/types"
 import { ArrowUpDown } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/shared/status-badge";
 import { TaxTypes } from "@/config/enum"
 import { format } from "date-fns"
 import { getNextQuotationStatus } from "@/lib/status-workflow"
@@ -78,14 +78,8 @@ export const quotationColumns = (
                 }
                 const taxType = taxMap[taxId] ?? TaxTypes.NON
 
-                const colorClass = taxType === TaxTypes.NON ? "bg-gray-100 text-gray-800" :
-                    taxType === TaxTypes.SVAT ? "bg-yellow-100 text-yellow-800" :
-                        "bg-green-100 text-green-800"
-
                 return (
-                    <Badge className={`uppercase ${colorClass} px-2 py-1 rounded-md text-sm font-medium`}>
-                        {taxType}
-                    </Badge>
+                    <StatusBadge status={taxType} type="TAX" />
                 )
             }
         },
@@ -134,21 +128,7 @@ export const quotationColumns = (
             cell: ({ row }) => {
                 const status = row.original.status
                 return (
-                    <Badge
-                        className={`uppercase px-2 py-1 rounded-md text-sm font-medium transition-colors duration-200
-    ${status === "Created"
-                                ? "bg-blue-100 text-blue-800 hover:bg-blue-600 hover:text-white"
-                                : status === "Pending"
-                                    ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-600 hover:text-white"
-                                    : status === "Completed"
-                                        ? "bg-green-100 text-green-800 hover:bg-green-600 hover:text-white"
-                                        : "bg-gray-100 text-gray-800 hover:bg-gray-600 hover:text-white"
-                            }
-  `}
-                    >
-                        {status}
-                    </Badge>
-
+                    <StatusBadge status={status} type="QUOTATION" />
                 )
             },
         },

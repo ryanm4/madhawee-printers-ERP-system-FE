@@ -11,7 +11,7 @@ import { DispatchColumns } from "./_components/dispatch_columns";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 import { DataTable } from "./_components/dispatch_table";
 import { dispatchInventoryApi } from "@/modules/dispatch-invoice/api";
-import { toast } from "sonner";
+import { appToast } from "@/lib/toast-utils";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
@@ -41,7 +41,7 @@ function DispatchInvoiceManagement() {
       }
     } catch (error) {
       console.error("Failed to fetch dispatch records", error);
-      toast(getErrorMessage(error, "Failed to fetch dispatch records"));
+      appToast.error("Fetch Error", getErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
@@ -67,15 +67,11 @@ function DispatchInvoiceManagement() {
     try {
       setIsLoading(true);
       await dispatchInventoryApi.delete(deleteId);
-      toast("Dispatch Deleted", {
-        description: "Dispatch has been deleted successfully.",
-      });
+      appToast.success("Dispatch Deleted", "Dispatch has been deleted successfully.");
       await fetchData();
     } catch (error) {
       console.error("Failed to delete dispatch:", error);
-      toast("Failed to Delete Dispatch", {
-        description: getErrorMessage(error, "An error occurred while deleting the dispatch record. Please try again."),
-      });
+      appToast.error("Delete Failed", getErrorMessage(error));
     } finally {
       setIsLoading(false);
       setDeleteId(null); // close popup
@@ -88,80 +84,40 @@ function DispatchInvoiceManagement() {
         title="Dispatch & Invoice Management"
         breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
       />
-      <Tabs
-        defaultValue="Grid-View"
-        className="w-full flex-1 flex flex-col gap-4"
-      >
-        <div className="flex flex-row justify-end gap-[24px]">
-          <div className="relative w-[320px]">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search Customer"
-              className="w-full pl-8"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <TabsList>
-            <TabsTrigger value="Grid-View">
-              <LayoutPanelTop />
-            </TabsTrigger>
-            <TabsTrigger value="Table-View">
-              <Table2 />
-            </TabsTrigger>
-          </TabsList>
-          <ExportButton data={data} filename="dispatch-list" />
-          <Button onClick={() => router.push("/dispatch-invoice/create")}>
-            <PlusIcon /> Create New
-          </Button>
-        </div>
-        {isLoading ? (
-          <PageLoader />
-        ) : data.length === 0 ? (
-          <EmptyState
-            title="No Dispatch Records"
-            description="You haven't recorded any dispatches yet. Start processing your orders by creating your first record."
-            createLabel="Create New Dispatch"
-            createPath="/dispatch-invoice/create"
+      <div className="flex flex-row justify-end gap-[24px]">
+        <div className="relative w-[320px]">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search Customer"
+            className="w-full pl-8"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
-        ) : (
-          <>
-            <TabsContent value="Grid-View">
-              <div className="grid gap-[24px] grid-cols-[repeat(auto-fill,minmax(450px,1fr))]">
-                {data
-                  .filter((item) => {
-                    if (!search) return true;
-                    const s = search.toLowerCase();
-                    return (
-                      item.customer_name?.toLowerCase().includes(s) ||
-                      item.dispatch_id.toString().toLowerCase().includes(s) ||
-                      item.status?.toLowerCase().includes(s)
-                    );
-                  })
-                  .map((item: ALL_DISPATCH) => (
-                    <DispatchCard
-                      key={item.dispatch_id}
-                      dispatch={item}
-                      onEdit={handlers.onEdit}
-                      onDelete={handlers.onDelete}
-                      onView={handlers.onView}
-                    />
-                  ))}
-              </div>
-            </TabsContent>
-            <TabsContent value="Table-View">
-              <DataTable
-                columns={columns}
-                data={data}
-                searchValue={search}
-                searchColumn="customer_name"
-              />
-            </TabsContent>
-          </>
-        )}
-      </Tabs>
+        </div>
+
+        <ExportButton data={data} filename="dispatch-list" />
+        <Button onClick={() => router.push("/dispatch-invoice/create")}>
+          <PlusIcon /> Create New
+        </Button>
+      </div>
+      {isLoading ? (
+        <PageLoader />
+      ) : data.length === 0 ? (
+        <EmptyState
+          title="No Dispatch Records"
+          description="You haven't recorded any dispatches yet. Start processing your orders by creating your first record."
+          createLabel="Create New Dispatch"
+          createPath="/dispatch-invoice/create"
+        />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={data}
+          searchValue={search}
+          searchColumn="customer_name"
+        />
+      )}
     </div>
 
       <AlertDeleteDialog

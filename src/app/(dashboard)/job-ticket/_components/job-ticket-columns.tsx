@@ -5,7 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { ALL_TICKETS } from "@/modules/job-tickets/types"
 import { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown, EyeIcon, MoreHorizontal, PencilIcon, TrashIcon, ArrowRightIcon, Printer } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/shared/status-badge"
 import { format } from "date-fns"
 import { getNextJobTicketStatus } from "@/lib/status-workflow"
 
@@ -35,6 +35,18 @@ export const jobTicketColumns = (
             },
         },
         {
+            accessorKey: "job_name",
+            header: "Job Name",
+            cell: ({ row }) => {
+                const name = row.original.job_name;
+                return (
+                    <div className="max-w-[200px] font-medium leading-tight line-clamp-2" title={name}>
+                        {name}
+                    </div>
+                )
+            }
+        },
+        {
             accessorKey: "customer_po",
             header: "Purchase Order Number",
         },
@@ -59,15 +71,7 @@ export const jobTicketColumns = (
             cell: ({ row }) => {
                 const status = row.original.status
                 return (
-                    <Badge
-                        className={`uppercase ${status === "COMPLETED" ? "bg-green-100 text-green-800" :
-                            status === "PENDING" ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-600 hover:text-white" :
-                                status === "ACTIVE" ? "bg-blue-100 text-blue-800 hover:bg-blue-600 hover:text-white" :
-                                    "bg-gray-100 text-gray-800 hover:bg-gray-600 hover:text-white"
-                            } px-2 py-1 rounded-md text-sm font-medium`}
-                    >
-                        {status || "N/A"}
-                    </Badge>
+                    <StatusBadge status={status || "N/A"} type="JOB_TICKET" />
                 )
             },
         },

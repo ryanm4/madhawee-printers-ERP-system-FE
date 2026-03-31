@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutPanelTop, PlusIcon, Search, Table2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { appToast } from "@/lib/toast-utils";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
@@ -37,7 +37,7 @@ function PurchaseOrderPage() {
       setData(response.data);
     } catch (err) {
       console.error("Failed to fetch POs", err);
-      toast(getErrorMessage(err, "Failed to fetch purchase orders"));
+      appToast.error("Failed to fetch purchase orders", getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -47,15 +47,11 @@ function PurchaseOrderPage() {
     try {
       setLoading(true);
       await purchaseOrderApi.delete(id);
-      toast("Purchase Order Deleted", {
-        description: "The purchase order has been deleted successfully.",
-      });
+      appToast.success("Purchase Order Deleted", "The purchase order has been deleted successfully.");
       await fetchData();
     } catch (error) {
       console.error("Failed to delete PO:", error);
-      toast("Failed to Delete Purchase Order", {
-        description: getErrorMessage(error, "An error occurred while deleting the purchase order. Please try again."),
-      });
+      appToast.error("Failed to Delete Purchase Order", getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -74,10 +70,7 @@ function PurchaseOrderPage() {
           );
 
           if (hasIncompleteJobs) {
-            toast.warning("Cannot Complete Purchase Order", {
-              description:
-                "This Purchase Order has active Job Tickets. All linked Job Tickets must be COMPLETED first.",
-            });
+            appToast.warning("Cannot Complete Purchase Order", "This Purchase Order has active Job Tickets. All linked Job Tickets must be COMPLETED first.");
             setLoading(false);
             return;
           }
@@ -93,7 +86,7 @@ function PurchaseOrderPage() {
           TC_E_PR_No: data.TC_E_PR_No,
           updated_by: "admin", // Ideally from user context
           status: status,
-          customer_po: String(data.po_id), // Or specific field if different
+          customer_po: String(data.customer_po), 
           po_items: (data.po_items || []).map((item: any) => ({
             item_code: item.item_code,
             description: item.description,
@@ -103,14 +96,14 @@ function PurchaseOrderPage() {
           })),
         };
         await purchaseOrderApi.update(id, payload as any);
-        toast.success(`Purchase Order status updated to ${status}`);
+        appToast.success("Status Updated", `Purchase Order status updated to ${status}`);
         await fetchData();
       } else {
-        toast.error("Failed to fetch PO details for status update");
+        appToast.error("Data Error", "Failed to fetch PO details for status update");
       }
     } catch (error) {
       console.error("Status Update Error:", error);
-      toast.error(getErrorMessage(error, "Failed to update status"));
+      appToast.error("Update Failed", getErrorMessage(error));
     } finally {
       setLoading(false);
     }

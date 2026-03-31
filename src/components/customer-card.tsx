@@ -1,5 +1,4 @@
-"use client"
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "./shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -47,9 +46,9 @@ export function CustomerCard({
                         {customer.company_name?.charAt(0) || <Building2 className="h-6 w-6" />}
                     </div>
                     <div className="flex flex-col gap-1 min-w-0">
-                        <h3 className="font-medium leading-none tracking-tight truncate" title={customer.company_name}>
-                            {customer.company_name}
-                        </h3>
+                        <h3 className="font-medium leading-tight line-clamp-2" title={customer.company_name}>
+                             {customer.company_name}
+                         </h3>
                         <p className="text-sm text-muted-foreground truncate">{customer.customer_type}</p>
                     </div>
                 </div>
@@ -111,12 +110,7 @@ export function CustomerCard({
                     </div>
                     <div className="flex flex-col items-end gap-0.5 shrink-0 ml-4">
                         <span className="text-muted-foreground text-[12px] uppercase tracking-wider font-semibold">Status</span>
-                        <Badge variant="outline" className={cn(
-                            "font-bold capitalize",
-                            customer.status === "active" ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"
-                        )}>
-                            {customer.status}
-                        </Badge>
+                        <StatusBadge status={customer.status} type="CUSTOMER" />
                     </div>
                 </div>
             </CardContent>

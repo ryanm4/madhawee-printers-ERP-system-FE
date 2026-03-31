@@ -58,7 +58,7 @@ export function ReportsTable({ data }: ReportsTableProps) {
                 if (value === null || value === undefined) return "-";
                 if (typeof value === "boolean") return value ? "Yes" : "No";
                 return (
-                    <div className="max-w-[500px] min-w-[100px] break-words whitespace-pre-wrap">
+                    <div className="max-w-[300px] break-words whitespace-pre-wrap text-sm">
                         {String(value)}
                     </div>
                 );
