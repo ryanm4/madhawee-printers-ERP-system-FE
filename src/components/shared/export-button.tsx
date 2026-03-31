@@ -39,7 +39,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ data, filename }) =>
         if (!data || data.length === 0) return;
 
         try {
-            const doc = new jsPDF();
+            const doc = new jsPDF({ orientation: "landscape" });
             const keys = Object.keys(data[0]);
 
             // Format headers for display
@@ -58,10 +58,12 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ data, filename }) =>
                 head: [headers],
                 body: rows,
                 startY: 30,
-                styles: { fontSize: 8, cellPadding: 2 },
-                headStyles: { fillColor: [34, 63, 122], textColor: [255, 255, 255] }, // Matching primary color #223F7A
-                alternateRowStyles: { fillColor: [234, 236, 242] }, // Matching table body color #EAECF2
-                margin: { top: 30 },
+                styles: { fontSize: 8, cellPadding: 2, overflow: "linebreak" },
+                headStyles: { fillColor: [34, 63, 122], textColor: [255, 255, 255], minCellWidth: 15 },
+                alternateRowStyles: { fillColor: [234, 236, 242] },
+                margin: { top: 30, left: 10, right: 10 },
+                horizontalPageBreak: true,
+                horizontalPageBreakRepeat: 0,
             });
 
             doc.save(`${filename}.pdf`);

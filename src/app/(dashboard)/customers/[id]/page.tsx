@@ -13,12 +13,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { CloudUpload, FileArchive, X } from 'lucide-react'
+import { CloudUpload, FileArchive, X, Edit } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CustomerType, VatType } from '@/config/enum'
 import { CREATE_CUSTOMER } from '@/modules/customer/types'
 import { CustomerApi } from '@/modules/customer/api'
 import { toast } from 'sonner'
+import { FullPageLoader } from "@/components/shared/loader";
 
 type CustomerFormValues = z.infer<typeof customerSchema>
 
@@ -151,6 +152,7 @@ function ViewCustomerRelationship() {
     }, [supplierType, form]);
     return (
         <div className='flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3'>
+            {isLoading && <FullPageLoader />}
             <PageTitleWithBreadcrumb
                 title="View Customer"
                 breadcrumbs={[
@@ -162,7 +164,22 @@ function ViewCustomerRelationship() {
 
             <Form {...form}>
                 <form className='space-y-6  pb-0'>
-
+                    <div className="flex items-center justify-end gap-3 w-full mt-6 mb-4">
+                        <Button
+                            variant="outline"
+                            type="button"
+                            onClick={() => router.push("/customers")}
+                        >
+                            Back to List
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={() => router.push(`/customers/${id}/edit`)}
+                            className="bg-primary hover:bg-primary/90"
+                        >
+                            <Edit className="mr-2 h-4 w-4" /> Edit Customer
+                        </Button>
+                    </div>
 
                     <div className='grid grid-cols-2 md:grid-cols-2 gap-4'>
                         <Card className={cn("w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col")}>

@@ -17,6 +17,11 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarInput,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+  SidebarRail,
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
@@ -35,51 +40,100 @@ import Image from "next/image";
 import company_logo from "@/assets/Images/company_logo.jpeg";
 
 const data = {
-  navMain: [
+  user: {
+    name: "Admin User",
+    email: "admin@madhawee.com",
+    avatar: "/avatars/admin.png",
+  },
+  navGroups: [
     {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: LayoutDashboard,
+      title: "Main",
+      items: [
+        {
+          title: "Dashboard",
+          url: "/dashboard",
+          icon: LayoutDashboard,
+        },
+      ],
     },
     {
-      title: "Quotations",
-      url: "/quotation-management",
-      icon: FileText,
+      title: "Sales & CRM",
+      items: [
+        {
+          title: "Quotations",
+          url: "/quotation-management",
+          icon: FileText,
+        },
+        {
+          title: "Customers",
+          url: "/customers",
+          icon: Users,
+        },
+      ],
     },
     {
-      title: "Purchase Orders",
-      url: "/purchase-order",
-      icon: ShoppingCart,
-    },
-    {
-      title: "Job Tickets",
-      url: "/job-ticket",
-      icon: ClipboardCheck,
-    },
-    {
-      title: "Dispatch and Invoice",
-      url: "/dispatch-invoice",
-      icon: Truck,
+      title: "Production",
+      items: [
+        {
+          title: "Purchase Orders",
+          url: "/purchase-order",
+          icon: ShoppingCart,
+        },
+        {
+          title: "Job Tickets",
+          url: "/job-ticket",
+          icon: ClipboardCheck,
+        },
+        {
+          title: "Dispatch & Invoice",
+          url: "/dispatch-invoice",
+          icon: Truck,
+        },
+      ],
     },
     {
       title: "Inventory",
-      icon: Warehouse,
-      url: "/inventory",
+      items: [
+        {
+          title: "Inventory and Stock",
+          icon: Warehouse,
+          url: "/inventory",
+          items: [
+            {
+              title: "Inventory List",
+              url: "/inventory",
+            },
+            {
+              title: "GRN",
+              url: "/inventory/grn",
+            },
+            {
+              title: "Issue Notes",
+              url: "/inventory/issue-notes",
+            },
+          ],
+        },
+      ],
     },
     {
-      title: "Customers",
-      icon: Users,
-      url: "/customers",
-    },
-    {
-      title: "Users",
-      icon: SquareUser,
-      url: "/users",
-    },
-    {
-      title: "Reports",
-      icon: ChartNoAxesCombined,
-      url: "/reports",
+      title: "System",
+      items: [
+        {
+          title: "Users",
+          icon: SquareUser,
+          url: "/users",
+        },
+        {
+          title: "Reports",
+          icon: ChartNoAxesCombined,
+          url: "/reports",
+        },
+        {
+          title: "Settings",
+          icon: Settings,
+          url: "/settings",
+        },
+      ],
     },
   ],
 };
@@ -91,11 +145,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
+              size="lg"
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
               <a href="/dashboard">
-                <div className="flex aspect-square size-8 items-center justify-center    text-sidebar-primary-foreground">
+                <div className="flex aspect-square size-8 items-center justify-center ">
                   <Image
                     src={company_logo}
                     alt="Madhawee Printers"
@@ -109,19 +164,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <span className="truncate font-semibold">
                     Madhawee Printers
                   </span>
-                  <span className="truncate text-xs">ERP System</span>
+                  <span className="truncate text-xs">v1.0.5</span>
                 </div>
+                <IconInnerShadowTop className="ml-auto size-4 opacity-50" />
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={data.navMain} />
+      <SidebarContent className="gap-0">
+        {data.navGroups.map((group) => (
+          <SidebarGroup key={group.title} className="py-1">
+            <SidebarGroupLabel className="h-5 mb-0 px-2 text-xs font-semibold">{group.title}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <NavMain items={group.items} />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
       <SidebarFooter>
         <NavUser />
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }

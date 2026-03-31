@@ -1,13 +1,13 @@
 "use client"
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Barcode, Calendar, DeleteIcon, EyeIcon, FileText, MoreVertical, PencilIcon, PlusIcon, Ticket, TrashIcon, Truck } from "lucide-react";
+import { Barcode, Calendar, FileText, MoreVertical, PencilIcon, PlusIcon, Ticket, TrashIcon, Truck, EyeIcon } from "lucide-react";
 import React, { useState } from "react";
 import { CreateJobTicketDialog } from "../app/(dashboard)/job-ticket/_components/create-job-ticket-dialog";
 
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 import { useRouter } from "next/navigation";
 import { PURCHASE_ORDER_JOBS } from "@/modules/purchase-order/types";
@@ -15,9 +15,8 @@ import { format } from "date-fns"
 import { getNextPurchaseOrderStatus } from "@/lib/status-workflow";
 import { JobTicketStatus, PurchaseOrderStatus } from "@/config/enum";
 import { ArrowRightIcon } from "lucide-react";
-import { toast } from "sonner";
-
-
+import { appToast } from "@/lib/toast-utils";
+import { Badge } from "./ui/badge";
 
 export interface PurchaseOrderCardProps {
     companyName: string;
@@ -76,17 +75,17 @@ export function PurchaseOrderCard({
 
     return (
         <>
-            <Card className={cn("w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col", className)}>
+            <Card className={cn("w-full shadow-sm hover:shadow-md transition-shadow flex flex-col", className)}>
                 <CardHeader className="flex flex-row items-start justify-between space-y-0 p-6 pb-2 shrink-0">
                     <div className="flex items-center gap-4">
                         <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                             <FileText className="h-6 w-6" />
                         </div>
                         <div className="flex flex-col gap-1">
-                            <h3 className="font-medium  leading-none tracking-tight">
+                            <h3 className="font-medium leading-none tracking-tight truncate" title={companyName}>
                                 {companyName}
                             </h3>
-                            <p className="text-sm text-extralight">{contactEmail}</p>
+                            <p className="text-sm text-extralight truncate" title={contactEmail}>{contactEmail}</p>
                         </div>
                     </div>
                     <DropdownMenu modal={false}>
@@ -109,9 +108,7 @@ export function PurchaseOrderCard({
                                                         );
 
                                                         if (hasIncompleteJobs) {
-                                                            toast.warning("Cannot Complete Purchase Order", {
-                                                                description: "This Purchase Order has active Job Tickets. All linked Job Tickets must be COMPLETED first.",
-                                                            });
+                                                            appToast.warning("Cannot Complete Purchase Order", "This Purchase Order has active Job Tickets. All linked Job Tickets must be COMPLETED first.");
                                                             return;
                                                         }
                                                     }
@@ -166,29 +163,33 @@ export function PurchaseOrderCard({
                         <Badge className="h-[40px] w-full justify-center rounded-md px-4 bg-primary hover:bg-primary/90 text-white text-md font-medium">
                             {additionalJobs} Jobs More
                         </Badge>
-                        <Badge variant="secondary" className="h-[40px] w-full justify-center rounded-md px-4 font-medium text-md bg-muted hover:bg-muted/80">
-                            {status}
-                        </Badge>
+                        <div className="flex items-center justify-center">
+                            <StatusBadge 
+                                status={status} 
+                                type="PURCHASE_ORDER" 
+                                className="w-full h-[40px] rounded-md text-md px-4"
+                            />
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-4 mb-8">
-                        <div className="flex flex-col gap-1">
-                            <span className="text-sm text-muted-foreground flex items-center gap-2">
+                        <div className="flex flex-col gap-1 min-w-0">
+                            <span className="text-sm text-muted-foreground flex items-center gap-2 whitespace-nowrap">
                                 PO Number <span className="font-mono tracking-widest text-md"><Barcode className="h-5 w-5" /></span>
                             </span>
-                            <span className="font-semibold text-sm">{customer_po}</span>
+                            <span className="font-semibold text-sm truncate" title={customer_po}>{customer_po}</span>
                         </div>
-                        <div className="flex flex-col gap-1">
-                            <span className="text-md text-muted-foreground flex items-center gap-2">
+                        <div className="flex flex-col gap-1 min-w-0">
+                            <span className="text-md text-muted-foreground flex items-center gap-2 whitespace-nowrap">
                                 PO Date <Calendar className="h-5 w-5" />
                             </span>
-                            <span className="font-semibold text-sm">{new Date(poDate).toLocaleDateString()}</span>
+                            <span className="font-semibold text-sm truncate">{new Date(poDate).toLocaleDateString()}</span>
                         </div>
-                        <div className="flex flex-col gap-1">
-                            <span className="text-md text-muted-foreground flex items-center gap-2">
+                        <div className="flex flex-col gap-1 min-w-0">
+                            <span className="text-md text-muted-foreground flex items-center gap-2 whitespace-nowrap">
                                 Delivery Date <Truck className="h-5 w-5" />
                             </span>
-                            <span className="font-semibold text-sm">{new Date(deliveryDate).toLocaleDateString()}</span>
+                            <span className="font-semibold text-sm truncate">{new Date(deliveryDate).toLocaleDateString()}</span>
                         </div>
                     </div>
 
@@ -199,18 +200,18 @@ export function PurchaseOrderCard({
 
                                     <Ticket className="h-8 w-8" />
 
-                                    <div className="flex flex-col gap-0.5">
-                                        <span className="text-[14px] text-muted-foreground line-clamp-1">
+                                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                                        <span className="text-[14px] text-muted-foreground truncate">
                                             {job.job_id}
                                         </span>
-                                        <span className="text-[16px] font-medium leading-none">
+                                        <span className="text-[14px] font-medium leading-tight line-clamp-2" title={job.job_name}>
                                             {job.job_name}
                                         </span>
                                     </div>
                                 </div>
-                                <div className="flex flex-col items-end gap-0.5">
+                                <div className="flex flex-col items-end gap-0.5 shrink-0 min-w-fit ml-2">
                                     <span className="text-[14px] text-muted-foreground">{format(new Date(job.job_open_date), "dd MMM yyyy")}</span>
-                                    <span className="text-[18px] font-light text-muted-foreground">{job.status}</span>
+                                    <StatusBadge status={job.status} type="JOB_TICKET" />
                                 </div>
                             </div>
                         ))}

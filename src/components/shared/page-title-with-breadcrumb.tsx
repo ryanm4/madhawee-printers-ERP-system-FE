@@ -1,5 +1,5 @@
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb'
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 
 interface PageTitleWithBreadcrumbProps {
     title?: string
@@ -14,21 +14,35 @@ function PageTitleWithBreadcrumb({
     isDashboard = false,
     userName = "John Doe"
 }: PageTitleWithBreadcrumbProps) {
+    const [currentTime, setCurrentTime] = useState(new Date())
+
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+        return () => clearInterval(timer)
+    }, [])
 
     const getGreeting = () => {
-        const hour = new Date().getHours()
+        const hour = currentTime.getHours()
         if (hour < 12) return "Good Morning"
         if (hour < 18) return "Good Afternoon"
         return "Good Evening"
     }
 
     const formatDate = () => {
-        const date = new Date()
-        return date.toLocaleDateString('en-US', {
+        return currentTime.toLocaleDateString('en-US', {
             weekday: 'long',
             month: 'long',
             day: 'numeric',
             year: 'numeric'
+        })
+    }
+
+    const formatTime = () => {
+        return currentTime.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
         })
     }
 
@@ -37,9 +51,9 @@ function PageTitleWithBreadcrumb({
             <div className="flex flex-col gap-1">
                 <span className="text-sm text-muted-foreground">Dashboard</span>
                 <h1 className="text-2xl font-semibold tracking-tight">
-                    {getGreeting()}, {userName}
+                    {getGreeting()}
                 </h1>
-                <p className="text-sm text-muted-foreground">{formatDate()}</p>
+                <p className="text-sm text-muted-foreground">{formatDate()} · {formatTime()}</p>
             </div>
         )
     }

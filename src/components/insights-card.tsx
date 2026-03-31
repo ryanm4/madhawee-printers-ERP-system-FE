@@ -1,8 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertCircle, CheckCircle, TrendingDown } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface InsightsCardProps {
     insights: string[];
+    className?: string;
 }
 
 const getInsightIcon = (insight: string) => {
@@ -19,9 +21,9 @@ const getInsightIcon = (insight: string) => {
     return <AlertCircle className="h-5 w-5 text-blue-500" />
 }
 
-export function InsightsCard({ insights }: InsightsCardProps) {
+export function InsightsCard({ insights, className }: InsightsCardProps) {
     return (
-        <Card className="h-full">
+        <Card className={cn("h-full", className)}>
             <CardHeader>
                 <CardTitle>Key Insights</CardTitle>
                 <CardDescription>Important observations from your data</CardDescription>

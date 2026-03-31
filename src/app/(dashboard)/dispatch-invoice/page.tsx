@@ -11,10 +11,13 @@ import { DispatchColumns } from "./_components/dispatch_columns";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 import { DataTable } from "./_components/dispatch_table";
 import { dispatchInventoryApi } from "@/modules/dispatch-invoice/api";
-import { toast } from "sonner";
+import { appToast } from "@/lib/toast-utils";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LayoutPanelTop, Table2 } from "lucide-react";
+import { DispatchCard } from "@/components/dispatch-card";
 
 function DispatchInvoiceManagement() {
   const router = useRouter();
@@ -38,20 +41,25 @@ function DispatchInvoiceManagement() {
       }
     } catch (error) {
       console.error("Failed to fetch dispatch records", error);
-      toast(getErrorMessage(error, "Failed to fetch dispatch records"));
+      appToast.error("Fetch Error", getErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const columns = DispatchColumns({
-    onEdit: (id) => {
+  const handlers = {
+    onEdit: (id: string | number) => {
       router.push(`/dispatch-invoice/${id}/edit`);
     },
-    onDelete: (id) => {
-      setDeleteId(id);
+    onDelete: (id: string | number) => {
+      setDeleteId(Number(id));
     },
-  });
+    onView: (id: string | number) => {
+      router.push(`/dispatch-invoice/${id}/view`);
+    },
+  };
+
+  const columns = DispatchColumns(handlers);
 
   const handleDelete = async () => {
     if (deleteId === null) return;
@@ -59,15 +67,11 @@ function DispatchInvoiceManagement() {
     try {
       setIsLoading(true);
       await dispatchInventoryApi.delete(deleteId);
-      toast("Dispatch Deleted", {
-        description: "Dispatch has been deleted successfully.",
-      });
+      appToast.success("Dispatch Deleted", "Dispatch has been deleted successfully.");
       await fetchData();
     } catch (error) {
       console.error("Failed to delete dispatch:", error);
-      toast("Failed to Delete Dispatch", {
-        description: getErrorMessage(error, "An error occurred while deleting the dispatch record. Please try again."),
-      });
+      appToast.error("Delete Failed", getErrorMessage(error));
     } finally {
       setIsLoading(false);
       setDeleteId(null); // close popup
@@ -76,45 +80,45 @@ function DispatchInvoiceManagement() {
   return (
     <>
       <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-        <PageTitleWithBreadcrumb
-          title="Dispatch and Invoice Management"
-          breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
-        />
-        <div className="flex flex-row justify-end gap-[24px]">
-          <div className="relative w-[320px]">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Dispatch"
-              className="w-full pl-8"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <ExportButton data={data} filename="dispatch-invoices" />
-          <Button onClick={() => router.push("/dispatch-invoice/create")}>
-            <PlusIcon /> Create New
-          </Button>
+      <PageTitleWithBreadcrumb
+        title="Dispatch & Invoice Management"
+        breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
+      />
+      <div className="flex flex-row justify-end gap-[24px]">
+        <div className="relative w-[320px]">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search Customer"
+            className="w-full pl-8"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-        {isLoading ? (
-          <PageLoader />
-        ) : data.length === 0 ? (
-          <EmptyState
-            title="No Dispatch Records"
-            description="There are no dispatch notes or invoices recorded yet. Start by creating a NEW dispatch note."
-            createLabel="Create New Dispatch"
-            createPath="/dispatch-invoice/create"
-          />
-        ) : (
-          <DataTable
-            columns={columns}
-            data={data}
-            searchValue={search}
-            searchColumn="dispatch_note"
-          />
-        )}
+
+        <ExportButton data={data} filename="dispatch-list" />
+        <Button onClick={() => router.push("/dispatch-invoice/create")}>
+          <PlusIcon /> Create New
+        </Button>
       </div>
+      {isLoading ? (
+        <PageLoader />
+      ) : data.length === 0 ? (
+        <EmptyState
+          title="No Dispatch Records"
+          description="You haven't recorded any dispatches yet. Start processing your orders by creating your first record."
+          createLabel="Create New Dispatch"
+          createPath="/dispatch-invoice/create"
+        />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={data}
+          searchValue={search}
+          searchColumn="customer_name"
+        />
+      )}
+    </div>
 
       <AlertDeleteDialog
         isOpen={deleteId !== null}

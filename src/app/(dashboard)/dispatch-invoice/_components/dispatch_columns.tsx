@@ -8,7 +8,7 @@ import {
 import { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown, MoreHorizontal, PencilIcon, TrashIcon } from "lucide-react"
 import { ALL_DISPATCH } from "@/modules/dispatch-invoice/types"
-import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/shared/status-badge"
 
 interface DispatchTableActions {
     onEdit: (id: string | number) => void
@@ -60,16 +60,8 @@ export const DispatchColumns = (
             accessorKey: "status",
             header: "Status",
             cell: ({ row }) => {
-                const status = row.original.status
                 return (
-                    <Badge
-                        className={`uppercase ${status === "COMPLETED" ? "bg-green-100 text-green-800 hover:bg-green-600 hover:text-white" :
-                            status === "PENDING" ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-600 hover:text-white" :
-                                "bg-gray-100 text-gray-800 hover:bg-gray-600 hover:text-white"
-                            } px-2 py-1 rounded-md text-sm font-medium`}
-                    >
-                        {status}
-                    </Badge>
+                    <StatusBadge status={status || "N/A"} type="DISPATCH_INVOICE" />
                 )
             },
         },

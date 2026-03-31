@@ -11,17 +11,12 @@ import React, { useEffect, useState } from "react";
 import { DataTable } from "./_components/inventory_table";
 import { inventoryColumns } from "./_components/inventory_columns";
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
-import { toast } from "sonner";
+import { appToast } from "@/lib/toast-utils";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { useMemo } from "react";
 import {
   Popover,
   PopoverContent,
@@ -59,39 +54,39 @@ function InventoryManagement() {
       }
     } catch (error) {
       console.error("Failed to fetch inventory", error);
-      toast(getErrorMessage(error, "Failed to fetch inventory"));
+      appToast.error("Failed to fetch inventory", getErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const columns = inventoryColumns({
-    onEdit: (id) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handlers = useMemo(() => ({
+    onEdit: (id: number) => {
       router.push(`/inventory/${id}/edit`);
     },
-    onDelete: (id) => {
+    onDelete: (id: number) => {
       setDeleteId(id);
     },
-  });
+  }), [router]);
+
+  const columns = useMemo(() => inventoryColumns(handlers), [handlers]);
 
   const handleDelete = async () => {
     if (deleteId === null) return;
 
     try {
-      setIsLoading(true);
+      setIsDeleting(true);
       await inventoryApi.delete(deleteId);
-      toast("Inventory Item Deleted", {
-        description: "Inventory item has been deleted successfully.",
-      });
+      appToast.success("Inventory Item Deleted", "The item has been successfully removed from inventory.");
       await fetchData();
     } catch (error) {
       console.error("Failed to delete inventory item", error);
-      toast("Failed to Delete Inventory Item", {
-        description: getErrorMessage(error, "An error occurred while deleting the inventory item. Please try again."),
-      });
+      appToast.error("Failed to Delete Item", getErrorMessage(error));
     } finally {
-      setIsLoading(false);
-      setDeleteId(null); // close popup
+      setIsDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -116,6 +111,7 @@ function InventoryManagement() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+
           <Popover open={sizeOpen} onOpenChange={setSizeOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -207,10 +203,13 @@ function InventoryManagement() {
         )}
       </div>
 
-      <AlertDeleteDialog
-        isOpen={deleteId !== null}
-        onClose={() => setDeleteId(null)}
-        handleSubmit={handleDelete}
+      <DeleteConfirmationDialog
+        open={deleteId !== null}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Inventory Item"
+        description="Are you sure you want to delete this inventory item? This action cannot be undone."
+        loading={isDeleting}
       />
     </>
   );

@@ -111,6 +111,7 @@ function CreatePurchaseOrder() {
     tceprNo: "",
     purchaseOrderType: PurchaseOrderType.TIEP,
     batchRef: "",
+    salesRef: "",
     poDate: new Date(),
     itemDetails: [
       { itemCode: "", description: "", quantity: "", unit: "", price: "" },
@@ -148,6 +149,7 @@ function CreatePurchaseOrder() {
         customer_id: data.customer ? parseInt(data.customer) : 0,
         po_type_id: poTypeMap[data.purchaseOrderType] || 1,
         batch_ref: data.batchRef,
+        sales_ref: data.salesRef,
         po_date:
           data.poDate instanceof Date ? formatDate(data.poDate) : data.poDate,
         TC_E_PR_No: data.tceprNo,
@@ -415,15 +417,26 @@ function CreatePurchaseOrder() {
                     </FormItem>
                   ))}
                 </div>
-                {renderFormField("batchRef", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>Batch Ref</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter Batch Ref" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                ))}
+                <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+                  {renderFormField("batchRef", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Batch Ref</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter Batch Ref" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                  {renderFormField("salesRef", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sales Ref</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter Sales Ref" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                </div>
 
                 {renderFormField("poDate", ({ field }) => (
                   <FormItem>

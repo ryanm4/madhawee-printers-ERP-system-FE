@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { getErrorMessage } from "@/lib/error-utils";
 import { Input } from "@/components/ui/input";
-import { PlusIcon, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QUOTATIONS } from "@/modules/quotations/types";
 import { quotationColumns } from "./_components/quotation_columns";
@@ -12,7 +11,10 @@ import { quotationApi } from "@/modules/quotations/api";
 import { CustomerApi } from "@/modules/customer/api";
 import { DataTable } from "./_components/quotation_table";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
-import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LayoutPanelTop, PlusIcon, Search, Table2 } from "lucide-react";
+import { QuotationCard } from "@/components/quotation-card";
+import { appToast } from "@/lib/toast-utils";
 import { EmptyState } from "@/components/shared/empty-page";
 import { generateQuotationPDF } from "@/components/pdf-generator";
 import { ExportButton } from "@/components/shared/export-button";
@@ -25,14 +27,14 @@ function QuotationsManagement() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
 
-  const columns = quotationColumns({
-    onEdit: (id) => {
+  const handlers = {
+    onEdit: (id: string | number) => {
       router.push(`/quotation-management/${id}/edit`);
     },
-    onDelete: (id) => {
+    onDelete: (id: string | number) => {
       setDeleteId(Number(id));
     },
-    async onDownload(id) {
+    async onDownload(id: string | number) {
       try {
         const response = await quotationApi.getById(Number(id));
         if (response.data) {
@@ -67,17 +69,17 @@ function QuotationsManagement() {
 
           await generateQuotationPDF(pdfData);
         } else {
-          toast.error("Failed to load quotation details");
+          appToast.error("Data Error", "Failed to load quotation details");
         }
       } catch (error) {
         console.error("PDF Download Error:", error);
-        toast.error(getErrorMessage(error, "Could not download PDF"));
+        appToast.error("Download Error", getErrorMessage(error));
       }
     },
-    async onStatusChange(id, status) {
+    async onStatusChange(id: string | number, status: string) {
       try {
         setLoading(true);
-        const response = await quotationApi.getById(id);
+        const response = await quotationApi.getById(Number(id));
         if (response.data) {
           const data = response.data as any;
           const payload = {
@@ -105,20 +107,22 @@ function QuotationsManagement() {
               item_total_price: String(item.item_total_price),
             })),
           };
-          await quotationApi.update(id, payload as any);
-          toast.success(`Quotation status updated to ${status}`);
+          await quotationApi.update(Number(id), payload as any);
+          appToast.success("Status Updated", `Quotation status updated to ${status}`);
           await fetchData();
         } else {
-          toast.error("Failed to fetch quotation details for status update");
+          appToast.error("Update Error", "Failed to fetch quotation details for status update");
         }
       } catch (error) {
         console.error("Status Update Error:", error);
-        toast.error(getErrorMessage(error, "Failed to update status"));
+        appToast.error("Update Failed", getErrorMessage(error));
       } finally {
         setLoading(false);
       }
     },
-  });
+  };
+
+  const columns = quotationColumns(handlers);
 
   useEffect(() => {
     fetchData();
@@ -134,7 +138,7 @@ function QuotationsManagement() {
       }
     } catch (error) {
       console.error("Failed to fetch quotation", error);
-      toast(getErrorMessage(error, "Failed to fetch quotation"));
+      appToast.error("Fetch Error", getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -145,15 +149,11 @@ function QuotationsManagement() {
     try {
       setLoading(true);
       await quotationApi.delete(deleteId);
-      toast("Quotation Deleted", {
-        description: `Quotation has been deleted successfully.`,
-      });
+      appToast.success("Quotation Deleted", "Quotation has been deleted successfully.");
       await fetchData();
     } catch (error) {
       console.error(error);
-      toast("Failed to Delete Quotation", {
-        description: getErrorMessage(error, "An error occurred while deleting the quotation. Please try again."),
-      });
+      appToast.error("Delete Failed", getErrorMessage(error));
     } finally {
       setLoading(false);
       setDeleteId(null);
@@ -200,7 +200,6 @@ function QuotationsManagement() {
           searchColumn="quote_id"
         />
       )}
-
       <AlertDeleteDialog
         isOpen={deleteId !== null}
         onClose={() => setDeleteId(null)}

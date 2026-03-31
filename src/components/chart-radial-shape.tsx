@@ -1,5 +1,6 @@
 "use client"
 
+import { cn } from "@/lib/utils"
 import { TrendingUp } from "lucide-react"
 import {
     Label,
@@ -44,15 +45,8 @@ export function ChartRadialShape({
     footerTitle,
     footerDescription
 }: ChartRadialShapeProps) {
-
-    const chartData = [
-        { name: label, value: completed, fill: color },
-    ]
-
-    // Calculate the end angle based on completion percentage
-    // Start at 90 degrees, and add up to 360 degrees based on completion
-    const completionPercentage = total > 0 ? (completed / total) : 0;
-    const endAngle = 90 + (360 * completionPercentage);
+    const percentage = total > 0 ? (completed / total) * 100 : 0;
+    const data = [{ name: label, value: percentage, fill: color }];
 
     const chartConfig = {
         value: {
@@ -65,30 +59,35 @@ export function ChartRadialShape({
     } satisfies ChartConfig
 
     return (
-        <Card className="flex flex-col">
-            <CardHeader className="items-center pb-0">
-                <CardTitle>{title}</CardTitle>
-                <CardDescription>{description}</CardDescription>
+        <Card className="flex flex-col border-none shadow-sm rounded-[2rem] bg-white group hover:shadow-md transition-all h-full">
+            <CardHeader className="p-8 pb-0">
+                <CardTitle className="text-xl font-bold text-gray-900">{title}</CardTitle>
+                <CardDescription className="text-sm text-gray-400">{description}</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 pb-0">
+            <CardContent className="flex-1 p-0 flex flex-col justify-center">
                 <ChartContainer
                     config={chartConfig}
-                    className="mx-auto aspect-square max-h-[250px]"
+                    className="mx-auto aspect-square w-full max-w-[200px]"
                 >
                     <RadialBarChart
-                        data={chartData}
-                        startAngle={90}
-                        endAngle={endAngle}
-                        innerRadius={80}
-                        outerRadius={140}
+                        data={data}
+                        startAngle={180}
+                        endAngle={-180}
+                        innerRadius="75%"
+                        outerRadius="100%"
+                        barSize={15}
                     >
-                        {/* Setting domain to [0, total] ensures the bar fills proportionally */}
-                        <PolarRadiusAxis
-                            type="number"
-                            domain={[0, total || 1]}
-                            tick={false}
-                            tickLine={false}
-                            axisLine={false}
+                        <RadialBar
+                            dataKey="value"
+                            background={{ fill: '#f3f4f6' }}
+                            cornerRadius={30}
+                        />
+                        <PolarRadiusAxis 
+                           type="number" 
+                           domain={[0, 100]} 
+                           tick={false} 
+                           tickLine={false} 
+                           axisLine={false}
                         >
                             <Label
                                 content={({ viewBox }) => {
@@ -103,16 +102,16 @@ export function ChartRadialShape({
                                                 <tspan
                                                     x={viewBox.cx}
                                                     y={viewBox.cy}
-                                                    className="fill-foreground text-4xl font-bold"
+                                                    className="fill-gray-900 text-5xl font-black tracking-tighter"
                                                 >
-                                                    {total.toLocaleString()}
+                                                    {total}
                                                 </tspan>
                                                 <tspan
                                                     x={viewBox.cx}
-                                                    y={(viewBox.cy || 0) + 24}
-                                                    className="fill-muted-foreground"
+                                                    y={(viewBox.cy || 0) + 25}
+                                                    className="fill-gray-400 text-sm font-bold uppercase tracking-widest"
                                                 >
-                                                    {label}
+                                                  {label}
                                                 </tspan>
                                             </text>
                                         )
@@ -120,21 +119,14 @@ export function ChartRadialShape({
                                 }}
                             />
                         </PolarRadiusAxis>
-
-                        <RadialBar
-                            dataKey="value"
-                            background
-                            cornerRadius={10}
-                        />
-
                     </RadialBarChart>
                 </ChartContainer>
             </CardContent>
-            <CardFooter className="flex-col gap-2 text-sm">
-                <div className="flex items-center gap-2 leading-none font-medium">
-                    {footerTitle} <TrendingUp className="h-4 w-4" />
+            <CardFooter className="p-8 pt-0 flex-col gap-1 items-start">
+                <div className="flex items-center gap-2 leading-none font-bold text-gray-700">
+                    {footerTitle} <TrendingUp className={cn("h-4 w-4", percentage > 80 ? "text-green-500" : "text-gray-400")} />
                 </div>
-                <div className="text-muted-foreground leading-none">
+                <div className="text-gray-400 text-xs font-medium">
                     {footerDescription}
                 </div>
             </CardFooter>

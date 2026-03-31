@@ -2,21 +2,24 @@
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlusIcon, Search } from "lucide-react";
+import { LayoutPanelTop, PlusIcon, Search, Table2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { DataTable } from "./_components/job-ticket-table";
 import { jobTicketColumns } from "./_components/job-ticket-columns";
 import { ALL_TICKETS, JobTicketPrintData } from "@/modules/job-tickets/types";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
-import { toast } from "sonner";
+import { appToast } from "@/lib/toast-utils";
+import { getErrorMessage } from "@/lib/error-utils";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
 import { JobTicketPrintDialog, handleJobTicketPrint } from "./_components/job-ticket-print-dialog";
 import { CustomerApi } from "@/modules/customer/api";
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
+import { JobTicketCard } from "@/components/job-ticket-card";
 
 function JobTicketComponent() {
   const router = useRouter();
@@ -45,17 +48,17 @@ function JobTicketComponent() {
     }
   };
 
-  const columns = jobTicketColumns({
-    onEdit: (id) => {
+  const handlers = {
+    onEdit: (id: number) => {
       router.push(`/job-ticket/${id}/edit`);
     },
-    onDelete: (id) => {
+    onDelete: (id: number) => {
       setDeleteId(id);
     },
-    onView: (id) => {
+    onView: (id: number) => {
       router.push(`/job-ticket/${id}`);
     },
-    onDownload: async (id) => {
+    onDownload: async (id: number) => {
       try {
         setIsLoading(true);
         const [ticketResponse, customersResponse] = await Promise.all([
@@ -114,12 +117,12 @@ function JobTicketComponent() {
         }
       } catch (error) {
         console.error("Failed to fetch ticket for printing", error);
-        toast.error("Failed to load ticket details for printing");
+        appToast.error("Print Error", "Failed to load ticket details for printing");
       } finally {
         setIsLoading(false);
       }
     },
-    onStatusChange: async (id, status) => {
+    onStatusChange: async (id: number, status: string) => {
       try {
         setIsLoading(true);
         const currentTicketResponse = await jobTicketsApi.getById(id);
@@ -171,17 +174,19 @@ function JobTicketComponent() {
           };
 
           await jobTicketsApi.update(id, payload as any);
-          toast.success(`Job Ticket status updated to ${status}`);
+          appToast.success("Status Updated", `Job Ticket status updated to ${status}`);
           await fetchData();
         }
       } catch (error) {
         console.error("Failed to update status", error);
-        toast.error("Failed to update status");
+        appToast.error("Update Failed", getErrorMessage(error));
       } finally {
         setIsLoading(false);
       }
     },
-  });
+  };
+
+  const columns = jobTicketColumns(handlers);
 
   const handleDelete = async () => {
     if (deleteId === null) return;
@@ -189,16 +194,11 @@ function JobTicketComponent() {
     try {
       setIsLoading(true);
       await jobTicketsApi.delete(deleteId);
-      toast("Job Ticket Deleted", {
-        description: "Job Ticket has been deleted successfully.",
-      });
+      appToast.success("Job Ticket Deleted", "Job Ticket has been deleted successfully.");
       await fetchData();
     } catch (error) {
       console.error("Failed to delete inventory item");
-      toast("Failed to Delete Job Ticket", {
-        description:
-          "An error occurred while deleting the job ticket. Please try again.",
-      });
+      appToast.error("Delete Failed", getErrorMessage(error));
     } finally {
       setIsLoading(false);
       setDeleteId(null); // close popup

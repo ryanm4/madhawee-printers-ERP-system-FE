@@ -40,6 +40,7 @@ import { Combobox } from "@/components/shared/combobox"
 import { PURCHASE_ORDER, PURCHASE_ORDER_ID } from "@/modules/purchase-order/types"
 import { purchaseOrderApi } from "@/modules/purchase-order/api"
 import { jobTicketsApi } from "@/modules/job-tickets/api"
+import { FullPageLoader } from "@/components/shared/loader"
 
 type JobTicketFormValues = z.infer<typeof jobTicketSchema>
 
@@ -270,6 +271,7 @@ function JobViewTicket() {
 
     return (
         <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+            {isLoading && <FullPageLoader />}
             <PageTitleWithBreadcrumb
                 title="View Job Ticket"
                 breadcrumbs={[
@@ -283,6 +285,9 @@ function JobViewTicket() {
                 <form className="space-y-6 pb-0">
                     <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
                         <Button size="lg" variant="outline" type="button" onClick={() => router.push("/job-ticket")}>Back</Button>
+                        <Button size="lg" type="button" className="bg-primary hover:bg-primary/90" onClick={() => router.push(`/job-ticket/${id}/edit`)}>
+                            <Edit2 className="mr-2 h-4 w-4" /> Edit Job Ticket
+                        </Button>
                     </div>
                     <Card className={cn("w-full shdow-sm hover:shadow-md transition-shadow flex flex-col")}>
                         <CardHeader className="flex flex-col gap-[0.5px]">

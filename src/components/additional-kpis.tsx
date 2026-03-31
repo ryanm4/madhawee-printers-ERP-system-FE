@@ -1,14 +1,16 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { IconChartBar, IconPackage } from "@tabler/icons-react"
 import { Truck } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface AdditionalKPIsProps {
     productionEfficiency: string | number;
     lowStockItems: string | number;
     totalDispatches: string | number;
+    className?: string;
 }
 
-export function AdditionalKPIs({ productionEfficiency, lowStockItems, totalDispatches }: AdditionalKPIsProps) {
+export function AdditionalKPIs({ productionEfficiency, lowStockItems, totalDispatches, className }: AdditionalKPIsProps) {
     const kpis = [
         {
             key: "productionEfficiency",
@@ -34,7 +36,7 @@ export function AdditionalKPIs({ productionEfficiency, lowStockItems, totalDispa
     ]
 
     return (
-        <div className="grid grid-rows gap-4 md:grid-rows-3">
+        <div className={cn("grid grid-rows gap-4 md:grid-rows-3", className)}>
             {kpis.map((kpi) => {
                 const Icon = kpi.icon
                 return (

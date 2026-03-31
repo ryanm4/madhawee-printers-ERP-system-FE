@@ -31,7 +31,7 @@ import { CREATE_INVENTORY } from "@/modules/inventory/types";
 import { inventoryManagementScheme } from "@/modules/inventory/validation";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import { toast } from "sonner";
+import { appToast } from "@/lib/toast-utils";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { getUser } from "@/lib/auth";
@@ -95,17 +95,13 @@ function CreateInventoryManagement() {
       };
       const response = await inventoryApi.create(payload);
 
-      toast("Inventory Item Created", {
-        description: "The inventory item has been added successfully.",
-      });
+      appToast.success("Inventory Item Created", "The inventory item has been added successfully.");
       form.reset(baseDefaultValues);
       form.clearErrors();
       router.push("/inventory");
     } catch (error) {
       console.error("Failed to submit inventory:", error);
-      toast("Failed to Create Inventory Item", {
-        description: getErrorMessage(error, "An error occurred while adding the inventory item. Please try again."),
-      });
+      appToast.error("Failed to Create Inventory Item", getErrorMessage(error, "An error occurred while adding the inventory item. Please try again."));
     } finally {
       setIsLoading(false);
     }
