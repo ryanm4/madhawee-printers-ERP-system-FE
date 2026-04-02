@@ -50,7 +50,9 @@ function CreateGRN() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [user, setUser] = useState<{ name: string } | null>(null);
 
-  const [inventoryItems, setInventoryItems] = useState<{ value: string; label: string }[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<
+    { value: string; label: string }[]
+  >([]);
 
   useEffect(() => {
     const userData = getUser();
@@ -62,10 +64,12 @@ function CreateGRN() {
       try {
         const response = await inventoryApi.getAll();
         if (response.status === 200) {
-          const uniqueItems = Array.from(new Map(response.data.map((item: any) => [
-            item.item_name, item
-          ])).values());
-          
+          const uniqueItems = Array.from(
+            new Map(
+              response.data.map((item: any) => [item.item_name, item])
+            ).values()
+          );
+
           setInventoryItems(
             (uniqueItems as any[]).map((item: any) => ({
               value: item.item_name,
@@ -90,9 +94,7 @@ function CreateGRN() {
     currency: "LKR",
     supplier_invoice_no: "",
     remarks: "",
-    items: [
-      { item_name: "", quantity: 0, rate: 0, amount: 0 },
-    ],
+    items: [{ item_name: "", quantity: 0, rate: 0, amount: 0 }],
   };
 
   const form = useForm<GRNFormValues>({
@@ -142,7 +144,10 @@ function CreateGRN() {
       />
 
       <Form {...(form as any)}>
-        <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+        <form
+          onSubmit={form.handleSubmit(onSubmit as any)}
+          className="space-y-6"
+        >
           <div className="flex items-center justify-end gap-[16px] mt-6">
             <Button
               variant="outline"
@@ -168,7 +173,9 @@ function CreateGRN() {
             <Card>
               <CardHeader>
                 <h3 className="text-lg font-medium">Basic Information</h3>
-                <p className="text-sm text-muted-foreground">General details of the GRN</p>
+                <p className="text-sm text-muted-foreground">
+                  General details of the GRN
+                </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <FormField
@@ -176,7 +183,9 @@ function CreateGRN() {
                   name="releated_po"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Related PO <span className="text-red-500">*</span></FormLabel>
+                      <FormLabel>
+                        Related PO <span className="text-red-500">*</span>
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="Enter PO Number" {...field} />
                       </FormControl>
@@ -190,7 +199,9 @@ function CreateGRN() {
                   name="received_date"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Received Date <span className="text-red-500">*</span></FormLabel>
+                      <FormLabel>
+                        Received Date <span className="text-red-500">*</span>
+                      </FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -201,7 +212,11 @@ function CreateGRN() {
                                 !field.value && "text-muted-foreground"
                               )}
                             >
-                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>
@@ -211,7 +226,9 @@ function CreateGRN() {
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                            disabled={(date) =>
+                              date > new Date() || date < new Date("1900-01-01")
+                            }
                             initialFocus
                           />
                         </PopoverContent>
@@ -226,7 +243,9 @@ function CreateGRN() {
                   name="supplier_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Supplier Name <span className="text-red-500">*</span></FormLabel>
+                      <FormLabel>
+                        Supplier Name <span className="text-red-500">*</span>
+                      </FormLabel>
                       <FormControl>
                         <SupplierCombobox
                           value={field.value}
@@ -243,7 +262,9 @@ function CreateGRN() {
                   name="stock_location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Stock Location <span className="text-red-500">*</span></FormLabel>
+                      <FormLabel>
+                        Stock Location <span className="text-red-500">*</span>
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="Enter Stock Location" {...field} />
                       </FormControl>
@@ -257,7 +278,9 @@ function CreateGRN() {
             <Card>
               <CardHeader>
                 <h3 className="text-lg font-medium">Payment & Invoice</h3>
-                <p className="text-sm text-muted-foreground">Financial and tracking details</p>
+                <p className="text-sm text-muted-foreground">
+                  Financial and tracking details
+                </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <FormField
@@ -265,7 +288,9 @@ function CreateGRN() {
                   name="payee_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Payee Name <span className="text-red-500">*</span></FormLabel>
+                      <FormLabel>
+                        Payee Name <span className="text-red-500">*</span>
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="Enter Payee Name" {...field} />
                       </FormControl>
@@ -280,8 +305,13 @@ function CreateGRN() {
                     name="payment_method"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Payment Method <span className="text-red-500">*</span></FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormLabel>
+                          Payment Method <span className="text-red-500">*</span>
+                        </FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select method" />
@@ -302,7 +332,9 @@ function CreateGRN() {
                     name="currency"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Currency <span className="text-red-500">*</span></FormLabel>
+                        <FormLabel>
+                          Currency <span className="text-red-500">*</span>
+                        </FormLabel>
                         <FormControl>
                           <Input placeholder="LKR" {...field} />
                         </FormControl>
@@ -317,7 +349,10 @@ function CreateGRN() {
                   name="supplier_invoice_no"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Supplier Invoice No <span className="text-red-500">*</span></FormLabel>
+                      <FormLabel>
+                        Supplier Invoice No{" "}
+                        <span className="text-red-500">*</span>
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="Enter Invoice Number" {...field} />
                       </FormControl>
@@ -333,7 +368,11 @@ function CreateGRN() {
                     <FormItem>
                       <FormLabel>Remarks</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Enter any notes" className="resize-none" {...field} />
+                        <Textarea
+                          placeholder="Enter any notes"
+                          className="resize-none"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -347,13 +386,17 @@ function CreateGRN() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <h3 className="text-lg font-medium">Items List</h3>
-                <p className="text-sm text-muted-foreground">Add items received in this GRN</p>
+                <p className="text-sm text-muted-foreground">
+                  Add items received in this GRN
+                </p>
               </div>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => append({ item_name: "", quantity: 0, rate: 0, amount: 0 })}
+                onClick={() =>
+                  append({ item_name: "", quantity: 0, rate: 0, amount: 0 })
+                }
               >
                 <PlusIcon className="mr-2 h-4 w-4" /> Add Item
               </Button>
@@ -361,7 +404,10 @@ function CreateGRN() {
             <CardContent>
               <div className="space-y-4">
                 {fields.map((item, index) => (
-                  <div key={item.id} className="flex gap-4 items-start p-4 border rounded-lg bg-muted/20 relative">
+                  <div
+                    key={item.id}
+                    className="flex gap-4 items-start p-4 border rounded-lg bg-muted/20 relative"
+                  >
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
                       <FormField
                         control={form.control}
@@ -394,8 +440,13 @@ function CreateGRN() {
                                 onChange={(e) => {
                                   const val = Number(e.target.value);
                                   field.onChange(val);
-                                  const rate = form.getValues(`items.${index}.rate`);
-                                  form.setValue(`items.${index}.amount`, val * rate);
+                                  const rate = form.getValues(
+                                    `items.${index}.rate`
+                                  );
+                                  form.setValue(
+                                    `items.${index}.amount`,
+                                    val * rate
+                                  );
                                 }}
                               />
                             </FormControl>
@@ -417,8 +468,13 @@ function CreateGRN() {
                                 onChange={(e) => {
                                   const val = Number(e.target.value);
                                   field.onChange(val);
-                                  const qty = form.getValues(`items.${index}.quantity`);
-                                  form.setValue(`items.${index}.amount`, val * qty);
+                                  const qty = form.getValues(
+                                    `items.${index}.quantity`
+                                  );
+                                  form.setValue(
+                                    `items.${index}.amount`,
+                                    val * qty
+                                  );
                                 }}
                               />
                             </FormControl>
@@ -433,7 +489,12 @@ function CreateGRN() {
                           <FormItem>
                             <FormLabel>Amount</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="0.00" {...field} readOnly />
+                              <Input
+                                type="number"
+                                placeholder="0.00"
+                                {...field}
+                                readOnly
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
