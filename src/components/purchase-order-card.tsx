@@ -183,13 +183,13 @@ export function PurchaseOrderCard({
                             <span className="text-md text-muted-foreground flex items-center gap-2 whitespace-nowrap">
                                 PO Date <Calendar className="h-5 w-5" />
                             </span>
-                            <span className="font-semibold text-sm truncate">{new Date(poDate).toLocaleDateString()}</span>
+                            <span className="font-semibold text-sm truncate">{poDate ? new Date(poDate).toLocaleDateString() : "N/A"}</span>
                         </div>
                         <div className="flex flex-col gap-1 min-w-0">
                             <span className="text-md text-muted-foreground flex items-center gap-2 whitespace-nowrap">
                                 Delivery Date <Truck className="h-5 w-5" />
                             </span>
-                            <span className="font-semibold text-sm truncate">{new Date(deliveryDate).toLocaleDateString()}</span>
+                            <span className="font-semibold text-sm truncate">{deliveryDate ? new Date(deliveryDate).toLocaleDateString() : "N/A"}</span>
                         </div>
                     </div>
 
@@ -210,7 +210,7 @@ export function PurchaseOrderCard({
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-end gap-0.5 shrink-0 min-w-fit ml-2">
-                                    <span className="text-[14px] text-muted-foreground">{format(new Date(job.job_open_date), "dd MMM yyyy")}</span>
+                                    <span className="text-[14px] text-muted-foreground">{job.job_open_date ? format(new Date(job.job_open_date), "dd MMM yyyy") : "N/A"}</span>
                                     <StatusBadge status={job.status} type="JOB_TICKET" />
                                 </div>
                             </div>
