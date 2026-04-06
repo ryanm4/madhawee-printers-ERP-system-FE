@@ -251,7 +251,7 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
       ${tdLabel("Order Received Date")}
       ${td(formatDate(data.orderReceivedDate), "text-align:center;")}
       ${tdLabel("Quantity:")}
-      ${td(String(data.quantity || ""), "text-align:center;")}
+      ${td(String(data.quantity || ""), "text-align:center;font-size:20px;font-weight:bold;")}
     </tr>
     <tr>
       ${tdLabel("Job Open Date")}
@@ -261,13 +261,13 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
     </tr>
     <tr>
       ${tdLabel("Customer:")}
-      ${td(data.customer || "", "text-align:center;")}
+      ${td(data.customer || "", "text-align:center;font-size:20px;font-weight:bold;")}
       ${tdLabel("Coating")}
       ${td(data.coating || "", "text-align:center;")}
     </tr>
     <tr>
       ${tdLabel("Job Name:")}
-      ${td(data.jobName || "", "background:#e8e8e8;")}
+      ${td(data.jobName || "", "background:#e8e8e8;font-size:20px;font-weight:bold;")}
       ${tdLabel("Customer Del Date")}
       ${td(formatDate(data.customerDeliveryDate), "text-align:center;")}
     </tr>
@@ -299,7 +299,7 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
   <table>
     <tr>
       ${tdLabel("Remarks")}
-      ${td(data.remarks || "", "background:#e8e8e8;width:75%;")}
+      ${td(data.remarks || "", "background:#e8e8e8;width:75%;font-size:20px;font-weight:bold;")}
     </tr>
   </table>
 
