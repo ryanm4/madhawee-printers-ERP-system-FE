@@ -97,7 +97,7 @@ function CreateDispatchandInvoice() {
 
       if (response.status === 200) {
         const completedJobs = response.data.filter(
-          (x) => x.status === "COMPLETED"
+          (x) => x.status === "PRINTING COMPLETED"
         );
 
         setJobData(completedJobs);
