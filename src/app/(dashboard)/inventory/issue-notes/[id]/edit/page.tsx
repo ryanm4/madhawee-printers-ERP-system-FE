@@ -30,6 +30,7 @@ import { format, parseISO } from "date-fns";
 import { useEffect, useState } from "react";
 import { issueNotesApi } from "@/modules/inventory/issue-notes/api";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
+import { inventoryApi } from "@/modules/inventory/api";
 import { toast } from "sonner";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
@@ -44,6 +45,9 @@ function EditIssueNote() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [user, setUser] = useState<{ name: string } | null>(null);
   const [jobs, setJobs] = useState<{ value: string; label: string }[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<
+    { value: string; label: string }[]
+  >([]);
 
   const form = useForm<IssueNoteFormValues>({
     resolver: zodResolver(issueNoteSchema) as any,
@@ -74,16 +78,42 @@ function EditIssueNote() {
       try {
         const response = await jobTicketsApi.getAll();
         if (response.status === 200) {
-          setJobs(response.data.map((job: any) => ({
-            value: job.job_id.toString(),
-            label: job.job_name || `Job #${job.job_id}`
-          })));
+          setJobs(
+            response.data.map((job: any) => ({
+              value: job.job_id.toString(),
+              label: job.job_name || `Job #${job.job_id}`,
+            }))
+          );
         }
       } catch (err) {
         console.error("Failed to fetch jobs", err);
       }
     };
+
+    const fetchInventory = async () => {
+      try {
+        const response = await inventoryApi.getAll();
+        if (response.status === 200) {
+          const uniqueItems = Array.from(
+            new Map(
+              response.data.map((item: any) => [item.item_name, item])
+            ).values()
+          );
+
+          setInventoryItems(
+            (uniqueItems as any[]).map((item: any) => ({
+              value: item.item_name,
+              label: item.item_name,
+            }))
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch inventory items", error);
+      }
+    };
+
     fetchJobs();
+    fetchInventory();
   }, [id]);
 
   const fetchIssueNote = async () => {
@@ -257,9 +287,15 @@ function EditIssueNote() {
                         control={form.control}
                         name={`items.${index}.item_name`}
                         render={({ field }) => (
-                          <FormItem>
+                          <FormItem className="flex flex-col mt-2">
                             <FormLabel>Item Name</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
+                            <Combobox
+                              items={inventoryItems}
+                              value={field.value}
+                              onValueChange={field.onChange}
+                              placeholder="Select Item"
+                              searchPlaceholder="Search item..."
+                            />
                             <FormMessage />
                           </FormItem>
                         )}
