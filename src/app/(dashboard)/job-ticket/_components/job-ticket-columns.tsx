@@ -66,6 +66,14 @@ export const jobTicketColumns = (
             },
         },
         {
+            id: "created_on",
+            header: "Created On",
+            cell: ({ row }) => {
+                const date = (row.original as any).created_on || (row.original as any).created_at || (row.original as any).job_open_date;
+                return date ? format(new Date(date), "dd MMM yyyy") : "-";
+            },
+        },
+        {
             accessorKey: "status",
             header: "Status",
             cell: ({ row }) => {
