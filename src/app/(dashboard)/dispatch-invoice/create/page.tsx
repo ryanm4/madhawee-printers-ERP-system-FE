@@ -47,7 +47,10 @@ import { Combobox } from "@/components/shared/combobox";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
 
-import { handleDispatchPrint, DispatchPrintData } from "../_components/dispatch-print-dialog";
+import {
+  handleDispatchPrint,
+  DispatchPrintData,
+} from "../_components/dispatch-print-dialog";
 import { DispatchStatus, JobTicketStatus } from "@/config/enum";
 
 type DispatchFormValues = z.infer<typeof dispatchInvoiceScheme>;
@@ -100,7 +103,9 @@ function CreateDispatchandInvoice() {
 
       if (response.status === 200) {
         const completedJobs = response.data.filter(
-          (x) => x.status === JobTicketStatus.IN_PRODUCTION || x.status === JobTicketStatus.PARTIALLY_DISPATCHED
+          (x) =>
+            x.status === JobTicketStatus.IN_PRODUCTION ||
+            x.status === JobTicketStatus.PARTIALLY_DISPATCHED
         );
 
         setJobData(completedJobs);
@@ -139,7 +144,10 @@ function CreateDispatchandInvoice() {
         no_of_bundles: data.dispatch_bundles_qty ?? "",
         description: data.dispatch_description ?? "",
         delivery_address: data.delivery_address ?? "",
-        status: newJobStatus === JobTicketStatus.COMPLETED ? DispatchStatus.COMPLETED : DispatchStatus.PARTIALLY_DISPATCHED,
+        status:
+          newJobStatus === JobTicketStatus.COMPLETED
+            ? DispatchStatus.COMPLETED
+            : DispatchStatus.PARTIALLY_DISPATCHED,
         created_by: user?.name || "User",
         created_on: new Date(),
       };
@@ -153,7 +161,10 @@ function CreateDispatchandInvoice() {
             updated_by: user?.name || "User",
           });
         } catch (err) {
-          console.error("Failed to update Job Ticket status during dispatch:", err);
+          console.error(
+            "Failed to update Job Ticket status during dispatch:",
+            err
+          );
         }
       }
 
@@ -173,7 +184,9 @@ function CreateDispatchandInvoice() {
         no_of_bundles: data.dispatch_bundles_qty || "",
         description: data.dispatch_description || "",
         job_id: data.job_id,
-        job_name: JobData.find(j => String(j.job_id) === String(data.job_id))?.job_name || "",
+        job_name:
+          JobData.find((j) => String(j.job_id) === String(data.job_id))
+            ?.job_name || "",
         remarks: data.dispatch_note || "",
         created_by: user?.name || "User",
       };
@@ -187,7 +200,10 @@ function CreateDispatchandInvoice() {
     } catch (error) {
       console.error("Failed to create dispatch record:", error);
       toast("Failed to Create Dispatch", {
-        description: getErrorMessage(error, "An error occurred while creating the dispatch record. Please try again."),
+        description: getErrorMessage(
+          error,
+          "An error occurred while creating the dispatch record. Please try again."
+        ),
       });
     } finally {
       setIsLoading(false);
@@ -297,10 +313,11 @@ function CreateDispatchandInvoice() {
                       <Combobox
                         items={JobData.map((job) => ({
                           value: String(job.job_id),
-                          label: `Job-${job.job_number} (${job.job_name.length > 25
-                            ? job.job_name.substring(0, 25) + "..."
-                            : job.job_name
-                            })`,
+                          label: `Job-${job.job_number} (${
+                            job.job_name.length > 25
+                              ? job.job_name.substring(0, 25) + "..."
+                              : job.job_name
+                          })`,
                         }))}
                         value={field.value ? String(field.value) : ""}
                         onValueChange={field.onChange}
@@ -319,7 +336,8 @@ function CreateDispatchandInvoice() {
                         className="bg-gray-50 border-gray-200 cursor-not-allowed"
                         value={
                           JobData.find(
-                            (j) => String(j.job_id) === String(form.watch("job_id"))
+                            (j) =>
+                              String(j.job_id) === String(form.watch("job_id"))
                           )?.quantity || ""
                         }
                       />
