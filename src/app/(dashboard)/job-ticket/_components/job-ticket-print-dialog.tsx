@@ -131,43 +131,11 @@ export function JobTicketPrintDialog({
 }
 
 export function buildPrintHTML(data: JobTicketPrintData): string {
+  const safe = (val: any) => (val !== undefined && val !== null && String(val).trim() !== "" ? String(val) : "&nbsp;");
   const td = (content: string, style = "") =>
-    `<td style="border:1px solid #333;padding:5px 8px;${style}">${content}</td>`;
+    `<td style="border:1px solid #333;padding:5px 8px;${style}">${safe(content)}</td>`;
   const tdLabel = (content: string, style = "") =>
-    `<td style="border:1px solid #333;padding:5px 8px;font-weight:bold;background:#f8f8f8;${style}">${content}</td>`;
-
-  // Ink rows
-  const inkRows = (data.inks || [])
-    .map(
-      (ink) => `
-    <tr>
-      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${ink.ink || ""
-        }</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${ink.quantity || ""
-        }</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${ink.status || ""
-        }</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${ink.remarks || ""
-        }</td>
-    </tr>`
-    )
-    .join("");
-
-  // Raw material rows
-  const rmRows = (data.rawMaterials || [])
-    .map(
-      (rm) => `
-    <tr>
-      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${rm.material_name || ""
-        } ${rm.size ? "- " + rm.size : ""}</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${rm.quantity || ""
-        }</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${rm.status || ""}</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${rm.remarks || ""
-        }</td>
-    </tr>`
-    )
-    .join("");
+    `<td style="border:1px solid #333;padding:5px 8px;font-weight:bold;background:#f8f8f8;${style}">${safe(content)}</td>`;
 
   return `
 <!DOCTYPE html>
@@ -177,7 +145,7 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
   <title>Job Ticket - ${data.jobNumber || ""}</title>
   <style>
     @media print {
-      @page { margin: 15mm; }
+      @page { margin: 10mm; }
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
     body {
@@ -185,217 +153,220 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
       font-size: 11px;
       color: #000;
       margin: 0;
-      padding: 20px;
+      padding: 10px;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 10px;
+      table-layout: fixed;
+      margin-bottom: 0px;
     }
-    .header-table td {
-      border: 2px solid #333;
+    td {
+      border: 1px solid #333;
+      padding: 5px 8px;
+    }
+    .label {
+      font-weight: bold;
+      background: #f8f8f8;
+      vertical-align: middle;
+    }
+    .value {
       text-align: center;
+      vertical-align: middle;
+      word-wrap: break-word;
+    }
+    .value-bold {
+      font-weight: bold;
       font-size: 14px;
-      font-weight: bold;
-      padding: 8px;
     }
-    .section-header td {
-      border: 1px solid #333;
-      text-align: center;
+    .value-highlight {
+      background: #e8e8e8;
       font-weight: bold;
-      background: #f0f0f0;
-      padding: 5px;
-    }
-    .approval-label {
-      font-weight: bold;
-      padding: 5px 8px;
-      border: 1px solid #333;
-    }
-    .approval-blank {
-      border: 1px solid #333;
-      padding: 5px 8px;
+      font-size: 14px;
     }
     .materials-header td {
-      border: 1px solid #333;
       font-weight: bold;
-      padding: 5px 8px;
       background: #f0f0f0;
-    }
-    .group-label td {
-      border: 1px solid #333;
-      font-weight: bold;
-      padding: 5px 8px;
-      vertical-align: middle;
       text-align: center;
     }
+    .group-label {
+      font-weight: bold;
+      vertical-align: middle;
+      text-align: center;
+      background: #f8f8f8;
+    }
+    .center { text-align: center; }
   </style>
 </head>
 <body>
 
-  <!-- Company Header -->
-  <table class="header-table">
-    <tr>
-      <td>Madhawee Printers (PVT) Ltd</td>
-    </tr>
-  </table>
-
-  <!-- Main Info Grid -->
+  <!-- Unified Master Table for Alignment -->
   <table>
-    <tr>
-      ${tdLabel("Job Number:")}
-      ${td(data.jobNumber || "", "text-align:center;")}
-      ${tdLabel("Product Type")}
-      ${td(data.productType || "", "text-align:center;")}
-    </tr>
-    <tr>
-      ${tdLabel("Order Received Date")}
-      ${td(formatDate(data.orderReceivedDate), "text-align:center;")}
-      ${tdLabel("Quantity:")}
-      ${td(String(data.quantity || ""), "text-align:center;font-size:20px;font-weight:bold;")}
-    </tr>
-    <tr>
-      ${tdLabel("Job Open Date")}
-      ${td(formatDate(data.jobOpenDate), "text-align:center;")}
-      ${tdLabel("Paper Type:")}
-      ${td(data.paperType || "", "text-align:center;")}
-    </tr>
-    <tr>
-      ${tdLabel("Customer:")}
-      ${td(data.customer || "", "text-align:center;font-size:20px;font-weight:bold;")}
-      ${tdLabel("Coating")}
-      ${td(data.coating || "", "text-align:center;")}
-    </tr>
-    <tr>
-      ${tdLabel("Job Name:")}
-      ${td(data.jobName || "", "background:#e8e8e8;font-size:20px;font-weight:bold;")}
-      ${tdLabel("Customer Del Date")}
-      ${td(formatDate(data.customerDeliveryDate), "text-align:center;")}
-    </tr>
-  </table>
+    <!-- Define column widths for 12-column grid to allow mixing 2, 3, 4, 6 column layouts -->
+    <colgroup>
+      <col style="width: 8.33%"><col style="width: 8.33%"><col style="width: 8.33%"><col style="width: 8.33%">
+      <col style="width: 8.33%"><col style="width: 8.33%"><col style="width: 8.33%"><col style="width: 8.33%">
+      <col style="width: 8.33%"><col style="width: 8.33%"><col style="width: 8.33%"><col style="width: 8.33%">
+    </colgroup>
 
-  <!-- Packing / Expiry -->
-  <table>
+    <!-- Company Header -->
     <tr>
-      ${tdLabel("Packing Date")}
-      ${td(formatMonthYear(data.packingDate), "text-align:center;")}
-      ${tdLabel("Expiry Date")}
-      ${td(formatMonthYear(data.expiryDate), "text-align:center;")}
+      <td colspan="12" style="border: 2px solid #333; text-align: center; font-size: 14px; font-weight: bold; padding: 10px;">
+        Madhawee Printers (PVT) Ltd
+      </td>
     </tr>
-  </table>
 
-  <!-- PO / TC / Batch -->
-  <table>
+    <!-- Spacer -->
+    <tr style="height: 10px; border: none;"><td colspan="12" style="border: none;"></td></tr>
+
+    <!-- Row 1: Job Number & Product Type -->
     <tr>
-      ${tdLabel("PO No.")}
-      ${td(data.poNo || "", "text-align:center;")}
-      ${tdLabel("TC/E/PR/No.")}
-      ${td(data.tcNo || "", "text-align:center;")}
-      ${tdLabel("Batch Ref.")}
-      ${td(data.batchRef || "", "text-align:center;")}
+      <td colspan="2" class="label">Job Number:</td>
+      <td colspan="4" class="value">${safe(data.jobNumber)}</td>
+      <td colspan="2" class="label">Product Type</td>
+      <td colspan="4" class="value">${safe(data.productType)}</td>
     </tr>
-  </table>
 
-  <!-- Remarks -->
-  <table>
+    <!-- Row 2: Order Date & Quantity -->
     <tr>
-      ${tdLabel("Remarks")}
-      ${td(data.remarks || "", "background:#e8e8e8;width:75%;font-size:20px;font-weight:bold;")}
+      <td colspan="2" class="label">Order Rec Date</td>
+      <td colspan="4" class="value">${safe(formatDate(data.orderReceivedDate))}</td>
+      <td colspan="2" class="label">Quantity:</td>
+      <td colspan="4" class="value value-bold" style="font-size: 20px;">${safe(data.quantity)}</td>
     </tr>
-  </table>
 
- 
+    <!-- Row 3: Open Date & Paper Type -->
+    <tr>
+      <td colspan="2" class="label">Job Open Date</td>
+      <td colspan="4" class="value">${safe(formatDate(data.jobOpenDate))}</td>
+      <td colspan="2" class="label">Paper Type:</td>
+      <td colspan="4" class="value">${safe(data.paperType)}</td>
+    </tr>
 
-  <!-- Materials Table -->
-  <table>
+    <!-- Row 4: Customer & Coating -->
+    <tr>
+      <td colspan="2" class="label">Customer:</td>
+      <td colspan="4" class="value value-bold" style="font-size: 18px;">${safe(data.customer)}</td>
+      <td colspan="2" class="label">Coating</td>
+      <td colspan="4" class="value">${safe(data.coating)}</td>
+    </tr>
+
+    <!-- Row 5: Job Name & Customer Del Date -->
+    <tr>
+      <td colspan="2" class="label">Job Name:</td>
+      <td colspan="4" class="value value-highlight" style="text-align:center;">${safe(data.jobName)}</td>
+      <td colspan="2" class="label">Customer Del Date</td>
+      <td colspan="4" class="value">${safe(formatDate(data.customerDeliveryDate))}</td>
+    </tr>
+
+    <!-- Spacer -->
+    <tr style="height: 5px; border: none;"><td colspan="12" style="border: none;"></td></tr>
+
+    <!-- Packing & Expiry -->
+    <tr>
+      <td colspan="2" class="label">Packing Date</td>
+      <td colspan="4" class="value">${safe(formatMonthYear(data.packingDate))}</td>
+      <td colspan="2" class="label">Expiry Date</td>
+      <td colspan="4" class="value">${safe(formatMonthYear(data.expiryDate))}</td>
+    </tr>
+
+    <!-- Spacer -->
+    <tr style="height: 5px; border: none;"><td colspan="12" style="border: none;"></td></tr>
+
+    <!-- PO / TC / Batch (6 equal segments) -->
+    <tr>
+      <td colspan="2" class="label">PO No.</td>
+      <td colspan="2" class="value">${safe(data.poNo)}</td>
+      <td colspan="2" class="label">TC/E/PR/No.</td>
+      <td colspan="2" class="value">${safe(data.tcNo)}</td>
+      <td colspan="2" class="label">Batch Ref.</td>
+      <td colspan="2" class="value">${safe(data.batchRef)}</td>
+    </tr>
+
+    <!-- Spacer -->
+    <tr style="height: 5px; border: none;"><td colspan="12" style="border: none;"></td></tr>
+
+    <!-- Remarks -->
+    <tr>
+      <td colspan="2" class="label" style="vertical-align: middle;">Remarks</td>
+      <td colspan="10" class="value value-highlight" style="text-align: left; font-size: 14px;">${safe(data.remarks)}</td>
+    </tr>
+
+    <!-- Spacer -->
+    <tr style="height: 10px; border: none;"><td colspan="12" style="border: none;"></td></tr>
+
+    <!-- Materials Header -->
     <tr class="materials-header">
-      <td style="width:35%;">Materials</td>
-      <td style="width:22%;">Items</td>
-      <td style="width:18%;">Quantity</td>
-      <td style="width:25%;">Remarks</td>
+      <td colspan="2">Materials</td>
+      <td colspan="4">Items</td>
+      <td colspan="2">Quantity</td>
+      <td colspan="4">Remarks</td>
     </tr>
 
     <!-- CTP Plates -->
     <tr>
-      <td rowspan="2" class="group-label" style="border:1px solid #333;">CTP Plates</td>
-      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">Old Plates  
-    </td>
-      <td style="border:1px solid #333;padding:5px 8px;">${data.oldPlatesQuantity || 0}</td>
-      <td style="border:1px solid #333;padding:5px 8px;"></td>
+      <td rowspan="2" colspan="2" class="group-label">CTP Plates</td>
+      <td colspan="4" style="padding-left: 24px;">Old Plates</td>
+      <td colspan="2" class="center">${safe(data.oldPlatesQuantity || 0)}</td>
+      <td colspan="4">&nbsp;</td>
     </tr>
     <tr>
-      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">New Plates</td>  
-      <td style="border:1px solid #333;padding:5px 8px;">${data.newPlatesQuantity || 0}</td>
-      <td style="border:1px solid #333;padding:5px 8px;"></td>
+      <td colspan="4" style="padding-left: 24px;">New Plates</td>
+      <td colspan="2" class="center">${safe(data.newPlatesQuantity || 0)}</td>
+      <td colspan="4">&nbsp;</td>
     </tr>
 
     <!-- Raw Materials -->
     ${(data.rawMaterials || []).length > 0
       ? `<tr>
-      <td rowspan="${data.rawMaterials!.length
-      }" class="group-label" style="border:1px solid #333;">Raw Material</td>
-      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${data.rawMaterials![0].material_name || ""
-      } ${data.rawMaterials![0].size ? "- " + data.rawMaterials![0].size : ""
-      }</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${data.rawMaterials![0].quantity || ""
-      }</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${data.rawMaterials![0].remarks || ""
-      }</td>
+      <td rowspan="${data.rawMaterials!.length}" colspan="2" class="group-label">Raw Material</td>
+      <td colspan="4" style="padding-left: 24px;">${safe(data.rawMaterials![0].material_name)} ${data.rawMaterials![0].size ? "- " + data.rawMaterials![0].size : ""}</td>
+      <td colspan="2" class="center">${safe(data.rawMaterials![0].quantity)}</td>
+      <td colspan="4">${safe(data.rawMaterials![0].remarks)}</td>
     </tr>${(data.rawMaterials || [])
         .slice(1)
         .map(
           (rm) => `
     <tr>
-      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${rm.material_name || ""
-            } ${rm.size ? "- " + rm.size : ""}</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${rm.quantity || ""
-            }</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${rm.remarks || ""
-            }</td>
+      <td colspan="4" style="padding-left: 24px;">${safe(rm.material_name)} ${rm.size ? "- " + rm.size : ""}</td>
+      <td colspan="2" class="center">${safe(rm.quantity)}</td>
+      <td colspan="4">${safe(rm.remarks)}</td>
     </tr>`
         )
         .join("")}`
       : `<tr>
-      <td class="group-label" style="border:1px solid #333;">Raw Material</td>
-      <td style="border:1px solid #333;padding:5px 8px;"></td>
-      <td style="border:1px solid #333;padding:5px 8px;"></td>
-      <td style="border:1px solid #333;padding:5px 8px;"></td>
+      <td colspan="2" class="group-label">Raw Material</td>
+      <td colspan="4">&nbsp;</td>
+      <td colspan="2" class="center">&nbsp;</td>
+      <td colspan="4">&nbsp;</td>
     </tr>`
     }
 
     <!-- Ink -->
     ${(data.inks || []).length > 0
       ? `<tr>
-      <td rowspan="${data.inks!.length
-      }" class="group-label" style="border:1px solid #333;">Ink</td>
-      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${data.inks![0].ink || ""
-      }</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${data.inks![0].quantity || ""
-      }</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${data.inks![0].remarks || ""
-      }</td>
+      <td rowspan="${data.inks!.length}" colspan="2" class="group-label">Ink</td>
+      <td colspan="4" style="padding-left: 24px;">${safe(data.inks![0].ink)}</td>
+      <td colspan="2" class="center">${safe(data.inks![0].quantity)}</td>
+      <td colspan="4">${safe(data.inks![0].remarks)}</td>
     </tr>${(data.inks || [])
         .slice(1)
         .map(
           (ink) => `
     <tr>
-      <td style="border:1px solid #333;padding:5px 8px;padding-left:24px;">${ink.ink || ""
-            }</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${ink.quantity || ""
-            }</td>
-      <td style="border:1px solid #333;padding:5px 8px;">${ink.remarks || ""
-            }</td>
+      <td colspan="4" style="padding-left: 24px;">${safe(ink.ink)}</td>
+      <td colspan="2" class="center">${safe(ink.quantity)}</td>
+      <td colspan="4">${safe(ink.remarks)}</td>
     </tr>`
         )
         .join("")}`
       : `<tr>
-      <td class="group-label" style="border:1px solid #333;">Ink</td>
-      <td style="border:1px solid #333;padding:5px 8px;"></td>
-      <td style="border:1px solid #333;padding:5px 8px;"></td>
-      <td style="border:1px solid #333;padding:5px 8px;"></td>
+      <td colspan="2" class="group-label">Ink</td>
+      <td colspan="4">&nbsp;</td>
+      <td colspan="2" class="center">&nbsp;</td>
+      <td colspan="4">&nbsp;</td>
     </tr>`
     }
-
-    
   </table>
 
 </body>

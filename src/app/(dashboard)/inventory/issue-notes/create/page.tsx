@@ -35,6 +35,7 @@ import { toast } from "sonner";
 import { getUser } from "@/lib/auth";
 import { Combobox } from "@/components/shared/combobox";
 import { FullPageLoader } from "@/components/shared/loader";
+import { JobTicketStatus } from "@/config/enum";
 
 type IssueNoteFormValues = z.infer<typeof issueNoteSchema>;
 
@@ -52,7 +53,7 @@ function CreateIssueNote() {
   useEffect(() => {
     const userData = getUser();
     if (userData) {
-      setUser({ name: userData.name || "admin" });
+      setUser({ name: userData.name || "User" });
     }
 
     const fetchJobs = async () => {
@@ -63,7 +64,7 @@ function CreateIssueNote() {
           setJobs(
             response.data.map((job: any) => ({
               value: job.job_id.toString(),
-              label: job.job_name || `Job #${job.job_id}`,
+              label: job.job_number || `Job #${job.job_id}`,
             }))
           );
         }
@@ -127,12 +128,23 @@ function CreateIssueNote() {
       const payload = {
         ...values,
         date: format(values.date, "yyyy-MM-dd HH:mm:ss"),
-        created_by: user?.name || "admin",
+        created_by: user?.name || "User",
       };
 
       const response = await issueNotesApi.create(payload);
 
       if (response.status === 201 || response.status === 200) {
+        // Update Job Ticket status to IN_PRODUCTION
+        if (values.job_id) {
+          try {
+            await jobTicketsApi.patch(values.job_id, {
+              status: JobTicketStatus.IN_PRODUCTION,
+              updated_by: user?.name || "User",
+            });
+          } catch (err) {
+            console.error("Failed to update Job Ticket status:", err);
+          }
+        }
         toast.success("Issue Note Created successfully");
         router.push("/inventory/issue-notes");
       }

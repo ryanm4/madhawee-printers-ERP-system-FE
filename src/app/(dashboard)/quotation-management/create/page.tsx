@@ -291,7 +291,7 @@ function CreateQuotation({
         no_of_items: data.no_of_items,
         total_without_tax: data.total_without_tax,
         net_total: data.net_total,
-        created_by: user?.name || "Admin",
+        created_by: user?.name || "User",
 
         created_on: new Date(),
 

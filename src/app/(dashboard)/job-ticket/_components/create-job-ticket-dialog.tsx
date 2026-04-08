@@ -17,7 +17,7 @@ import {
   X,
   FileArchive,
 } from "lucide-react"; // Import icons
-import { format } from "date-fns";
+import { format, addYears } from "date-fns";
 import { useState, useRef, useEffect } from "react";
 
 import { cn } from "@/lib/utils";
@@ -134,7 +134,7 @@ export function CreateJobTicketDialog({
     wastage: "",
     deliveryDate: undefined,
     packingDate: undefined,
-    expiryDate: undefined,
+    expiryDate: addYears(new Date(), 5),
     tcNo: "",
     batchRef: "",
     remarks: "",
@@ -310,7 +310,7 @@ export function CreateJobTicketDialog({
         })),
 
         status: JobTicketStatus.CREATED,
-        created_by: user?.name || "admin@admin.com",
+        created_by: user?.name || "User",
         created_on: new Date(),
       };
 
@@ -542,9 +542,9 @@ export function CreateJobTicketDialog({
                           );
                           form.setValue(
                             "jobName",
-                            selectedItem.description + " " + selectedItem.item_code
+                            selectedItem.item_code + " " + selectedItem.description
                           );
-                        }
+                        } ``
                       }}
                       placeholder={
                         fetchingDetails

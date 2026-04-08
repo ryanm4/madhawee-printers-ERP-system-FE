@@ -86,8 +86,8 @@ export function SupplierCombobox({
         contact_person: "",
         contact_person_email: "",
         contact_person_phone: "",
-        created_by: userData?.name || "Admin",
-        updated_by: userData?.name || "Admin",
+        created_by: userData?.name || "User",
+        updated_by: userData?.name || "User",
         status: "ACTIVE",
       };
 

@@ -116,6 +116,7 @@ function EditPurchaseOrder() {
     batchRef: "",
     salesRef: "",
     poDate: new Date(),
+    currency: "LKR",
     itemDetails: [
       { itemCode: "", description: "", quantity: "", unit: "", price: "" },
     ],
@@ -158,9 +159,10 @@ function EditPurchaseOrder() {
           data.poDate instanceof Date ? formatDate(data.poDate) : data.poDate,
         TC_E_PR_No: data.tceprNo,
         updated_on: new Date(),
-        updated_by: user?.name || "admin",
+        updated_by: user?.name || "User",
         status: PurchaseOrderStatus.CREATED,
         customer_po: data.customer_po,
+        currency: data.currency,
         po_items: data.itemDetails.map((item: any) => ({
           item_code: item.itemCode,
           description: item.description,
@@ -219,6 +221,7 @@ function EditPurchaseOrder() {
             batchRef: poData.batch_ref,
             salesRef: (poData as any).sales_ref || "",
             poDate: new Date(poData.po_date),
+            currency: (poData as any).currency || "LKR",
             itemDetails: poData.po_items.map((item) => ({
               itemCode: item.item_code,
               description: item.description,
@@ -486,40 +489,65 @@ function EditPurchaseOrder() {
                   ))}
                 </div>
 
-                {renderFormField("poDate", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      PO Date <span className="text-red-500">*</span>
-                    </FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
+                <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+                  {renderFormField("poDate", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        PO Date <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value
+                                ? format(field.value, "PPP")
+                                : format(new Date(), "PPP")}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            captionLayout="dropdown"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+
+                  {renderFormField("currency", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Currency</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        value={field.value}
+                      >
                         <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value
-                              ? format(field.value, "PPP")
-                              : format(new Date(), "PPP")}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select Currency" />
+                          </SelectTrigger>
                         </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          captionLayout="dropdown"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                ))}
+                        <SelectContent>
+                          <SelectItem value="LKR">🇱🇰 LKR</SelectItem>
+                          <SelectItem value="USD">🇺🇸 USD</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                </div>
+
               </CardContent>
             </Card>
           </div>

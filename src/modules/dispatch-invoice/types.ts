@@ -8,8 +8,9 @@ export interface ALL_DISPATCH {
     dispatch_date: Date;
     status: string;
     create_by: string;
+    created_by: string;
     created_on: Date;
-    updated_by: string
+    updated_by: string;
     updated_on: Date;
     customer_id: number;
     customer_name: string;

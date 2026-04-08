@@ -12,7 +12,7 @@ export const grnSchema = z.object({
   received_date: z.date().min(new Date(0), "Received date is required"),
   supplier_name: z.string().min(1, "Supplier name is required"),
   stock_location: z.string().min(1, "Stock location is required"),
-  payee_name: z.string().min(1, "Payee name is required"),
+  payee_name: z.string().optional(),
   payment_method: z.enum(["CASH", "CARD"]),
   currency: z.string().min(1, "Currency is required"),
   supplier_invoice_no: z.string().min(1, "Invoice number is required"),

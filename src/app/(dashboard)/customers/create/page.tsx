@@ -63,7 +63,7 @@ function CreateCustomerRelationship() {
     contactPerson: "",
     contactPersonEmail: "",
     contactPersonPhone: "",
-    created_by: "Admin", // Or get from auth
+    created_by: "", 
     status: "Active",
   };
 
@@ -143,22 +143,24 @@ function CreateCustomerRelationship() {
         contact_person: data.contactPerson ?? "",
         contact_person_email: data.contactPersonEmail ?? "",
         contact_person_phone: data.contactPersonPhone ?? "",
-        created_by: user?.name || "Admin",
-        updated_by: user?.name || "Admin",
+        created_by: user?.name || "User",
+        updated_by: user?.name || "User",
         status: "CREATED",
       };
       const response = await CustomerApi.create(payload);
 
-      toast("Customer Created", {
-        description: "The customer has been created successfully.",
+      const isSupplier = data.customer_type === CustomerType.SUPPLIER;
+      toast(`${isSupplier ? "Supplier" : "Customer"} Created`, {
+        description: `The ${isSupplier ? "supplier" : "customer"} has been created successfully.`,
       });
       form.reset(baseDefaultValues);
       form.clearErrors();
       router.push("/customers");
     } catch (error) {
-      console.error("Failed to submit customer:", error);
-      toast("Failed to Create Customer", {
-        description: getErrorMessage(error, "An error occurred while creating the customer. Please try again."),
+      console.error("Failed to submit entity:", error);
+      const isSupplier = form.getValues("customer_type") === CustomerType.SUPPLIER;
+      toast(`Failed to Create ${isSupplier ? "Supplier" : "Customer"}`, {
+        description: getErrorMessage(error, `An error occurred while creating the ${isSupplier ? "supplier" : "customer"}. Please try again.`),
       });
     } finally {
       setIsLoading(false);
@@ -177,10 +179,10 @@ function CreateCustomerRelationship() {
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       {isLoading && <FullPageLoader />}
       <PageTitleWithBreadcrumb
-        title="Create Customer"
+        title={`Create ${supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"}`}
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
-          { title: "Customer Relationship Management", href: "/customers" },
+          { title: "Customer / Supplier Management", href: "/customers" },
         ]}
       />
 
@@ -194,7 +196,7 @@ function CreateCustomerRelationship() {
               size="lg"
               variant="outline"
               type="button"
-              onClick={() => router.push("/crm")}
+              onClick={() => router.push("/customers")}
             >
               Cancel
             </Button>
@@ -210,9 +212,11 @@ function CreateCustomerRelationship() {
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Customer</h3>
+                <h3 className="text-md font-medium mb-2">
+                  {supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"} Details
+                </h3>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Add your customer details here
+                  Add your {supplierType === CustomerType.SUPPLIER ? "supplier" : "customer"} details here
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
@@ -262,10 +266,10 @@ function CreateCustomerRelationship() {
                 </div>
                 {renderFormField("address", ({ field }) => (
                   <FormItem>
-                    <FormLabel>Customer Address</FormLabel>
+                    <FormLabel>{supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"} Address</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Enter Customer Address"
+                        placeholder={`Enter ${supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"} Address`}
                         className="resize-none"
                         {...field}
                       />

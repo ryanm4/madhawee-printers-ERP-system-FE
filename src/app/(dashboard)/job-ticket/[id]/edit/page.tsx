@@ -15,7 +15,7 @@ import {
   X,
   FileArchive,
 } from "lucide-react"; // Import icons
-import { format } from "date-fns";
+import { format, addYears } from "date-fns";
 import { useState, useRef, useEffect } from "react";
 
 import { cn } from "@/lib/utils";
@@ -116,7 +116,7 @@ function EditJobTicket() {
     wastage: "",
     deliveryDate: undefined,
     packingDate: undefined,
-    expiryDate: undefined,
+    expiryDate: addYears(new Date(), 5),
     tcNo: "",
     batchRef: "",
     remarks: "",
@@ -281,7 +281,7 @@ function EditJobTicket() {
           ...ink,
           ink: ink.ink,
         })),
-        updated_by: user?.name || "admin@admin.com",
+        updated_by: user?.name || "User",
         updated_on: new Date(),
         status: JobTicketStatus.CREATED,
       };

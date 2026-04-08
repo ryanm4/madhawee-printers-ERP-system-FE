@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils"
 import { TrendingUp } from "lucide-react"
 import {
     Label,
+    PolarAngleAxis,
     PolarRadiusAxis,
     RadialBar,
     RadialBarChart,
@@ -33,6 +34,7 @@ interface ChartRadialShapeProps {
     color?: string;
     footerTitle: string;
     footerDescription: string;
+    percentage?: number;
 }
 
 export function ChartRadialShape({
@@ -43,9 +45,14 @@ export function ChartRadialShape({
     label,
     color = "var(--chart-1)",
     footerTitle,
-    footerDescription
+    footerDescription,
+    percentage: manualPercentage,
 }: ChartRadialShapeProps) {
-    const percentage = total > 0 ? (completed / total) * 100 : 0;
+    const calculatedPercentage = total > 0 ? (completed / total) * 100 : 0;
+    const percentage = manualPercentage !== undefined ? manualPercentage : calculatedPercentage;
+    
+    // Ensure a tiny sliver of color is visible if there's any total but 0 progress (user choice pending)
+    // Actually let's stick to true 0 if it's 0, but ensure the chart can render it.
     const data = [{ name: label, value: percentage, fill: color }];
 
     const chartConfig = {
@@ -71,16 +78,23 @@ export function ChartRadialShape({
                 >
                     <RadialBarChart
                         data={data}
-                        startAngle={180}
-                        endAngle={-180}
+                        startAngle={90}
+                        endAngle={-270}
                         innerRadius="75%"
                         outerRadius="100%"
                         barSize={15}
                     >
+                        <PolarAngleAxis
+                            type="number"
+                            domain={[0, 100]}
+                            angleAxisId={0}
+                            tick={false}
+                        />
                         <RadialBar
                             dataKey="value"
                             background={{ fill: '#f3f4f6' }}
                             cornerRadius={30}
+                            fill={color}
                         />
                         <PolarRadiusAxis 
                            type="number" 

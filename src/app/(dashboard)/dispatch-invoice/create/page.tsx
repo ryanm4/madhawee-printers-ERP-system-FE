@@ -47,6 +47,12 @@ import { Combobox } from "@/components/shared/combobox";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
 
+import {
+  handleDispatchPrint,
+  DispatchPrintData,
+} from "../_components/dispatch-print-dialog";
+import { DispatchStatus, JobTicketStatus } from "@/config/enum";
+
 type DispatchFormValues = z.infer<typeof dispatchInvoiceScheme>;
 
 function CreateDispatchandInvoice() {
@@ -97,7 +103,9 @@ function CreateDispatchandInvoice() {
 
       if (response.status === 200) {
         const completedJobs = response.data.filter(
-          (x) => x.status === "PRINTING COMPLETED"
+          (x) =>
+            x.status === JobTicketStatus.IN_PRODUCTION ||
+            x.status === JobTicketStatus.PARTIALLY_DISPATCHED
         );
 
         setJobData(completedJobs);
@@ -113,31 +121,89 @@ function CreateDispatchandInvoice() {
   const onSubmit: SubmitHandler<DispatchFormValues> = async (data) => {
     try {
       setIsLoading(true);
+
+      const selectedJob = JobData.find(
+        (j) => String(j.job_id) === String(data.job_id)
+      );
+      const previouslyCompleted = Number(selectedJob?.completed_qty || 0);
+      const totalJobQty = Number(selectedJob?.quantity || 0);
+      const currentDispatchQty = Number(data.dispatch_quantity || 0);
+      const totalDispatched = previouslyCompleted + currentDispatchQty;
+
+      const newJobStatus =
+        totalDispatched >= totalJobQty
+          ? JobTicketStatus.COMPLETED
+          : JobTicketStatus.PARTIALLY_DISPATCHED;
+
       const payload: CREATE_DISPATCH = {
-        customer_id: data.customer_id ?? "",
+        customer_id: data.customer_id || "",
         job_id: data.job_id,
         dispatch_note: data.dispatch_note ?? "",
-        dispatch_date: toMySQLDateTime(new Date("2025-01-05")),
+        dispatch_date: toMySQLDateTime(new Date()),
         dispatch_qty: data.dispatch_quantity ?? "",
         no_of_bundles: data.dispatch_bundles_qty ?? "",
         description: data.dispatch_description ?? "",
         delivery_address: data.delivery_address ?? "",
-        status: "PENDING",
-        created_by: user?.name || "Admin",
+        status:
+          newJobStatus === JobTicketStatus.COMPLETED
+            ? DispatchStatus.COMPLETED
+            : DispatchStatus.PARTIALLY_DISPATCHED,
+        created_by: user?.name || "User",
         created_on: new Date(),
       };
       const response = await dispatchInventoryApi.create(payload);
 
+      // Update Job Ticket status based on total dispatch quantity using PATCH API
+      if (data.job_id) {
+        try {
+          await jobTicketsApi.patch(data.job_id, {
+            status: newJobStatus,
+            updated_by: user?.name || "User",
+          });
+        } catch (err) {
+          console.error(
+            "Failed to update Job Ticket status during dispatch:",
+            err
+          );
+        }
+      }
+
       toast("Dispatch Created", {
         description: "The dispatch record has been created successfully.",
       });
+
+      // Prepare print data
+      const pData: DispatchPrintData = {
+        dispatch_id: (response.data as any).dispatch_id || "N/A",
+        dispatch_date: new Date(),
+        customer_name: data.customer_name || "",
+        customer_address: data.customer_address || "",
+        customer_phone: data.customer_phone || "",
+        delivery_address: data.delivery_address || "",
+        dispatch_qty: data.dispatch_quantity || "",
+        no_of_bundles: data.dispatch_bundles_qty || "",
+        description: data.dispatch_description || "",
+        job_id: data.job_id,
+        job_name:
+          JobData.find((j) => String(j.job_id) === String(data.job_id))
+            ?.job_name || "",
+        remarks: data.dispatch_note || "",
+        created_by: user?.name || "User",
+      };
+
+      // Auto-trigger print
+      handleDispatchPrint(pData);
+
       form.reset(baseDefaultValues);
       form.clearErrors();
       router.push("/dispatch-invoice");
     } catch (error) {
       console.error("Failed to create dispatch record:", error);
       toast("Failed to Create Dispatch", {
-        description: getErrorMessage(error, "An error occurred while creating the dispatch record. Please try again."),
+        description: getErrorMessage(
+          error,
+          "An error occurred while creating the dispatch record. Please try again."
+        ),
       });
     } finally {
       setIsLoading(false);
@@ -240,22 +306,44 @@ function CreateDispatchandInvoice() {
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                {renderFormField("job_id", ({ field }) => (
+                <div className="grid grid-cols-2 gap-4">
+                  {renderFormField("job_id", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Job ID</FormLabel>
+                      <Combobox
+                        items={JobData.map((job) => ({
+                          value: String(job.job_id),
+                          label: `Job-${job.job_number} (${
+                            job.job_name.length > 25
+                              ? job.job_name.substring(0, 25) + "..."
+                              : job.job_name
+                          })`,
+                        }))}
+                        value={field.value ? String(field.value) : ""}
+                        onValueChange={field.onChange}
+                        placeholder="Select a Job Ticket"
+                        searchPlaceholder="Search job..."
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  ))}
                   <FormItem>
-                    <FormLabel>Job ID</FormLabel>
-                    <Combobox
-                      items={JobData.map((job) => ({
-                        value: String(job.job_id),
-                        label: `Job-${job.job_id} (${job.job_name})`,
-                      }))}
-                      value={field.value ? String(field.value) : ""}
-                      onValueChange={field.onChange}
-                      placeholder="Select a Job Ticket"
-                      searchPlaceholder="Search job..."
-                    />
-                    <FormMessage />
+                    <FormLabel>Job Quantity</FormLabel>
+                    <FormControl>
+                      <Input
+                        readOnly
+                        disabled
+                        className="bg-gray-50 border-gray-200 cursor-not-allowed"
+                        value={
+                          JobData.find(
+                            (j) =>
+                              String(j.job_id) === String(form.watch("job_id"))
+                          )?.quantity || ""
+                        }
+                      />
+                    </FormControl>
                   </FormItem>
-                ))}
+                </div>
                 <div className="flex flex-row gap-4">
                   {renderFormField("customer_name", ({ field }) => (
                     <FormItem className="w-full">

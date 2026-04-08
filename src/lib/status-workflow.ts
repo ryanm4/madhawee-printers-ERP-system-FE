@@ -3,13 +3,8 @@ import { JobTicketStatus, PurchaseOrderStatus, QuotationStatus } from "@/config/
 export const getNextJobTicketStatus = (currentStatus: string): JobTicketStatus | null => {
     const statusOrder = [
         JobTicketStatus.CREATED,
-        JobTicketStatus.APPROVED,
-        JobTicketStatus.MATERIALS_REQUESTED,
-        JobTicketStatus.MATERIALS_ALLOCATED,
-        JobTicketStatus.IN_PRINTING,
-        JobTicketStatus.PRINTING_COMPLETED,
+        JobTicketStatus.IN_PRODUCTION,
         JobTicketStatus.PARTIALLY_DISPATCHED,
-        JobTicketStatus.DISPATCHED,
         JobTicketStatus.COMPLETED
     ];
 

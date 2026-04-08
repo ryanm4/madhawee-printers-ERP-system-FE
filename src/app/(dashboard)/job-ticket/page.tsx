@@ -27,6 +27,7 @@ function JobTicketComponent() {
   const [isLoading, setIsLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [remarksSearch, setRemarksSearch] = useState("");
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [printData, setPrintData] = useState<JobTicketPrintData | null>(null);
 
@@ -129,21 +130,26 @@ function JobTicketComponent() {
         if (currentTicketResponse.status === 200) {
           const currentTicket = currentTicketResponse.data as any;
 
+          const formatDate = (date: any) => {
+            if (!date) return undefined;
+            return new Date(date).toISOString().slice(0, 10);
+          };
+
           // Construct payload matching CREATE_TICKETS interface
           const payload = {
             po_id: currentTicket.po_id,
             item_code: currentTicket.item_code,
             job_number: currentTicket.job_number,
-            order_received_date: currentTicket.order_received_date,
-            job_open_date: currentTicket.job_open_date,
+            order_received_date: formatDate(currentTicket.order_received_date),
+            job_open_date: formatDate(currentTicket.job_open_date),
             customer_id: currentTicket.customer_id,
             job_name: currentTicket.job_name,
             product_type: currentTicket.product_type,
             quantity: currentTicket.quantity,
             completed_qty: currentTicket.completed_qty,
             wastage: currentTicket.wastage,
-            packing_date: currentTicket.packing_date,
-            expiry_date: currentTicket.expiry_date,
+            packing_date: formatDate(currentTicket.packing_date),
+            expiry_date: formatDate(currentTicket.expiry_date),
             tc_no: currentTicket.tc_no,
             batch_ref: currentTicket.batch_ref,
             remarks: currentTicket.remarks,
@@ -166,11 +172,11 @@ function JobTicketComponent() {
             ).map((p: any) => ({
               paper: p.paper || p.paper_type,
               coating: p.coating,
-              delivery_date: p.delivery_date,
+              delivery_date: formatDate(p.delivery_date),
             })),
 
             status: status,
-            create_by: currentTicket.create_by || "Admin",
+            create_by: currentTicket.create_by || "User",
           };
 
           await jobTicketsApi.update(id, payload as any);
@@ -223,6 +229,17 @@ function JobTicketComponent() {
             />
           </div>
 
+          <div className="relative w-[320px]">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search Remarks"
+              className="w-full pl-8"
+              value={remarksSearch}
+              onChange={(e) => setRemarksSearch(e.target.value)}
+            />
+          </div>
+
           <ExportButton data={data} filename="job-tickets" />
           <Button onClick={() => router.push("/job-ticket/create")}>
             <PlusIcon /> Create New
@@ -240,8 +257,12 @@ function JobTicketComponent() {
         ) : (
           <DataTable
             columns={columns}
-            data={data}
-            searchValue={search}
+            data={data.filter((item) => {
+              const matchesSearch = !search || item.job_number?.toLowerCase().includes(search.toLowerCase()) || String(item.job_id).includes(search);
+              const matchesRemarks = !remarksSearch || item.remarks?.toLowerCase().includes(remarksSearch.toLowerCase());
+              return matchesSearch && matchesRemarks;
+            })}
+            searchValue=""
             searchColumn="job_id"
           />
         )}

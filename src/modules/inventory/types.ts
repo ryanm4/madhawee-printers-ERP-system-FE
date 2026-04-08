@@ -21,6 +21,8 @@ export interface CREATE_INVENTORY {
     item_sub_category: string;
     item_name: string;
     size: string;
+    width: string;
+    height: string;
     quantity: string;
     unit_of_measure: string;
     reorder_level: string;

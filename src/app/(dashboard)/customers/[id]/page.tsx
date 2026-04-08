@@ -44,7 +44,7 @@ function ViewCustomerRelationship() {
         contactPerson: "",
         contactPersonEmail: "",
         contactPersonPhone: "",
-        created_by: "Admin", // Or get from auth
+        created_by: "", 
         status: "Active",
     }
 

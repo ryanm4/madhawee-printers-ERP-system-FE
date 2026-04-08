@@ -68,7 +68,7 @@ function EditIssueNote() {
   useEffect(() => {
     const userData = getUser();
     if (userData) {
-      setUser({ name: userData.name || "admin" });
+      setUser({ name: userData.name || "User" });
     }
     if (id) {
       fetchIssueNote();
@@ -81,7 +81,7 @@ function EditIssueNote() {
           setJobs(
             response.data.map((job: any) => ({
               value: job.job_id.toString(),
-              label: job.job_name || `Job #${job.job_id}`,
+              label: job.job_number || `Job #${job.job_id}`,
             }))
           );
         }
@@ -147,7 +147,7 @@ function EditIssueNote() {
       const payload = {
         ...values,
         date: format(values.date, "yyyy-MM-dd HH:mm:ss"),
-        updated_by: user?.name || "admin",
+        updated_by: user?.name || "User",
       };
 
       const response = await issueNotesApi.update(id as string, payload);

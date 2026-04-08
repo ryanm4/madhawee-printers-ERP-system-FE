@@ -196,3 +196,8 @@ export interface JobTicketPrintData {
     remarks?: string;
   }[];
 }
+
+export interface JOB_TICKET_STATUS_UPDATE {
+  updated_by: string;
+  status: string;
+}
