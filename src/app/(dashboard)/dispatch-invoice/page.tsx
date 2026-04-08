@@ -16,8 +16,8 @@ import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutPanelTop, Table2 } from "lucide-react";
-import { DispatchCard } from "@/components/dispatch-card";
+import { AppSidebar } from "@/components/layout/app-sidebar"
+import { handleDispatchPrint, DispatchPrintData } from "./_components/dispatch-print-dialog";
 
 function DispatchInvoiceManagement() {
   const router = useRouter();
@@ -57,6 +57,26 @@ function DispatchInvoiceManagement() {
     onView: (id: string | number) => {
       router.push(`/dispatch-invoice/${id}/view`);
     },
+    onPrint: (dispatch: ALL_DISPATCH) => {
+      const pData: DispatchPrintData = {
+        dispatch_id: dispatch.dispatch_id,
+        dispatch_date: dispatch.dispatch_date,
+        customer_name: dispatch.customer_name,
+        customer_address: dispatch.customer_address,
+        customer_phone: dispatch.customer_phone,
+        delivery_address: dispatch.delivery_address,
+        dispatch_qty: dispatch.dispatch_qty,
+        no_of_bundles: dispatch.no_of_bundles,
+        description: dispatch.description,
+        job_id: dispatch.job_id,
+        job_name: dispatch.job_name,
+        po_id: dispatch.po_id,
+        contact_person: dispatch.contact_person,
+        remarks: dispatch.dispatch_note,
+        created_by: dispatch.created_by || dispatch.create_by,
+      };
+      handleDispatchPrint(pData);
+    }
   };
 
   const columns = DispatchColumns(handlers);
@@ -80,45 +100,45 @@ function DispatchInvoiceManagement() {
   return (
     <>
       <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      <PageTitleWithBreadcrumb
-        title="Dispatch & Invoice Management"
-        breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
-      />
-      <div className="flex flex-row justify-end gap-[24px]">
-        <div className="relative w-[320px]">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search Customer"
-            className="w-full pl-8"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+        <PageTitleWithBreadcrumb
+          title="Dispatch & Invoice Management"
+          breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
+        />
+        <div className="flex flex-row justify-end gap-[24px]">
+          <div className="relative w-[320px]">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search by Job Number"
+              className="w-full pl-8"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
 
-        <ExportButton data={data} filename="dispatch-list" />
-        <Button onClick={() => router.push("/dispatch-invoice/create")}>
-          <PlusIcon /> Create New
-        </Button>
+          <ExportButton data={data} filename="dispatch-list" />
+          <Button onClick={() => router.push("/dispatch-invoice/create")}>
+            <PlusIcon /> Create New
+          </Button>
+        </div>
+        {isLoading ? (
+          <PageLoader />
+        ) : data.length === 0 ? (
+          <EmptyState
+            title="No Dispatch Records"
+            description="You haven't recorded any dispatches yet. Start processing your orders by creating your first record."
+            createLabel="Create New Dispatch"
+            createPath="/dispatch-invoice/create"
+          />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={data}
+            searchValue={search}
+            searchColumn="job_number"
+          />
+        )}
       </div>
-      {isLoading ? (
-        <PageLoader />
-      ) : data.length === 0 ? (
-        <EmptyState
-          title="No Dispatch Records"
-          description="You haven't recorded any dispatches yet. Start processing your orders by creating your first record."
-          createLabel="Create New Dispatch"
-          createPath="/dispatch-invoice/create"
-        />
-      ) : (
-        <DataTable
-          columns={columns}
-          data={data}
-          searchValue={search}
-          searchColumn="customer_name"
-        />
-      )}
-    </div>
 
       <AlertDeleteDialog
         isOpen={deleteId !== null}

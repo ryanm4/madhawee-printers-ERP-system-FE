@@ -14,7 +14,7 @@ import {
   X,
   FileArchive,
 } from "lucide-react"; // Import icons
-import { format } from "date-fns";
+import { format, addYears } from "date-fns";
 import { useState, useRef, useEffect } from "react";
 
 import { cn } from "@/lib/utils";
@@ -117,7 +117,7 @@ function CreateJobTicket() {
     wastage: "",
     deliveryDate: undefined,
     packingDate: undefined,
-    expiryDate: undefined,
+    expiryDate: addYears(new Date(), 5),
     tcNo: "",
     batchRef: "",
     remarks: "",
@@ -280,7 +280,7 @@ function CreateJobTicket() {
         })),
 
         status: JobTicketStatus.CREATED,
-        created_by: user?.name || "admin@admin.com",
+        created_by: user?.name || "User",
       };
 
       const response = await jobTicketsApi.create(payload);
@@ -527,9 +527,7 @@ function CreateJobTicket() {
                           if (selectedItem) {
                             form.setValue(
                               "jobName",
-                              selectedItem.description +
-                              " " +
-                              selectedItem.item_code
+                              selectedItem.item_code + " " + selectedItem.description
                             );
                           }
                         }}

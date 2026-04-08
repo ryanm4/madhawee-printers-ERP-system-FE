@@ -65,7 +65,7 @@ function EditCustomerRelationship() {
     contactPerson: "",
     contactPersonEmail: "",
     contactPersonPhone: "",
-    created_by: "Admin", // Or get from auth
+    created_by: "", 
     status: "Active",
   };
 
@@ -181,22 +181,25 @@ function EditCustomerRelationship() {
         contact_person: data.contactPerson ?? "",
         contact_person_email: data.contactPersonEmail ?? "",
         contact_person_phone: data.contactPersonPhone ?? "",
-        created_by: data.created_by ?? "Admin",
-        updated_by: user?.name || "Admin",
+        created_by: data.created_by || user?.name || "User",
+        updated_by: user?.name || "User",
         status: "Updated",
       };
       const response = await CustomerApi.update(id, payload);
 
-      toast("Customer Updated", {
-        description: "The customer details have been updated successfully.",
+      const isSupplier = data.customer_type === CustomerType.SUPPLIER;
+      toast(`${isSupplier ? "Supplier" : "Customer"} Updated`, {
+        description: `The ${isSupplier ? "supplier" : "customer"} details have been updated successfully.`,
       });
       form.reset(baseDefaultValues);
       form.clearErrors();
       router.push("/customers");
     } catch (error) {
-      console.error("Failed to submit customer:", error);
-      toast("Failed to Update Customer", {
-        description: getErrorMessage(error, "An error occurred while updating the customer. Please try again."),
+      console.error("Failed to submit entity:", error);
+      const isSupplier = form.getValues("customer_type") === CustomerType.SUPPLIER;
+      const label = isSupplier ? "Supplier" : "Customer";
+      toast(`Failed to Update ${label}`, {
+        description: getErrorMessage(error, `An error occurred while updating the ${label.toLowerCase()}. Please try again.`),
       });
     } finally {
       setIsLoading(false);
@@ -221,10 +224,10 @@ function EditCustomerRelationship() {
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       {isLoading && <FullPageLoader />}
       <PageTitleWithBreadcrumb
-        title="Edit Customer"
+        title={`Edit ${supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"}`}
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
-          { title: "Customer", href: "/customers" },
+          { title: "Customer / Supplier Management", href: "/customers" },
         ]}
       />
 
@@ -256,9 +259,11 @@ function EditCustomerRelationship() {
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Customer</h3>
+                <h3 className="text-md font-medium mb-2">
+                  {supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"} Details
+                </h3>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Edit your customer details here
+                  Edit your {supplierType === CustomerType.SUPPLIER ? "supplier" : "customer"} details here
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
@@ -308,10 +313,10 @@ function EditCustomerRelationship() {
                 </div>
                 {renderFormField("address", ({ field }) => (
                   <FormItem>
-                    <FormLabel>Customer Address</FormLabel>
+                    <FormLabel>{supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"} Address</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Enter Customer Address"
+                        placeholder={`Enter ${supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"} Address`}
                         className="resize-none"
                         {...field}
                       />

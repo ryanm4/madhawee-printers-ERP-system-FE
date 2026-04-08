@@ -55,6 +55,8 @@ function EditInventoryManagement() {
     item_category: "",
     item_sub_category: "",
     item_name: "",
+    width: "",
+    height: "",
     size: "",
     quantity: 0,
     unit_of_measure: "",
@@ -86,11 +88,24 @@ function EditInventoryManagement() {
         const response = await inventoryApi.getById(id);
         const data = response.data;
 
+        // Parse size into width and height
+        let width = "";
+        let height = "";
+        if (data.size && data.size.includes("x")) {
+          const parts = data.size.split("x").map((p) => p.trim());
+          width = parts[0] || "";
+          height = parts[1] || "";
+        } else if (data.size) {
+          width = data.size;
+        }
+
         // ✅ Populate form with fetched data
         form.reset({
           item_category: data.item_category,
           item_sub_category: data.item_sub_category,
           item_name: data.item_name,
+          width: width,
+          height: height,
           size: data.size,
           quantity: Number(data.quantity),
           unit_of_measure: data.unit_of_measure,
@@ -119,13 +134,15 @@ function EditInventoryManagement() {
         item_category: data.item_category,
         item_sub_category: data.item_sub_category,
         item_name: data.item_name,
-        size: data.size,
+        size: `${data.width} x ${data.height}`,
+        width: data.width,
+        height: data.height,
         quantity: String(data.quantity),
         unit_of_measure: data.unit_of_measure,
         reorder_level: data.reorder_level,
         status: data.status,
         remarks: data.remarks ?? "",
-        updated_by: user?.name || "Admin",
+        updated_by: user?.name || "User",
       };
       const response = await inventoryApi.update(id, payload);
 
@@ -201,165 +218,195 @@ function EditInventoryManagement() {
                 Edit your Inventory details here
               </p>
             </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              {renderFormField("item_category", ({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Item Category <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || undefined}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select Item Category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.entries(ITEM_CATEGORY).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("item_sub_category", ({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Item Sub Category <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || undefined}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select Item Sub Category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.entries(ITEM_SUB_CATEGORY).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("item_name", ({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Item Name <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Enter Item Name"
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("size", ({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Size <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Enter Size"
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("quantity", ({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Item Quantitiy <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="Enter Item Quantity"
-                      value={field.value}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("unit_of_measure", ({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Unit of Measure <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
+            <CardContent className="flex flex-col gap-6">
+              {/* Row 1: Categories */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {renderFormField("item_category", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Item Category <span className="text-red-500">*</span>
+                    </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select Unit of Meassure" />
+                          <SelectValue placeholder="Select Item Category" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.values(UNIT_OF_MEASSURE).map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
+                        {Object.entries(ITEM_CATEGORY).map(([key, value]) => (
+                          <SelectItem key={key} value={value}>
+                            {value}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("reorder_level", ({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Re-order Level <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="Enter Re-order Level"
-                      value={field.value}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("status", ({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Status <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || undefined}>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("item_sub_category", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Item Sub Category <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || undefined}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select Item Sub Category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {Object.entries(ITEM_SUB_CATEGORY).map(([key, value]) => (
+                          <SelectItem key={key} value={value}>
+                            {value}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </div>
+
+              {/* Row 2: Name */}
+              <div className="grid grid-cols-1 gap-4">
+                {renderFormField("item_name", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Item Name <span className="text-red-500">*</span>
+                    </FormLabel>
                     <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select Status" />
-                      </SelectTrigger>
+                      <Input
+                        placeholder="Enter Item Name"
+                        className="resize-none"
+                        {...field}
+                      />
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="ACTIVE">ACTIVE</SelectItem>
-                      <SelectItem value="INACTIVE">INACTIVE</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("remarks", ({ field }) => (
-                <FormItem>
-                  <FormLabel>Remarks</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Enter Remarks" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </div>
+
+              {/* Row 3: Width, Height and Quantity */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+                  {renderFormField("width", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Width (cm) <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="W"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                  <div className="pb-3 text-muted-foreground font-bold text-xs">x</div>
+                  {renderFormField("height", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Height (cm) <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="H"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                </div>
+                {renderFormField("quantity", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Item Quantitiy <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="Enter Item Quantity"
+                        value={field.value}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </div>
+
+              {/* Row 4: UOM, Reorder Level, Status */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {renderFormField("unit_of_measure", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Unit of Measure <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Select onValueChange={field.onChange} value={field.value || undefined}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select Unit of Meassure" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.values(UNIT_OF_MEASSURE).map((category) => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("reorder_level", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Re-order Level <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter Re-order Level" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("status", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Status <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || undefined}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select Status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+                        <SelectItem value="INACTIVE">INACTIVE</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </div>
+
+              {/* Row 5: Remarks */}
+              <div className="grid grid-cols-1 gap-4">
+                {renderFormField("remarks", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Remarks</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Enter Remarks" className="h-20 min-h-[80px]" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </form>

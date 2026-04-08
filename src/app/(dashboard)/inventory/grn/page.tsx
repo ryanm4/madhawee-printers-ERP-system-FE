@@ -17,7 +17,7 @@ import { PageLoader } from "@/components/shared/loader";
 import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
 import { useMemo } from "react";
 
-import { generateGRNPdf } from "@/modules/inventory/grn/pdf-utils";
+import { handleGRNPrint } from "./_components/grn-print-dialog";
 
 function GRNManagement() {
   const router = useRouter();
@@ -60,9 +60,9 @@ function GRNManagement() {
       setSelectedGrnId(id);
       setIsDeleteDialogOpen(true);
     },
-    onDownload: (grn: GRN) => {
-      generateGRNPdf(grn);
-      toast.success("Downloading GRN PDF...");
+    onPrint: (grn: GRN) => {
+      handleGRNPrint(grn);
+      toast.success("Opening GRN Print View...");
     },
   }), [router]);
 

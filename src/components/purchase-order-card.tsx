@@ -164,9 +164,9 @@ export function PurchaseOrderCard({
                             {additionalJobs} Jobs More
                         </Badge>
                         <div className="flex items-center justify-center">
-                            <StatusBadge 
-                                status={status} 
-                                type="PURCHASE_ORDER" 
+                            <StatusBadge
+                                status={status}
+                                type="PURCHASE_ORDER"
                                 className="w-full h-[40px] rounded-md text-md px-4"
                             />
                         </div>
@@ -202,7 +202,7 @@ export function PurchaseOrderCard({
 
                                     <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                                         <span className="text-[14px] text-muted-foreground truncate">
-                                            {job.job_id}
+                                            {job.job_number}
                                         </span>
                                         <span className="text-[14px] font-medium leading-tight line-clamp-2" title={job.job_name}>
                                             {job.job_name}

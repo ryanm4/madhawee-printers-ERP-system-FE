@@ -6,7 +6,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, Eye, MoreHorizontal, PencilIcon, TrashIcon, Download } from "lucide-react"
+import { ArrowUpDown, Eye, MoreHorizontal, PencilIcon, TrashIcon, Printer } from "lucide-react"
 import { GRN } from "@/modules/inventory/grn/types"
 import { format, parseISO } from "date-fns"
 
@@ -14,7 +14,7 @@ interface GRNTableActions {
     onView: (id: number | string) => void
     onEdit: (id: number | string) => void
     onDelete: (id: number | string) => void
-    onDownload: (grn: GRN) => void
+    onPrint: (grn: GRN) => void
 }
 
 export const grnColumns = (
@@ -77,41 +77,53 @@ export const grnColumns = (
             const grn = row.original
 
             return (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal />
-                        </Button>
-                    </DropdownMenuTrigger>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => actions.onPrint(grn)}
+                        title="Print GRN"
+                    >
+                        <Printer className="h-4 w-4" />
+                    </Button>
 
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                            onClick={() => actions.onView(grn.id)}
-                        >
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => actions.onEdit(grn.id)}
-                        >
-                            <PencilIcon className="mr-2 h-4 w-4" />
-                            Edit GRN
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => actions.onDownload(grn)}
-                        >
-                            <Download className="mr-2 h-4 w-4" />
-                            Download PDF
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => actions.onDelete(grn.id)}
-                        >
-                            <TrashIcon className="mr-2 h-4 w-4" />
-                            Delete GRN
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                <MoreHorizontal />
+                            </Button>
+                        </DropdownMenuTrigger>
+
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                                onClick={() => actions.onView(grn.id)}
+                            >
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={() => actions.onEdit(grn.id)}
+                            >
+                                <PencilIcon className="mr-2 h-4 w-4" />
+                                Edit GRN
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={() => actions.onPrint(grn)}
+                            >
+                                <Printer className="mr-2 h-4 w-4" />
+                                Print GRN
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => actions.onDelete(grn.id)}
+                            >
+                                <TrashIcon className="mr-2 h-4 w-4" />
+                                Delete GRN
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
             )
         },
     },

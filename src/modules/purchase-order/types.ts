@@ -14,6 +14,7 @@ export interface PURCHASE_ORDER {
     updated_on: Date,
     updated_by: string,
     status: string,
+    currency: string,
     sales_ref?: string;
     customer: PO_CUSTOMER,
     po_items: PO_ITEMS[]
@@ -55,6 +56,7 @@ export interface CREATE_PURCHASE_ORDER {
     status?: string;
     customer_po: string;
     sales_ref?: string;
+    currency?: string;
     po_items: {
         item_code?: string;
         description: string;
@@ -66,7 +68,7 @@ export interface CREATE_PURCHASE_ORDER {
 
 export interface PURCHASE_ORDER_JOBS {
     job_id: number,
-    code: string;
+    job_number: string;
     job_name: string;
     status: string;
     job_open_date: string;
@@ -89,6 +91,7 @@ export interface PURCHASE_ORDER_ID {
     updated_by: string,
     po_status: string,
     sales_ref?: string,
+    currency: string,
     customer: PO_CUSTOMER,
     po_items: PO_ITEMS[]
     jobs: PURCHASE_ORDER_JOBS[]

@@ -15,6 +15,7 @@ export const purchaseOrderScheme = z.object({
     batchRef: z.string().optional(),
     salesRef: z.string().optional(),
     poDate: z.date(),
+    currency: z.string().optional(),
 
     itemDetails: z
         .array(

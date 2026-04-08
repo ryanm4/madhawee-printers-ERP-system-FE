@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon, TrendingUp, Package, Truck, ClipboardList, CheckCircle2, AlertCircle, Clock, FileText, Banknote, BarChart3 } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
@@ -40,8 +40,8 @@ function DashboardPage({
   }>(initialUser);
   const [isLoading, setIsLoading] = useState(false);
   const [date, setDate] = React.useState<DateRange | undefined>({
-    from: new Date(new Date().getFullYear(), 0, 1),
-    to: new Date(),
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
   });
   const [kpiData, setKpiData] = useState<KPIItem[]>([]);
   const [insights, setInsights] = useState<string[]>([]);
@@ -85,10 +85,11 @@ function DashboardPage({
   }, [date]);
 
   const KAR_CONFIG: Record<string, { label: string, color: string, badgeBg: string, icon: any }> = {
-    totalQuotations: { label: "Total Quotations", color: "#223F7A", badgeBg: "#223F7A15", icon: FileText },
-    approvedQuotations: { label: "Approved Quotations", color: "#10b981", badgeBg: "#10b98115", icon: CheckCircle2 },
     totalRevenue: { label: "Total Revenue", color: "#8b5cf6", badgeBg: "#8b5cf615", icon: Banknote },
     avgQuoteValue: { label: "Total dispatched revenue", color: "#f59e0b", badgeBg: "#f59e0b15", icon: BarChart3 },
+    totalQuotations: { label: "Total Quotations", color: "#223F7A", badgeBg: "#223F7A15", icon: FileText },
+    approvedQuotations: { label: "Approved Quotations", color: "#10b981", badgeBg: "#10b98115", icon: CheckCircle2 },
+
   }
 
   return (
@@ -169,7 +170,7 @@ function DashboardPage({
               {/* Left: Welcome */}
               <div className="flex-1 px-10 pb-8 pt-6 flex flex-col justify-center">
                 <h2 className="text-4xl md:text-5xl font-black text-gray-900 leading-tight mb-4">
-                  Welcome back,<br />{user?.name}!
+                  Welcome Back,<br />{user?.name}!
                 </h2>
                 <p className="text-gray-500 text-lg max-w-md mb-6 leading-relaxed">
                   Ready to manage your printing operations? You have <span className="font-bold" style={{ color: '#223F7A' }}>{kpiData.find(k => k.key === "totalQuotations")?.value || 0}</span> active quotations to review.
@@ -187,12 +188,13 @@ function DashboardPage({
               {/* Right: KPI Grid */}
               <div className="lg:w-[480px] xl:w-[540px] p-6 lg:p-10 flex items-center">
                 <div className="grid grid-cols-2 gap-6 w-full">
-                  {kpiData
-                    .filter(item => KAR_CONFIG[item.key])
-                    .map((item) => {
-                      const config = KAR_CONFIG[item.key]
-                      const isCurrency = item.key === 'totalRevenue' || item.key === 'avgQuoteValue'
-                      const rawValue = Number(item.value)
+                  {Object.keys(KAR_CONFIG).map((key) => {
+                    const item = kpiData.find(d => d.key === key)
+                    if (!item) return null
+
+                    const config = KAR_CONFIG[key]
+                    const isCurrency = key === 'totalRevenue' || key === 'avgQuoteValue'
+                    const rawValue = Number(item.value)
 
                       // Smart formatting: abbreviate large numbers to prevent clutter
                       const formatValue = (val: number, currency: boolean) => {
@@ -286,6 +288,7 @@ function DashboardPage({
               color="#10b981"
               footerTitle="Output Rate"
               footerDescription="Active job ticket progress"
+              percentage={Number(analytics?.jobStats?.production_efficiency || 0)}
             />
             <div className="lg:col-span-1 flex flex-col h-full">
               {insights && insights.length > 0 ? (

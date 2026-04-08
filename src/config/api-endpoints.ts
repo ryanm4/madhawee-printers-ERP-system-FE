@@ -33,6 +33,7 @@ export const API_ENDPOINTS = {
     CREATE: `${API_BASE_URL}/jobs`,
     GET: (jobId: number | string) => `${API_BASE_URL}/jobs/${jobId}`,
     UPDATE: (jobId: number | string) => `${API_BASE_URL}/jobs/${jobId}`,
+    PATCH: (jobId: number | string) => `${API_BASE_URL}/jobs/${jobId}`,
     DELETE: (jobId: number | string) => `${API_BASE_URL}/jobs/${jobId}`,
   },
   DISPATCH: {
@@ -129,6 +130,8 @@ export const API_ENDPOINTS = {
       GET: (jobId: number | string) => `${NEXTJS_API_BASE}/jobs/${jobId}`,
       UPDATE: (jobId: number | string) => `${NEXTJS_API_BASE}/jobs/${jobId}`,
       DELETE: (jobId: number | string) => `${NEXTJS_API_BASE}/jobs/${jobId}`,
+      PATCH: (jobId: number | string) => `${NEXTJS_API_BASE}/jobs/${jobId}`,
+
     },
     DISPATCH: {
       LIST: `${NEXTJS_API_BASE}/dispatch`,

@@ -1,5 +1,6 @@
 "use client";
 import { dispatchInvoiceScheme } from "@/modules/dispatch-invoice/validation";
+import { DispatchStatus } from "@/config/enum";
 import { useParams, useRouter } from "next/navigation";
 import { getErrorMessage } from "@/lib/error-utils";
 import React, { useEffect, useState } from "react";
@@ -73,6 +74,7 @@ function EditDispatchandInvoice() {
     dispatch_quantity: "",
     dispatch_bundles_qty: "",
     dispatch_description: "",
+    customer_id: "",
   };
 
   const form = useForm<DispatchFormValues>({
@@ -99,7 +101,11 @@ function EditDispatchandInvoice() {
 
       if (response.status === 200) {
         const completedJobs = response.data.filter(
-          (x) => x.status === "COMPLETED"
+          (x) =>
+            x.status === "PRINTING COMPLETED" ||
+            x.status === "PARTIALLY DISPATCHED" ||
+            x.status === "DISPATCHED" ||
+            x.status === "COMPLETED"
         );
 
         setJobData(completedJobs);
@@ -115,8 +121,28 @@ function EditDispatchandInvoice() {
   const onSubmit: SubmitHandler<DispatchFormValues> = async (data) => {
     try {
       setIsLoading(true);
+
+      const selectedJob = JobData.find(
+        (j) => String(j.job_id) === String(data.job_id)
+      );
+      const jobQty = Number(selectedJob?.quantity || 0);
+      const dispatchQty = Number(data.dispatch_quantity || 0);
+
+      if (dispatchQty > jobQty) {
+        toast("Invalid Dispatch Quantity", {
+          description: `Dispatched quantity (${dispatchQty}) cannot exceed Job quantity (${jobQty}).`,
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      const status =
+        dispatchQty >= jobQty
+          ? DispatchStatus.COMPLETED
+          : DispatchStatus.PARTIALLY_DISPATCHED;
+
       const payload: CREATE_DISPATCH = {
-        customer_id: data.customer_phone ?? "", // Assuming customer_phone as id for now or change based on actual mapping
+        customer_id: data.customer_id || "",
         job_id: data.job_id,
         dispatch_note: data.dispatch_note ?? "",
         dispatch_date: toMySQLDateTime(new Date()),
@@ -124,14 +150,13 @@ function EditDispatchandInvoice() {
         no_of_bundles: data.dispatch_bundles_qty ?? "",
         description: data.dispatch_description ?? "",
         delivery_address: data.delivery_address ?? "",
-        status: "PENDING",
-        updated_by: user?.name || "Admin",
+        status: status,
+        updated_by: user?.name || "User",
         updated_on: new Date(),
       };
-      const response = await dispatchInventoryApi.create(payload);
+      await dispatchInventoryApi.update(id, payload);
 
       toast("Dispatch Updated Successfully");
-      form.reset(baseDefaultValues);
       form.clearErrors();
       router.push("/dispatch-invoice");
     } catch (error) {
@@ -175,6 +200,7 @@ function EditDispatchandInvoice() {
         const response = await CustomerApi.getById(customerId);
         if (response.status === 200) {
           const customer = response.data;
+          form.setValue("customer_id", String(customer.customer_id));
           form.setValue("customer_name", customer.company_name ?? "");
           form.setValue("customer_phone", customer.phone ?? "");
           form.setValue("customer_address", customer.address ?? "");
@@ -200,15 +226,16 @@ function EditDispatchandInvoice() {
         const response = await dispatchInventoryApi.getById(id);
         if (response.status === 200) {
           const dispatch = response.data;
-          form.setValue("job_id", dispatch.job_id);
+          form.setValue("job_id", String(dispatch.job_id));
+          form.setValue("customer_id", String(dispatch.customer_id));
           form.setValue("customer_name", dispatch.customer_name);
           form.setValue("customer_phone", dispatch.customer_phone);
           form.setValue("customer_address", dispatch.customer_address);
           form.setValue("delivery_address", dispatch.delivery_address);
           form.setValue("dispatch_note", dispatch.dispatch_note);
-          form.setValue("dispatch_date", dispatch.dispatch_date);
-          form.setValue("dispatch_quantity", dispatch.dispatch_qty);
-          form.setValue("dispatch_bundles_qty", dispatch.no_of_bundles);
+          form.setValue("dispatch_date", new Date(dispatch.dispatch_date));
+          form.setValue("dispatch_quantity", String(dispatch.dispatch_qty));
+          form.setValue("dispatch_bundles_qty", String(dispatch.no_of_bundles));
           form.setValue("dispatch_description", dispatch.description);
         }
       } catch (err) {
@@ -278,22 +305,43 @@ function EditDispatchandInvoice() {
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                {renderFormField("job_id", ({ field }) => (
+                <div className="grid grid-cols-2 gap-4">
+                  {renderFormField("job_id", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Job ID</FormLabel>
+                      <Combobox
+                        items={JobData.map((job) => ({
+                          value: String(job.job_id),
+                          label: `Job-${job.job_id} (${
+                            job.job_name.length > 25
+                              ? job.job_name.substring(0, 25) + "..."
+                              : job.job_name
+                          })`,
+                        }))}
+                        value={field.value ? String(field.value) : ""}
+                        onValueChange={field.onChange}
+                        placeholder="Select a Job Ticket"
+                        searchPlaceholder="Search job..."
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  ))}
                   <FormItem>
-                    <FormLabel>Job ID</FormLabel>
-                    <Combobox
-                      items={JobData.map((job) => ({
-                        value: String(job.job_id),
-                        label: `Job-${job.job_id} (${job.job_name})`,
-                      }))}
-                      value={field.value ? String(field.value) : ""}
-                      onValueChange={field.onChange}
-                      placeholder="Select a Job Ticket"
-                      searchPlaceholder="Search job..."
-                    />
-                    <FormMessage />
+                    <FormLabel>Job Quantity</FormLabel>
+                    <FormControl>
+                      <Input
+                        readOnly
+                        disabled
+                        className="bg-gray-50 border-gray-200 cursor-not-allowed"
+                        value={
+                          JobData.find(
+                            (j) => String(j.job_id) === String(form.watch("job_id"))
+                          )?.quantity || ""
+                        }
+                      />
+                    </FormControl>
                   </FormItem>
-                ))}{" "}
+                </div>
                 <div className="flex flex-row gap-4">
                   {renderFormField("customer_name", ({ field }) => (
                     <FormItem className="w-full">

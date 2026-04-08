@@ -5,13 +5,19 @@ import { PurchaseOrderCard } from "@/components/purchase-order-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutPanelTop, PlusIcon, Search, Table2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon, LayoutPanelTop, PlusIcon, Search, Table2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import { getUser } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { appToast } from "@/lib/toast-utils";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
+import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { DateRange } from "react-day-picker";
+import { cn } from "@/lib/utils";
 
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { PURCHASE_ORDER } from "@/modules/purchase-order/types";
@@ -23,6 +29,10 @@ function PurchaseOrderPage() {
   const [data, setData] = useState<PURCHASE_ORDER[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: new Date(new Date().getFullYear(), 0, 1),
+    to: new Date(),
+  });
   const router = useRouter();
 
   useEffect(() => {
@@ -34,7 +44,7 @@ function PurchaseOrderPage() {
       setLoading(true);
       const response = await purchaseOrderApi.getAll();
 
-      setData(response.data);
+      setData([...response.data].sort((a, b) => b.po_id - a.po_id));
     } catch (err) {
       console.error("Failed to fetch POs", err);
       appToast.error("Failed to fetch purchase orders", getErrorMessage(err));
@@ -84,7 +94,7 @@ function PurchaseOrderPage() {
           po_date: data.po_date,
           delivery_date: data.delivery_date,
           TC_E_PR_No: data.TC_E_PR_No,
-          updated_by: "admin", // Ideally from user context
+          updated_by: getUser()?.name || "User", // Ideally from user context
           status: status,
           customer_po: String(data.customer_po), 
           po_items: (data.po_items || []).map((item: any) => ({
@@ -116,6 +126,27 @@ function PurchaseOrderPage() {
     onStatusChange: handleStatusChange,
   });
 
+  const filteredData = data.filter((item) => {
+    const matchesSearch = !search || (() => {
+      const s = search.toLowerCase();
+      return (
+        item.po_id.toString().toLowerCase().includes(s) ||
+        item.customer?.name?.toLowerCase().includes(s) ||
+        item.status?.toLowerCase().includes(s)
+      );
+    })();
+
+    const matchesDate = !date?.from || !date?.to || (() => {
+      const poDate = new Date(item.po_date);
+      return isWithinInterval(poDate, {
+        start: startOfDay(date.from),
+        end: endOfDay(date.to),
+      });
+    })();
+
+    return matchesSearch && matchesDate;
+  });
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       <PageTitleWithBreadcrumb
@@ -137,6 +168,41 @@ function PurchaseOrderPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                id="date"
+                variant={"outline"}
+                className={cn(
+                  "w-[280px] justify-start text-left font-normal border-gray-200 shadow-none",
+                  !date && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date?.from ? (
+                  date.to ? (
+                    <>
+                      {format(date.from, "LLL dd, y")} - {format(date.to, "LLL dd, y")}
+                    </>
+                  ) : (
+                    format(date.from, "LLL dd, y")
+                  )
+                ) : (
+                  <span>Pick a date</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="range"
+                defaultMonth={date?.from}
+                selected={date}
+                onSelect={setDate}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
 
           <TabsList>
             <TabsTrigger value="Grid-View">
@@ -168,43 +234,32 @@ function PurchaseOrderPage() {
           <>
             <TabsContent value="Grid-View">
               <div className="grid gap-[24px] grid-cols-[repeat(auto-fill,minmax(450px,1fr))]">
-                {data
-                  .filter((item) => {
-                    if (!search) return true;
-                    const s = search.toLowerCase();
-                    return (
-                      item.po_id.toString().toLowerCase().includes(s) ||
-                      item.customer?.name?.toLowerCase().includes(s) ||
-                      item.status?.toLowerCase().includes(s)
-                    );
-                  })
-                  .map((item: PURCHASE_ORDER) => (
-                    <PurchaseOrderCard
-                      key={item.po_id}
-                      po_id={item.po_id}
-                      customer_po={item.customer_po}
-                      companyName={item.customer?.name}
-                      contactEmail={item.customer?.email}
-                      poNumber={item.po_id}
-                      poDate={item.po_date}
-                      deliveryDate={item.delivery_date}
-                      jobs={item.jobs}
-                      totalJobs={item.jobs.length}
-                      additionalJobs={item.jobs.length}
-                      status={item.status}
-                      onDelete={handleDelete}
-                      onRefresh={fetchData}
-                      onStatusChange={handleStatusChange}
-                    />
-                  ))}
+                {filteredData.map((item: PURCHASE_ORDER) => (
+                  <PurchaseOrderCard
+                    key={item.po_id}
+                    po_id={item.po_id}
+                    customer_po={item.customer_po}
+                    companyName={item.customer?.name}
+                    contactEmail={item.customer?.email}
+                    poNumber={item.po_id}
+                    poDate={item.po_date}
+                    deliveryDate={item.delivery_date}
+                    jobs={item.jobs}
+                    totalJobs={item.jobs.length}
+                    additionalJobs={item.jobs.length}
+                    status={item.status}
+                    onDelete={handleDelete}
+                    onRefresh={fetchData}
+                    onStatusChange={handleStatusChange}
+                  />
+                ))}
               </div>
-              {/* Pagination could be here if needed */}
             </TabsContent>
 
             <TabsContent value="Table-View">
               <DataTable
                 columns={columns}
-                data={data}
+                data={filteredData}
                 searchValue={search}
                 searchColumn="po_id"
               />

@@ -124,3 +124,44 @@ export async function DELETE(
         );
     }
 }
+
+export async function PATCH(
+    request: NextRequest,
+    context: { params: Promise<{ id: string }> }
+) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token");
+    try {
+        const { id } = await context.params;
+        const body = await request.json();
+        const apiUrl = API_ENDPOINTS.JOB_TICKETS.PATCH(id);
+
+        const response = await fetch(apiUrl, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token?.value}`,
+            },
+            body: JSON.stringify(body),
+            cache: "no-store",
+            credentials: "include",
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            return NextResponse.json(
+                { message: errorData.message || `Backend error: ${response.status}` },
+                { status: response.status }
+            );
+        }
+
+        const data = await response.json();
+        return NextResponse.json(data);
+    } catch (error) {
+        console.error("Job Ticket PATCH API Error:", error);
+        return NextResponse.json(
+            { message: "Internal server error" },
+            { status: 500 }
+        );
+    }
+}

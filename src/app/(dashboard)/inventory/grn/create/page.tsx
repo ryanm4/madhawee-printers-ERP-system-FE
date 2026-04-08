@@ -57,24 +57,22 @@ function CreateGRN() {
   useEffect(() => {
     const userData = getUser();
     if (userData) {
-      setUser({ name: userData.name || "admin" });
+      setUser({ name: userData.name || "User" });
     }
 
     const fetchInventory = async () => {
       try {
         const response = await inventoryApi.getAll();
         if (response.status === 200) {
-          const uniqueItems = Array.from(
-            new Map(
-              response.data.map((item: any) => [item.item_name, item])
-            ).values()
-          );
-
           setInventoryItems(
-            (uniqueItems as any[]).map((item: any) => ({
-              value: item.item_name,
-              label: item.item_name,
-            }))
+            response.data.map((item: any) => {
+              const fullLabel = `${item.item_name}${item.size ? ` - ${item.size}` : ""
+                }`;
+              return {
+                value: item.item_name,
+                label: fullLabel,
+              };
+            })
           );
         }
       } catch (error) {
@@ -114,7 +112,7 @@ function CreateGRN() {
       const payload = {
         ...values,
         received_date: format(values.received_date, "yyyy-MM-dd HH:mm:ss"),
-        created_by: user?.name || "admin",
+        created_by: user?.name || "User",
       };
 
       const response = await grnApi.create(payload);
@@ -289,7 +287,7 @@ function CreateGRN() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        Payee Name <span className="text-red-500">*</span>
+                        Payee Name
                       </FormLabel>
                       <FormControl>
                         <Input placeholder="Enter Payee Name" {...field} />

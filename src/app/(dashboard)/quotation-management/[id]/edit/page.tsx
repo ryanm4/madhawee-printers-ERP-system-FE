@@ -261,7 +261,7 @@ function EditQuotation({
         no_of_items: data.no_of_items,
         total_without_tax: data.total_without_tax,
         net_total: data.net_total,
-        updated_by: user?.name || "admin",
+        updated_by: user?.name || "User",
         updated_on: new Date(),
         items: data.items.map((item) => ({
           item_id: item.item_id,

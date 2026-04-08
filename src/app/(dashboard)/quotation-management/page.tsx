@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { getUser } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { getErrorMessage } from "@/lib/error-utils";
@@ -96,7 +97,7 @@ function QuotationsManagement() {
             no_of_items: data.no_of_items,
             total_without_tax: data.total_without_tax,
             net_total: data.net_total,
-            updated_by: data.updated_by || "admin",
+            updated_by: data.updated_by || getUser()?.name || "User",
             items: (data.items || []).map((item: any) => ({
               item_id: item.item_id,
               item_category: item.item_category,
