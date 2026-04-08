@@ -22,7 +22,7 @@ const statusStyles: Record<string, string> = {
   "PENDING": "border-yellow-200 bg-yellow-50 text-yellow-800 hover:bg-yellow-100",
   "CREATED": "border-blue-200 bg-blue-50 text-[#223F7A] hover:bg-blue-100",
   "APPROVED": "border-green-200 bg-green-50 text-green-800 hover:bg-green-100",
-  "COMPLETED": "border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100",
+  "COMPLETED": "border-green-200 bg-green-50 text-green-800 hover:bg-green-100",
   "REJECTED": "border-red-200 bg-red-50 text-red-800 hover:bg-red-100",
 
   // Job Ticket specific
@@ -30,8 +30,9 @@ const statusStyles: Record<string, string> = {
   "MATERIALS ALLOCATED": "border-orange-200 bg-orange-50 text-orange-800 hover:bg-orange-100",
   "IN PRINTING": "border-indigo-200 bg-indigo-50 text-indigo-800 hover:bg-indigo-100",
   "PRINTING COMPLETED": "border-purple-200 bg-purple-50 text-purple-800 hover:bg-purple-100",
-  "PARTIALLY DISPATCHED": "border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-100",
-  "DISPATCHED": "border-lime-200 bg-lime-50 text-lime-800 hover:bg-lime-100",
+  "PARTIALLY DISPATCHED": "border-orange-200 bg-orange-50 text-orange-800 hover:bg-orange-100",
+  "PARTIALLY DISPATHCED": "border-orange-200 bg-orange-50 text-orange-800 hover:bg-orange-100",
+  "DISPATCHED": "border-green-200 bg-green-50 text-green-800 hover:bg-green-100",
 
   // Customer specific
   "ACTIVE": "border-green-200 bg-green-50 text-green-800 hover:bg-green-100",
