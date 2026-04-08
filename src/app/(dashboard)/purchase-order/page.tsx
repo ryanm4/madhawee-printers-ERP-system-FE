@@ -44,7 +44,11 @@ function PurchaseOrderPage() {
       setLoading(true);
       const response = await purchaseOrderApi.getAll();
 
-      setData([...response.data].sort((a, b) => b.po_id - a.po_id));
+      setData([...response.data].sort((a: any, b: any) => {
+        const dateA = new Date(a.created_on || a.po_date || 0).getTime();
+        const dateB = new Date(b.created_on || b.po_date || 0).getTime();
+        return dateB - dateA;
+      }));
     } catch (err) {
       console.error("Failed to fetch POs", err);
       appToast.error("Failed to fetch purchase orders", getErrorMessage(err));

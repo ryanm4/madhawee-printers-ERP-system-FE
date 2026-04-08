@@ -37,7 +37,12 @@ function DispatchInvoiceManagement() {
       const response = await dispatchInventoryApi.getAll();
 
       if (response.status === 200) {
-        setData(response.data);
+        const sortedData = response.data.sort((a: any, b: any) => {
+          const dateA = new Date(a.created_on || a.dispatch_date || 0).getTime();
+          const dateB = new Date(b.created_on || b.dispatch_date || 0).getTime();
+          return dateB - dateA;
+        });
+        setData(sortedData);
       }
     } catch (error) {
       console.error("Failed to fetch dispatch records", error);
