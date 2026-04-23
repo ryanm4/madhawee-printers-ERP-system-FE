@@ -70,10 +70,10 @@ function IssueNotesManagement() {
 
   const handlers = useMemo(() => ({
     onView: (id: number | string) => {
-      router.push(`/inventory/issue-notes/${id}`);
+      router.push(`/issue-notes/${id}`);
     },
     onEdit: (id: number | string) => {
-      router.push(`/inventory/issue-notes/${id}/edit`);
+      router.push(`/issue-notes/${id}/edit`);
     },
     onDelete: (id: number | string) => {
       setSelectedId(id);
@@ -127,7 +127,7 @@ function IssueNotesManagement() {
           </div>
 
           <ExportButton data={data} filename="issue-notes-list" />
-          <Button onClick={() => router.push("/inventory/issue-notes/create")}>
+          <Button onClick={() => router.push("/issue-notes/create")}>
             <PlusIcon /> Create New Issue Material
           </Button>
         </div>
@@ -138,7 +138,7 @@ function IssueNotesManagement() {
             title="No Issue Materials Found"
             description="You haven't recorded any Issue Materials yet."
             createLabel="Create New Issue Material"
-            createPath="/inventory/issue-notes/create"
+            createPath="/issue-notes/create"
           />
         ) : (
           <DataTable
