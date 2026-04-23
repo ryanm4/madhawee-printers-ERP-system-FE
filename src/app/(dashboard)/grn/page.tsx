@@ -51,10 +51,10 @@ function GRNManagement() {
 
   const handlers = useMemo(() => ({
     onView: (id: number | string) => {
-      router.push(`/inventory/grn/${id}`);
+      router.push(`/grn/${id}`);
     },
     onEdit: (id: number | string) => {
-      router.push(`/inventory/grn/${id}/edit`);
+      router.push(`/grn/${id}/edit`);
     },
     onDelete: (id: number | string) => {
       setSelectedGrnId(id);
@@ -109,7 +109,7 @@ function GRNManagement() {
           </div>
 
           <ExportButton data={data} filename="grn-list" />
-          <Button onClick={() => router.push("/inventory/grn/create")}>
+          <Button onClick={() => router.push("/grn/create")}>
             <PlusIcon /> Create New GRN
           </Button>
         </div>
@@ -120,7 +120,7 @@ function GRNManagement() {
             title="No GRN Found"
             description="You haven't recorded any Goods Received Notes yet."
             createLabel="Create New GRN"
-            createPath="/inventory/grn/create"
+            createPath="/grn/create"
           />
         ) : (
           <DataTable
