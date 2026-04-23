@@ -9,12 +9,12 @@ export const getNextJobTicketStatus = (currentStatus: string): JobTicketStatus |
     ];
 
     const currentIndex = statusOrder.indexOf(currentStatus as JobTicketStatus);
-    
+
     // User can only change status manually up to IN PRODUCTION
     if (currentIndex === -1 || currentStatus === JobTicketStatus.IN_PRODUCTION || currentIndex >= statusOrder.indexOf(JobTicketStatus.IN_PRODUCTION)) {
         return null;
     }
-    
+
     return statusOrder[currentIndex + 1];
 };
 
@@ -37,7 +37,6 @@ export const getNextQuotationStatus = (currentStatus: string): QuotationStatus |
 
 export const getNextPurchaseOrderStatus = (currentStatus: string): PurchaseOrderStatus | null => {
     const statusOrder = [
-        PurchaseOrderStatus.PENDING,
         PurchaseOrderStatus.CREATED,
         PurchaseOrderStatus.APPROVED,
         PurchaseOrderStatus.COMPLETED
