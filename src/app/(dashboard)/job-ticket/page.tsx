@@ -16,7 +16,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
-import { JobTicketPrintDialog, handleJobTicketPrint } from "./_components/job-ticket-print-dialog";
+import {
+  JobTicketPrintDialog,
+  handleJobTicketPrint,
+} from "./_components/job-ticket-print-dialog";
 import { CustomerApi } from "@/modules/customer/api";
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { JobTicketCard } from "@/components/job-ticket-card";
@@ -52,14 +55,19 @@ function JobTicketComponent() {
 
         const enrichedData = tickets.map((ticket) => ({
           ...ticket,
-          customer_name: customers.find(
-            (c: any) => String(c.customer_id) === String(ticket.customer_id)
-          )?.company_name || ticket.customer_id,
+          customer_name:
+            customers.find(
+              (c: any) => String(c.customer_id) === String(ticket.customer_id)
+            )?.company_name || ticket.customer_id,
         }));
 
         const sortedData = enrichedData.sort((a: any, b: any) => {
-          const dateA = new Date(a.created_on || a.job_open_date || 0).getTime();
-          const dateB = new Date(b.created_on || b.job_open_date || 0).getTime();
+          const dateA = new Date(
+            a.created_on || a.job_open_date || 0
+          ).getTime();
+          const dateB = new Date(
+            b.created_on || b.job_open_date || 0
+          ).getTime();
           return dateB - dateA;
         });
         setData(sortedData);
@@ -106,12 +114,18 @@ function JobTicketComponent() {
             }
           }
 
-          const customerName = customers.find(
-            (c: any) => String(c.customer_id) === String(ticket.customer_id)
-          )?.company_name || ticket.customer_id;
+          const customerName =
+            customers.find(
+              (c: any) => String(c.customer_id) === String(ticket.customer_id)
+            )?.company_name || ticket.customer_id;
 
-          const firstPaperType = ticket.paperCoating?.[0] || ticket.paper_coating?.[0];
-          const allRawMaterials = (ticket.paperCoating || ticket.paper_coating || []).flatMap((p: any) => p.materials || p.raw_materials || []);
+          const firstPaperType =
+            ticket.paperCoating?.[0] || ticket.paper_coating?.[0];
+          const allRawMaterials = (
+            ticket.paperCoating ||
+            ticket.paper_coating ||
+            []
+          ).flatMap((p: any) => p.materials || p.raw_materials || []);
 
           const pd: JobTicketPrintData = {
             jobNumber: ticket.job_number,
@@ -126,21 +140,30 @@ function JobTicketComponent() {
             customerDeliveryDate: ticket.delivery_date,
             packingDate: ticket.packing_date,
             expiryDate: ticket.expiry_date,
-            poNo: ticket.customer_po || poDetails?.customer_po || String(ticket.po_id),
+            poNo:
+              ticket.customer_po ||
+              poDetails?.customer_po ||
+              String(ticket.po_id),
             tcNo: ticket.tc_no || poDetails?.TC_E_PR_No,
             batchRef: ticket.batch_ref || poDetails?.batch_ref,
             remarks: ticket.remarks,
             oldPlatesQuantity: ticket.old_plate_quantity,
             newPlatesQuantity: ticket.new_plate_quantity,
-            inks: (ticket.inks || []).map((i: any) => ({ ...i, ink: i.ink || "" })),
+            inks: (ticket.inks || []).map((i: any) => ({
+              ...i,
+              ink: i.ink || "",
+            })),
             rawMaterials: allRawMaterials,
           };
-          console.log(pd)
+          console.log(pd);
           handleJobTicketPrint(pd);
         }
       } catch (error) {
         console.error("Failed to fetch ticket for printing", error);
-        appToast.error("Print Error", "Failed to load ticket details for printing");
+        appToast.error(
+          "Print Error",
+          "Failed to load ticket details for printing"
+        );
       } finally {
         setIsLoading(false);
       }
@@ -202,7 +225,10 @@ function JobTicketComponent() {
           };
 
           await jobTicketsApi.update(id, payload as any);
-          appToast.success("Status Updated", `Job Ticket status updated to ${status}`);
+          appToast.success(
+            "Status Updated",
+            `Job Ticket status updated to ${status}`
+          );
           await fetchData();
         }
       } catch (error) {
@@ -222,7 +248,10 @@ function JobTicketComponent() {
     try {
       setIsLoading(true);
       await jobTicketsApi.delete(deleteId);
-      appToast.success("Job Ticket Deleted", "Job Ticket has been deleted successfully.");
+      appToast.success(
+        "Job Ticket Deleted",
+        "Job Ticket has been deleted successfully."
+      );
       await fetchData();
     } catch (error) {
       console.error("Failed to delete inventory item");
@@ -234,12 +263,15 @@ function JobTicketComponent() {
   };
 
   const filteredData = data.filter((item) => {
-    const matchesSearch = !search ||
+    const matchesSearch =
+      !search ||
       item.job_number?.toLowerCase().includes(search.toLowerCase()) ||
       String(item.job_id).includes(search) ||
       item.job_name?.toLowerCase().includes(search.toLowerCase()) ||
       item.customer_name?.toLowerCase().includes(search.toLowerCase());
-    const matchesRemarks = !remarksSearch || item.remarks?.toLowerCase().includes(remarksSearch.toLowerCase());
+    const matchesRemarks =
+      !remarksSearch ||
+      item.remarks?.toLowerCase().includes(remarksSearch.toLowerCase());
     return matchesSearch && matchesRemarks;
   });
 
