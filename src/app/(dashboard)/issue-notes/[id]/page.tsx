@@ -111,11 +111,9 @@ function ViewIssueNote() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       <PageTitleWithBreadcrumb
-        title="View Issue Note"
+        title="View Issue Material"
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
-          { title: "Inventory", href: "/inventory" },
-          { title: "Issue Notes", href: "/inventory/issue-notes" },
           { title: "View", href: "#" },
         ]}
       />
@@ -130,10 +128,10 @@ function ViewIssueNote() {
             >
               Back to List
             </Button>
-            <Button 
-                type="button" 
-                onClick={() => router.push(`/inventory/issue-notes/${id}/edit`)}
-                className="bg-primary hover:bg-primary/90"
+            <Button
+              type="button"
+              onClick={() => router.push(`/inventory/issue-notes/${id}/edit`)}
+              className="bg-primary hover:bg-primary/90"
             >
               <Edit className="mr-2 h-4 w-4" /> Edit Note
             </Button>
@@ -154,10 +152,10 @@ function ViewIssueNote() {
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
-                            <Button 
-                                variant={"outline"} 
-                                className={cn("w-full pl-3 text-left font-normal", readonlyClass)}
-                                disabled
+                            <Button
+                              variant={"outline"}
+                              className={cn("w-full pl-3 text-left font-normal", readonlyClass)}
+                              disabled
                             >
                               {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
@@ -190,7 +188,7 @@ function ViewIssueNote() {
                       <Combobox
                         items={jobs}
                         value={field.value ? field.value.toString() : ""}
-                        onValueChange={() => {}}
+                        onValueChange={() => { }}
                         placeholder="Select Job"
                         searchPlaceholder="Search job..."
                         disabled

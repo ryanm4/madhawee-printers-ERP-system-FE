@@ -36,7 +36,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
@@ -263,11 +263,11 @@ function EditDispatchandInvoice() {
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       {isLoading && <FullPageLoader />}
       <PageTitleWithBreadcrumb
-        title="Edit Dispatch and Invoice Management"
+        title="Edit Dispatch Note"
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
           {
-            title: "Dispatch and Invoice Management",
+            title: "Dispatch Note",
             href: "/dispatch-invoice",
           },
         ]}
@@ -278,19 +278,7 @@ function EditDispatchandInvoice() {
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6  pb-0"
         >
-          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-            <Button
-              size="lg"
-              variant="outline"
-              type="button"
-              onClick={() => router.push("/dispatch-invoice")}
-            >
-              Cancel
-            </Button>
-            <Button size="lg" type="submit" className="bg-primary text-white">
-              Update
-            </Button>
-          </div>
+
 
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
@@ -312,11 +300,10 @@ function EditDispatchandInvoice() {
                       <Combobox
                         items={JobData.map((job) => ({
                           value: String(job.job_id),
-                          label: `Job-${job.job_id} (${
-                            job.job_name.length > 25
-                              ? job.job_name.substring(0, 25) + "..."
-                              : job.job_name
-                          })`,
+                          label: `Job-${job.job_id} (${job.job_name.length > 25
+                            ? job.job_name.substring(0, 25) + "..."
+                            : job.job_name
+                            })`,
                         }))}
                         value={field.value ? String(field.value) : ""}
                         onValueChange={field.onChange}
@@ -517,6 +504,33 @@ function EditDispatchandInvoice() {
                 ))}
               </CardContent>
             </Card>
+          </div>
+
+          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
+            <Button
+              size="lg"
+              variant="outline"
+              type="button"
+              onClick={() => router.push("/dispatch-invoice")}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="lg"
+              type="submit"
+              className="bg-primary text-white"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Update"
+              )}
+            </Button>
           </div>
         </form>
       </Form>

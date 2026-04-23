@@ -28,7 +28,7 @@ export default function RootLayout({
   const isLoginPage = pathname === "/login";
 
   return (
-    <html lang="en" className={`${manrope.variable} ${geistMono.variable}`}>
+    <html lang="en" className={`${manrope.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body className="antialiased font-sans">
         <StoreProvider>
           <Toaster position="top-right" richColors />

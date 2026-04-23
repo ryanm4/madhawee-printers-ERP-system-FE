@@ -128,10 +128,10 @@ function CreateInventoryManagement() {
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       {isLoading && <FullPageLoader />}
       <PageTitleWithBreadcrumb
-        title="Create Inventory Management"
+        title="Create Stock"
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
-          { title: "Inventory Management", href: "/inventory" },
+          { title: "Stock List", href: "/inventory" },
         ]}
       />
 
@@ -140,25 +140,7 @@ function CreateInventoryManagement() {
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6  pb-0"
         >
-          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-            <Button
-              size="lg"
-              variant="outline"
-              type="button"
-              onClick={() => router.push("/inventory")}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="lg"
-              type="submit"
-              className="bg-primary text-white"
-              disabled={isLoading}
-            >
-              {isLoading ? "Saving..." : "Save"}
-            </Button>
-          </div>
+
 
           <Card
             className={cn(
@@ -166,9 +148,9 @@ function CreateInventoryManagement() {
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
-              <h3 className="text-md font-medium mb-2">Inventory Management</h3>
+              <h3 className="text-md font-medium mb-2">Stock Details</h3>
               <p className="text-xs text-muted-foreground mb-4">
-                Add your Inventory details here
+                Add your stock details here
               </p>
             </CardHeader>
             <CardContent className="flex flex-col gap-6">
@@ -362,6 +344,25 @@ function CreateInventoryManagement() {
               </div>
             </CardContent>
           </Card>
+        <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
+          <Button
+            size="lg"
+            variant="outline"
+            type="button"
+            onClick={() => router.push("/inventory")}
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="lg"
+            type="submit"
+            className="bg-primary text-white"
+            disabled={isLoading}
+          >
+            {isLoading ? "Creating..." : "Create"}
+          </Button>
+        </div>
         </form>
       </Form>
     </div>

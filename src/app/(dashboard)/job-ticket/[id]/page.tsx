@@ -147,8 +147,8 @@ function JobViewTicket() {
                         quantity: data.quantity ? String(data.quantity) : "",
                         deliveryDate: data.delivery_date ? new Date(data.delivery_date) : undefined,
                         wastage: data.wastage ? String(data.wastage) : "",
-                        packingDate: data.packing_date ? new Date(data.packing_date) : undefined,
-                        expiryDate: data.expiry_date ? new Date(data.expiry_date) : undefined,
+                        packingDate: data.packing_date ? String(data.packing_date) : "",
+                        expiryDate: data.expiry_date ? String(data.expiry_date) : "",
                         tcNo: data.tc_no || "",
                         batchRef: data.batch_ref || "",
                         remarks: data.remarks || "",
@@ -511,10 +511,7 @@ function JobViewTicket() {
                                     <FormItem>
                                         <FormLabel>Packing Date</FormLabel>
                                         <FormControl>
-                                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled>
-                                                {field.value ? format(field.value, "PPP") : "No Date"}
-                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                            </Button>
+                                            <Input placeholder="No Date" {...field} value={field.value as string || ""} readOnly />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -523,10 +520,7 @@ function JobViewTicket() {
                                     <FormItem>
                                         <FormLabel>Expiry Date</FormLabel>
                                         <FormControl>
-                                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled>
-                                                {field.value ? format(field.value, "PPP") : "No Date"}
-                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                            </Button>
+                                            <Input placeholder="No Date" {...field} value={field.value as string || ""} readOnly />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

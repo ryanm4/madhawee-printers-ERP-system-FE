@@ -3,29 +3,32 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { 
-    Barcode, 
-    Calendar, 
-    EyeIcon, 
-    FileText, 
-    MoreVertical, 
-    PencilIcon, 
-    Ticket, 
-    TrashIcon, 
-    Printer,
+import {
+    Barcode,
+    Calendar,
+    EyeIcon,
+    FileText,
+    MoreVertical,
+    PencilIcon,
+    Ticket,
+    TrashIcon,
     ArrowRightIcon,
-    History
+    History,
+    Loader2,
+    LayoutPanelTop,
+    Printer
 } from "lucide-react";
 import React, { useState } from "react";
-import { 
-    DropdownMenu, 
-    DropdownMenuContent, 
-    DropdownMenuItem, 
-    DropdownMenuSeparator, 
-    DropdownMenuTrigger 
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
 } from "./ui/dropdown-menu";
 import { format } from "date-fns";
 import { ALL_TICKETS } from "@/modules/job-tickets/types";
+import { JobTicketStatus } from "@/config/enum";
 
 export interface JobTicketCardProps {
     ticket: ALL_TICKETS;
@@ -133,6 +136,37 @@ export function JobTicketCard({
                             {ticket.completed_qty || 0} / {ticket.quantity}
                         </span>
                     </div>
+                </div>
+
+                <div className="mt-6">
+                    <Button
+                        className="w-full h-[40px] bg-primary hover:bg-primary/90 text-white font-semibold shadow-sm transition-all"
+                        onClick={async () => {
+                            setIsUpdatingStatus(true);
+                            try {
+                                await onStatusChange(ticket.job_id, JobTicketStatus.IN_PRODUCTION);
+                            } finally {
+                                setIsUpdatingStatus(false);
+                            }
+                        }}
+                        disabled={
+                            ticket.status === JobTicketStatus.IN_PRODUCTION ||
+                            ticket.status === JobTicketStatus.PARTIALLY_DISPATCHED ||
+                            ticket.status === JobTicketStatus.COMPLETED ||
+                            isUpdatingStatus
+                        }
+                    >
+                        {isUpdatingStatus ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <LayoutPanelTop className="mr-2 h-4 w-4" />
+                        )}
+                        {ticket.status === JobTicketStatus.IN_PRODUCTION ||
+                            ticket.status === JobTicketStatus.PARTIALLY_DISPATCHED ||
+                            ticket.status === JobTicketStatus.COMPLETED
+                            ? "In Production"
+                            : "Start Production"}
+                    </Button>
                 </div>
             </CardContent>
         </Card>

@@ -57,6 +57,7 @@ import {
   JobTicketStatus,
   PLATES_STATUS,
   PRODUCT_TYPES,
+  PurchaseOrderStatus,
 } from "@/config/enum";
 
 import { Combobox } from "@/components/shared/combobox";
@@ -102,6 +103,7 @@ function EditJobTicket() {
   const dispatch = useDispatch<AppDispatch>();
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [printData, setPrintData] = useState<JobTicketPrintData | null>(null);
+  const [ticketStatus, setTicketStatus] = useState<string>(JobTicketStatus.CREATED);
 
   const baseDefaultValues = {
     poNumber: "",
@@ -116,7 +118,7 @@ function EditJobTicket() {
     wastage: "",
     deliveryDate: undefined,
     packingDate: undefined,
-    expiryDate: addYears(new Date(), 5),
+    expiryDate: undefined,
     tcNo: "",
     batchRef: "",
     remarks: "",
@@ -241,12 +243,8 @@ function EditJobTicket() {
         job_open_date: data.jobOpenDate
           ? toMySQLDateTime(data.jobOpenDate)
           : undefined,
-        packing_date: data.packingDate
-          ? toMySQLDateTime(data.packingDate)
-          : undefined,
-        expiry_date: data.expiryDate
-          ? toMySQLDateTime(data.expiryDate)
-          : undefined,
+        packing_date: data.packingDate,
+        expiry_date: data.expiryDate,
         tc_no: data.tcNo,
         batch_ref: data.batchRef,
         remarks: data.remarks,
@@ -283,7 +281,7 @@ function EditJobTicket() {
         })),
         updated_by: user?.name || "User",
         updated_on: new Date(),
-        status: JobTicketStatus.CREATED,
+        status: ticketStatus,
       };
 
       const response = await jobTicketsApi.update(id, formattedData as any);
@@ -344,8 +342,11 @@ function EditJobTicket() {
         const pos = poResponse.data;
         const customers = customerResponse.data;
         const inventory = inventoryResponse.data;
+        
+        // Initial filter for Approved POs
+        const filteredPOs = pos.filter((p: any) => p.status === PurchaseOrderStatus.APPROVED);
 
-        setPurchaseOrderData(pos);
+        setPurchaseOrderData(filteredPOs);
         setCustomerData(customers);
         setInventoryList(inventory);
         dispatch(setReduxInventoryList(inventory));
@@ -354,9 +355,16 @@ function EditJobTicket() {
         const ticketResponse = await jobTicketsApi.getById(id);
         if (ticketResponse.status === 200) {
           const jt = ticketResponse.data;
+          setTicketStatus(jt.status);
+
+          // 3. Ensure the currently linked PO is in the list even if not APPROVED
+          const currentPo = pos.find((p: any) => String(p.po_id) === String(jt.po_id));
+          if (currentPo && !filteredPOs.some(p => String(p.po_id) === String(jt.po_id))) {
+            setPurchaseOrderData(prev => [...prev, currentPo]);
+          }
           
           // Find the matching PO for fallbacks
-          const matchingPo = pos.find((p: any) => String(p.po_id) === String(jt.po_id));
+          const matchingPo = currentPo;
 
           form.reset({
             item: String(jt.job_item),
@@ -377,10 +385,8 @@ function EditJobTicket() {
             quantity: String(jt.quantity),
             deliveryDate: jt.delivery_date ? new Date(jt.delivery_date) : undefined,
             wastage: jt.wastage || "",
-            packingDate: jt.packing_date
-              ? new Date(jt.packing_date)
-              : undefined,
-            expiryDate: jt.expiry_date ? new Date(jt.expiry_date) : undefined,
+            packingDate: jt.packing_date ? String(jt.packing_date) : "",
+            expiryDate: jt.expiry_date ? String(jt.expiry_date) : "",
             // Prioritize JT data, fallback to PO data if missing
             tcNo: jt.tc_no || matchingPo?.TC_E_PR_No || "",
             batchRef: jt.batch_ref || matchingPo?.batch_ref || "",
@@ -1186,66 +1192,18 @@ function EditJobTicket() {
                 {renderFormField("packingDate", ({ field }) => (
                   <FormItem>
                     <FormLabel>Packing Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value
-                              ? format(field.value, "PPP")
-                              : format(new Date(), "PPP")}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          captionLayout="dropdown"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input placeholder="Enter Packing Date e.g. Apr 2026" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 ))}
                 {renderFormField("expiryDate", ({ field }) => (
                   <FormItem>
                     <FormLabel>Expiry Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value
-                              ? format(field.value, "PPP")
-                              : format(new Date(), "PPP")}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          captionLayout="dropdown"
-                          startMonth={new Date(2026, 0)}
-                          endMonth={new Date(2045, 11)}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input placeholder="Enter Expiry Date e.g. Apr 2031" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 ))}

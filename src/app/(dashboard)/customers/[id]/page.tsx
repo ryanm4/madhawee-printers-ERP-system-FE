@@ -41,9 +41,13 @@ function ViewCustomerRelationship() {
         vat_type: "",
         vat_no: "",
         logoUrl: "",
-        contactPerson: "",
-        contactPersonEmail: "",
-        contactPersonPhone: "",
+        contactPersons: [
+          {
+            name: "",
+            email: "",
+            phone: "",
+          }
+        ],
         created_by: "", 
         status: "Active",
     }
@@ -76,9 +80,7 @@ function ViewCustomerRelationship() {
                     vat_type: data.vat_type,
                     vat_no: data.vat_no,
                     logoUrl: data.logo_url,
-                    contactPerson: data.contact_person,
-                    contactPersonEmail: data.contact_person_email,
-                    contactPersonPhone: data.contact_person_phone,
+                    contactPersons: data.contact_persons || [{ name: "", email: "", phone: "" }],
                     created_by: data.created_by,
 
                 });
@@ -331,46 +333,38 @@ function ViewCustomerRelationship() {
                             </CardContent>
                         </Card>
 
-                        <div className='grid grid-rows-2 md:grid-rows-2 gap-4'>
-                            <Card className={cn("w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
+                        <div className="space-y-4">
+                            <Card className={cn("w-full shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
                                 <CardHeader className="flex flex-col gap-[0.5px]">
-                                    <h3 className="text-md font-medium mb-2">Contact Person One</h3>
-                                    <p className="text-xs text-muted-foreground mb-4">Add your contact person details here</p>
-
+                                    <h3 className="text-md font-medium mb-2">Point of Contacts</h3>
+                                    <p className="text-xs text-muted-foreground mb-4">View your contact person details here</p>
                                 </CardHeader>
-                                <CardContent className='flex flex-col gap-4'>
-                                    {renderFormField("contactPerson", ({ field }) => (
-                                        <FormItem >
-                                            <FormLabel>Contact Person Name</FormLabel>
-                                            <FormControl><Input readOnly placeholder="Enter your name" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
+                                <CardContent className="space-y-4">
+                                    {form.watch("contactPersons")?.map((contact: any, index: number) => (
+                                        <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 border rounded-lg bg-accent/5">
+                                            {renderFormField(`contactPersons.${index}.name`, ({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Name</FormLabel>
+                                                    <FormControl><Input readOnly placeholder="Name" {...field} /></FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            ))}
+                                            {renderFormField(`contactPersons.${index}.email`, ({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Email</FormLabel>
+                                                    <FormControl><Input readOnly placeholder="Email" {...field} /></FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            ))}
+                                            {renderFormField(`contactPersons.${index}.phone`, ({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Phone</FormLabel>
+                                                    <FormControl><Input readOnly placeholder="Phone" {...field} /></FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            ))}
+                                        </div>
                                     ))}
-                                    {renderFormField("contactPersonEmail", ({ field }) => (
-                                        <FormItem >
-                                            <FormLabel>Contact Person Email</FormLabel>
-                                            <FormControl><Input readOnly placeholder="Enter your email" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    ))}
-                                    {renderFormField("contactPersonPhone", ({ field }) => (
-                                        <FormItem >
-                                            <FormLabel>Contact Person Phone</FormLabel>
-                                            <FormControl><Input readOnly placeholder="Enter your phone" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    ))}
-
-                                </CardContent>
-                            </Card>
-                            <Card className={cn("w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
-                                <CardHeader className="flex flex-col gap-[0.5px]">
-                                    <h3 className="text-md font-medium mb-2">Contact Person Two</h3>
-                                    <p className="text-xs text-muted-foreground mb-4">Add your contact person details here</p>
-
-                                </CardHeader>
-                                <CardContent className='flex flex-col gap-4'>
-
                                 </CardContent>
                             </Card>
                         </div>

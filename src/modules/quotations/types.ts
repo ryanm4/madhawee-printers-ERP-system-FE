@@ -11,6 +11,7 @@ export interface QUOTATIONS {
     tax_type_id: number;
     currency: string;
     contact_person: string;
+    marketing_person: string;
     notes: string;
     status: string;
     sub_total: string;
@@ -42,12 +43,13 @@ export interface CREATE_QUOTATION_REQUEST {
     delivery_days: string;
     tax_type_id: number;
     currency: string;
-    contact_person: string;
+    contact_person: string | null;
+    marketing_person: string | null;
     notes: string;
     status: string;
-    sub_total: string;
+    sub_total?: string;
     no_of_items: string;
-    total_without_tax: string;
+    total_without_tax?: string;
     net_total: string;
     created_by: string;
     created_on: Date;
@@ -62,7 +64,8 @@ export interface UPDATE_QUOTATION_REQUEST {
     delivery_days?: string;
     tax_type_id?: number;
     currency?: string;
-    contact_person?: string;
+    contact_person?: string | null;
+    marketing_person?: string | null;
     notes?: string;
     status?: string;
     sub_total?: string;

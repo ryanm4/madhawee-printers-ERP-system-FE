@@ -56,6 +56,7 @@ import {
   JobTicketStatus,
   PLATES_STATUS,
   PRODUCT_TYPES,
+  PurchaseOrderStatus,
   PurchaseOrderType,
 } from "@/config/enum";
 import { PaperTypeCombobox } from "../_components/paper-type-combobox";
@@ -117,7 +118,7 @@ function CreateJobTicket() {
     wastage: "",
     deliveryDate: undefined,
     packingDate: undefined,
-    expiryDate: addYears(new Date(), 5),
+    expiryDate: undefined,
     tcNo: "",
     batchRef: "",
     remarks: "",
@@ -244,8 +245,8 @@ function CreateJobTicket() {
           ? toMySQLDateTime(data.deliveryDate)
           : undefined,
         wastage: data.wastage,
-        packing_date: toMySQLDateTime(data.packingDate || new Date()),
-        expiry_date: toMySQLDateTime(data.expiryDate || new Date()),
+        packing_date: data.packingDate,
+        expiry_date: data.expiryDate,
         tc_no: data.tcNo,
         batch_ref: data.batchRef,
         remarks: data.remarks,
@@ -351,7 +352,12 @@ function CreateJobTicket() {
         CustomerApi.getAll(),
       ]);
 
-      setPurchaseOrderData(poResponse.data);
+
+      const approvedPOs = poResponse.data.filter(
+        (po) => po.status === PurchaseOrderStatus.APPROVED
+      );
+
+      setPurchaseOrderData(approvedPOs);
       setCustomerData(customerResponse.data);
     } catch (error) {
       console.error("Failed to fetch data", error);
@@ -459,25 +465,7 @@ function CreateJobTicket() {
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-6 pb-0"
           >
-            <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-              <Button
-                size="lg"
-                variant="outline"
-                type="button"
-                onClick={() => router.push("/job-ticket")}
-                disabled={isLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="lg"
-                type="submit"
-                className="bg-primary text-white"
-                disabled={isLoading}
-              >
-                {isLoading ? "Saving..." : "Save"}
-              </Button>
-            </div>
+
             <Card
               className={cn(
                 "w-full shdow-sm hover:shadow-md transition-shadow flex flex-col"
@@ -1102,66 +1090,18 @@ function CreateJobTicket() {
                   {renderFormField("packingDate", ({ field }) => (
                     <FormItem>
                       <FormLabel>Packing Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value
-                                ? format(field.value, "PPP")
-                                : format(new Date(), "PPP")}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            captionLayout="dropdown"
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <FormControl>
+                        <Input placeholder="Enter Packing Date" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   ))}
                   {renderFormField("expiryDate", ({ field }) => (
                     <FormItem>
                       <FormLabel>Expiry Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value
-                                ? format(field.value, "PPP")
-                                : format(new Date(), "PPP")}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            captionLayout="dropdown"
-                            startMonth={new Date(currentYear, 0)} // Jan of current year
-                            endMonth={new Date(currentYear + 10, 11)} // Dec of 10 years ahead
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <FormControl>
+                        <Input placeholder="Enter Packing Date" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   ))}
@@ -1509,29 +1449,42 @@ function CreateJobTicket() {
                 </div>
               </CardContent>
             </Card>
+            <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
+
+              <Button
+                size="lg"
+                type="submit"
+                className="bg-primary text-white"
+                disabled={isLoading}
+              >
+                {isLoading ? "Creating..." : "Create"}
+              </Button>
+            </div>
           </form>
-        </Form>
-      </div>
+        </Form >
+      </div >
 
       {/* Print dialog — shown after successful save */}
-      {printData && (
-        <JobTicketPrintDialog
-          open={showPrintDialog}
-          onOpenChange={(open) => {
-            if (!open) {
+      {
+        printData && (
+          <JobTicketPrintDialog
+            open={showPrintDialog}
+            onOpenChange={(open) => {
+              if (!open) {
+                setShowPrintDialog(false);
+                setPrintData(null);
+                router.push("/job-ticket");
+              }
+            }}
+            data={printData}
+            onDecline={() => {
               setShowPrintDialog(false);
               setPrintData(null);
               router.push("/job-ticket");
-            }
-          }}
-          data={printData}
-          onDecline={() => {
-            setShowPrintDialog(false);
-            setPrintData(null);
-            router.push("/job-ticket");
-          }}
-        />
-      )}
+            }}
+          />
+        )
+      }
     </>
   );
 }

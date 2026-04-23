@@ -57,12 +57,9 @@ export function DataTablePagination<TData>({
     const pages = getPageNumbers()
 
     return (
-        <div className="flex items-center justify-between px-2 py-4">
-            <div className="flex-1 text-sm text-muted-foreground whitespace-nowrap">
-                {table.getFilteredSelectedRowModel().rows.length} of{" "}
-                {table.getFilteredRowModel().rows.length} row(s) selected.
-            </div>
-            <div className="flex items-center gap-4 lg:gap-8">
+        <div className="flex items-center justify-end px-2 py-4">
+
+            <div className="flex justify-end gap-4 lg:gap-8">
                 <div className="flex items-center gap-2">
                     <p className="text-sm font-medium whitespace-nowrap">Rows per page</p>
                     <Select

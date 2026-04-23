@@ -48,10 +48,9 @@ import {
   QuotationType,
   QuotationTaxType,
   QuotationStatus,
+  PRODUCT_TYPES,
 } from "@/config/enum";
 import { getUser } from "@/lib/auth";
-import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
-import { inventoryApi } from "@/modules/inventory/api";
 import { FullPageLoader } from "@/components/shared/loader";
 
 type QuotationFormValues = z.infer<typeof createQuotationSchema>;
@@ -74,14 +73,12 @@ function CreateQuotation({
 
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
   const [loading, setLoading] = useState(false);
-  const [itemList, setItemList] = useState<GET_ALL_INVENTORY[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quoteDate, setQuoteDate] = useState<Date>(new Date());
   const [showAccountDetails, setShowAccountDetails] = useState(false);
 
   useEffect(() => {
     getCustomerList();
-    getItemList();
   }, []);
 
   const getCustomerList = async () => {
@@ -97,18 +94,7 @@ function CreateQuotation({
     }
   };
 
-  const getItemList = async () => {
-    try {
-      setLoading(true);
-      const response = await inventoryApi.getAll();
-      setItemList(response.data);
-    } catch (error) {
-      console.error("Failed to fetch items", error);
-      toast(getErrorMessage(error, "Failed to load items"));
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   const baseDefaultValues: Partial<QuotationFormValues> = {
     customer_id: 0,
@@ -117,6 +103,7 @@ function CreateQuotation({
     tax_type_id: QuotationTaxType.NONE,
     currency: "LKR",
     contact_person: "",
+    marketing_person: "",
     notes: "",
     status: QuotationStatus.CREATED,
     sub_total: "0",
@@ -184,9 +171,12 @@ function CreateQuotation({
 
     // Calculate net total based on tax type
     let netTotal = subTotal;
-    if (taxTypeId === QuotationTaxType.VAT) {
-      // VAT
-      netTotal = subTotal * 1.15;
+    if (
+      taxTypeId === QuotationTaxType.VAT ||
+      taxTypeId === QuotationTaxType.TIEP
+    ) {
+      // VAT/TIEP 18%
+      netTotal = subTotal * 1.18;
     }
 
     return {
@@ -230,25 +220,6 @@ function CreateQuotation({
 
     form.setValue(`items.${index}.${field}`, sanitizedValue);
 
-    // Validate qty against inventory stock
-    if (field === "item_qty") {
-      const itemId = form.getValues(`items.${index}.item_id`);
-      const selectedItem = itemList.find((i) => i.item_id === itemId);
-
-      if (selectedItem) {
-        const qty = parseFloat(sanitizedValue || "0");
-
-        if (qty > Number(selectedItem.quantity)) {
-          form.setError(`items.${index}.item_qty` as any, {
-            type: "manual",
-            message: `Only ${selectedItem.quantity} items available in stock`,
-          });
-        } else {
-          form.clearErrors(`items.${index}.item_qty` as any);
-        }
-      }
-    }
-
     // Calculate row total immediately
     const qty = parseFloat(
       field === "item_qty"
@@ -284,12 +255,15 @@ function CreateQuotation({
         delivery_days: data.delivery_days,
         tax_type_id: data.tax_type_id,
         currency: data.currency,
-        contact_person: data.contact_person,
+        contact_person: data.contact_person ?? null,
+        marketing_person: data.marketing_person ?? null,
         notes: data.notes || "",
         status: data.status,
-        sub_total: data.sub_total,
+        ...(data.tax_type_id !== QuotationTaxType.NONE && {
+          sub_total: data.sub_total,
+          total_without_tax: data.total_without_tax,
+        }),
         no_of_items: data.no_of_items,
-        total_without_tax: data.total_without_tax,
         net_total: data.net_total,
         created_by: user?.name || "User",
 
@@ -346,32 +320,7 @@ function CreateQuotation({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-0">
-          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-            <Button
-              size="lg"
-              variant="outline"
-              type="button"
-              onClick={() => router.push("/quotation-management")}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="lg"
-              type="submit"
-              className="bg-primary text-white"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Create Quotation"
-              )}
-            </Button>
-          </div>
+
 
           {/* Card 1: Customer Selection */}
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
@@ -435,11 +384,11 @@ function CreateQuotation({
                             (c) => String(c.customer_id) === value
                           );
                           if (selectedCustomer) {
-                            // Auto-populate contact person
-                            form.setValue(
-                              "contact_person",
-                              selectedCustomer.contact_person || ""
-                            );
+                            // Auto-populate first contact person by default
+                            const firstContact = selectedCustomer.contact_persons?.[0];
+                            form.setValue("contact_person", firstContact?.name || "");
+                          } else {
+                            form.setValue("contact_person", "");
                           }
                         }}
                         placeholder="Select company"
@@ -467,15 +416,33 @@ function CreateQuotation({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Contact Person */}
-                  {renderFormField("contact_person", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Person</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Select contact person" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
+                  {renderFormField("contact_person", ({ field }) => {
+                    const selectedCustomer = customer.find(
+                      (c) => c.customer_id === form.watch("customer_id")
+                    );
+                    const contacts = selectedCustomer?.contact_persons || [];
+
+                    return (
+                      <FormItem>
+                        <FormLabel>Contact Person</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select contact person" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {contacts.map((cp, idx) => (
+                              <SelectItem key={idx} value={cp.name}>
+                                {cp.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  })}
 
                   {/* Mobile Number */}
                   <FormItem>
@@ -483,9 +450,13 @@ function CreateQuotation({
                     <Input
                       placeholder="Mobile Number"
                       value={
-                        customer.find(
-                          (c) => c.customer_id === form.watch("customer_id")
-                        )?.phone || ""
+                        (() => {
+                          const selectedCustomerId = form.watch("customer_id");
+                          const selectedContactName = form.watch("contact_person");
+                          const selectedCustomer = customer.find(c => c.customer_id === selectedCustomerId);
+                          const contact = selectedCustomer?.contact_persons?.find(cp => cp.name === selectedContactName);
+                          return contact?.phone || "";
+                        })()
                       }
                       readOnly
                     />
@@ -566,7 +537,7 @@ function CreateQuotation({
                     const taxTypeLabels: Record<QuotationTaxType, string> = {
                       [QuotationTaxType.NONE]: "None",
                       [QuotationTaxType.VAT]: "VAT",
-                      [QuotationTaxType.SVAT]: "SVAT",
+                      [QuotationTaxType.TIEP]: "TIEP",
                     };
                     return (
                       <FormItem>
@@ -630,6 +601,19 @@ function CreateQuotation({
                           </SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Marketing Person */}
+                  {renderFormField("marketing_person", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Marketing Person</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter marketing person" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   ))}
@@ -709,8 +693,9 @@ function CreateQuotation({
                       );
                       const totalExclusive = qty * price;
                       const totalInclusive =
-                        watchTaxType === 2
-                          ? totalExclusive * 1.15
+                        watchTaxType === QuotationTaxType.VAT ||
+                          watchTaxType === QuotationTaxType.TIEP
+                          ? totalExclusive * 1.18
                           : totalExclusive;
 
                       return (
@@ -719,43 +704,36 @@ function CreateQuotation({
                             {renderFormField(
                               `items.${index}.item_category`,
                               ({ field }) => {
-                                const groupedItems = Array.from(
-                                  new Map(
-                                    itemList.map((item) => [
-                                      `${item.item_sub_category} ${item.item_name}`,
-                                      {
-                                        value: String(item.item_id),
-                                        label: `${item.item_sub_category || ''} ${item.item_name || ''}`.trim(),
-                                      },
-                                    ])
-                                  ).values()
-                                );
+                                const groupedItems = Object.values(PRODUCT_TYPES).map((type, idx) => ({
+                                  value: String(idx + 1),
+                                  label: type,
+                                }));
 
                                 return (
-                                <FormItem>
-                                  <Combobox
-                                    items={groupedItems}
-                                    value={
-                                      field.value ? String(groupedItems.find(i => i.label === field.value)?.value || "") : ""
-                                    }
-                                    onValueChange={(value) => {
-                                      const selectedGroupItem = groupedItems.find(
-                                        (i) => i.value === value
-                                      );
-
-                                      if (selectedGroupItem) {
-                                        field.onChange(selectedGroupItem.label);
-                                        form.setValue(
-                                          `items.${index}.item_id`,
-                                          parseInt(selectedGroupItem.value, 10)
-                                        );
+                                  <FormItem>
+                                    <Combobox
+                                      items={groupedItems}
+                                      value={
+                                        field.value ? String(groupedItems.find(i => i.label === field.value)?.value || "") : ""
                                       }
-                                    }}
-                                    placeholder="Select Item"
-                                    searchPlaceholder="Search item..."
-                                  />
-                                  <FormMessage />
-                                </FormItem>
+                                      onValueChange={(value) => {
+                                        const selectedGroupItem = groupedItems.find(
+                                          (i) => i.value === value
+                                        );
+
+                                        if (selectedGroupItem) {
+                                          field.onChange(selectedGroupItem.label);
+                                          form.setValue(
+                                            `items.${index}.item_id`,
+                                            parseInt(selectedGroupItem.value, 10)
+                                          );
+                                        }
+                                      }}
+                                      placeholder="Select Item"
+                                      searchPlaceholder="Search item..."
+                                    />
+                                    <FormMessage />
+                                  </FormItem>
                                 );
                               }
                             )}
@@ -925,24 +903,36 @@ function CreateQuotation({
               {/* Calculation Summary */}
               <div className="flex justify-end">
                 <div className="w-full md:w-1/2 space-y-2 border-t pt-4">
-                  <div className="flex justify-between text-sm">
-                    <span>Sub Total (Without TAX):</span>
-                    <span className="font-medium">
-                      Rs {form.watch("sub_total") || "0"}
-                    </span>
-                  </div>
+                  {watchTaxType !== QuotationTaxType.NONE && (
+                    <>
+                      <div className="flex justify-between text-sm text-muted-foreground italic">
+                        <span>Sub Total (Without TAX):</span>
+                        <span className="font-medium">
+                          Rs {form.watch("sub_total") || "0"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm text-muted-foreground italic">
+                        <span>Total Amount (Without TAX):</span>
+                        <span className="font-medium">
+                          Rs {form.watch("total_without_tax") || "0"}
+                        </span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span>No. of Items:</span>
                     <span className="font-medium">
                       {form.watch("no_of_items") || "0"}
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Total Amount (Without TAX):</span>
-                    <span className="font-medium">
-                      Rs {form.watch("total_without_tax") || "0"}
-                    </span>
-                  </div>
+                  {(watchTaxType === QuotationTaxType.VAT || watchTaxType === QuotationTaxType.TIEP) && (
+                    <div className="flex justify-between text-sm text-muted-foreground italic">
+                      <span>{watchTaxType === QuotationTaxType.VAT ? "VAT" : "TIEP"} Amount (18%):</span>
+                      <span className="font-medium">
+                        Rs {(parseFloat(form.watch("sub_total") || "0") * 0.18).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm font-bold border-t pt-2">
                     <span>Net Total:</span>
                     <span>Rs {form.watch("net_total") || "0"}</span>
@@ -951,6 +941,32 @@ function CreateQuotation({
               </div>
             </CardContent>
           </Card>
+          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
+            <Button
+              size="lg"
+              variant="outline"
+              type="button"
+              onClick={() => router.push("/quotation-management")}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="lg"
+              type="submit"
+              className="bg-primary text-white"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create"
+              )}
+            </Button>
+          </div>
         </form>
       </Form>
     </div>

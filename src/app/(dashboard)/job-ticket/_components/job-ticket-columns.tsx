@@ -35,6 +35,10 @@ export const jobTicketColumns = (
             },
         },
         {
+            accessorKey: "customer_name",
+            header: "Customer",
+        },
+        {
             accessorKey: "job_name",
             header: "Job Name",
             cell: ({ row }) => {
@@ -48,8 +52,9 @@ export const jobTicketColumns = (
         },
         {
             accessorKey: "customer_po",
-            header: "Purchase Order Number",
+            header: "PO Number",
         },
+
         {
             accessorKey: "quantity",
             header: "Quantity",
@@ -65,6 +70,7 @@ export const jobTicketColumns = (
                     : "-"
             },
         },
+
         {
             id: "created_on",
             header: "Created On",
@@ -106,7 +112,7 @@ export const jobTicketColumns = (
                                                 onClick={() => actions.onStatusChange(job_ticket.job_id, nextStatus)}
                                             >
                                                 <ArrowRightIcon className="mr-2 h-4 w-4" />
-                                                Move Status to {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1).toLowerCase()}
+                                                Update Status to {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1).toLowerCase()}
                                             </DropdownMenuItem>
                                         );
                                     }

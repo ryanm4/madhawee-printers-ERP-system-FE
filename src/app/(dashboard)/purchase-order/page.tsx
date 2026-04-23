@@ -100,7 +100,7 @@ function PurchaseOrderPage() {
           TC_E_PR_No: data.TC_E_PR_No,
           updated_by: getUser()?.name || "User", // Ideally from user context
           status: status,
-          customer_po: String(data.customer_po), 
+          customer_po: String(data.customer_po),
           po_items: (data.po_items || []).map((item: any) => ({
             item_code: item.item_code,
             description: item.description,
@@ -250,7 +250,7 @@ function PurchaseOrderPage() {
                     deliveryDate={item.delivery_date}
                     jobs={item.jobs}
                     totalJobs={item.jobs.length}
-                    additionalJobs={item.jobs.length}
+                    additionalJobs={item.jobs.filter(job => job.status !== 'COMPLETED').length}
                     status={item.status}
                     onDelete={handleDelete}
                     onRefresh={fetchData}

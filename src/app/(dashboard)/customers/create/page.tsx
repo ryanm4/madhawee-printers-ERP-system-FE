@@ -6,7 +6,7 @@ import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcr
 import { customerSchema } from "@/modules/customer/validation";
 import { useRouter } from "next/navigation";
 import React, { useRef, useState } from "react";
-import { FieldPath, useForm, SubmitHandler } from "react-hook-form";
+import { FieldPath, useForm, SubmitHandler, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { CloudUpload, FileArchive, X } from "lucide-react";
+import { CloudUpload, FileArchive, Plus, Trash2, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -51,7 +51,7 @@ function CreateCustomerRelationship() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const baseDefaultValues: CustomerFormValues = {
-    customer_type: "",
+    customer_type: "CUSTOMER",
     companyName: "",
     address: "",
     phone: "",
@@ -60,16 +60,25 @@ function CreateCustomerRelationship() {
     vat_type: "",
     vat_no: "",
     logoUrl: "",
-    contactPerson: "",
-    contactPersonEmail: "",
-    contactPersonPhone: "",
-    created_by: "", 
+    contactPersons: [
+      {
+        name: "",
+        email: "",
+        phone: "",
+      },
+    ],
+    created_by: "",
     status: "Active",
   };
 
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
     defaultValues: baseDefaultValues,
+  });
+
+  const { fields: contactFields, append: appendContact, remove: removeContact } = useFieldArray({
+    control: form.control,
+    name: "contactPersons",
   });
 
   React.useEffect(() => {
@@ -131,7 +140,7 @@ function CreateCustomerRelationship() {
     try {
       setIsLoading(true);
       const payload: CREATE_CUSTOMER = {
-        customer_type: data.customer_type,
+        customer_type: "CUSTOMER",
         company_name: data.companyName,
         address: data.address ?? "",
         phone: data.phone ?? "",
@@ -140,9 +149,11 @@ function CreateCustomerRelationship() {
         vat_type: data.vat_type ?? "",
         vat_no: data.vat_no ?? "",
         logo_url: data.logoUrl ?? "",
-        contact_person: data.contactPerson ?? "",
-        contact_person_email: data.contactPersonEmail ?? "",
-        contact_person_phone: data.contactPersonPhone ?? "",
+        contact_persons: data.contactPersons.map((cp) => ({
+          name: cp.name,
+          email: cp.email ?? "",
+          phone: cp.phone ?? "",
+        })),
         created_by: user?.name || "User",
         updated_by: user?.name || "User",
         status: "CREATED",
@@ -205,7 +216,7 @@ function CreateCustomerRelationship() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
             <Card
               className={cn(
                 "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
@@ -223,23 +234,11 @@ function CreateCustomerRelationship() {
                 {renderFormField("customer_type", ({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Customer / Supplier<span className="text-red-500">*</span>
+                      Customer Type
                     </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select Customer" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Object.values(CustomerType).map((customer) => (
-                          <SelectItem key={customer} value={customer}>
-                            {customer.charAt(0).toUpperCase() +
-                              customer.slice(1).toLowerCase()}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Input placeholder="Enter Customer Type" readOnly {...field} />
+                    </FormControl>
                   </FormItem>
                 ))}
                 <div className="flex flex-row gap-4">
@@ -340,6 +339,67 @@ function CreateCustomerRelationship() {
                     </FormItem>
                   ))}
                 </div>
+
+                <div className="flex flex-col gap-4 border-t pt-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-md font-medium">Point of Contacts</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => appendContact({ name: "", email: "", phone: "" })}
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Contact
+                    </Button>
+                  </div>
+
+                  <div className="space-y-6">
+                    {contactFields.map((field, index) => (
+                      <div key={field.id} className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 pr-14 border rounded-lg relative bg-accent/5">
+                        {contactFields.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeContact(index)}
+                            className="absolute top-4 right-4 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {renderFormField(`contactPersons.${index}.name`, ({ field }) => (
+                          <FormItem>
+                            <FormLabel>Name <span className="text-red-500">*</span></FormLabel>
+                            <FormControl>
+                              <Input placeholder="Contact Name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        ))}
+                        {renderFormField(`contactPersons.${index}.email`, ({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Email Address" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        ))}
+                        {renderFormField(`contactPersons.${index}.phone`, ({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Phone Number" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 {renderFormField("logoUrl", ({ field }) => (
                   <FormItem>
                     <FormLabel>Company Logo</FormLabel>
@@ -405,66 +465,7 @@ function CreateCustomerRelationship() {
               </CardContent>
             </Card>
 
-            <div className="grid grid-rows-2 md:grid-rows-2 gap-4">
-              <Card
-                className={cn(
-                  "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
-                )}
-              >
-                <CardHeader className="flex flex-col gap-[0.5px]">
-                  <h3 className="text-md font-medium mb-2">
-                    Contact Person One
-                  </h3>
-                  <p className="text-xs text-muted-foreground mb-4">
-                    Add your contact person details here
-                  </p>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-4">
-                  {renderFormField("contactPerson", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Person Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                  {renderFormField("contactPersonEmail", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Person Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                  {renderFormField("contactPersonPhone", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Person Phone</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your phone" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                </CardContent>
-              </Card>
-              <Card
-                className={cn(
-                  "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
-                )}
-              >
-                <CardHeader className="flex flex-col gap-[0.5px]">
-                  <h3 className="text-md font-medium mb-2">
-                    Contact Person Two
-                  </h3>
-                  <p className="text-xs text-muted-foreground mb-4">
-                    Add your contact person details here
-                  </p>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-4"></CardContent>
-              </Card>
-            </div>
+
           </div>
         </form>
       </Form>
