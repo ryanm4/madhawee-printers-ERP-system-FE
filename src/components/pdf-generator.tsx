@@ -223,6 +223,7 @@ export const generateQuotationPDF = async (data: any) => {
         leftY -= leftSpacing;
         currentPage.drawText(`Date : ${formattedDate(data.created_on)}`, { x: leftColX, y: leftY, size: labelSize, font: helvetica });
         leftY -= leftSpacing;
+        const validity = data.delivery_days || 7;
         currentPage.drawText(`Validity Period : ${validity} Days`, { x: leftColX, y: leftY, size: labelSize, font: helvetica });
         leftY -= leftSpacing;
         if (data.marketing_person) {

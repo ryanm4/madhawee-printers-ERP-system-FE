@@ -181,7 +181,7 @@ function EditCustomerRelationship() {
     try {
       setIsLoading(true);
       const payload: CREATE_CUSTOMER = {
-        customer_type: data.customer_type,
+        customer_type: CustomerType.CUSTOMER,
         company_name: data.companyName,
         address: data.address ?? "",
         phone: data.phone ?? "",

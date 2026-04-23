@@ -6,7 +6,12 @@ import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcr
 import { customerSchema } from "@/modules/customer/validation";
 import { useRouter } from "next/navigation";
 import React, { useRef, useState } from "react";
-import { FieldPath, useForm, SubmitHandler, useFieldArray } from "react-hook-form";
+import {
+  FieldPath,
+  useForm,
+  SubmitHandler,
+  useFieldArray,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -51,7 +56,7 @@ function CreateCustomerRelationship() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const baseDefaultValues: CustomerFormValues = {
-    customer_type: "CUSTOMER",
+    customer_type: CustomerType.CUSTOMER,
     companyName: "",
     address: "",
     phone: "",
@@ -76,7 +81,11 @@ function CreateCustomerRelationship() {
     defaultValues: baseDefaultValues,
   });
 
-  const { fields: contactFields, append: appendContact, remove: removeContact } = useFieldArray({
+  const {
+    fields: contactFields,
+    append: appendContact,
+    remove: removeContact,
+  } = useFieldArray({
     control: form.control,
     name: "contactPersons",
   });
@@ -140,7 +149,7 @@ function CreateCustomerRelationship() {
     try {
       setIsLoading(true);
       const payload: CREATE_CUSTOMER = {
-        customer_type: "CUSTOMER",
+        customer_type: CustomerType.CUSTOMER,
         company_name: data.companyName,
         address: data.address ?? "",
         phone: data.phone ?? "",
@@ -160,18 +169,19 @@ function CreateCustomerRelationship() {
       };
       const response = await CustomerApi.create(payload);
 
-      const isSupplier = data.customer_type === CustomerType.SUPPLIER;
-      toast(`${isSupplier ? "Supplier" : "Customer"} Created`, {
-        description: `The ${isSupplier ? "supplier" : "customer"} has been created successfully.`,
+      toast(`Customer Created`, {
+        description: `The customer has been created successfully.`,
       });
       form.reset(baseDefaultValues);
       form.clearErrors();
       router.push("/customers");
     } catch (error) {
       console.error("Failed to submit entity:", error);
-      const isSupplier = form.getValues("customer_type") === CustomerType.SUPPLIER;
-      toast(`Failed to Create ${isSupplier ? "Supplier" : "Customer"}`, {
-        description: getErrorMessage(error, `An error occurred while creating the ${isSupplier ? "supplier" : "customer"}. Please try again.`),
+      toast(`Failed to Create Customer`, {
+        description: getErrorMessage(
+          error,
+          `An error occurred while creating the customer. Please try again.`
+        ),
       });
     } finally {
       setIsLoading(false);
@@ -185,15 +195,15 @@ function CreateCustomerRelationship() {
     >["0"]["render"]
   ) => <FormField control={form.control} name={name} render={render} />;
 
-  const supplierType = form.watch("customer_type");
+  const customerType = form.watch("customer_type");
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       {isLoading && <FullPageLoader />}
       <PageTitleWithBreadcrumb
-        title={`Create ${supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"}`}
+        title={`Create Customer`}
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
-          { title: "Customer / Supplier Management", href: "/customers" },
+          { title: "Customer", href: "/customers" },
         ]}
       />
 
@@ -223,21 +233,21 @@ function CreateCustomerRelationship() {
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">
-                  {supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"} Details
-                </h3>
+                <h3 className="text-md font-medium mb-2">Customer Details</h3>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Add your {supplierType === CustomerType.SUPPLIER ? "supplier" : "customer"} details here
+                  Add your customer details here
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
                 {renderFormField("customer_type", ({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      Customer Type
-                    </FormLabel>
+                    <FormLabel>Customer Type</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter Customer Type" readOnly {...field} />
+                      <Input
+                        placeholder="Enter Customer Type"
+                        readOnly
+                        {...field}
+                      />
                     </FormControl>
                   </FormItem>
                 ))}
@@ -265,10 +275,10 @@ function CreateCustomerRelationship() {
                 </div>
                 {renderFormField("address", ({ field }) => (
                   <FormItem>
-                    <FormLabel>{supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"} Address</FormLabel>
+                    <FormLabel>Customer Address</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder={`Enter ${supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"} Address`}
+                        placeholder={`Enter Customer Address`}
                         className="resize-none"
                         {...field}
                       />
@@ -282,24 +292,6 @@ function CreateCustomerRelationship() {
                       <FormLabel>Company Email</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter Company Email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                  {renderFormField("creditPeriod", ({ field }) => (
-                    <FormItem className="w-full">
-                      <FormLabel>Credit Period (For Suppliers)</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter Credit Period"
-                          disabled={supplierType === CustomerType.CUSTOMER}
-                          className={
-                            supplierType === CustomerType.CUSTOMER
-                              ? "bg-muted cursor-not-allowed"
-                              : ""
-                          }
-                          {...field}
-                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -347,7 +339,9 @@ function CreateCustomerRelationship() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => appendContact({ name: "", email: "", phone: "" })}
+                      onClick={() =>
+                        appendContact({ name: "", email: "", phone: "" })
+                      }
                       className="flex items-center gap-2"
                     >
                       <Plus className="h-4 w-4" />
@@ -357,7 +351,10 @@ function CreateCustomerRelationship() {
 
                   <div className="space-y-6">
                     {contactFields.map((field, index) => (
-                      <div key={field.id} className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 pr-14 border rounded-lg relative bg-accent/5">
+                      <div
+                        key={field.id}
+                        className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 pr-14 border rounded-lg relative bg-accent/5"
+                      >
                         {contactFields.length > 1 && (
                           <Button
                             type="button"
@@ -369,33 +366,44 @@ function CreateCustomerRelationship() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
-                        {renderFormField(`contactPersons.${index}.name`, ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Name <span className="text-red-500">*</span></FormLabel>
-                            <FormControl>
-                              <Input placeholder="Contact Name" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        ))}
-                        {renderFormField(`contactPersons.${index}.email`, ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Email Address" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        ))}
-                        {renderFormField(`contactPersons.${index}.phone`, ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Phone</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Phone Number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        ))}
+                        {renderFormField(
+                          `contactPersons.${index}.name`,
+                          ({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                Name <span className="text-red-500">*</span>
+                              </FormLabel>
+                              <FormControl>
+                                <Input placeholder="Contact Name" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )
+                        )}
+                        {renderFormField(
+                          `contactPersons.${index}.email`,
+                          ({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Email Address" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )
+                        )}
+                        {renderFormField(
+                          `contactPersons.${index}.phone`,
+                          ({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Phone Number" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )
+                        )}
                       </div>
                     ))}
                   </div>
@@ -464,8 +472,6 @@ function CreateCustomerRelationship() {
                 ))}
               </CardContent>
             </Card>
-
-
           </div>
         </form>
       </Form>
