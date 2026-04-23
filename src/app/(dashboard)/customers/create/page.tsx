@@ -51,7 +51,7 @@ function CreateCustomerRelationship() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const baseDefaultValues: CustomerFormValues = {
-    customer_type: "CUSTOMER",
+    customer_type: CustomerType.CUSTOMER,
     companyName: "",
     address: "",
     phone: "",
@@ -140,7 +140,7 @@ function CreateCustomerRelationship() {
     try {
       setIsLoading(true);
       const payload: CREATE_CUSTOMER = {
-        customer_type: "CUSTOMER",
+        customer_type: CustomerType.CUSTOMER,
         company_name: data.companyName,
         address: data.address ?? "",
         phone: data.phone ?? "",
@@ -160,18 +160,17 @@ function CreateCustomerRelationship() {
       };
       const response = await CustomerApi.create(payload);
 
-      const isSupplier = data.customer_type === CustomerType.SUPPLIER;
-      toast(`${isSupplier ? "Supplier" : "Customer"} Created`, {
-        description: `The ${isSupplier ? "supplier" : "customer"} has been created successfully.`,
+
+      toast(`Customer Created`, {
+        description: `The customer has been created successfully.`,
       });
       form.reset(baseDefaultValues);
       form.clearErrors();
       router.push("/customers");
     } catch (error) {
       console.error("Failed to submit entity:", error);
-      const isSupplier = form.getValues("customer_type") === CustomerType.SUPPLIER;
-      toast(`Failed to Create ${isSupplier ? "Supplier" : "Customer"}`, {
-        description: getErrorMessage(error, `An error occurred while creating the ${isSupplier ? "supplier" : "customer"}. Please try again.`),
+      toast(`Failed to Create Customer`, {
+        description: getErrorMessage(error, `An error occurred while creating the customer. Please try again.`),
       });
     } finally {
       setIsLoading(false);
@@ -185,15 +184,15 @@ function CreateCustomerRelationship() {
     >["0"]["render"]
   ) => <FormField control={form.control} name={name} render={render} />;
 
-  const supplierType = form.watch("customer_type");
+  const customerType = form.watch("customer_type");
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       {isLoading && <FullPageLoader />}
       <PageTitleWithBreadcrumb
-        title={`Create ${supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"}`}
+        title={`Create Customer`}
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
-          { title: "Customer / Supplier Management", href: "/customers" },
+          { title: "Customer", href: "/customers" },
         ]}
       />
 
@@ -224,10 +223,10 @@ function CreateCustomerRelationship() {
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
                 <h3 className="text-md font-medium mb-2">
-                  {supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"} Details
+                  Customer Details
                 </h3>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Add your {supplierType === CustomerType.SUPPLIER ? "supplier" : "customer"} details here
+                  Add your customer details here
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
@@ -265,10 +264,10 @@ function CreateCustomerRelationship() {
                 </div>
                 {renderFormField("address", ({ field }) => (
                   <FormItem>
-                    <FormLabel>{supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"} Address</FormLabel>
+                    <FormLabel>Customer Address</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder={`Enter ${supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"} Address`}
+                        placeholder={`Enter Customer Address`}
                         className="resize-none"
                         {...field}
                       />
@@ -286,24 +285,7 @@ function CreateCustomerRelationship() {
                       <FormMessage />
                     </FormItem>
                   ))}
-                  {renderFormField("creditPeriod", ({ field }) => (
-                    <FormItem className="w-full">
-                      <FormLabel>Credit Period (For Suppliers)</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter Credit Period"
-                          disabled={supplierType === CustomerType.CUSTOMER}
-                          className={
-                            supplierType === CustomerType.CUSTOMER
-                              ? "bg-muted cursor-not-allowed"
-                              : ""
-                          }
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
+
                 </div>
                 <div className="flex flex-row gap-4">
                   {renderFormField("vat_type", ({ field }) => (
