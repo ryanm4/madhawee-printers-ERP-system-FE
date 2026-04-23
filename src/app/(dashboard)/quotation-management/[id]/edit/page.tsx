@@ -51,6 +51,7 @@ import {
   QuotationType,
   QuotationTaxType,
   QuotationStatus,
+  PRODUCT_TYPES,
 } from "@/config/enum";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
@@ -104,8 +105,9 @@ function EditQuotation({
     tax_type_id: QuotationTaxType.NONE,
     currency: "LKR",
     contact_person: "",
+    marketing_person: "",
     notes: "",
-    status: QuotationStatus.PENDING,
+    status: QuotationStatus.CREATED,
     sub_total: "0",
     no_of_items: "0",
     total_without_tax: "0",
@@ -171,9 +173,12 @@ function EditQuotation({
 
     // Calculate net total based on tax type
     let netTotal = subTotal;
-    if (taxTypeId === QuotationTaxType.VAT) {
-      // VAT
-      netTotal = subTotal * 1.15;
+    if (
+      taxTypeId === QuotationTaxType.VAT ||
+      taxTypeId === QuotationTaxType.TIEP
+    ) {
+      // VAT/TIEP 18%
+      netTotal = subTotal * 1.18;
     }
 
     return {
@@ -254,12 +259,15 @@ function EditQuotation({
         delivery_days: data.delivery_days,
         tax_type_id: data.tax_type_id,
         currency: data.currency,
-        contact_person: data.contact_person,
+        contact_person: data.contact_person ?? null,
+        marketing_person: data.marketing_person ?? null,
         notes: data.notes || "",
         status: data.status,
-        sub_total: data.sub_total,
+        ...(data.tax_type_id !== QuotationTaxType.NONE && {
+          sub_total: data.sub_total,
+          total_without_tax: data.total_without_tax,
+        }),
         no_of_items: data.no_of_items,
-        total_without_tax: data.total_without_tax,
         net_total: data.net_total,
         updated_by: user?.name || "User",
         updated_on: new Date(),
@@ -312,27 +320,28 @@ function EditQuotation({
           form.reset({
             customer_id: quoteData.customer_id,
             type_id: quoteData.type_id,
-            delivery_days: quoteData.delivery_days,
+            delivery_days: String(quoteData.delivery_days || ""),
             tax_type_id: quoteData.tax_type_id,
-            currency: quoteData.currency,
+            currency: quoteData.currency || "LKR",
             contact_person: quoteData.contact_person,
+            marketing_person: quoteData.marketing_person || "",
             notes: quoteData.notes || "",
             status: quoteData.status,
-            sub_total: quoteData.sub_total,
-            no_of_items: quoteData.no_of_items,
-            total_without_tax: quoteData.total_without_tax,
-            net_total: quoteData.net_total,
-            created_by: quoteData.created_by,
-            updated_by: user?.name || quoteData.updated_by,
+            sub_total: String(quoteData.sub_total || "0"),
+            no_of_items: String(quoteData.no_of_items || "0"),
+            total_without_tax: String(quoteData.total_without_tax || "0"),
+            net_total: String(quoteData.net_total || "0"),
+            created_by: quoteData.created_by || "User",
+            updated_by: user?.name || quoteData.updated_by || "User",
             items:
               (quoteData as any).items?.map((item: any) => ({
                 item_id: item.item_id,
                 item_category: item.item_category,
-                item_qty: String(item.item_qty),
+                item_qty: String(item.item_qty || "0"),
                 item_description: item.item_description || "",
-                item_unit_price: item.item_unit_price,
-                item_unit_discount: item.item_unit_discount || "0",
-                item_total_price: item.item_total_price,
+                item_unit_price: String(item.item_unit_price || "0"),
+                item_unit_discount: String(item.item_unit_discount || "0"),
+                item_total_price: String(item.item_total_price || "0"),
               })) || [],
           });
           setQuoteDate(new Date(quoteData.created_on));
@@ -362,33 +371,16 @@ function EditQuotation({
       />
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-0">
-          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-            <Button
-              size="lg"
-              variant="outline"
-              type="button"
-              onClick={() => router.push("/quotation-management")}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="lg"
-              type="submit"
-              className="bg-primary text-white"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                "Update Quotation"
-              )}
-            </Button>
-          </div>
+        <form
+          onSubmit={form.handleSubmit(onSubmit, (errors) => {
+            console.error("Form validation errors:", errors);
+            toast("Form Validation Error", {
+              description: "Please check the form for errors and try again.",
+            });
+          })}
+          className="space-y-6 pb-0"
+        >
+
 
           {/* Card 1: Customer Selection */}
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
@@ -452,11 +444,11 @@ function EditQuotation({
                             (c) => String(c.customer_id) === value
                           );
                           if (selectedCustomer) {
-                            // Auto-populate contact person
-                            form.setValue(
-                              "contact_person",
-                              selectedCustomer.contact_person || ""
-                            );
+                            // Auto-populate first contact person by default
+                            const firstContact = selectedCustomer.contact_persons?.[0];
+                            form.setValue("contact_person", firstContact?.name || "");
+                          } else {
+                            form.setValue("contact_person", "");
                           }
                         }}
                         placeholder="Select company"
@@ -484,15 +476,33 @@ function EditQuotation({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Contact Person */}
-                  {renderFormField("contact_person", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Person</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Select contact person" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
+                  {renderFormField("contact_person", ({ field }) => {
+                    const selectedCustomer = customer.find(
+                      (c) => c.customer_id === form.watch("customer_id")
+                    );
+                    const contacts = selectedCustomer?.contact_persons || [];
+
+                    return (
+                      <FormItem>
+                        <FormLabel>Contact Person</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select contact person" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {contacts.map((cp, idx) => (
+                              <SelectItem key={idx} value={cp.name}>
+                                {cp.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  })}
 
                   {/* Mobile Number */}
                   <FormItem>
@@ -500,9 +510,13 @@ function EditQuotation({
                     <Input
                       placeholder="Mobile Number"
                       value={
-                        customer.find(
-                          (c) => c.customer_id === form.watch("customer_id")
-                        )?.phone || ""
+                        (() => {
+                          const selectedCustomerId = form.watch("customer_id");
+                          const selectedContactName = form.watch("contact_person");
+                          const selectedCustomer = customer.find(c => c.customer_id === selectedCustomerId);
+                          const contact = selectedCustomer?.contact_persons?.find(cp => cp.name === selectedContactName);
+                          return contact?.phone || "";
+                        })()
                       }
                       readOnly
                     />
@@ -583,7 +597,7 @@ function EditQuotation({
                     const taxTypeLabels: Record<QuotationTaxType, string> = {
                       [QuotationTaxType.NONE]: "None",
                       [QuotationTaxType.VAT]: "VAT",
-                      [QuotationTaxType.SVAT]: "SVAT",
+                      [QuotationTaxType.TIEP]: "TIEP",
                     };
                     return (
                       <FormItem>
@@ -647,6 +661,19 @@ function EditQuotation({
                           </SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Marketing Person */}
+                  {renderFormField("marketing_person", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Marketing Person</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter marketing person" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   ))}
@@ -726,8 +753,9 @@ function EditQuotation({
                       );
                       const totalExclusive = qty * price;
                       const totalInclusive =
-                        watchTaxType === 2
-                          ? totalExclusive * 1.15
+                        watchTaxType === QuotationTaxType.VAT ||
+                          watchTaxType === QuotationTaxType.TIEP
+                          ? totalExclusive * 1.18
                           : totalExclusive;
 
                       return (
@@ -735,43 +763,39 @@ function EditQuotation({
                           <td className="p-2">
                             {renderFormField(
                               `items.${index}.item_category`,
-                              ({ field }) => (
-                                <FormItem>
-                                  <Select
-                                    onValueChange={(val) => {
-                                      field.onChange(val);
-                                      // Set a corresponding item_id based on the selection
-                                      const idMap: Record<string, number> = {
-                                        item1: 1,
-                                        item2: 2,
-                                        item3: 3,
-                                      };
-                                      form.setValue(
-                                        `items.${index}.item_id`,
-                                        idMap[val] || 0
-                                      );
-                                    }}
-                                    value={field.value}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger className="w-[150px]">
-                                        <SelectValue placeholder="Select an item" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="item1">
-                                        Item 1
-                                      </SelectItem>
-                                      <SelectItem value="item2">
-                                        Item 2
-                                      </SelectItem>
-                                      <SelectItem value="item3">
-                                        Item 3
-                                      </SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </FormItem>
-                              )
+                              ({ field }) => {
+                                const groupedItems = Object.values(PRODUCT_TYPES).map((type, idx) => ({
+                                  value: String(idx + 1),
+                                  label: type,
+                                }));
+
+                                return (
+                                  <FormItem>
+                                    <Combobox
+                                      items={groupedItems}
+                                      value={
+                                        field.value ? String(groupedItems.find(i => i.label === field.value)?.value || "") : ""
+                                      }
+                                      onValueChange={(value) => {
+                                        const selectedGroupItem = groupedItems.find(
+                                          (i) => i.value === value
+                                        );
+
+                                        if (selectedGroupItem) {
+                                          field.onChange(selectedGroupItem.label);
+                                          form.setValue(
+                                            `items.${index}.item_id`,
+                                            parseInt(selectedGroupItem.value, 10)
+                                          );
+                                        }
+                                      }}
+                                      placeholder="Select Item"
+                                      searchPlaceholder="Search item..."
+                                    />
+                                    <FormMessage />
+                                  </FormItem>
+                                );
+                              }
                             )}
                           </td>
                           <td className="p-2">
@@ -936,24 +960,36 @@ function EditQuotation({
               {/* Calculation Summary */}
               <div className="flex justify-end">
                 <div className="w-full md:w-1/2 space-y-2 border-t pt-4">
-                  <div className="flex justify-between text-sm">
-                    <span>Sub Total (Without TAX):</span>
-                    <span className="font-medium">
-                      Rs {form.watch("sub_total") || "0"}
-                    </span>
-                  </div>
+                  {watchTaxType !== QuotationTaxType.NONE && (
+                    <>
+                      <div className="flex justify-between text-sm text-muted-foreground italic">
+                        <span>Sub Total (Without TAX):</span>
+                        <span className="font-medium">
+                          Rs {form.watch("sub_total") || "0"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm text-muted-foreground italic">
+                        <span>Total Amount (Without TAX):</span>
+                        <span className="font-medium">
+                          Rs {form.watch("total_without_tax") || "0"}
+                        </span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span>No. of Items:</span>
                     <span className="font-medium">
                       {form.watch("no_of_items") || "0"}
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Total Amount (Without TAX):</span>
-                    <span className="font-medium">
-                      Rs {form.watch("total_without_tax") || "0"}
-                    </span>
-                  </div>
+                  {(watchTaxType === QuotationTaxType.VAT || watchTaxType === QuotationTaxType.TIEP) && (
+                    <div className="flex justify-between text-sm text-muted-foreground italic">
+                      <span>{watchTaxType === QuotationTaxType.VAT ? "VAT" : "TIEP"} Amount (18%):</span>
+                      <span className="font-medium">
+                        Rs {(parseFloat(form.watch("sub_total") || "0") * 0.18).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm font-bold border-t pt-2">
                     <span>Net Total:</span>
                     <span>Rs {form.watch("net_total") || "0"}</span>
@@ -962,6 +998,32 @@ function EditQuotation({
               </div>
             </CardContent>
           </Card>
+          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
+            <Button
+              size="lg"
+              variant="outline"
+              type="button"
+              onClick={() => router.push("/quotation-management")}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="lg"
+              type="submit"
+              className="bg-primary text-white"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Update"
+              )}
+            </Button>
+          </div>
         </form>
       </Form>
     </div>

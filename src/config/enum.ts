@@ -11,16 +11,13 @@ export enum CustomerType {
 }
 
 export enum QuotationStatus {
-    PENDING = "PENDING",
     CREATED = "CREATED",
-    APPROVED = "APPROVED",
-    COMPLETED = "COMPLETED",
+    ACCEPTED = "ACCEPTED",
     REJECTED = "REJECTED",
 }
 
 export enum PurchaseOrderStatus {
     CREATED = "CREATED",
-    PENDING = "PENDING",
     APPROVED = "APPROVED",
     COMPLETED = "COMPLETED",
 
@@ -56,7 +53,7 @@ export enum QuotationType {
 
 export enum QuotationTaxType {
     VAT = 0,
-    SVAT = 1,
+    TIEP = 1,
     NONE = 2,
 }
 

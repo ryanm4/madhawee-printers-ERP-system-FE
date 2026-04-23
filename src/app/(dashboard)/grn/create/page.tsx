@@ -136,8 +136,7 @@ function CreateGRN() {
         title="Create Goods Received Note (GRN)"
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
-          { title: "Inventory", href: "/inventory" },
-          { title: "GRN", href: "/inventory/grn" },
+
         ]}
       />
 
@@ -146,26 +145,7 @@ function CreateGRN() {
           onSubmit={form.handleSubmit(onSubmit as any)}
           className="space-y-6"
         >
-          <div className="flex items-center justify-end gap-[16px] mt-6">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => router.push("/inventory/grn")}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save GRN"
-              )}
-            </Button>
-          </div>
+
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
@@ -515,6 +495,32 @@ function CreateGRN() {
               </div>
             </CardContent>
           </Card>
+          <div className="flex items-center justify-end gap-[16px] mt-6">
+            <Button
+              size="lg"
+              variant="outline"
+              type="button"
+              onClick={() => router.push("/inventory/grn")}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="lg"
+              type="submit"
+              className="bg-primary text-white"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create"
+              )}
+            </Button>
+          </div>
         </form>
       </Form>
     </div>

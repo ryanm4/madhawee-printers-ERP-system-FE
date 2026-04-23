@@ -134,7 +134,7 @@ export function CreateJobTicketDialog({
     wastage: "",
     deliveryDate: undefined,
     packingDate: undefined,
-    expiryDate: addYears(new Date(), 5),
+    expiryDate: undefined,
     tcNo: "",
     batchRef: "",
     remarks: "",
@@ -270,12 +270,8 @@ export function CreateJobTicketDialog({
           ? toMySQLDateTime(data.deliveryDate)
           : undefined,
         wastage: data.wastage,
-        packing_date: data.packingDate
-          ? toMySQLDateTime(data.packingDate)
-          : undefined,
-        expiry_date: data.expiryDate
-          ? toMySQLDateTime(data.expiryDate)
-          : undefined,
+        packing_date: data.packingDate,
+        expiry_date: data.expiryDate,
         tc_no: data.tcNo,
         batch_ref: data.batchRef,
         remarks: data.remarks,
@@ -475,6 +471,10 @@ export function CreateJobTicketDialog({
       typeof FormField<JobTicketFormValues, TName>
     >["0"]["render"]
   ) => <FormField control={form.control} name={name} render={render} />;
+
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
 
   return (
     <>
@@ -1108,64 +1108,18 @@ export function CreateJobTicketDialog({
                 {renderFormField("packingDate", ({ field }) => (
                   <FormItem>
                     <FormLabel>Packing Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value
-                              ? format(field.value, "PPP")
-                              : format(new Date(), "PPP")}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          captionLayout="dropdown"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input placeholder="Enter Packing Date "{...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 ))}
                 {renderFormField("expiryDate", ({ field }) => (
                   <FormItem>
                     <FormLabel>Expiry Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value
-                              ? format(field.value, "PPP")
-                              : format(new Date(), "PPP")}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          captionLayout="dropdown"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input placeholder="Enter Expiry Date" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 ))}

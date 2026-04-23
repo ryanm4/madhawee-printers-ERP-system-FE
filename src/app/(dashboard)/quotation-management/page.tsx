@@ -57,7 +57,7 @@ function QuotationsManagement() {
                   customer_phone: customer.phone || pdfData.customer_phone,
                   customer_email: customer.email || pdfData.customer_email,
                   contact_person:
-                    customer.contact_person || pdfData.contact_person,
+                    customer.contact_persons?.[0]?.name || pdfData.contact_person,
                 };
               }
             } catch (custError) {
@@ -93,9 +93,11 @@ function QuotationsManagement() {
             contact_person: data.contact_person,
             notes: data.notes || "",
             status: status,
-            sub_total: data.sub_total,
+            ...(Number(data.tax_type_id) !== 2 && {
+              sub_total: data.sub_total,
+              total_without_tax: data.total_without_tax,
+            }),
             no_of_items: data.no_of_items,
-            total_without_tax: data.total_without_tax,
             net_total: data.net_total,
             updated_by: data.updated_by || getUser()?.name || "User",
             items: (data.items || []).map((item: any) => ({

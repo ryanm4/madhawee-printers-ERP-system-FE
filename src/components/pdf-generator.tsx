@@ -223,9 +223,12 @@ export const generateQuotationPDF = async (data: any) => {
         leftY -= leftSpacing;
         currentPage.drawText(`Date : ${formattedDate(data.created_on)}`, { x: leftColX, y: leftY, size: labelSize, font: helvetica });
         leftY -= leftSpacing;
-        const validity = data.delivery_days || 7;
         currentPage.drawText(`Validity Period : ${validity} Days`, { x: leftColX, y: leftY, size: labelSize, font: helvetica });
         leftY -= leftSpacing;
+        if (data.marketing_person) {
+            currentPage.drawText(`Marketing : ${data.marketing_person}`, { x: leftColX, y: leftY, size: labelSize, font: helvetica });
+            leftY -= leftSpacing;
+        }
 
 
         // RIGHT: TO + Customer Details
@@ -265,9 +268,12 @@ export const generateQuotationPDF = async (data: any) => {
 
         // --- TABLE GENERATION ---
         // Columns: #, Product, Qty, Price, Total, VAT, Total(Inc)
-        const colWidths = [30, 175, 30, 80, 80, 60, 80];
-        const colAlign: ('center' | 'left' | 'right')[] = ['center', 'left', 'center', 'center', 'center', 'center', 'center'];
-        const headers = [
+        // tax_type_id mapping: 0: VAT, 1: TIEP, 2: NONE
+        const isTaxNone = Number(data?.tax_type_id) === 2;
+
+        let colWidths = [30, 175, 50, 80, 80, 60, 80];
+        let colAlign: ('center' | 'left' | 'right')[] = ['center', 'left', 'right', 'right', 'right', 'right', 'right'];
+        let headers = [
             "#",
             "Product",
             "Qty",
@@ -276,6 +282,19 @@ export const generateQuotationPDF = async (data: any) => {
             `VAT` + "\n" + "(18%)",
             `Total` + "\n" + "(Inc)"
         ];
+
+        if (isTaxNone) {
+            // Remove Total(EX) and VAT(18%) columns if tax is None
+            colWidths = [30, 245, 60, 100, 120];
+            colAlign = ['center', 'left', 'right', 'right', 'right'];
+            headers = [
+                "#",
+                "Product",
+                "Qty",
+                `Unit Price` + "\n" + `(${currency})`,
+                `Total` + "\n" + "(Inc)"
+            ];
+        }
 
         const tableX = margin;
         const rowHeightBuffer = 10;
@@ -324,7 +343,8 @@ export const generateQuotationPDF = async (data: any) => {
             const qty = Number(p.item_qty);
             const rate = Number(p.item_unit_price);
             const itemTotal = qty * rate;
-            const vatAmount = (data?.tax_type_id === 1 || data?.tax_type_id === 2) ? itemTotal * 0.18 : 0; // Assuming 1/2 corresponds to VAT/TIEP or similar logic. Original checked string 'vat'/'tiep'.
+            // tax_type_id mapping: 0: VAT, 1: TIEP, 2: NONE
+            const vatAmount = (data?.tax_type_id === 0 || data?.tax_type_id === 1) ? itemTotal * 0.18 : 0; 
             // If API returns IDs, we need logic. For now, assuming tax logic based on previous string check isn't directly compatible without lookup. 
             // However, usually detailed items might have tax info.
             // Let's stick to simple logic or 0 if unknown, or maybe 18% if tax_type suggests.
@@ -338,7 +358,7 @@ export const generateQuotationPDF = async (data: any) => {
 
             const totalWithVat = itemTotal + vatAmount;
 
-            const rowData = [
+            let rowData = [
                 (i + 1).toString(),
                 p.item_description || p.item_category || "-",
                 qty.toString(),
@@ -347,6 +367,16 @@ export const generateQuotationPDF = async (data: any) => {
                 formatCurrency(vatAmount, currency),
                 formatCurrency(totalWithVat, currency)
             ];
+
+            if (isTaxNone) {
+                rowData = [
+                    (i + 1).toString(),
+                    p.item_description || p.item_category || "-",
+                    qty.toString(),
+                    formatCurrency(rate, currency),
+                    formatCurrency(totalWithVat, currency)
+                ];
+            }
 
             const productLines = wrapText(rowData[1], colWidths[1] - 10, helvetica, 9);
             const rowHeight = Math.max(20, productLines.length * 12 + rowHeightBuffer);
@@ -394,7 +424,61 @@ export const generateQuotationPDF = async (data: any) => {
             yPosition += 2;
         }
 
-        moveDown(40);
+        // --- SUMMARY SECTION ---
+        moveDown(20);
+        const summaryWidth = 200;
+        const summaryX = width - margin - summaryWidth;
+        const valueX = width - margin;
+        const summaryFontSize = 10;
+
+        const subtotalVal = parseFloat(data.sub_total || "0");
+        const netTotalVal = parseFloat(data.net_total || "0");
+        const taxAmount = netTotalVal - subtotalVal;
+        
+        const totalDiscount = (data.items || []).reduce((acc: number, item: any) => 
+            acc + (parseFloat(item.item_qty || "0") * parseFloat(item.item_unit_discount || "0")), 0
+        );
+
+        const summaryLines = isTaxNone ? [
+            { label: "Subtotal :", value: formatCurrency(subtotalVal, currency) },
+            { label: "No. of Items :", value: data.no_of_items || "0" },
+            { label: "TOTAL :", value: formatCurrency(netTotalVal, currency), highlight: true },
+        ] : [
+            { label: "Subtotal :", value: formatCurrency(subtotalVal, currency) },
+            { label: `Tax (18%) :`, value: formatCurrency(taxAmount, currency) },
+            { label: "Discount :", value: formatCurrency(totalDiscount, currency) },
+            { label: "TOTAL :", value: formatCurrency(netTotalVal, currency), highlight: true },
+        ];
+
+        summaryLines.forEach(line => {
+            currentPage = checkPageBreak(25);
+            
+            // Removed highlight background as requested
+            
+            currentPage.drawText(line.label, {
+                x: summaryX,
+                y: yPosition - 10,
+                size: line.highlight ? summaryFontSize + 2 : summaryFontSize,
+                font: line.highlight ? helveticaBold : helvetica,
+                color: colors.text,
+            });
+
+            const currentFont = line.highlight ? helveticaBold : helvetica;
+            const currentSize = line.highlight ? summaryFontSize + 2 : summaryFontSize;
+            const textWidth = currentFont.widthOfTextAtSize(line.value, currentSize);
+            
+            currentPage.drawText(line.value, {
+                x: valueX - textWidth,
+                y: yPosition - 10,
+                size: currentSize,
+                font: currentFont,
+                color: colors.text,
+            });
+
+            moveDown(25);
+        });
+
+        moveDown(20);
 
         // --- TERMS & CONDITIONS ---
         if (companyData.payment_terms) {

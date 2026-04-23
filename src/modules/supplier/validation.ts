@@ -1,6 +1,6 @@
 import * as z from "zod"
 
-export const customerSchema = z.object({
+export const supplierSchema = z.object({
     customer_type: z.string().optional(),
     companyName: z.string().min(1, "Company name is required"),
     address: z.string().optional(),

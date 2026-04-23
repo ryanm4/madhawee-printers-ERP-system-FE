@@ -124,7 +124,7 @@ function CreateIssueNote() {
   async function onSubmit(values: IssueNoteFormValues) {
     try {
       setIsSubmitting(true);
-      
+
       const payload = {
         ...values,
         date: format(values.date, "yyyy-MM-dd HH:mm:ss"),
@@ -160,36 +160,16 @@ function CreateIssueNote() {
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       {(isLoading || isSubmitting) && <FullPageLoader />}
       <PageTitleWithBreadcrumb
-        title="Create Issue Note"
+        title="Create Issue Material"
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
-          { title: "Inventory", href: "/inventory" },
-          { title: "Issue Notes", href: "/inventory/issue-notes" },
+          { title: "Issue Material", href: "/inventory/issue-notes" },
         ]}
       />
 
       <Form {...(form as any)}>
         <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
-          <div className="flex items-center justify-end gap-3 w-full mt-6">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => router.push("/inventory/issue-notes")}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Issue Note"
-              )}
-            </Button>
-          </div>
+
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
@@ -347,6 +327,32 @@ function CreateIssueNote() {
                 ))}
               </CardContent>
             </Card>
+          </div>
+          <div className="flex items-center justify-end gap-[16px] mt-6">
+            <Button
+              size="lg"
+              variant="outline"
+              type="button"
+              onClick={() => router.push("/inventory/issue-notes")}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="lg"
+              type="submit"
+              className="bg-primary text-white"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create"
+              )}
+            </Button>
           </div>
         </form>
       </Form>

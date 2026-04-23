@@ -105,7 +105,7 @@ export function CustomerCard({
                         <span className="text-muted-foreground text-[12px] uppercase tracking-wider font-semibold">Contact Person</span>
                         <div className="flex items-center gap-2">
                              <User className="h-3 w-3 text-primary" />
-                             <span className="font-medium truncate" title={customer.contact_person}>{customer.contact_person}</span>
+                             <span className="font-medium truncate" title={customer.contact_persons?.[0]?.name}>{customer.contact_persons?.[0]?.name || "N/A"}</span>
                         </div>
                     </div>
                     <div className="flex flex-col items-end gap-0.5 shrink-0 ml-4">

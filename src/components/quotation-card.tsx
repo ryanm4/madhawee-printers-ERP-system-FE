@@ -102,6 +102,15 @@ export function QuotationCard({
                     </div>
                     <div className="flex flex-col gap-1 min-w-0">
                         <span className="text-[12px] text-muted-foreground flex items-center gap-2 whitespace-nowrap uppercase tracking-wider font-semibold">
+                            <User className="h-3.5 w-3.5" /> Marketing
+                        </span>
+                        <span className="font-semibold text-sm truncate" title={quotation.marketing_person}>{quotation.marketing_person || "N/A"}</span>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 mb-4">
+                    <div className="flex flex-col gap-1 min-w-0">
+                        <span className="text-[12px] text-muted-foreground flex items-center gap-2 whitespace-nowrap uppercase tracking-wider font-semibold">
                             <Calendar className="h-3.5 w-3.5" /> Created
                         </span>
                         <span className="font-semibold text-sm truncate">

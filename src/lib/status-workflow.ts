@@ -9,18 +9,19 @@ export const getNextJobTicketStatus = (currentStatus: string): JobTicketStatus |
     ];
 
     const currentIndex = statusOrder.indexOf(currentStatus as JobTicketStatus);
-    if (currentIndex === -1 || currentIndex === statusOrder.length - 1) {
-        return null; // Unknown status or last status
+    
+    // User can only change status manually up to IN PRODUCTION
+    if (currentIndex === -1 || currentStatus === JobTicketStatus.IN_PRODUCTION || currentIndex >= statusOrder.indexOf(JobTicketStatus.IN_PRODUCTION)) {
+        return null;
     }
+    
     return statusOrder[currentIndex + 1];
 };
 
 export const getNextQuotationStatus = (currentStatus: string): QuotationStatus | null => {
     const statusOrder = [
-        QuotationStatus.PENDING,
         QuotationStatus.CREATED,
-        QuotationStatus.APPROVED,
-        QuotationStatus.COMPLETED
+        QuotationStatus.ACCEPTED
     ];
     // Note: REJECTED is a terminal state that doesn't fit a simple linear "next" flow usually, 
     // but maybe we can just allow moving to Completed?

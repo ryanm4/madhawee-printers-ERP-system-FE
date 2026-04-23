@@ -1,3 +1,10 @@
+export interface CONTACT_PERSON {
+    id?: number;
+    name: string;
+    email: string;
+    phone: string;
+}
+
 export interface CUSTOMER {
     customer_id: number;
     customer_type: string;
@@ -9,9 +16,7 @@ export interface CUSTOMER {
     vat_type: string,
     vat_no: string,
     logo_url: string,
-    contact_person: string,
-    contact_person_email: string,
-    contact_person_phone: string,
+    contact_persons: CONTACT_PERSON[],
     created_on: string,
     created_by: string,
     updated_on: string,
@@ -29,9 +34,7 @@ export interface CREATE_CUSTOMER {
     vat_type: string,
     vat_no: string,
     logo_url: string,
-    contact_person: string,
-    contact_person_email: string,
-    contact_person_phone: string,
+    contact_persons: CONTACT_PERSON[],
     created_by: string,
     updated_by: string,
     status: string,

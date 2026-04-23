@@ -102,7 +102,7 @@ function InventoryManagement() {
     <>
       <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
         <PageTitleWithBreadcrumb
-          title="Inventory Management"
+          title="Stock List"
           breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
         />
         <div className="flex flex-row justify-end gap-[24px]">
@@ -192,9 +192,9 @@ function InventoryManagement() {
           <PageLoader />
         ) : data.length === 0 ? (
           <EmptyState
-            title="Inventory Empty"
-            description="There are no items in your inventory. Add your stocks and materials to start tracking them."
-            createLabel="Create New Inventory"
+            title="Stock List Empty"
+            description="There are no items in your stock list. Add your stocks and materials to start tracking them."
+            createLabel="Create New Stock"
             createPath="/inventory/create"
           />
         ) : (

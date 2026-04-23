@@ -106,7 +106,7 @@ function DispatchInvoiceManagement() {
     <>
       <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
         <PageTitleWithBreadcrumb
-          title="Dispatch & Invoice Management"
+          title="Dispatch Note"
           breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
         />
         <div className="flex flex-row justify-end gap-[24px]">

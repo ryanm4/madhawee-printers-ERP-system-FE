@@ -34,6 +34,9 @@ import {
   SquareUser,
   Settings,
   ChartNoAxesCombined,
+  PackagePlus,
+  PackageOpen,
+  Store,
 } from "lucide-react";
 import { NavSecondary } from "./nav-secondary";
 import Image from "next/image";
@@ -65,7 +68,7 @@ const data = {
           icon: FileText,
         },
         {
-          title: "Customers / Supplier",
+          title: "Customers",
           url: "/customers",
           icon: Users,
         },
@@ -85,7 +88,7 @@ const data = {
           icon: ClipboardCheck,
         },
         {
-          title: "Dispatch & Invoice",
+          title: "Dispatch",
           url: "/dispatch-invoice",
           icon: Truck,
         },
@@ -95,25 +98,36 @@ const data = {
       title: "Inventory",
       items: [
         {
-          title: "Inventory and Stock",
-          icon: Warehouse,
+          title: "Stock List",
           url: "/inventory",
-          items: [
-            {
-              title: "Inventory List",
-              url: "/inventory",
-            },
-            {
-              title: "GRN",
-              url: "/inventory/grn",
-            },
-            {
-              title: "Issue Notes",
-              url: "/inventory/issue-notes",
-            },
-          ],
+          icon: Warehouse,
+        },
+        {
+          title: "Receive Goods",
+          url: "/grn",
+          icon: PackagePlus
+        },
+        {
+          title: "Issue Material",
+          url: "/issue-notes",
+          icon: PackageOpen
+        },
+        {
+          title: "Suppliers",
+          url: "/suppliers",
+          icon: Store
         },
       ],
+    },
+    {
+      title: "Reporting & Analytics",
+      items: [
+        {
+          title: "Reports",
+          icon: ChartNoAxesCombined,
+          url: "/reports",
+        },
+      ]
     },
     {
       title: "System",
@@ -123,11 +137,7 @@ const data = {
           icon: SquareUser,
           url: "/users",
         },
-        {
-          title: "Reports",
-          icon: ChartNoAxesCombined,
-          url: "/reports",
-        },
+
         {
           title: "Settings",
           icon: Settings,
@@ -164,7 +174,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <span className="truncate font-semibold">
                     Madhawee Printers
                   </span>
-                  <span className="truncate text-xs">v1.0.5</span>
+                  <span className="truncate text-xs">v1.0.9</span>
                 </div>
                 <IconInnerShadowTop className="ml-auto size-4 opacity-50" />
               </a>
