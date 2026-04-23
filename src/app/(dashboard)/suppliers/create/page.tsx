@@ -5,7 +5,12 @@ import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcr
 import { supplierSchema } from "@/modules/supplier/validation";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
-import { FieldPath, useForm, SubmitHandler, useFieldArray } from "react-hook-form";
+import {
+  FieldPath,
+  useForm,
+  SubmitHandler,
+  useFieldArray,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -21,7 +26,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { CloudUpload, FileArchive, Loader2, Plus, Trash2, X } from "lucide-react";
+import {
+  CloudUpload,
+  FileArchive,
+  Loader2,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -64,7 +76,7 @@ function CreateSupplierProfile() {
         name: "",
         email: "",
         phone: "",
-      }
+      },
     ],
     created_by: "",
     status: "Active",
@@ -75,7 +87,11 @@ function CreateSupplierProfile() {
     defaultValues: baseDefaultValues,
   });
 
-  const { fields: contactFields, append: appendContact, remove: removeContact } = useFieldArray({
+  const {
+    fields: contactFields,
+    append: appendContact,
+    remove: removeContact,
+  } = useFieldArray({
     control: form.control,
     name: "contactPersons",
   });
@@ -93,13 +109,20 @@ function CreateSupplierProfile() {
 
   const handleFileSelect = (file: File | null) => {
     if (file) {
-      const validTypes = ["image/jpeg", "image/png", "image/svg+xml", "application/zip"];
+      const validTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/svg+xml",
+        "application/zip",
+      ];
       const maxSize = 10 * 1024 * 1024; // 10MB
 
       if (validTypes.includes(file.type) && file.size <= maxSize) {
         setUploadedFile(file);
       } else {
-        alert("Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB.");
+        alert(
+          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB."
+        );
       }
     }
   };
@@ -148,7 +171,9 @@ function CreateSupplierProfile() {
       }
     } catch (error) {
       console.error("Failed to create supplier:", error);
-      toast.error(getErrorMessage(error, "Failed to create supplier. Please try again."));
+      toast.error(
+        getErrorMessage(error, "Failed to create supplier. Please try again.")
+      );
     } finally {
       setIsLoading(false);
     }
@@ -156,17 +181,13 @@ function CreateSupplierProfile() {
 
   const renderFormField = <TName extends FieldPath<SupplierFormValues>>(
     name: TName,
-    render: Parameters<typeof FormField<SupplierFormValues, TName>>["0"]["render"]
-  ) => (
-    <FormField
-      control={form.control}
-      name={name}
-      render={render}
-    />
-  );
+    render: Parameters<
+      typeof FormField<SupplierFormValues, TName>
+    >["0"]["render"]
+  ) => <FormField control={form.control} name={name} render={render} />;
 
   return (
-    <div className='flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3'>
+    <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       {isLoading && <FullPageLoader />}
       <PageTitleWithBreadcrumb
         title="Create Supplier"
@@ -177,35 +198,54 @@ function CreateSupplierProfile() {
       />
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6  pb-0'>
-
-
-          <div className='grid grid-cols-1 gap-4'>
-            <Card className={cn("w-full shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-6  pb-0"
+        >
+          <div className="grid grid-cols-1 gap-4">
+            <Card
+              className={cn(
+                "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              )}
+            >
               <CardHeader className="flex flex-col gap-[0.5px]">
                 <h3 className="text-md font-medium mb-2">Supplier Details</h3>
-                <p className="text-xs text-muted-foreground mb-4">Core information for the new supplier profile.</p>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Core information for the new supplier profile.
+                </p>
               </CardHeader>
-              <CardContent className='flex flex-col gap-4'>
+              <CardContent className="flex flex-col gap-4">
                 {renderFormField("customer_type", ({ field }) => (
                   <FormItem>
                     <FormLabel>Entity Type</FormLabel>
-                    <FormControl><Input readOnly {...field} className="bg-muted cursor-not-allowed" /></FormControl>
+                    <FormControl>
+                      <Input
+                        readOnly
+                        {...field}
+                        className="bg-muted cursor-not-allowed"
+                      />
+                    </FormControl>
                   </FormItem>
                 ))}
 
-                <div className='flex flex-row gap-4'>
+                <div className="flex flex-row gap-4">
                   {renderFormField("companyName", ({ field }) => (
-                    <FormItem className='w-full'>
-                      <FormLabel>Company Name <span className="text-red-500">*</span></FormLabel>
-                      <FormControl><Input placeholder="Enter Company Name" {...field} /></FormControl>
+                    <FormItem className="w-full">
+                      <FormLabel>
+                        Company Name <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter Company Name" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   ))}
                   {renderFormField("phone", ({ field }) => (
-                    <FormItem className='w-full'>
+                    <FormItem className="w-full">
                       <FormLabel>Company Phone</FormLabel>
-                      <FormControl><Input placeholder="Enter Phone Number" {...field} /></FormControl>
+                      <FormControl>
+                        <Input placeholder="Enter Phone Number" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   ))}
@@ -214,39 +254,56 @@ function CreateSupplierProfile() {
                 {renderFormField("address", ({ field }) => (
                   <FormItem>
                     <FormLabel>Address</FormLabel>
-                    <FormControl><Textarea placeholder="Enter Company Address" className="resize-none" {...field} /></FormControl>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Enter Company Address"
+                        className="resize-none"
+                        {...field}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 ))}
 
-                <div className='flex flex-row gap-4'>
+                <div className="flex flex-row gap-4">
                   {renderFormField("email", ({ field }) => (
-                    <FormItem className='w-full'>
+                    <FormItem className="w-full">
                       <FormLabel>Company Email</FormLabel>
-                      <FormControl><Input placeholder="Enter Email Address" {...field} /></FormControl>
+                      <FormControl>
+                        <Input placeholder="Enter Email Address" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   ))}
                   {renderFormField("creditPeriod", ({ field }) => (
-                    <FormItem className='w-full'>
+                    <FormItem className="w-full">
                       <FormLabel>Credit Period (Days)</FormLabel>
-                      <FormControl><Input placeholder="Enter Credit Period" {...field} /></FormControl>
+                      <FormControl>
+                        <Input placeholder="Enter Credit Period" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   ))}
                 </div>
 
-                <div className='flex flex-row gap-4'>
+                <div className="flex flex-row gap-4">
                   {renderFormField("vat_type", ({ field }) => (
-                    <FormItem className='w-full'>
+                    <FormItem className="w-full">
                       <FormLabel>VAT Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
                         <FormControl>
-                          <SelectTrigger className="w-full"><SelectValue placeholder="Select VAT Type" /></SelectTrigger>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select VAT Type" />
+                          </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {Object.values(VatType).map((type) => (
-                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -254,9 +311,11 @@ function CreateSupplierProfile() {
                     </FormItem>
                   ))}
                   {renderFormField("vat_no", ({ field }) => (
-                    <FormItem className='w-full'>
+                    <FormItem className="w-full">
                       <FormLabel>VAT Number</FormLabel>
-                      <FormControl><Input placeholder="Enter VAT Number" {...field} /></FormControl>
+                      <FormControl>
+                        <Input placeholder="Enter VAT Number" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   ))}
@@ -269,7 +328,9 @@ function CreateSupplierProfile() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => appendContact({ name: "", email: "", phone: "" })}
+                      onClick={() =>
+                        appendContact({ name: "", email: "", phone: "" })
+                      }
                       className="flex items-center gap-2"
                     >
                       <Plus className="h-4 w-4" /> Add Contact
@@ -278,7 +339,10 @@ function CreateSupplierProfile() {
 
                   <div className="space-y-6">
                     {contactFields.map((field, index) => (
-                      <div key={field.id} className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 pr-14 border rounded-lg relative bg-accent/5">
+                      <div
+                        key={field.id}
+                        className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 pr-14 border rounded-lg relative bg-accent/5"
+                      >
                         {contactFields.length > 1 && (
                           <Button
                             type="button"
@@ -290,27 +354,44 @@ function CreateSupplierProfile() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
-                        {renderFormField(`contactPersons.${index}.name`, ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Name <span className="text-red-500">*</span></FormLabel>
-                            <FormControl><Input placeholder="Contact Name" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        ))}
-                        {renderFormField(`contactPersons.${index}.email`, ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl><Input placeholder="Contact Email" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        ))}
-                        {renderFormField(`contactPersons.${index}.phone`, ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Phone</FormLabel>
-                            <FormControl><Input placeholder="Contact Phone" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        ))}
+                        {renderFormField(
+                          `contactPersons.${index}.name`,
+                          ({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                Name <span className="text-red-500">*</span>
+                              </FormLabel>
+                              <FormControl>
+                                <Input placeholder="Contact Name" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )
+                        )}
+                        {renderFormField(
+                          `contactPersons.${index}.email`,
+                          ({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Contact Email" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )
+                        )}
+                        {renderFormField(
+                          `contactPersons.${index}.phone`,
+                          ({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Contact Phone" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )
+                        )}
                       </div>
                     ))}
                   </div>

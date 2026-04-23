@@ -6,7 +6,12 @@ import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcr
 import { customerSchema } from "@/modules/customer/validation";
 import { useRouter } from "next/navigation";
 import React, { useRef, useState } from "react";
-import { FieldPath, useForm, SubmitHandler, useFieldArray } from "react-hook-form";
+import {
+  FieldPath,
+  useForm,
+  SubmitHandler,
+  useFieldArray,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -76,7 +81,11 @@ function CreateCustomerRelationship() {
     defaultValues: baseDefaultValues,
   });
 
-  const { fields: contactFields, append: appendContact, remove: removeContact } = useFieldArray({
+  const {
+    fields: contactFields,
+    append: appendContact,
+    remove: removeContact,
+  } = useFieldArray({
     control: form.control,
     name: "contactPersons",
   });
@@ -160,7 +169,6 @@ function CreateCustomerRelationship() {
       };
       const response = await CustomerApi.create(payload);
 
-
       toast(`Customer Created`, {
         description: `The customer has been created successfully.`,
       });
@@ -170,7 +178,10 @@ function CreateCustomerRelationship() {
     } catch (error) {
       console.error("Failed to submit entity:", error);
       toast(`Failed to Create Customer`, {
-        description: getErrorMessage(error, `An error occurred while creating the customer. Please try again.`),
+        description: getErrorMessage(
+          error,
+          `An error occurred while creating the customer. Please try again.`
+        ),
       });
     } finally {
       setIsLoading(false);
@@ -222,9 +233,7 @@ function CreateCustomerRelationship() {
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">
-                  Customer Details
-                </h3>
+                <h3 className="text-md font-medium mb-2">Customer Details</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Add your customer details here
                 </p>
@@ -232,11 +241,13 @@ function CreateCustomerRelationship() {
               <CardContent className="flex flex-col gap-4">
                 {renderFormField("customer_type", ({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      Customer Type
-                    </FormLabel>
+                    <FormLabel>Customer Type</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter Customer Type" readOnly {...field} />
+                      <Input
+                        placeholder="Enter Customer Type"
+                        readOnly
+                        {...field}
+                      />
                     </FormControl>
                   </FormItem>
                 ))}
@@ -285,7 +296,6 @@ function CreateCustomerRelationship() {
                       <FormMessage />
                     </FormItem>
                   ))}
-
                 </div>
                 <div className="flex flex-row gap-4">
                   {renderFormField("vat_type", ({ field }) => (
@@ -329,7 +339,9 @@ function CreateCustomerRelationship() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => appendContact({ name: "", email: "", phone: "" })}
+                      onClick={() =>
+                        appendContact({ name: "", email: "", phone: "" })
+                      }
                       className="flex items-center gap-2"
                     >
                       <Plus className="h-4 w-4" />
@@ -339,7 +351,10 @@ function CreateCustomerRelationship() {
 
                   <div className="space-y-6">
                     {contactFields.map((field, index) => (
-                      <div key={field.id} className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 pr-14 border rounded-lg relative bg-accent/5">
+                      <div
+                        key={field.id}
+                        className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 pr-14 border rounded-lg relative bg-accent/5"
+                      >
                         {contactFields.length > 1 && (
                           <Button
                             type="button"
@@ -351,33 +366,44 @@ function CreateCustomerRelationship() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
-                        {renderFormField(`contactPersons.${index}.name`, ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Name <span className="text-red-500">*</span></FormLabel>
-                            <FormControl>
-                              <Input placeholder="Contact Name" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        ))}
-                        {renderFormField(`contactPersons.${index}.email`, ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Email Address" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        ))}
-                        {renderFormField(`contactPersons.${index}.phone`, ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Phone</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Phone Number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        ))}
+                        {renderFormField(
+                          `contactPersons.${index}.name`,
+                          ({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                Name <span className="text-red-500">*</span>
+                              </FormLabel>
+                              <FormControl>
+                                <Input placeholder="Contact Name" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )
+                        )}
+                        {renderFormField(
+                          `contactPersons.${index}.email`,
+                          ({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Email Address" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )
+                        )}
+                        {renderFormField(
+                          `contactPersons.${index}.phone`,
+                          ({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Phone Number" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )
+                        )}
                       </div>
                     ))}
                   </div>
@@ -446,8 +472,6 @@ function CreateCustomerRelationship() {
                 ))}
               </CardContent>
             </Card>
-
-
           </div>
         </form>
       </Form>
