@@ -178,7 +178,7 @@ export const API_ENDPOINTS = {
     },
 
     AUTH: {
-      LOGIN: `${NEXTJS_API_BASE}/login`,
+      LOGIN: `/api/login`,
     },
 
     REPORTS: {
@@ -188,5 +188,7 @@ export const API_ENDPOINTS = {
       ADVANCED: `${NEXTJS_API_BASE}/reports`,
       SUMMARY: `${NEXTJS_API_BASE}/reports/summary`,
     },
-  },
+
+}
+
 } as const;
