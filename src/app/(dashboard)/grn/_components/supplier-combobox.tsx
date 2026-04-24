@@ -83,7 +83,7 @@ export function SupplierCombobox({
         vat_type: "",
         vat_no: "",
         logo_url: "",
-        contact_persons: [],
+        contact_persons: JSON.stringify([]),
         created_by: userData?.name || "User",
         updated_by: userData?.name || "User",
         status: "ACTIVE",
