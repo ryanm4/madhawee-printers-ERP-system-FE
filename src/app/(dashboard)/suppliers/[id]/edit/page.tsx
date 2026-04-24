@@ -104,7 +104,15 @@ function EditSupplierRelationship() {
           vat_type: data.vat_type,
           vat_no: data.vat_no,
           logoUrl: data.logo_url,
-          contactPersons: data.contact_persons || [{ name: "", email: "", phone: "" }],
+          contactPersons: (() => {
+              const arr = Array.isArray(data.contact_persons) ? data.contact_persons : (typeof data.contact_persons === 'string' && data.contact_persons ? JSON.parse(data.contact_persons) : []);
+              return arr.length > 0 ? arr.map((cp: any) => ({
+                  id: cp.id || undefined,
+                  name: cp.name || "",
+                  email: cp.email || "",
+                  phone: cp.phone || "",
+              })) : [{ name: "", email: "", phone: "" }];
+          })(),
           created_by: data.created_by,
           status: data.status,
         });
