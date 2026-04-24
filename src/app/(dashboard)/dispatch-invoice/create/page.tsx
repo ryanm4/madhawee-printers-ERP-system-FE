@@ -184,9 +184,8 @@ function CreateDispatchandInvoice() {
         no_of_bundles: data.dispatch_bundles_qty || "",
         description: data.dispatch_description || "",
         job_id: data.job_id,
-        job_name:
-          JobData.find((j) => String(j.job_id) === String(data.job_id))
-            ?.job_name || "",
+        job_number: selectedJob?.job_number || "",
+        job_name: selectedJob?.job_name || "",
         remarks: data.dispatch_note || "",
         created_by: user?.name || "User",
       };
@@ -298,13 +297,17 @@ function CreateDispatchandInvoice() {
                     <FormItem>
                       <FormLabel>Job ID</FormLabel>
                       <Combobox
-                        items={JobData.map((job) => ({
-                          value: String(job.job_id),
-                          label: `Job-${job.job_number} (${job.job_name.length > 25
-                            ? job.job_name.substring(0, 25) + "..."
-                            : job.job_name
-                            })`,
-                        }))}
+                        items={JobData.map((job) => {
+                          const jobName = job.job_name || "";
+
+                          return {
+                            value: String(job.job_id),
+                            label: `Job-${job.job_number} (${jobName.length > 25
+                              ? jobName.substring(0, 25) + "..."
+                              : jobName
+                              })`,
+                          };
+                        })}
                         value={field.value ? String(field.value) : ""}
                         onValueChange={field.onChange}
                         placeholder="Select a Job Ticket"
@@ -418,7 +421,7 @@ function CreateDispatchandInvoice() {
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                {renderFormField("dispatch_note", ({ field }) => (
+                {/* {renderFormField("dispatch_note", ({ field }) => (
                   <FormItem>
                     <FormLabel>Dispatch Note</FormLabel>
                     <FormControl>
@@ -426,7 +429,7 @@ function CreateDispatchandInvoice() {
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                ))}
+                ))} */}
                 {renderFormField("dispatch_date", ({ field }) => (
                   <FormItem>
                     <FormLabel>Dispatch Date</FormLabel>

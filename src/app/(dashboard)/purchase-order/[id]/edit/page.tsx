@@ -118,7 +118,7 @@ function EditPurchaseOrder() {
     poDate: new Date(),
     currency: "LKR",
     itemDetails: [
-      { itemCode: "", description: "", quantity: "", unit: "", price: "" },
+      { description: "", quantity: "", unit: 0, price: "" },
     ],
   };
 
@@ -455,7 +455,7 @@ function EditPurchaseOrder() {
                   ))}
                   {renderFormField("salesRef", ({ field }) => (
                     <FormItem>
-                      <FormLabel>Sales Ref</FormLabel>
+                      <FormLabel>Marketing Person</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter Sales Ref" {...field} />
                       </FormControl>

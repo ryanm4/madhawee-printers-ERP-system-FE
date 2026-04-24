@@ -134,7 +134,7 @@ function PurchaseOrderPage() {
     const matchesSearch = !search || (() => {
       const s = search.toLowerCase();
       return (
-        item.po_id.toString().toLowerCase().includes(s) ||
+        item.customer_po.toString().toLowerCase().includes(s) ||
         item.customer?.name?.toLowerCase().includes(s) ||
         item.status?.toLowerCase().includes(s)
       );

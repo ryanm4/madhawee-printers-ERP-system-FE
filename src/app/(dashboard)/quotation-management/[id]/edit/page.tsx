@@ -76,6 +76,7 @@ function EditQuotation({
     avatar: string;
   }>(initialUser);
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
+
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quoteDate, setQuoteDate] = useState<Date>(new Date());

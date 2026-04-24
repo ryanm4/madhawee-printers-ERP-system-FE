@@ -73,7 +73,7 @@ export const quotationColumns = (
                 const taxId = row.original.tax_type_id
                 const taxMap: Record<number, TaxTypes> = {
                     0: TaxTypes.VAT,
-                    1: TaxTypes.SVAT,
+                    1: TaxTypes.TIEP,
                     2: TaxTypes.NON,
                 }
                 const taxType = taxMap[taxId] ?? TaxTypes.NON

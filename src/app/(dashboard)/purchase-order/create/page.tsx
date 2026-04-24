@@ -37,7 +37,7 @@ import { CalendarIcon, Edit2, Loader2, PlusIcon, Trash2 } from "lucide-react";
 import { FullPageLoader } from "@/components/shared/loader";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { PurchaseOrderStatus, PurchaseOrderType } from "@/config/enum";
+import { PRODUCT_TYPES, PurchaseOrderStatus, PurchaseOrderType } from "@/config/enum";
 import { useEffect, useState } from "react";
 import { CustomerApi } from "@/modules/customer/api";
 import { CUSTOMER } from "@/modules/customer/types";
@@ -48,12 +48,15 @@ import { toast } from "sonner";
 import { CREATE_PURCHASE_ORDER } from "@/modules/purchase-order/types";
 import { Combobox } from "@/components/shared/combobox";
 import { getUser } from "@/lib/auth";
+import { GET_ALL_USER } from "@/modules/users/types";
+import { userApi } from "@/modules/users/api";
 
 type PurchaseOrderFormValues = z.infer<typeof purchaseOrderScheme>;
 
 function CreatePurchaseOrder() {
   const router = useRouter();
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
+  const [userList, setUserList] = useState<GET_ALL_USER[]>([]);
   const [quotationList, setQuotationList] = useState<QUOTATIONS[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,6 +69,7 @@ function CreatePurchaseOrder() {
   useEffect(() => {
     getCustomerList();
     getQuotationList();
+    getUserList();
     const userData = getUser();
     if (userData) {
       setUser({
@@ -101,6 +105,21 @@ function CreatePurchaseOrder() {
     }
   };
 
+  const getUserList = async () => {
+    try {
+      setLoading(true)
+      const response = await userApi.getAll();
+      if (response.status === 200) {
+        setUserList(response?.data?.users);
+      }
+    } catch (error) {
+      console.error("Failed to fetch users", error);
+      toast(getErrorMessage(error, "Failed to fetch users"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const baseDefaultValues: PurchaseOrderFormValues = {
     customer: "",
     customerAddress: "",
@@ -115,7 +134,7 @@ function CreatePurchaseOrder() {
     poDate: new Date(),
     currency: "LKR",
     itemDetails: [
-      { itemCode: "", description: "", quantity: "", unit: "", price: "" },
+      { description: "", quantity: "", unit: 0, price: "" },
     ],
   };
 
@@ -160,7 +179,6 @@ function CreatePurchaseOrder() {
         customer_po: data.customer_po,
         currency: data.currency,
         po_items: data.itemDetails.map((item: any) => ({
-          item_code: item.itemCode,
           description: item.description,
           quantity: String(item.quantity),
           uom: item.unit,
@@ -408,10 +426,21 @@ function CreatePurchaseOrder() {
 
                   {renderFormField("salesRef", ({ field }) => (
                     <FormItem>
-                      <FormLabel>Sales Ref</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter Sales Ref" {...field} />
-                      </FormControl>
+                      <FormLabel>Marketing Person</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select contact person" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {userList.map((cp, idx) => (
+                            <SelectItem key={idx} value={cp.name}>
+                              {cp.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   ))}
@@ -497,10 +526,10 @@ function CreatePurchaseOrder() {
                   variant="secondary"
                   onClick={() =>
                     appendItemDetails({
-                      itemCode: "",
+
                       description: "",
                       quantity: "",
-                      unit: "",
+                      unit: 0,
                       price: "",
                     })
                   }
@@ -515,19 +544,39 @@ function CreatePurchaseOrder() {
                     key={item.id}
                     className="grid grid-cols-[1fr_auto] gap-2 mb-2 items-start"
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
                       {renderFormField(
-                        `itemDetails.${index}.itemCode`,
-                        ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Item Code</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter Item Code" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )
+                        `itemDetails.${index}.unit`,
+                        ({ field }) => {
+                          const groupedItems = Object.values(PRODUCT_TYPES).map((type, idx) => ({
+                            value: String(idx + 1),
+                            label: type,
+                          }));
+
+                          return (
+                            <FormItem>
+                              <FormLabel>Item Type</FormLabel>
+                              <Combobox
+                                items={groupedItems}
+                                value={field.value ? String(field.value) : ""}
+                                onValueChange={(value) => {
+                                  const selectedGroupItem = groupedItems.find(
+                                    (i) => i.value === value
+                                  );
+
+                                  if (selectedGroupItem) {
+                                    field.onChange(parseInt(selectedGroupItem.value, 10));
+                                  }
+                                }}
+                                placeholder="Select Item"
+                                searchPlaceholder="Search item..."
+                              />
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }
                       )}
+
                       {renderFormField(
                         `itemDetails.${index}.description`,
                         ({ field }) => (
@@ -537,9 +586,10 @@ function CreatePurchaseOrder() {
                               <span className="text-red-500">*</span>
                             </FormLabel>
                             <FormControl>
-                              <Input
+                              <Textarea
                                 placeholder="Enter Description"
                                 {...field}
+
                               />
                             </FormControl>
                             <FormMessage />
@@ -570,20 +620,7 @@ function CreatePurchaseOrder() {
                           </FormItem>
                         )
                       )}
-                      {renderFormField(
-                        `itemDetails.${index}.unit`,
-                        ({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Unit <span className="text-red-500">*</span>
-                            </FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter Unit" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )
-                      )}
+
                       {renderFormField(
                         `itemDetails.${index}.price`,
                         ({ field }) => (

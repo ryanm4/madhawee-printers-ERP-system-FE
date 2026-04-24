@@ -103,7 +103,8 @@ function EditCustomerRelationship() {
         const response = await CustomerApi.getById(id);
         const data = response.data;
 
-        // ✅ Populate form with fetched data
+        const contactPersonsArray = Array.isArray(data.contact_persons) ? data.contact_persons : [];
+
         form.reset({
           customer_type: data.customer_type,
           companyName: data.company_name,
@@ -114,14 +115,21 @@ function EditCustomerRelationship() {
           vat_type: data.vat_type,
           vat_no: data.vat_no,
           logoUrl: data.logo_url,
-          contactPersons: data.contact_persons?.map(cp => ({
-            id: cp.id,
-            name: cp.name,
-            email: cp.email,
-            phone: cp.phone
-          })) || [{ name: "", email: "", phone: "" }],
+
+          // ✅ Safe mapping
+          contactPersons:
+            contactPersonsArray.length > 0
+              ? contactPersonsArray.map((cp) => ({
+                id: cp.id || undefined,
+                name: cp.name || "",
+                email: cp.email || "",
+                phone: cp.phone || "",
+              }))
+              : [{ name: "", email: "", phone: "" }],
+
           created_by: data.created_by,
         });
+
       } catch (error) {
         console.error("Failed to fetch customer:", error);
         toast(getErrorMessage(error, "Failed to load customer data"));
@@ -190,12 +198,13 @@ function EditCustomerRelationship() {
         vat_type: data.vat_type ?? "",
         vat_no: data.vat_no ?? "",
         logo_url: data.logoUrl ?? "",
-        contact_persons: data.contactPersons.map((cp) => ({
-          id: (cp as any).id,
-          name: cp.name,
-          email: cp.email ?? "",
-          phone: cp.phone ?? "",
-        })),
+        contact_persons: JSON.stringify(
+          data.contactPersons.map((cp) => ({
+            name: cp.name,
+            email: cp.email ?? "",
+            phone: cp.phone ?? "",
+          }))
+        ),
         created_by: data.created_by || user?.name || "User",
         updated_by: user?.name || "User",
         status: "Updated",

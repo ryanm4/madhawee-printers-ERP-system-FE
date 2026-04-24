@@ -177,9 +177,15 @@ function JobTicketComponent() {
 
           const formatDate = (date: any) => {
             if (!date) return undefined;
-            return new Date(date).toISOString().slice(0, 10);
-          };
 
+            const parsed = new Date(date);
+
+            if (isNaN(parsed.getTime())) {
+              return undefined;
+            }
+
+            return parsed.toISOString().slice(0, 10);
+          };
           // Construct payload matching CREATE_TICKETS interface
           const payload = {
             po_id: currentTicket.po_id,
