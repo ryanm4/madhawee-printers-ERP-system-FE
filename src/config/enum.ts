@@ -42,7 +42,7 @@ export enum CustomerStatus {
 
 export enum TaxTypes {
     NON = 'NON',
-    SVAT = "SVAT",
+    TIEP = "TIEP",
     VAT = "VAT",
 }
 
@@ -59,7 +59,7 @@ export enum QuotationTaxType {
 
 
 export enum VatType {
-    SVAT = "SVAT",
+    TIEP = "TIEP",
     VAT = "VAT",
 }
 
@@ -99,6 +99,7 @@ export enum ITEM_SUB_CATEGORY {
     SPIRAL = "SPIRAL",
 }
 
+
 export enum UNIT_OF_MEASSURE {
     NOS = "NOS",
     REEL = "REEL",
@@ -123,8 +124,13 @@ export enum PRODUCT_TYPES {
     INNER_CARTON = "INNER CARTON",
     STICKER = "STICKER",
     LEAFLET = "LEAFLET",
-    BOOK_COVER = "BOOK COVER"
+    BOOK_COVER = "BOOK COVER",
+    IMPRESSION = "IMPRESSION",
+    MAGAZINE = "MAGAZINE",
+    LABEL = "LABEL",
+    OTHERS = "OTHERS"
 }
+
 export enum PAPER_TYPES {
     // Art Paper
     ART_PAPER_100_GSM_GLOSS = "ART PAPER 100 GSM GLOSS",

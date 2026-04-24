@@ -353,11 +353,9 @@ function CreateJobTicket() {
       ]);
 
 
-      const approvedPOs = poResponse.data.filter(
-        (po) => po.status === PurchaseOrderStatus.APPROVED
-      );
 
-      setPurchaseOrderData(approvedPOs);
+
+      setPurchaseOrderData(poResponse.data);
       setCustomerData(customerResponse.data);
     } catch (error) {
       console.error("Failed to fetch data", error);
@@ -500,11 +498,11 @@ function CreateJobTicket() {
                   ))}
                   {renderFormField("item", ({ field }) => (
                     <FormItem>
-                      <FormLabel>Item</FormLabel>
+                      <FormLabel>Description</FormLabel>
                       <Combobox
                         items={selectedPoItems.map((item: any) => ({
-                          value: item.item_code,
-                          label: item.item_code,
+                          value: item.description,
+                          label: item.description,
                         }))}
                         value={field.value || ""}
                         onValueChange={(value) => {
@@ -583,7 +581,7 @@ function CreateJobTicket() {
                   ))}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {renderFormField("jobOpenDate", ({ field }) => (
                     <FormItem>
                       <FormLabel>Job Open Date</FormLabel>
@@ -635,7 +633,7 @@ function CreateJobTicket() {
                       <FormMessage />
                     </FormItem>
                   ))}
-                  {renderFormField("jobName", ({ field }) => (
+                  {/* {renderFormField("jobName", ({ field }) => (
                     <FormItem>
                       <FormLabel>Job Name</FormLabel>
                       <FormControl>
@@ -643,7 +641,7 @@ function CreateJobTicket() {
                       </FormControl>
                       <FormMessage />
                     </FormItem>
-                  ))}
+                  ))} */}
                 </div>
                 {/* Product Details */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -733,6 +731,64 @@ function CreateJobTicket() {
                     </FormItem>
                   ))}
                 </div>
+
+                {/* Dates */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {renderFormField("packingDate", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Packing Date</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter Packing Date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                  {renderFormField("expiryDate", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Expiry Date</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter Packing Date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+                  {renderFormField("tcNo", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>TC No</FormLabel>
+                      <FormControl>
+                        <Input readOnly placeholder="Enter TC No" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                  {renderFormField("batchRef", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Batch Ref</FormLabel>
+                      <FormControl>
+                        <Input readOnly placeholder="Enter Batch Ref" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                </div>
+
+                {renderFormField("remarks", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Remarks</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Enter Remarks"
+                        className="resize-none"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+
 
                 <div>
                   <h3 className="text-sm font-medium mb-2">
@@ -1085,62 +1141,6 @@ function CreateJobTicket() {
                   </div>
                 </div>
 
-                {/* Dates */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {renderFormField("packingDate", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>Packing Date</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter Packing Date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                  {renderFormField("expiryDate", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>Expiry Date</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter Packing Date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-                  {renderFormField("tcNo", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>TC No</FormLabel>
-                      <FormControl>
-                        <Input readOnly placeholder="Enter TC No" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                  {renderFormField("batchRef", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>Batch Ref</FormLabel>
-                      <FormControl>
-                        <Input readOnly placeholder="Enter Batch Ref" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                </div>
-
-                {renderFormField("remarks", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>Remarks</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter Remarks"
-                        className="resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                ))}
 
                 {/* CTP Plates */}
                 <div>

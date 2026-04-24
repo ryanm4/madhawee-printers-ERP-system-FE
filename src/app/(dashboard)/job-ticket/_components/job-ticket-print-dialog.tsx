@@ -253,7 +253,7 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
 
     <!-- Row 5: Job Name & Customer Del Date -->
     <tr>
-      <td colspan="2" class="label">Job Name:</td>
+      <td colspan="2" class="label">Description:</td>
       <td colspan="4" class="value value-highlight" style="text-align:center;">${safe(data.jobName)}</td>
       <td colspan="2" class="label">Customer Del Date</td>
       <td colspan="4" class="value">${safe(formatDate(data.customerDeliveryDate))}</td>

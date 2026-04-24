@@ -74,6 +74,7 @@ function DispatchInvoiceManagement() {
         no_of_bundles: dispatch.no_of_bundles,
         description: dispatch.description,
         job_id: dispatch.job_id,
+        job_number: (dispatch as any).job_number || "",
         job_name: dispatch.job_name,
         po_id: dispatch.po_id,
         contact_person: dispatch.contact_person,

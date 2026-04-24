@@ -185,7 +185,7 @@ function InventoryManagement() {
 
           <ExportButton data={data} filename="inventory-list" />
           <Button onClick={() => router.push("/inventory/create")}>
-            <PlusIcon /> Create New
+            <PlusIcon /> Add Item
           </Button>
         </div>
         {isLoading ? (

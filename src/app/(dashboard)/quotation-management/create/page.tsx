@@ -52,6 +52,8 @@ import {
 } from "@/config/enum";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
+import { GET_ALL_USER } from "@/modules/users/types";
+import { userApi } from "@/modules/users/api";
 
 type QuotationFormValues = z.infer<typeof createQuotationSchema>;
 
@@ -72,6 +74,7 @@ function CreateQuotation({
   }>(initialUser);
 
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
+  const [userList, setUserList] = useState<GET_ALL_USER[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quoteDate, setQuoteDate] = useState<Date>(new Date());
@@ -79,6 +82,7 @@ function CreateQuotation({
 
   useEffect(() => {
     getCustomerList();
+    getUserList();
   }, []);
 
   const getCustomerList = async () => {
@@ -93,6 +97,21 @@ function CreateQuotation({
       setLoading(false);
     }
   };
+
+  const getUserList = async () => {
+    try {
+      setLoading(true)
+      const response = await userApi.getAll();
+      if (response.status === 200) {
+        setUserList(response?.data?.users);
+      }
+    } catch (error) {
+      console.error("Failed to fetch users", error);
+      toast(getErrorMessage(error, "Failed to fetch users"));
+    } finally {
+      setLoading(false);
+    }
+  }
 
 
 
@@ -606,14 +625,25 @@ function CreateQuotation({
                   ))}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                   {/* Marketing Person */}
                   {renderFormField("marketing_person", ({ field }) => (
                     <FormItem>
                       <FormLabel>Marketing Person</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter marketing person" {...field} />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select contact person" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {userList.map((cp, idx) => (
+                            <SelectItem key={idx} value={cp.name}>
+                              {cp.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   ))}
@@ -927,7 +957,7 @@ function CreateQuotation({
                   </div>
                   {(watchTaxType === QuotationTaxType.VAT || watchTaxType === QuotationTaxType.TIEP) && (
                     <div className="flex justify-between text-sm text-muted-foreground italic">
-                      <span>{watchTaxType === QuotationTaxType.VAT ? "VAT" : "TIEP"} Amount (18%):</span>
+                      <span>VAT Amount (18%):</span>
                       <span className="font-medium">
                         Rs {(parseFloat(form.watch("sub_total") || "0") * 0.18).toFixed(2)}
                       </span>

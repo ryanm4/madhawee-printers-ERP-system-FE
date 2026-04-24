@@ -61,7 +61,7 @@ export interface CREATE_PURCHASE_ORDER {
         item_code?: string;
         description: string;
         quantity: string;
-        uom: string;
+        uom: number | string;
         price: string;
     }[];
 }

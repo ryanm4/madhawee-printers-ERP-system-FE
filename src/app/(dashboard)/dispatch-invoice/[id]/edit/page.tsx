@@ -417,7 +417,7 @@ function EditDispatchandInvoice() {
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                {renderFormField("dispatch_note", ({ field }) => (
+                {/* {renderFormField("dispatch_note", ({ field }) => (
                   <FormItem>
                     <FormLabel>Dispatch Note</FormLabel>
                     <FormControl>
@@ -425,7 +425,7 @@ function EditDispatchandInvoice() {
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                ))}
+                ))} */}
                 {renderFormField("dispatch_date", ({ field }) => (
                   <FormItem>
                     <FormLabel>Dispatch Date</FormLabel>

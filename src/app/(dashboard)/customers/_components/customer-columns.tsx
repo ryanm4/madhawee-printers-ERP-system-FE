@@ -43,10 +43,7 @@ export const customerColumns = (
             accessorKey: "company_name",
             header: "Company Name",
         },
-        {
-            accessorKey: "customer_type",
-            header: "Customer/Supplier",
-        },
+
         {
             accessorKey: "email",
             header: "Email",

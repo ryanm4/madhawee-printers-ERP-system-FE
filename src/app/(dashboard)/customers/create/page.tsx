@@ -158,11 +158,13 @@ function CreateCustomerRelationship() {
         vat_type: data.vat_type ?? "",
         vat_no: data.vat_no ?? "",
         logo_url: data.logoUrl ?? "",
-        contact_persons: data.contactPersons.map((cp) => ({
-          name: cp.name,
-          email: cp.email ?? "",
-          phone: cp.phone ?? "",
-        })),
+        contact_persons: JSON.stringify(
+          data.contactPersons.map((cp) => ({
+            name: cp.name,
+            email: cp.email ?? "",
+            phone: cp.phone ?? "",
+          }))
+        ),
         created_by: user?.name || "User",
         updated_by: user?.name || "User",
         status: "CREATED",

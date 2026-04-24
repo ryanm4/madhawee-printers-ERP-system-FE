@@ -88,7 +88,9 @@ function CreateIssueNote() {
           setInventoryItems(
             (uniqueItems as any[]).map((item: any) => ({
               value: item.item_name,
-              label: item.item_name,
+              label: item.size
+                ? `${item.item_name} (${item.size})`
+                : item.item_name,
             }))
           );
         }

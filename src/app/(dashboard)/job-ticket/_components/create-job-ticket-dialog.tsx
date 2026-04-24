@@ -421,6 +421,7 @@ export function CreateJobTicketDialog({
 
   const selectedPoId = form.watch("customer_po");
   const selectedPoItems = selectedPoDetails?.po_items ?? [];
+  console.log("PSD", selectedPoItems)
 
   useEffect(() => {
     const fetchPoDetails = async () => {
@@ -523,17 +524,17 @@ export function CreateJobTicketDialog({
                 ))}
                 {renderFormField("item", ({ field }) => (
                   <FormItem>
-                    <FormLabel>Item</FormLabel>
+                    <FormLabel>Description</FormLabel>
                     <Combobox
                       items={selectedPoItems.map((item: any) => ({
-                        value: item.item_code,
-                        label: item.item_code,
+                        value: item.description,
+                        label: item.description,
                       }))}
                       value={field.value || ""}
                       onValueChange={(value) => {
                         field.onChange(value);
                         const selectedItem = selectedPoItems.find(
-                          (i: any) => i.item_code === value
+                          (i: any) => i.po_item_id === value
                         );
                         if (selectedItem) {
                           form.setValue(
@@ -542,7 +543,7 @@ export function CreateJobTicketDialog({
                           );
                           form.setValue(
                             "jobName",
-                            selectedItem.item_code + " " + selectedItem.description
+                            selectedItem.description
                           );
                         } ``
                       }}
@@ -677,7 +678,7 @@ export function CreateJobTicketDialog({
                     <FormMessage />
                   </FormItem>
                 ))}
-                {renderFormField("jobName", ({ field }) => (
+                {/* {renderFormField("jobName", ({ field }) => (
                   <FormItem>
                     <FormLabel>Job Name</FormLabel>
                     <FormControl>
@@ -685,7 +686,7 @@ export function CreateJobTicketDialog({
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                ))}
+                ))} */}
               </div>
               {/* Product Details */}
               <div className="grid grid-cols-4 md:grid-cols-4 gap-4">
@@ -727,19 +728,6 @@ export function CreateJobTicketDialog({
                   </FormItem>
                 ))}
 
-                {renderFormField("completed_qty", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>Completed Quantity</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Enter Completed Quantity"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                ))}
 
                 {renderFormField("wastage", ({ field }) => (
                   <FormItem>
