@@ -70,12 +70,12 @@ function ViewSupplierProfile() {
                     vat_no: data.vat_no,
                     logoUrl: data.logo_url,
                     contactPersons: (() => {
-                        const arr = Array.isArray(data.contact_persons) ? data.contact_persons : (typeof data.contact_persons === 'string' && data.contact_persons ? JSON.parse(data.contact_persons) : []) as Array<Record<string, unknown>>;
-                        return arr.length > 0 ? arr.map((cp) => ({
-                            id: (cp.id as number) || undefined,
-                            name: (cp.name as string) || "",
-                            email: (cp.email as string) || "",
-                            phone: (cp.phone as string) || "",
+                        const arr = Array.isArray(data.contacts) ? data.contacts : [];
+                        return arr.length > 0 ? arr.map((cp: { id?: number; name?: string; email?: string; phone?: string }) => ({
+                            id: cp.id || undefined,
+                            name: cp.name || "",
+                            email: cp.email || "",
+                            phone: cp.phone || "",
                         })) : [{ name: "", email: "", phone: "" }];
                     })(),
                     created_by: data.created_by,

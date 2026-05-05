@@ -151,7 +151,7 @@ function CreateSupplierProfile() {
         vat_type: data.vat_type ?? "",
         vat_no: data.vat_no ?? "",
         logo_url: data.logoUrl ?? "",
-        contact_persons: data.contactPersons.map((cp) => ({
+        contacts: data.contactPersons.map((cp) => ({
           name: cp.name,
           email: cp.email ?? "",
           phone: cp.phone ?? "",

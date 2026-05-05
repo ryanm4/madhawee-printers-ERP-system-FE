@@ -114,7 +114,7 @@ function EditSupplierRelationship() {
           vat_no: data.vat_no,
           logoUrl: data.logo_url,
           contactPersons: (() => {
-              const arr = Array.isArray(data.contact_persons) ? data.contact_persons : (typeof data.contact_persons === 'string' && data.contact_persons ? JSON.parse(data.contact_persons) : []) as SUPPLIER_CONTACT[];
+              const arr = Array.isArray(data.contacts) ? data.contacts : [];
               return arr.length > 0 ? arr.map((cp: SUPPLIER_CONTACT) => ({
                   id: cp.id,
                   name: cp.name || "",
@@ -153,7 +153,7 @@ function EditSupplierRelationship() {
         vat_type: data.vat_type ?? "",
         vat_no: data.vat_no ?? "",
         logo_url: data.logoUrl ?? "",
-        contact_persons: data.contactPersons.map((cp: { id?: number; name: string; email?: string; phone?: string }) => ({
+        contacts: data.contactPersons.map((cp: { id?: number; name: string; email?: string; phone?: string }) => ({
           ...(cp.id && { id: cp.id }),
           name: cp.name,
           email: cp.email ?? "",
