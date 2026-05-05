@@ -43,9 +43,9 @@ export default function SuppliersPage() {
                         c.customer_type === CustomerType.BOTH
                 );
 
-                const sortedData = filteredData.sort((a: any, b: any) => {
-                    const dateA = new Date(a.created_on || a.created_at || 0).getTime();
-                    const dateB = new Date(b.created_on || b.created_at || 0).getTime();
+                const sortedData = filteredData.sort((a, b) => {
+                    const dateA = new Date(a.created_on || (a as Record<string, unknown>).created_at as string || 0).getTime();
+                    const dateB = new Date(b.created_on || (b as Record<string, unknown>).created_at as string || 0).getTime();
                     return dateB - dateA;
                 });
                 setData(sortedData);

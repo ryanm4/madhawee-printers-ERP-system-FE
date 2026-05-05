@@ -1,6 +1,5 @@
 "use client"
 
-import { TrendingUp } from "lucide-react"
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
 
 import {
@@ -42,11 +41,11 @@ export function RevenueTrendChart({ data }: RevenueTrendChartProps) {
                     cursor={{ fill: 'rgba(0,0,0,0.03)', radius: 12 }}
                     content={<ChartTooltipContent hideLabel />}
                 />
-                <Bar 
-                  dataKey="revenue" 
-                  fill="#2563eb" 
-                  radius={12} 
-                  className="transition-all hover:opacity-80"
+                <Bar
+                    dataKey="revenue"
+                    fill="#2563eb"
+                    radius={12}
+                    className="transition-all hover:opacity-80"
                 />
             </BarChart>
         </ChartContainer>

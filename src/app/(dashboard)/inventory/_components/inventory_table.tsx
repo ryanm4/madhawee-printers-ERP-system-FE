@@ -44,7 +44,7 @@ export function DataTable<TData, TValue>({
     columns,
     data,
     searchValue = "",
-    searchColumn,
+    searchColumn: _searchColumn,
     filters = DEFAULT_FILTERS,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = useState<SortingState>([])
@@ -70,7 +70,7 @@ export function DataTable<TData, TValue>({
         if (JSON.stringify(columnFilters) !== JSON.stringify(nextFilters)) {
             setColumnFilters(nextFilters)
         }
-    }, [filters])
+    }, [filters, columnFilters])
 
     const table = useReactTable({
         data,

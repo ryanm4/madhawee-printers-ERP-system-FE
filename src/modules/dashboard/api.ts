@@ -1,6 +1,6 @@
 import apiClient from '@/lib/axios-client';
 import { API_ENDPOINTS } from '@/config/api-endpoints';
-import { GENERATE_KPI, KPIItem, KPIResponse } from './types';
+import { GENERATE_KPI, KPIResponse } from './types';
 
 
 

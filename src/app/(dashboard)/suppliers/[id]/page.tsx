@@ -69,7 +69,15 @@ function ViewSupplierProfile() {
                     vat_type: data.vat_type,
                     vat_no: data.vat_no,
                     logoUrl: data.logo_url,
-                    contactPersons: data.contact_persons || [{ name: "", email: "", phone: "" }],
+                    contactPersons: (() => {
+                        const arr = Array.isArray(data.contacts) ? data.contacts : [];
+                        return arr.length > 0 ? arr.map((cp: { id?: number; name?: string; email?: string; phone?: string }) => ({
+                            id: cp.id || undefined,
+                            name: cp.name || "",
+                            email: cp.email || "",
+                            phone: cp.phone || "",
+                        })) : [{ name: "", email: "", phone: "" }];
+                    })(),
                     created_by: data.created_by,
                 });
             } catch (error) {
@@ -197,7 +205,7 @@ function ViewSupplierProfile() {
                                     <p className="text-xs text-muted-foreground mb-4">Contact individuals for this supplier.</p>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    {form.watch("contactPersons")?.map((contact: any, index: number) => (
+                                    {form.watch("contactPersons")?.map((_, index) => (
                                         <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 border rounded-lg bg-accent/5">
                                             {renderFormField(`contactPersons.${index}.name`, ({ field }) => (
                                                 <FormItem>

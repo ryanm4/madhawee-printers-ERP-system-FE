@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ALL_TICKETS } from "@/modules/job-tickets/types"
 import { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown, EyeIcon, MoreHorizontal, PencilIcon, TrashIcon, ArrowRightIcon, Printer } from "lucide-react"
@@ -71,14 +71,7 @@ export const jobTicketColumns = (
             },
         },
 
-        {
-            id: "created_on",
-            header: "Created On",
-            cell: ({ row }) => {
-                const date = (row.original as any).created_on || (row.original as any).created_at || (row.original as any).job_open_date;
-                return date ? format(new Date(date), "dd MMM yyyy") : "-";
-            },
-        },
+
         {
             accessorKey: "status",
             header: "Status",

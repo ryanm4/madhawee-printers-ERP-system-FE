@@ -1,5 +1,4 @@
-import { IconTrendingUp, IconFileInvoice, IconUsers, IconPackage, IconShoppingCart, IconChartBar } from "@tabler/icons-react"
-import { Badge } from "@/components/ui/badge"
+import { IconFileInvoice, IconChartBar } from "@tabler/icons-react"
 import {
   Card,
   CardDescription,
@@ -7,13 +6,14 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { KPIItem } from "@/modules/dashboard/types"
-import { FileText, LucideIcon, Truck } from "lucide-react"
+import { FileText } from "lucide-react"
+import React from "react"
 
 interface SectionCardsProps {
   data?: KPIItem[]
 }
 
-const KAR_CONFIG: Record<string, { label: string, icon: any, description: string, isCurrency?: boolean }> = {
+const KAR_CONFIG: Record<string, { label: string, icon: React.ElementType, description: string, isCurrency?: boolean }> = {
   totalQuotations: {
     label: "Total Quotations",
     icon: FileText,
@@ -42,7 +42,6 @@ export function SectionCards({ data = [] }: SectionCardsProps) {
   if (!data?.length) {
     return (
       <div className="grid grid-cols-1 gap-4 px-4 md:grid-cols-2 lg:grid-cols-3">
-        {/* Skeleton or empty state could go here, for now just returning nothing or basic placeholders if needed */}
         <p className="text-muted-foreground col-span-full">No insights available for the selected period.</p>
       </div>
     )

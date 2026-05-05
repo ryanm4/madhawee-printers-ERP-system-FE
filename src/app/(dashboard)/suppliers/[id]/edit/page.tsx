@@ -38,11 +38,19 @@ import { UPDATE_SUPPLIER } from "@/modules/supplier/types";
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
 
+interface SUPPLIER_CONTACT {
+  id?: number;
+  name: string;
+  email?: string;
+  phone?: string;
+}
+
 function EditSupplierRelationship() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
   const [isLoading, setIsLoading] = useState(false);
+
   const [user, setUser] = useState<{
     name: string;
     email: string;
@@ -92,6 +100,7 @@ function EditSupplierRelationship() {
       try {
         setIsLoading(true);
         const response = await SupplierApi.getById(id);
+
         const data = response.data;
 
         form.reset({
@@ -104,7 +113,15 @@ function EditSupplierRelationship() {
           vat_type: data.vat_type,
           vat_no: data.vat_no,
           logoUrl: data.logo_url,
-          contactPersons: data.contact_persons || [{ name: "", email: "", phone: "" }],
+          contactPersons: (() => {
+              const arr = Array.isArray(data.contacts) ? data.contacts : [];
+              return arr.length > 0 ? arr.map((cp: SUPPLIER_CONTACT) => ({
+                  id: cp.id,
+                  name: cp.name || "",
+                  email: cp.email || "",
+                  phone: cp.phone || "",
+              })) : [{ name: "", email: "", phone: "" }];
+          })(),
           created_by: data.created_by,
           status: data.status,
         });
@@ -136,7 +153,7 @@ function EditSupplierRelationship() {
         vat_type: data.vat_type ?? "",
         vat_no: data.vat_no ?? "",
         logo_url: data.logoUrl ?? "",
-        contact_persons: data.contactPersons.map((cp: any) => ({
+        contacts: data.contactPersons.map((cp: { id?: number; name: string; email?: string; phone?: string }) => ({
           ...(cp.id && { id: cp.id }),
           name: cp.name,
           email: cp.email ?? "",

@@ -1,11 +1,10 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { CUSTOMER } from "@/modules/customer/types"
 import { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown, EyeIcon, MoreHorizontal, PencilIcon, TrashIcon } from "lucide-react"
-import { StatusBadge } from "@/components/shared/status-badge"
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.

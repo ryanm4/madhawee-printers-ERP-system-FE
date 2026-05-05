@@ -118,7 +118,7 @@ function EditPurchaseOrder() {
     poDate: new Date(),
     currency: "LKR",
     itemDetails: [
-      { description: "", quantity: "", unit: 0, price: "" },
+      { itemCode: "", description: "", quantity: "", unit: 0, price: "" },
     ],
   };
 
@@ -163,7 +163,7 @@ function EditPurchaseOrder() {
         status: PurchaseOrderStatus.CREATED,
         customer_po: data.customer_po,
         currency: data.currency,
-        po_items: data.itemDetails.map((item: any) => ({
+        po_items: data.itemDetails.map((item) => ({
           item_code: item.itemCode,
           description: item.description,
           quantity: String(item.quantity),
@@ -219,14 +219,14 @@ function EditPurchaseOrder() {
             tceprNo: poData.TC_E_PR_No,
             purchaseOrderType: poData.po_type_id as PurchaseOrderType,
             batchRef: poData.batch_ref,
-            salesRef: (poData as any).sales_ref || "",
+            salesRef: poData.sales_ref || "",
             poDate: new Date(poData.po_date),
-            currency: (poData as any).currency || "LKR",
+            currency: poData.currency || "LKR",
             itemDetails: poData.po_items.map((item) => ({
               itemCode: item.item_code,
               description: item.description,
               quantity: String(item.quantity),
-              unit: item.uom,
+              unit: Number(item.uom) || 0,
               price: String(item.price),
             })),
           });
@@ -548,7 +548,7 @@ function EditPurchaseOrder() {
                       itemCode: "",
                       description: "",
                       quantity: "",
-                      unit: "",
+                      unit: 0,
                       price: "",
                     })
                   }
@@ -626,7 +626,15 @@ function EditPurchaseOrder() {
                               Unit <span className="text-red-500">*</span>
                             </FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter Unit" {...field} />
+                              <Input 
+                                type="number"
+                                placeholder="Enter Unit" 
+                                value={field.value || ""} 
+                                onChange={e => field.onChange(Number(e.target.value))}
+                                onBlur={field.onBlur}
+                                name={field.name}
+                                ref={field.ref}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

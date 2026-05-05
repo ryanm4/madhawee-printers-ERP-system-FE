@@ -39,7 +39,7 @@ type ReportsFormValues = z.infer<typeof ReportSchema>;
 function ReportsPage() {
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
   const [loading, setLoading] = useState(false);
-  const [reportData, setReportData] = useState([]);
+  const [reportData, setReportData] = useState<any[]>([]);
 
   useEffect(() => {
     getCustomerList();
@@ -112,7 +112,7 @@ function ReportsPage() {
 
       if (response.data) {
         console.log(response.data);
-        setReportData(response.data as any);
+        setReportData(response.data as Record<string, unknown>[]);
       }
 
       toast("Report Generated", {

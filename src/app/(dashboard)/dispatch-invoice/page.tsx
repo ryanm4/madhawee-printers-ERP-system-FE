@@ -15,8 +15,6 @@ import { appToast } from "@/lib/toast-utils";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AppSidebar } from "@/components/layout/app-sidebar"
 import { handleDispatchPrint, DispatchPrintData } from "./_components/dispatch-print-dialog";
 
 function DispatchInvoiceManagement() {
@@ -37,7 +35,7 @@ function DispatchInvoiceManagement() {
       const response = await dispatchInventoryApi.getAll();
 
       if (response.status === 200) {
-        const sortedData = response.data.sort((a: any, b: any) => {
+        const sortedData = response.data.sort((a: ALL_DISPATCH, b: ALL_DISPATCH) => {
           const dateA = new Date(a.created_on || a.dispatch_date || 0).getTime();
           const dateB = new Date(b.created_on || b.dispatch_date || 0).getTime();
           return dateB - dateA;
@@ -74,7 +72,7 @@ function DispatchInvoiceManagement() {
         no_of_bundles: dispatch.no_of_bundles,
         description: dispatch.description,
         job_id: dispatch.job_id,
-        job_number: (dispatch as any).job_number || "",
+        job_number: (dispatch as ALL_DISPATCH & { job_number?: string }).job_number || "",
         job_name: dispatch.job_name,
         po_id: dispatch.po_id,
         contact_person: dispatch.contact_person,

@@ -16,12 +16,13 @@ export interface SUPPLIER {
     vat_type: string;
     vat_no: string;
     logo_url: string;
-    contact_persons: SUPPLIER_CONTACT[];
+    contacts: SUPPLIER_CONTACT[];
     created_on: string;
     created_by: string;
     updated_on: string;
     updated_by: string;
     status: string;
+    [key: string]: unknown;
 }
 
 export interface CREATE_SUPPLIER {
@@ -34,7 +35,7 @@ export interface CREATE_SUPPLIER {
     vat_type: string;
     vat_no: string;
     logo_url: string;
-    contact_persons: SUPPLIER_CONTACT[];
+    contacts: SUPPLIER_CONTACT[];
     created_by: string;
     status: string;
 }

@@ -34,7 +34,7 @@ export interface ALL_DISPATCH {
     completed_by: string;
     wastage: string;
     job_status: string;
-
+    [key: string]: unknown;
 }
 
 export interface CREATE_DISPATCH {

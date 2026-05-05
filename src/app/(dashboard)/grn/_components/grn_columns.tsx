@@ -45,7 +45,7 @@ export const grnColumns = (
             const date = row.original.received_date
             try {
                 return date ? format(parseISO(date), "PPP") : "-"
-            } catch (e) {
+            } catch (_e) {
                 return date || "-"
             }
         },

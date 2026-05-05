@@ -41,7 +41,7 @@ export function DataTable<TData, TValue>({
     columns,
     data,
     searchValue = "",
-    searchColumn,
+    searchColumn: _searchColumn,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = useState<SortingState>([])
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -113,7 +113,7 @@ export function DataTable<TData, TValue>({
                 </DropdownMenu>
             </div>
             <div className="overflow-hidden rounded-md border">
-                <Table>
+                <Table className="table-fixed w-full">
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
@@ -136,7 +136,7 @@ export function DataTable<TData, TValue>({
                             table.getRowModel().rows.map((row) => (
                                 <TableRow key={row.id}>
                                     {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id}>
+                                        <TableCell className="max-w-[150px] truncate whitespace-nowrap overflow-hidden" key={cell.id}>
                                             {flexRender(
                                                 cell.column.columnDef.cell,
                                                 cell.getContext()

@@ -15,7 +15,6 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "@/components/ui/form";
 import {
   Select,
@@ -38,8 +37,26 @@ import { useEffect, useState } from "react";
 import { grnApi } from "@/modules/inventory/grn/api";
 import { toast } from "sonner";
 import { FullPageLoader } from "@/components/shared/loader";
+import { GRNItem } from "@/modules/inventory/grn/types";
+import { useCallback } from "react";
 
-type GRNFormValues = z.infer<typeof grnSchema>;
+type GRNFormValues = {
+  releated_po: string;
+  received_date: Date;
+  supplier_name: string;
+  stock_location: string;
+  payee_name?: string;
+  payment_method: "CASH" | "CARD";
+  currency: string;
+  supplier_invoice_no: string;
+  remarks?: string;
+  items: {
+    item_name: string;
+    quantity: number;
+    rate: number;
+    amount: number;
+  }[];
+};
 
 function ViewGRN() {
   const router = useRouter();
@@ -47,6 +64,7 @@ function ViewGRN() {
   const [loading, setLoading] = useState(true);
 
   const form = useForm<GRNFormValues>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(grnSchema) as any,
     defaultValues: {
       releated_po: "",
@@ -63,17 +81,12 @@ function ViewGRN() {
   });
 
   const { fields } = useFieldArray({
-    control: form.control as any,
+    control: form.control,
     name: "items",
   });
 
-  useEffect(() => {
-    if (id) {
-      fetchGRN();
-    }
-  }, [id]);
 
-  const fetchGRN = async () => {
+  const fetchGRN = useCallback(async () => {
     try {
       setLoading(true);
       const response = await grnApi.getById(id as string);
@@ -89,7 +102,7 @@ function ViewGRN() {
           currency: data.currency,
           supplier_invoice_no: data.supplier_invoice_no,
           remarks: data.remarks || "",
-          items: data.items.map((item: any) => ({
+          items: data.items.map((item: GRNItem) => ({
             item_name: item.item_name,
             quantity: Number(item.quantity),
             rate: Number(item.rate),
@@ -103,8 +116,12 @@ function ViewGRN() {
     } finally {
       setLoading(false);
     }
-  };
-
+  }, [id, form, router]);
+  useEffect(() => {
+    if (id) {
+      fetchGRN();
+    }
+  }, [id, fetchGRN]);
   const readonlyClass = "disabled:opacity-100 disabled:text-black disabled:cursor-default bg-muted/50";
 
   if (loading) return <FullPageLoader />;
@@ -119,7 +136,7 @@ function ViewGRN() {
         ]}
       />
 
-      <Form {...(form as any)}>
+      <Form {...form}>
         <form className="space-y-6">
           <div className="flex items-center justify-end gap-3 w-full mt-6">
             <Button

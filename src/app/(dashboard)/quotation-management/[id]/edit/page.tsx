@@ -129,8 +129,7 @@ function EditQuotation({
   };
 
   const form = useForm<QuotationFormValues>({
-    resolver: zodResolver(createQuotationSchema),
-    defaultValues: baseDefaultValues as any,
+    defaultValues: baseDefaultValues as QuotationFormValues,
   });
 
   useEffect(() => {
@@ -159,7 +158,7 @@ function EditQuotation({
   const watchTaxType = form.watch("tax_type_id");
 
   // Helper to calculate totals
-  const calculateTotals = (currentItems: any[], taxTypeId: number) => {
+  const calculateTotals = (currentItems: QuotationFormValues["items"], taxTypeId: number) => {
     let subTotal = 0;
     const updatedItems = currentItems.map((item) => {
       const qty = parseFloat(item.item_qty || "0");
@@ -289,7 +288,7 @@ function EditQuotation({
         description: `Quotation has been updated successfully.`,
       });
 
-      form.reset(baseDefaultValues as any);
+      form.reset(baseDefaultValues as QuotationFormValues);
       form.clearErrors();
 
       router.push("/quotation-management");
@@ -335,7 +334,7 @@ function EditQuotation({
             created_by: quoteData.created_by || "User",
             updated_by: user?.name || quoteData.updated_by || "User",
             items:
-              (quoteData as any).items?.map((item: any) => ({
+              quoteData.items?.map((item) => ({
                 item_id: item.item_id,
                 item_category: item.item_category,
                 item_qty: String(item.item_qty || "0"),
@@ -446,7 +445,8 @@ function EditQuotation({
                           );
                           if (selectedCustomer) {
                             // Auto-populate first contact person by default
-                            const firstContact = selectedCustomer.contact_persons?.[0];
+                            const contactPersons = Array.isArray(selectedCustomer.contact_persons) ? selectedCustomer.contact_persons : [];
+                            const firstContact = contactPersons[0];
                             form.setValue("contact_person", firstContact?.name || "");
                           } else {
                             form.setValue("contact_person", "");
@@ -481,7 +481,7 @@ function EditQuotation({
                     const selectedCustomer = customer.find(
                       (c) => c.customer_id === form.watch("customer_id")
                     );
-                    const contacts = selectedCustomer?.contact_persons || [];
+                    const contacts = Array.isArray(selectedCustomer?.contact_persons) ? selectedCustomer.contact_persons : [];
 
                     return (
                       <FormItem>
@@ -515,7 +515,8 @@ function EditQuotation({
                           const selectedCustomerId = form.watch("customer_id");
                           const selectedContactName = form.watch("contact_person");
                           const selectedCustomer = customer.find(c => c.customer_id === selectedCustomerId);
-                          const contact = selectedCustomer?.contact_persons?.find(cp => cp.name === selectedContactName);
+                          const contactPersons = Array.isArray(selectedCustomer?.contact_persons) ? selectedCustomer.contact_persons : [];
+                          const contact = contactPersons.find(cp => cp.name === selectedContactName);
                           return contact?.phone || "";
                         })()
                       }

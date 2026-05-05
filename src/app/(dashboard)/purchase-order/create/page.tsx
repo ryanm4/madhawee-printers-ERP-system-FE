@@ -178,7 +178,7 @@ function CreatePurchaseOrder() {
         status: PurchaseOrderStatus.CREATED,
         customer_po: data.customer_po,
         currency: data.currency,
-        po_items: data.itemDetails.map((item: any) => ({
+        po_items: data.itemDetails.map((item) => ({
           description: item.description,
           quantity: String(item.quantity),
           uom: item.unit,

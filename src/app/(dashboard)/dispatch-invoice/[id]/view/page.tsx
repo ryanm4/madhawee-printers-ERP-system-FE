@@ -15,21 +15,13 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { CalendarIcon, Edit2 } from "lucide-react";
+import { Edit2 } from "lucide-react";
 import { format } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
 import { ALL_TICKETS } from "@/modules/job-tickets/types";
 import { CustomerApi } from "@/modules/customer/api";
@@ -137,7 +129,7 @@ function ViewDispatchAndInvoice() {
     };
 
     fetchCustomerData();
-  }, [form.watch("job_id"), JobData, form]);
+  }, [JobData, form]);
 
   const renderFormField = <TName extends FieldPath<DispatchFormValues>>(
     name: TName,

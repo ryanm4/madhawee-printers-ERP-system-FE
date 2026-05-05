@@ -19,6 +19,12 @@ export interface ALL_TICKETS {
   completed_qty: number;
   delivery_date: Date;
   wastage: string;
+  created_on?: Date | string;
+  updated_on?: Date | string;
+  order_received_date?: Date | string;
+  paperCoating?: any[];
+  paper_coating?: any[];
+  [key: string]: unknown;
 }
 
 export interface JOB_TICKET_DETAIL {
@@ -44,6 +50,10 @@ export interface JOB_TICKET_DETAIL {
   job_number: string;
   tc_no?: string;
   batch_ref?: string;
+  item_code?: string;
+  order_received_date?: string | Date;
+  paper_coating?: any[];
+  [key: string]: unknown;
 
   // Plates
   old_plate_quantity?: number;

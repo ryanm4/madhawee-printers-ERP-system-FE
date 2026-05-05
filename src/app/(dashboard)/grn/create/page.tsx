@@ -42,8 +42,25 @@ import { SupplierCombobox } from "../_components/supplier-combobox";
 import { FullPageLoader } from "@/components/shared/loader";
 import { inventoryApi } from "@/modules/inventory/api";
 import { Combobox } from "@/components/shared/combobox";
+import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
 
-type GRNFormValues = z.infer<typeof grnSchema>;
+type GRNFormValues = {
+  releated_po: string;
+  received_date: Date;
+  supplier_name: string;
+  stock_location: string;
+  payee_name?: string;
+  payment_method: "CASH" | "CARD";
+  currency: string;
+  supplier_invoice_no: string;
+  remarks?: string;
+  items: {
+    item_name: string;
+    quantity: number;
+    rate: number;
+    amount: number;
+  }[];
+};
 
 function CreateGRN() {
   const router = useRouter();
@@ -64,15 +81,17 @@ function CreateGRN() {
       try {
         const response = await inventoryApi.getAll();
         if (response.status === 200) {
+          const uniqueItems = Array.from(
+            new Map(
+              response.data.map((item: GET_ALL_INVENTORY) => [item.item_name, item])
+            ).values()
+          );
+
           setInventoryItems(
-            response.data.map((item: any) => {
-              const fullLabel = `${item.item_name}${item.size ? ` - ${item.size}` : ""
-                }`;
-              return {
-                value: item.item_name,
-                label: fullLabel,
-              };
-            })
+            uniqueItems.map((item: GET_ALL_INVENTORY) => ({
+              value: item.item_name,
+              label: item.item_name,
+            }))
           );
         }
       } catch (error) {
@@ -96,6 +115,7 @@ function CreateGRN() {
   };
 
   const form = useForm<GRNFormValues>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(grnSchema) as any,
     defaultValues,
   });
@@ -140,9 +160,9 @@ function CreateGRN() {
         ]}
       />
 
-      <Form {...(form as any)}>
+      <Form {...form}>
         <form
-          onSubmit={form.handleSubmit(onSubmit as any)}
+          onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6"
         >
 

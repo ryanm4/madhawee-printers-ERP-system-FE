@@ -1,6 +1,6 @@
 import apiClient from '@/lib/axios-client';
 import { API_ENDPOINTS } from '@/config/api-endpoints';
-import { PurchaseOrderType } from '@/config/enum';
+
 import { CREATE_PURCHASE_ORDER, PURCHASE_ORDER, PURCHASE_ORDER_ID } from './types';
 
 export const purchaseOrderApi = {

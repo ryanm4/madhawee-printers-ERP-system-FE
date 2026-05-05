@@ -18,6 +18,7 @@ import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmatio
 import { useMemo } from "react";
 import { generateIssueNotePdf } from "@/modules/inventory/issue-notes/pdf-utils";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
+import { ALL_TICKETS } from "@/modules/job-tickets/types";
 
 function IssueNotesManagement() {
   const router = useRouter();
@@ -25,7 +26,11 @@ function IssueNotesManagement() {
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState("");
 
-  const [jobs, setJobs] = useState<{ id: number; name: string }[]>([]);
+  const [jobs, setJobs] = useState<{
+    id: number;
+    name: string;
+    job_number: number | string;
+  }[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -37,11 +42,12 @@ function IssueNotesManagement() {
       const response = await jobTicketsApi.getAll();
       if (response.status === 200) {
         setJobs(
-          response.data.map((job: any) => ({
+          response.data.map((job: ALL_TICKETS) => ({
             id: job.job_id,
             name: job.job_name,
+            job_number: job.job_number ?? "-", // or 0 depending on your UI
           }))
-        );
+        )
       }
     } catch (error) {
       console.error("Failed to fetch jobs", error);
@@ -143,10 +149,15 @@ function IssueNotesManagement() {
         ) : (
           <DataTable
             columns={columns}
-            data={data.map(item => ({
-              ...item,
-              job_name: jobs.find(j => j.id === item.job_id)?.name || (item.job_id ? `Job #${item.job_id}` : "-")
-            }))}
+            data={data.map(item => {
+              const job = jobs.find(j => j.id === item.job_id)
+
+              return {
+                ...item,
+                job_name: job?.name || (item.job_id ? `Job #${item.job_id}` : "-"),
+                job_number: job?.job_number || "-"
+              }
+            })}
             searchValue={search}
           />
         )}

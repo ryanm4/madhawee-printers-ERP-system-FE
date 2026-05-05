@@ -11,11 +11,11 @@ export const issueNotesApi = {
         const response = await apiClient.get<IssueNote>(API_ENDPOINTS.RELATIVE.ISSUE_NOTES.GET(id));
         return response;
     },
-    create: async (data: any) => {
+    create: async (data: Partial<IssueNote>) => {
         const response = await apiClient.post<IssueNote>(API_ENDPOINTS.RELATIVE.ISSUE_NOTES.CREATE, data);
         return response;
     },
-    update: async (id: number | string, data: any) => {
+    update: async (id: number | string, data: Partial<IssueNote>) => {
         const response = await apiClient.put<IssueNote>(API_ENDPOINTS.RELATIVE.ISSUE_NOTES.UPDATE(id), data);
         return response;
     },

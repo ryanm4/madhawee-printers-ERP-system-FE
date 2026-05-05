@@ -8,17 +8,17 @@ export const generateGRNPdf = (grn: GRN) => {
         if (num === 0) return "Zero";
         const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
         const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-        
+
         const numStr = Math.floor(num).toString();
-        if (numStr.length > 9) return "Overflow"; 
+        if (numStr.length > 9) return "Overflow";
         const paddedNum = ("000000000" + numStr).slice(-9);
-        
+
         const millions = parseInt(paddedNum.slice(0, 3));
         const thousands = parseInt(paddedNum.slice(3, 6));
         const units = parseInt(paddedNum.slice(6, 9));
-        
+
         let str = "";
-        
+
         const convertHundreds = (n: number) => {
             let res = "";
             if (n > 99) {
@@ -33,11 +33,11 @@ export const generateGRNPdf = (grn: GRN) => {
             }
             return res;
         };
-        
+
         if (millions) str += convertHundreds(millions) + "Million ";
         if (thousands) str += convertHundreds(thousands) + "Thousand ";
         if (units) str += convertHundreds(units);
-        
+
         return str.trim() + " Only";
     }
 
@@ -70,14 +70,14 @@ export const generateGRNPdf = (grn: GRN) => {
     doc.setFontSize(9);
     const leftX = 14;
     const rightX = 150;
-    let currY = 45;
+    const currY = 45;
     const lineHeight = 6;
 
     const addField = (label: string, value: string, x: number, y: number) => {
         doc.setFont("helvetica", "bold");
         doc.text(`${label}`, x, y);
         doc.setFont("helvetica", "normal");
-        const labelWidth = doc.getTextWidth(`${label}`);
+
         doc.text(` : ${value || "-"}`, x + 40, y);
     };
 
@@ -126,7 +126,7 @@ export const generateGRNPdf = (grn: GRN) => {
     });
 
     // Totals
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
     const subTotal = grn.items.reduce((sum, item) => sum + Number(item.amount), 0);
     const vatRate = 0; // Assuming 0 if not provided
     const vatAmount = subTotal * vatRate;
@@ -164,7 +164,7 @@ export const generateGRNPdf = (grn: GRN) => {
     const footerY = 180;
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    
+
     doc.line(20, footerY, 70, footerY);
     doc.text("Prepared By", 45, footerY + 5, { align: "center" });
 

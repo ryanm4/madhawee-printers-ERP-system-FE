@@ -15,7 +15,6 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +32,8 @@ import { jobTicketsApi } from "@/modules/job-tickets/api";
 import { toast } from "sonner";
 import { FullPageLoader } from "@/components/shared/loader";
 import { Combobox } from "@/components/shared/combobox";
+import { ALL_TICKETS } from "@/modules/job-tickets/types";
+import { useCallback } from "react";
 
 type IssueNoteFormValues = z.infer<typeof issueNoteSchema>;
 
@@ -43,6 +44,7 @@ function ViewIssueNote() {
   const [jobs, setJobs] = useState<{ value: string; label: string }[]>([]);
 
   const form = useForm<IssueNoteFormValues>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(issueNoteSchema) as any,
     defaultValues: {
       date: new Date(),
@@ -54,32 +56,11 @@ function ViewIssueNote() {
   });
 
   const { fields } = useFieldArray({
-    control: form.control as any,
+    control: form.control,
     name: "items",
   });
 
-  useEffect(() => {
-    if (id) {
-      fetchIssueNote();
-    }
-
-    const fetchJobs = async () => {
-      try {
-        const response = await jobTicketsApi.getAll();
-        if (response.status === 200) {
-          setJobs(response.data.map((job: any) => ({
-            value: job.job_id.toString(),
-            label: job.job_name || `Job #${job.job_id}`
-          })));
-        }
-      } catch (err) {
-        console.error("Failed to fetch jobs", err);
-      }
-    };
-    fetchJobs();
-  }, [id]);
-
-  const fetchIssueNote = async () => {
+  const fetchIssueNote = useCallback(async () => {
     try {
       setLoading(true);
       const response = await issueNotesApi.getById(id as string);
@@ -90,7 +71,7 @@ function ViewIssueNote() {
           collector_name: data.collector_name,
           job_id: data.job_id || 0,
           remarks: data.remarks || "",
-          items: data.items.map((item: any) => ({
+          items: data.items.map((item) => ({
             item_name: item.item_name,
             quantity: Number(item.quantity)
           }))
@@ -102,7 +83,28 @@ function ViewIssueNote() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, form, router]);
+
+  useEffect(() => {
+    if (id) {
+      fetchIssueNote();
+    }
+
+    const fetchJobs = async () => {
+      try {
+        const response = await jobTicketsApi.getAll();
+        if (response.status === 200) {
+          setJobs(response.data.map((job: ALL_TICKETS) => ({
+            value: job.job_id.toString(),
+            label: job.job_name || `Job #${job.job_id}`
+          })));
+        }
+      } catch (err) {
+        console.error("Failed to fetch jobs", err);
+      }
+    };
+    fetchJobs();
+  }, [id, fetchIssueNote]);
 
   const readonlyClass = "disabled:opacity-100 disabled:text-black disabled:cursor-default bg-muted/50";
 
@@ -118,7 +120,7 @@ function ViewIssueNote() {
         ]}
       />
 
-      <Form {...(form as any)}>
+      <Form {...form}>
         <form className="space-y-6">
           <div className="flex items-center justify-end gap-3 w-full mt-6">
             <Button

@@ -9,7 +9,6 @@ import {
     EmptyTitle,
 } from "@/components/ui/empty"
 import { IconFolderCode } from "@tabler/icons-react"
-import { ArrowUpRightIcon } from "lucide-react"
 import { EmptyCardProps } from "@/types/empty_card"
 
 

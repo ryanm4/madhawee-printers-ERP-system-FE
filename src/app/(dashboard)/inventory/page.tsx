@@ -4,7 +4,7 @@ import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { inventoryApi } from "@/modules/inventory/api";
-import { AlertDeleteDialog } from "@/components/shared/delete_popup";
+
 import { Check, ChevronsUpDown, PlusIcon, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -50,9 +50,9 @@ function InventoryManagement() {
       const response = await inventoryApi.getAll();
 
       if (response.status === 200) {
-        const sortedData = response.data.sort((a: any, b: any) => {
-          const dateA = new Date(a.created_on || a.created_at || 0).getTime();
-          const dateB = new Date(b.created_on || b.created_at || 0).getTime();
+        const sortedData = response.data.sort((a: GET_ALL_INVENTORY, b: GET_ALL_INVENTORY) => {
+          const dateA = new Date(a.created_on || 0).getTime();
+          const dateB = new Date(b.created_on || 0).getTime();
           return dateB - dateA;
         });
         setData(sortedData);

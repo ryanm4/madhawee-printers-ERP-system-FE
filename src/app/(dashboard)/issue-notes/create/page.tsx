@@ -36,6 +36,8 @@ import { getUser } from "@/lib/auth";
 import { Combobox } from "@/components/shared/combobox";
 import { FullPageLoader } from "@/components/shared/loader";
 import { JobTicketStatus } from "@/config/enum";
+import { ALL_TICKETS } from "@/modules/job-tickets/types";
+import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
 
 type IssueNoteFormValues = z.infer<typeof issueNoteSchema>;
 
@@ -62,7 +64,7 @@ function CreateIssueNote() {
         const response = await jobTicketsApi.getAll();
         if (response.status === 200) {
           setJobs(
-            response.data.map((job: any) => ({
+            response.data.map((job: ALL_TICKETS) => ({
               value: job.job_id.toString(),
               label: job.job_number || `Job #${job.job_id}`,
             }))
@@ -81,12 +83,12 @@ function CreateIssueNote() {
         if (response.status === 200) {
           const uniqueItems = Array.from(
             new Map(
-              response.data.map((item: any) => [item.item_name, item])
+              response.data.map((item: GET_ALL_INVENTORY) => [item.item_name, item])
             ).values()
           );
 
           setInventoryItems(
-            (uniqueItems as any[]).map((item: any) => ({
+            (uniqueItems as GET_ALL_INVENTORY[]).map((item: GET_ALL_INVENTORY) => ({
               value: item.item_name,
               label: item.size
                 ? `${item.item_name} (${item.size})`
@@ -114,8 +116,9 @@ function CreateIssueNote() {
   };
 
   const form = useForm<IssueNoteFormValues>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(issueNoteSchema) as any,
-    defaultValues,
+    defaultValues: defaultValues as any,
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -169,8 +172,8 @@ function CreateIssueNote() {
         ]}
       />
 
-      <Form {...(form as any)}>
-        <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

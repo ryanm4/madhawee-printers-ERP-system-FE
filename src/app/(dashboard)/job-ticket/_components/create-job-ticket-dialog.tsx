@@ -1,7 +1,7 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-utils";
 
 import {
-  SubmitHandler,
   useFieldArray,
   useForm,
   FieldPath,
@@ -17,7 +17,7 @@ import {
   X,
   FileArchive,
 } from "lucide-react"; // Import icons
-import { format, addYears } from "date-fns";
+import { format } from "date-fns";
 import { useState, useRef, useEffect } from "react";
 
 import { cn } from "@/lib/utils";
@@ -65,6 +65,7 @@ import {
 import {
   PURCHASE_ORDER,
   PURCHASE_ORDER_ID,
+  PO_ITEMS,
 } from "@/modules/purchase-order/types";
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { CustomerApi } from "@/modules/customer/api";
@@ -108,14 +109,14 @@ export function CreateJobTicketDialog({
   const [customerData, setCustomerData] = useState<CUSTOMER[]>([]);
   const [selectedPoDetails, setSelectedPoDetails] =
     useState<PURCHASE_ORDER_ID | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [fetchingDetails, setFetchingDetails] = useState(false);
   const [user, setUser] = useState<{
     name: string;
     email: string;
     avatar: string;
   } | null>(null);
-  const [existingTickets, setExistingTickets] = useState<ALL_TICKETS[]>([]);
+  const [_existingTickets, _setExistingTickets] = useState<ALL_TICKETS[]>([]);
   const [inventoryList, setInventoryList] = useState<GET_ALL_INVENTORY[]>([]);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [printData, setPrintData] = useState<JobTicketPrintData | null>(null);
@@ -238,18 +239,19 @@ export function CreateJobTicketDialog({
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + sizes[i];
   };
 
+
   async function onSubmit(data: JobTicketFormValues) {
     try {
       setLoading(true);
 
       // Find numeric PO ID from customer_po string if necessary
-      let poIdValue = data.customer_po ? Number(data.customer_po) : undefined;
+      let _poIdValue = data.customer_po ? Number(data.customer_po) : undefined;
       if (data.customer_po && isNaN(Number(data.customer_po))) {
         const matchingPo = purchaseOrderData.find(
           (po) => String(po.customer_po) === data.customer_po
         );
         if (matchingPo) {
-          poIdValue = matchingPo.po_id;
+          _poIdValue = matchingPo.po_id;
         }
       }
 
@@ -310,7 +312,7 @@ export function CreateJobTicketDialog({
         created_on: new Date(),
       };
 
-      const response = await jobTicketsApi.create(payload);
+      const _response = await jobTicketsApi.create(payload);
 
       toast("Job Ticket Created Successfully");
 
@@ -360,16 +362,30 @@ export function CreateJobTicketDialog({
         // Show print dialog; actual close/reset happens after it's dismissed
         setShowPrintDialog(true);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast("Failed to Create Job Ticket", {
-        description:
-          error?.response?.data?.message ||
-          "An error occurred while creating the job ticket. Please try again.",
+        description: getErrorMessage(error),
       });
     } finally {
       setLoading(false);
     }
   }
+
+  const getInventoryList = async () => {
+    try {
+      setLoading(true);
+      const response = await inventoryApi.getAll();
+
+      if (response.status === 200) {
+        setInventoryList(response.data);
+        dispatch(setReduxInventoryList(response.data));
+      }
+    } catch (_error) {
+      console.error("Failed to fetch inventory");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (open) {
@@ -384,23 +400,9 @@ export function CreateJobTicketDialog({
         });
       }
     }
-  }, [open]);
+  }, [open, getInventoryList]);
 
-  const getInventoryList = async () => {
-    try {
-      setLoading(true);
-      const response = await inventoryApi.getAll();
 
-      if (response.status === 200) {
-        setInventoryList(response.data);
-        dispatch(setReduxInventoryList(response.data));
-      }
-    } catch (error) {
-      console.error("Failed to fetch inventory");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchData = async () => {
     try {
@@ -475,7 +477,7 @@ export function CreateJobTicketDialog({
 
 
   const now = new Date();
-  const currentYear = now.getFullYear();
+  const _currentYear = now.getFullYear();
 
   return (
     <>
@@ -526,7 +528,7 @@ export function CreateJobTicketDialog({
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <Combobox
-                      items={selectedPoItems.map((item: any) => ({
+                      items={selectedPoItems.map((item: PO_ITEMS) => ({
                         value: item.description,
                         label: item.description,
                       }))}
@@ -534,7 +536,7 @@ export function CreateJobTicketDialog({
                       onValueChange={(value) => {
                         field.onChange(value);
                         const selectedItem = selectedPoItems.find(
-                          (i: any) => i.po_item_id === value
+                          (i: PO_ITEMS) => i.po_item_id === Number(value) || i.description === value
                         );
                         if (selectedItem) {
                           form.setValue(
@@ -545,7 +547,7 @@ export function CreateJobTicketDialog({
                             "jobName",
                             selectedItem.description
                           );
-                        } ``
+                        }
                       }}
                       placeholder={
                         fetchingDetails
@@ -861,7 +863,7 @@ export function CreateJobTicketDialog({
                       <h5 className="text-xs font-medium mb-2 mt-2">
                         Raw Materials
                       </h5>
-                      {rawMaterials.map((_rm: any, rmIndex: number) => (
+                      {rawMaterials.map((_rm, rmIndex: number) => (
                         <div
                           key={rmIndex}
                           className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-2"
@@ -1020,7 +1022,7 @@ export function CreateJobTicketDialog({
                                   form.setValue(
                                     `paperTypes.${index}.rawMaterials`,
                                     current.filter(
-                                      (_: any, i: number) => i !== rmIndex
+                                      (_: unknown, i: number) => i !== rmIndex
                                     )
                                   );
                                 }
