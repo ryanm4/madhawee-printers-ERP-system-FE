@@ -11,11 +11,11 @@ export const grnApi = {
         const response = await apiClient.get<GRN>(API_ENDPOINTS.RELATIVE.GRN.GET(id));
         return response;
     },
-    create: async (data: any) => {
+    create: async (data: Partial<GRN>) => {
         const response = await apiClient.post<GRN>(API_ENDPOINTS.RELATIVE.GRN.CREATE, data);
         return response;
     },
-    update: async (id: number | string, data: any) => {
+    update: async (id: number | string, data: Partial<GRN>) => {
         const response = await apiClient.put<GRN>(API_ENDPOINTS.RELATIVE.GRN.UPDATE(id), data);
         return response;
     },

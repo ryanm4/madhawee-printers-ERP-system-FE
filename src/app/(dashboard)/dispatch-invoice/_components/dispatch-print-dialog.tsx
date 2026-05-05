@@ -95,7 +95,7 @@ export function DispatchPrintDialog({
 }
 
 export function buildDispatchPrintHTML(data: DispatchPrintData): string {
-  const safe = (val: any) => (val !== undefined && val !== null && String(val).trim() !== "" ? String(val) : "&nbsp;");
+  const safe = (val: string | number | null | undefined) => (val !== undefined && val !== null && String(val).trim() !== "" ? String(val) : "&nbsp;");
   const formattedDate = data.dispatch_date ? format(new Date(data.dispatch_date), "dd/MM/yyyy") : "";
   const formattedTime = data.dispatch_date ? format(new Date(data.dispatch_date), "hh:mm a") : "";
 

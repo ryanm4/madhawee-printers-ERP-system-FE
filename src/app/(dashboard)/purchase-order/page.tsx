@@ -44,7 +44,7 @@ function PurchaseOrderPage() {
       setLoading(true);
       const response = await purchaseOrderApi.getAll();
 
-      setData([...response.data].sort((a: any, b: any) => {
+      setData([...response.data].sort((a, b) => {
         const dateA = new Date(a.created_on || a.po_date || 0).getTime();
         const dateB = new Date(b.created_on || b.po_date || 0).getTime();
         return dateB - dateA;
@@ -101,7 +101,7 @@ function PurchaseOrderPage() {
           updated_by: getUser()?.name || "User", // Ideally from user context
           status: status,
           customer_po: String(data.customer_po),
-          po_items: (data.po_items || []).map((item: any) => ({
+          po_items: (data.po_items || []).map((item) => ({
             item_code: item.item_code,
             description: item.description,
             quantity: String(item.quantity),
@@ -109,7 +109,7 @@ function PurchaseOrderPage() {
             price: String(item.price),
           })),
         };
-        await purchaseOrderApi.update(id, payload as any);
+        await purchaseOrderApi.update(id, payload);
         appToast.success("Status Updated", `Purchase Order status updated to ${status}`);
         await fetchData();
       } else {

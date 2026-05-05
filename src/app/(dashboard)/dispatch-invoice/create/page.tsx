@@ -2,6 +2,7 @@
 import { dispatchInvoiceScheme } from "@/modules/dispatch-invoice/validation";
 import { useRouter } from "next/navigation";
 import { getErrorMessage } from "@/lib/error-utils";
+import { cn } from "@/lib/utils";
 import React, { useEffect, useState } from "react";
 import { FieldPath, useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,14 +22,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Popover,
@@ -58,7 +51,6 @@ type DispatchFormValues = z.infer<typeof dispatchInvoiceScheme>;
 function CreateDispatchandInvoice() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [isJobLoading, setIsJobLoading] = useState(false);
   const [JobData, setJobData] = useState<ALL_TICKETS[]>([]);
   const [user, setUser] = useState<{
     name: string;
@@ -174,7 +166,7 @@ function CreateDispatchandInvoice() {
 
       // Prepare print data
       const pData: DispatchPrintData = {
-        dispatch_id: (response.data as any).dispatch_id || "N/A",
+        dispatch_id: (response.data as { dispatch_id?: string }).dispatch_id || "N/A",
         dispatch_date: new Date(),
         customer_name: data.customer_name || "",
         customer_address: data.customer_address || "",
@@ -216,7 +208,7 @@ function CreateDispatchandInvoice() {
     >["0"]["render"]
   ) => <FormField control={form.control} name={name} render={render} />;
 
-  const findCustomer = form.watch("job_id");
+
 
   const jobId = form.watch("job_id");
 

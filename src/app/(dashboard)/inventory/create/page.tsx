@@ -97,7 +97,7 @@ function CreateInventoryManagement() {
         remarks: data.remarks ?? "",
         created_by: user?.name || "User",
       };
-      const response = await inventoryApi.create(payload);
+      await inventoryApi.create(payload);
 
       appToast.success("Inventory Item Created", "The inventory item has been added successfully.");
       form.reset(baseDefaultValues);

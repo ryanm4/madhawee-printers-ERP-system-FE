@@ -144,7 +144,7 @@ function EditInventoryManagement() {
         remarks: data.remarks ?? "",
         updated_by: user?.name || "User",
       };
-      const response = await inventoryApi.update(id, payload);
+      await inventoryApi.update(id, payload);
 
       appToast.updated("Inventory Item Updated", "The inventory item has been updated successfully.");
       form.reset(baseDefaultValues);

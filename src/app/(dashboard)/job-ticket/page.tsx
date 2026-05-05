@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { DataTable } from "./_components/job-ticket-table";
 import { jobTicketColumns } from "./_components/job-ticket-columns";
-import { ALL_TICKETS, JobTicketPrintData } from "@/modules/job-tickets/types";
+import { ALL_TICKETS, CREATE_TICKETS, JobTicketPrintData } from "@/modules/job-tickets/types";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
 import { appToast } from "@/lib/toast-utils";
 import { getErrorMessage } from "@/lib/error-utils";
@@ -57,11 +57,11 @@ function JobTicketComponent() {
           ...ticket,
           customer_name:
             customers.find(
-              (c: any) => String(c.customer_id) === String(ticket.customer_id)
+              (c: CUSTOMER) => String(c.customer_id) === String(ticket.customer_id)
             )?.company_name || ticket.customer_id,
         }));
 
-        const sortedData = enrichedData.sort((a: any, b: any) => {
+        const sortedData = enrichedData.sort((a, b) => {
           const dateA = new Date(
             a.created_on || a.job_open_date || 0
           ).getTime();
@@ -98,7 +98,7 @@ function JobTicketComponent() {
         ]);
 
         if (ticketResponse.status === 200) {
-          const ticket = ticketResponse.data as any;
+          const ticket = ticketResponse.data;
           const customers = customersResponse.data;
 
           // Also fetch PO details to get TC/Batch if they aren't on the ticket
@@ -116,7 +116,7 @@ function JobTicketComponent() {
 
           const customerName =
             customers.find(
-              (c: any) => String(c.customer_id) === String(ticket.customer_id)
+              (c: CUSTOMER) => String(c.customer_id) === String(ticket.customer_id)
             )?.company_name || ticket.customer_id;
 
           const firstPaperType =
@@ -125,7 +125,7 @@ function JobTicketComponent() {
             ticket.paperCoating ||
             ticket.paper_coating ||
             []
-          ).flatMap((p: any) => p.materials || p.raw_materials || []);
+          ).flatMap((p) => p.materials || (p as Record<string, unknown>).raw_materials as Array<Record<string, unknown>> || []);
 
           const pd: JobTicketPrintData = {
             jobNumber: ticket.job_number,
@@ -137,9 +137,9 @@ function JobTicketComponent() {
             customer: customerName,
             coating: firstPaperType?.coating,
             jobName: ticket.job_name,
-            customerDeliveryDate: ticket.delivery_date,
-            packingDate: ticket.packing_date,
-            expiryDate: ticket.expiry_date,
+            customerDeliveryDate: ticket.delivery_date || undefined,
+            packingDate: ticket.packing_date || undefined,
+            expiryDate: ticket.expiry_date || undefined,
             poNo:
               ticket.customer_po ||
               poDetails?.customer_po ||
@@ -147,12 +147,8 @@ function JobTicketComponent() {
             tcNo: ticket.tc_no || poDetails?.TC_E_PR_No,
             batchRef: ticket.batch_ref || poDetails?.batch_ref,
             remarks: ticket.remarks,
-            oldPlatesQuantity: ticket.old_plate_quantity,
-            newPlatesQuantity: ticket.new_plate_quantity,
-            inks: (ticket.inks || []).map((i: any) => ({
-              ...i,
-              ink: i.ink || "",
-            })),
+            oldPlatesQuantity: ticket.old_plate_quantity !== undefined && ticket.old_plate_quantity !== null ? String(ticket.old_plate_quantity) : undefined,
+            newPlatesQuantity: ticket.new_plate_quantity !== undefined && ticket.new_plate_quantity !== null ? String(ticket.new_plate_quantity) : undefined,
             rawMaterials: allRawMaterials,
           };
           console.log(pd);
@@ -173,9 +169,9 @@ function JobTicketComponent() {
         setIsLoading(true);
         const currentTicketResponse = await jobTicketsApi.getById(id);
         if (currentTicketResponse.status === 200) {
-          const currentTicket = currentTicketResponse.data as any;
+          const currentTicket = currentTicketResponse.data;
 
-          const formatDate = (date: any) => {
+          const formatDate = (date: string | Date | null | undefined) => {
             if (!date) return undefined;
 
             const parsed = new Date(date);
@@ -214,23 +210,21 @@ function JobTicketComponent() {
             new_plates_remarks: currentTicket.new_plates_remarks,
 
             // Map Arrays
-            raw_materials: currentTicket.raw_materials,
-            inks: currentTicket.inks,
             paperCoating: (
-              currentTicket.paperCoating ||
-              currentTicket.paper_coating ||
-              []
-            ).map((p: any) => ({
+              (currentTicket.paperCoating ||
+                (currentTicket as Record<string, unknown>).paper_coating ||
+                []) as any[]
+            ).map((p: Record<string, unknown>) => ({
               paper: p.paper || p.paper_type,
               coating: p.coating,
-              delivery_date: formatDate(p.delivery_date),
+              delivery_date: formatDate(p.delivery_date as any),
             })),
 
             status: status,
-            create_by: currentTicket.create_by || "User",
+            created_by: (currentTicket as Record<string, unknown>).created_by as string || "User",
           };
 
-          await jobTicketsApi.update(id, payload as any);
+          await jobTicketsApi.update(id, payload as CREATE_TICKETS);
           appToast.success(
             "Status Updated",
             `Job Ticket status updated to ${status}`

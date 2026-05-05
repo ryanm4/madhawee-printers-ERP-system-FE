@@ -39,7 +39,6 @@ export interface PurchaseOrderCardProps {
 export function PurchaseOrderCard({
     companyName,
     contactEmail,
-    poNumber,
     poDate,
     deliveryDate,
     jobs,

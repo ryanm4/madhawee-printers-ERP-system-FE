@@ -20,7 +20,7 @@ export const purchaseOrderScheme = z.object({
     itemDetails: z
         .array(
             z.object({
-
+                itemCode: z.string().optional(),
                 description: z.string().min(1, "Description is required"),
                 quantity: z.string().min(1, "Quantity is required"),
                 unit: z.number().min(1, "Product Type is required"),

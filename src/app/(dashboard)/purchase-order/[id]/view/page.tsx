@@ -32,7 +32,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, Edit2, Loader2, PlusIcon, Trash2 } from "lucide-react";
+import { CalendarIcon, Edit2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { PurchaseOrderType } from "@/config/enum";
@@ -42,11 +42,8 @@ import { CUSTOMER } from "@/modules/customer/types";
 import { QUOTATIONS } from "@/modules/quotations/types";
 import { quotationApi } from "@/modules/quotations/api";
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
-import { toast } from "sonner";
-import {
-  CREATE_PURCHASE_ORDER,
-  PURCHASE_ORDER,
-} from "@/modules/purchase-order/types";
+
+
 import { FullPageLoader } from "@/components/shared/loader";
 
 type PurchaseOrderFormValues = z.infer<typeof purchaseOrderScheme>;
@@ -57,7 +54,7 @@ function ViewPurchaseOrder() {
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
   const [quotationList, setQuotationList] = useState<QUOTATIONS[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const id = params.id as string;
   useEffect(() => {
     getCustomerList();
@@ -101,7 +98,7 @@ function ViewPurchaseOrder() {
     salesRef: "",
     poDate: new Date(),
     itemDetails: [
-      { itemCode: "", description: "", quantity: "", unit: "", price: "" },
+      { itemCode: "", description: "", quantity: "", unit: 0, price: "" },
     ],
   };
 
@@ -134,7 +131,8 @@ function ViewPurchaseOrder() {
   useEffect(() => {
     const fetchPurchaseOrder = async () => {
       try {
-        setLoading(true);
+        setLoading(true); 3
+
         const response = await purchaseOrderApi.getById(id);
         if (response.status === 200) {
           const poData = response.data;
@@ -149,13 +147,13 @@ function ViewPurchaseOrder() {
             tceprNo: poData.TC_E_PR_No,
             purchaseOrderType: poData.po_type_id as PurchaseOrderType,
             batchRef: poData.batch_ref,
-            salesRef: (poData as any).sales_ref || "",
+            salesRef: poData.sales_ref || "",
             poDate: new Date(poData.po_date),
             itemDetails: poData.po_items.map((item) => ({
               itemCode: item.item_code,
               description: item.description,
               quantity: String(item.quantity),
-              unit: item.uom,
+              unit: Number(item.uom),
               price: String(item.price),
             })),
           });

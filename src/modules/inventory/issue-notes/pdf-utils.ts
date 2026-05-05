@@ -33,7 +33,7 @@ export const generateIssueNotePdf = (issueNote: IssueNote) => {
     doc.setFontSize(9);
     const leftX = 14;
     const rightX = 150;
-    let currY = 45;
+    const currY = 45;
     const lineHeight = 6;
 
     const addField = (label: string, value: string, x: number, y: number, labelOffset = 45) => {
@@ -46,7 +46,7 @@ export const generateIssueNotePdf = (issueNote: IssueNote) => {
     addField("PRINTED ON", format(new Date(), "dd/MM/yyyy h:mm:ss a"), leftX, currY);
     addField("GOODS ISSUE NOTE NO", issueNote.id.toString(), leftX, currY + lineHeight);
     addField("DATE", issueNote.date ? format(new Date(issueNote.date), "dd/MM/yyyy") : "-", leftX, currY + lineHeight * 2);
-    addField("RELATED JOB", (issueNote as any).job_name || (issueNote.job_id ? `Job #${issueNote.job_id}` : "-"), leftX, currY + lineHeight * 3);
+    addField("RELATED JOB", issueNote.job_name || (issueNote.job_id ? `Job #${issueNote.job_id}` : "-"), leftX, currY + lineHeight * 3);
 
     // Right column fields
     addField("REMARKS", issueNote.remarks, rightX, currY + lineHeight, 45);
@@ -81,7 +81,7 @@ export const generateIssueNotePdf = (issueNote: IssueNote) => {
     });
 
     // Footer signature lines
-    const finalY = (doc as any).lastAutoTable.finalY + 30; // some gap from table
+    const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 30; // some gap from table
     const footerY = Math.max(finalY, 160); // Keep it around bottom, but adapt if table is long
 
     doc.setFontSize(9);

@@ -38,6 +38,7 @@ export function NavUser() {
         userData.email || "user"
       )}&backgroundColor=${LIGHT_AVATAR_COLORS.join(",")}`
 
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUser({
         name: userData.name || "User",
         email: userData.email || "",

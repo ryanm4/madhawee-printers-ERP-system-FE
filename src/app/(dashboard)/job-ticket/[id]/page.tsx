@@ -3,7 +3,7 @@
 import { FieldPath, useFieldArray, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { CalendarIcon, Edit2, Trash2 } from "lucide-react" // Import icons
+import { CalendarIcon, Edit2 } from "lucide-react" // Import icons
 import { format } from "date-fns"
 import { useState, useEffect } from "react"
 
@@ -26,8 +26,6 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
 import { jobTicketSchema } from "@/modules/job-tickets/validation"
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { useRouter, useParams } from "next/navigation"
@@ -40,6 +38,7 @@ import { Combobox } from "@/components/shared/combobox"
 import { PURCHASE_ORDER, PURCHASE_ORDER_ID } from "@/modules/purchase-order/types"
 import { purchaseOrderApi } from "@/modules/purchase-order/api"
 import { jobTicketsApi } from "@/modules/job-tickets/api"
+
 import { FullPageLoader } from "@/components/shared/loader"
 
 type JobTicketFormValues = z.infer<typeof jobTicketSchema>
@@ -84,7 +83,7 @@ function JobViewTicket() {
             { ink: "Magenta", quantity: "", status: "", remarks: "" },
             { ink: "Yellow", quantity: "", status: "", remarks: "" },
         ],
-        paperTypes: [{ paper: "", coating: "", rawMaterials: [{ item_id: undefined, material_name: "", material_type: "", size: "", material_description: "", quantity: 0, status: "", remarks: "" }] }] as any[],
+        paperTypes: [{ paper: "", coating: "", rawMaterials: [{ item_id: undefined, material_name: "", material_type: "", size: "", material_description: "", quantity: 0, status: "", remarks: "" }] }],
     }
 
     const form = useForm<JobTicketFormValues>({
@@ -132,10 +131,10 @@ function JobViewTicket() {
                 setIsLoading(true);
                 const response = await jobTicketsApi.getById(id);
                 if (response.status === 200) {
-                    const data = response.data as any; // Casting because ALL_TICKETS might be missing some fields
+                    const data = response.data; // Use the data from response
 
                     // Map API data to form values
-                    const formValues: any = {
+                    const formValues: JobTicketFormValues = {
                         customer_po: data.customer_po ? String(data.customer_po) : (data.po_id ? String(data.po_id) : ""),
                         item: data.item_code ? String(data.item_code) : "",
                         jobNumber: data.job_number || "",
@@ -153,34 +152,39 @@ function JobViewTicket() {
                         batchRef: data.batch_ref || "",
                         remarks: data.remarks || "",
 
-                        oldPlatesQuantity: data.old_plate_quantity || "",
+                        oldPlatesQuantity: data.old_plate_quantity !== undefined && data.old_plate_quantity !== null ? String(data.old_plate_quantity) : "",
                         oldPlatesStatus: data.old_plate_status || "",
                         oldPlatesRemarks: data.old_plate_remarks || "",
-                        newPlatesQuantity: data.new_plate_quantity || "",
+                        newPlatesQuantity: data.new_plate_quantity !== undefined && data.new_plate_quantity !== null ? String(data.new_plate_quantity) : "",
                         newPlatesStatus: data.new_plate_status || "",
                         newPlatesRemarks: data.new_plate_remarks || "",
 
-                        rawMaterials: undefined,
-                        inks: data.inks?.length ? data.inks : [
+
+                        inks: (Array.isArray(data.inks) && data.inks.length > 0) ? (data.inks as Array<{ ink: string, quantity: string, status: string, remarks: string }>).map(i => ({
+                            ink: i.ink,
+                            quantity: i.quantity || "",
+                            status: i.status || "",
+                            remarks: i.remarks || ""
+                        })) : [
                             { ink: "Black", quantity: "", status: "", remarks: "" },
                             { ink: "Cyan", quantity: "", status: "", remarks: "" },
                             { ink: "Magenta", quantity: "", status: "", remarks: "" },
                             { ink: "Yellow", quantity: "", status: "", remarks: "" },
                         ],
-                        paperTypes: data.paperCoatingData?.map((p: any) => ({
-                            paper: p.paper,
-                            coating: p.coating,
-                            rawMaterials: p.materials?.map((rm: any) => ({
-                                item_id: rm.item_id,
-                                material_name: rm.material_name,
-                                material_type: rm.material_type,
-                                size: rm.size || "",
-                                material_description: rm.material_description,
-                                quantity: rm.quantity,
-                                status: rm.status,
-                                remarks: rm.remarks,
-                            })) || [{ item_id: undefined, material_name: "", material_type: "", size: "", material_description: "", quantity: 0, status: "", remarks: "" }],
-                        })) || [{ paper: "", coating: "", rawMaterials: [{ item_id: undefined, material_name: "", material_type: "", size: "", material_description: "", quantity: 0, status: "", remarks: "" }] }],
+                        paperTypes: (((data as Record<string, unknown>).paperCoatingData || data.paperCoating || []) as Array<Record<string, unknown>>).map((p) => ({
+                            paper: String(p.paper || ""),
+                            coating: String(p.coating || ""),
+                            rawMaterials: (Array.isArray(p.materials) ? p.materials : []).map((rm: Record<string, unknown>) => ({
+                                item_id: rm.item_id ? Number(rm.item_id) : undefined,
+                                material_name: String(rm.material_name || ""),
+                                material_type: String(rm.material_type || ""),
+                                size: String(rm.size || ""),
+                                material_description: String(rm.material_description || ""),
+                                quantity: Number(rm.quantity || 0),
+                                status: String(rm.status || ""),
+                                remarks: String(rm.remarks || ""),
+                            })),
+                        })),
                     };
 
                     form.reset(formValues);
@@ -209,7 +213,7 @@ function JobViewTicket() {
         };
 
         fetchJobTicket();
-    }, [id, form]);
+    }, [id, form, purchaseOrderData]);
 
     const selectedPoId = form.watch("customer_po");
 
@@ -254,7 +258,7 @@ function JobViewTicket() {
         };
 
         fetchPoDetails();
-    }, [selectedPoId, form]);
+    }, [selectedPoId, form, purchaseOrderData]);
 
     const renderFormField = <TName extends FieldPath<JobTicketFormValues>>(
         name: TName,
@@ -314,7 +318,7 @@ function JobViewTicket() {
                                     <FormItem>
                                         <FormLabel>Item</FormLabel>
                                         <Combobox
-                                            items={selectedPoItems.map((item: any) => ({ value: item.item_code, label: item.item_code }))}
+                                            items={selectedPoItems.map((item) => ({ value: item.item_code, label: item.item_code }))}
                                             value={field.value || ""}
                                             onValueChange={() => { }}
                                             placeholder={field.value || "Select Item"}
@@ -468,7 +472,7 @@ function JobViewTicket() {
 
                                             {/* Raw Materials for this Paper Type */}
                                             <h5 className="text-xs font-medium mb-2 mt-2">Raw Materials</h5>
-                                            {rawMaterials.map((_rm: any, rmIndex: number) => (
+                                            {rawMaterials.map((_rm, rmIndex: number) => (
                                                 <div key={rmIndex} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2">
                                                     {renderFormField(`paperTypes.${index}.rawMaterials.${rmIndex}.material_name`, ({ field }) => (
                                                         <FormItem>

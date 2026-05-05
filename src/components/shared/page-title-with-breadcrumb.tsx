@@ -12,7 +12,6 @@ function PageTitleWithBreadcrumb({
     title,
     breadcrumbs = [],
     isDashboard = false,
-    userName = "John Doe"
 }: PageTitleWithBreadcrumbProps) {
     const [currentTime, setCurrentTime] = useState(new Date())
 
@@ -62,7 +61,7 @@ function PageTitleWithBreadcrumb({
         <div className="flex flex-col gap-2">
             <Breadcrumb>
                 <BreadcrumbList>
-                    {breadcrumbs.map((crumb, index) => (
+                    {breadcrumbs.map((crumb) => (
                         <React.Fragment key={crumb.href}>
                             <BreadcrumbItem className="hidden md:block">
                                 <BreadcrumbLink href={crumb.href}>

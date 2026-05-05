@@ -22,6 +22,7 @@ export interface SUPPLIER {
     updated_on: string;
     updated_by: string;
     status: string;
+    [key: string]: unknown;
 }
 
 export interface CREATE_SUPPLIER {

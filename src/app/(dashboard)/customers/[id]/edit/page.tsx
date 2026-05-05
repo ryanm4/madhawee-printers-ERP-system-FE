@@ -103,7 +103,7 @@ function EditCustomerRelationship() {
         const response = await CustomerApi.getById(id);
         const data = response.data;
 
-        const contactPersonsArray = Array.isArray(data.contact_persons) ? data.contact_persons : [];
+        const contactPersonsArray = Array.isArray(data.contacts) ? data.contacts : [];
 
         form.reset({
           customer_type: data.customer_type,
@@ -198,18 +198,16 @@ function EditCustomerRelationship() {
         vat_type: data.vat_type ?? "",
         vat_no: data.vat_no ?? "",
         logo_url: data.logoUrl ?? "",
-        contact_persons: JSON.stringify(
-          data.contactPersons.map((cp) => ({
-            name: cp.name,
-            email: cp.email ?? "",
-            phone: cp.phone ?? "",
-          }))
-        ),
+        contacts: data.contactPersons.map((cp) => ({
+          name: cp.name,
+          email: cp.email ?? "",
+          phone: cp.phone ?? "",
+        })),
         created_by: data.created_by || user?.name || "User",
         updated_by: user?.name || "User",
         status: "Updated",
       };
-      const response = await CustomerApi.update(id, payload);
+      await CustomerApi.update(id, payload);
 
       const isSupplier = data.customer_type === CustomerType.SUPPLIER;
       toast(`${isSupplier ? "Supplier" : "Customer"} Updated`, {
@@ -257,7 +255,7 @@ function EditCustomerRelationship() {
 
       <Form {...form}>
         <form
-          onSubmit={form.handleSubmit(onSubmit, (errors) => {
+          onSubmit={form.handleSubmit(onSubmit, (_errors) => {
             toast("Please fill in all required fields correctly");
           })}
           className="space-y-6  pb-0"
@@ -380,7 +378,7 @@ function EditCustomerRelationship() {
                 <div className="flex flex-row gap-4">
                   {renderFormField("vat_type", ({ field }) => (
                     <FormItem className="w-full">
-                      <FormLabel>Vat Type</FormLabel>
+                      <FormLabel>VAT Type</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
@@ -411,7 +409,7 @@ function EditCustomerRelationship() {
                     </FormItem>
                   ))}
                 </div>
-                {renderFormField("logoUrl", ({ field }) => (
+                {renderFormField("logoUrl", ({ field: _field }) => (
                   <FormItem>
                     <FormLabel>Company Logo</FormLabel>
                     <FormControl>

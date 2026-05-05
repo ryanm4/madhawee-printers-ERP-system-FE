@@ -22,6 +22,9 @@ export interface QUOTATIONS {
     created_by: string;
     updated_on: string | null;
     updated_by: string;
+    items?: QuotationItems[];
+    quote_date?: string;
+    [key: string]: unknown; // For ExportButton compatibility
 }
 
 

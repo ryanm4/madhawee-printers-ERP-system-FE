@@ -11,12 +11,18 @@ export const getCurrencySymbol = (currency: Currency): string => {
     return symbols[currency] || "Rs";
 };
 
-export const formatCurrency = (amount: number | string, currency: Currency = "LKR"): string => {
+export const formatCurrency = (amount: number | string, currency?: Currency): string => {
     const numericAmount = typeof amount === "string" ? parseFloat(amount) : amount;
     if (isNaN(numericAmount)) return "0.00";
 
-    return numericAmount.toLocaleString("en-US", {
+    const formattedValue = numericAmount.toLocaleString("en-US", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
+
+    if (currency) {
+        return `${getCurrencySymbol(currency)} ${formattedValue}`;
+    }
+
+    return formattedValue;
 };

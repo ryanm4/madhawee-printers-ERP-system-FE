@@ -42,8 +42,27 @@ import { FullPageLoader } from "@/components/shared/loader";
 import { SupplierCombobox } from "../../_components/supplier-combobox";
 import { inventoryApi } from "@/modules/inventory/api";
 import { Combobox } from "@/components/shared/combobox";
+import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
+import { GRNItem } from "@/modules/inventory/grn/types";
+import { useCallback } from "react";
 
-type GRNFormValues = z.infer<typeof grnSchema>;
+type GRNFormValues = {
+  releated_po: string;
+  received_date: Date;
+  supplier_name: string;
+  stock_location: string;
+  payee_name?: string;
+  payment_method: "CASH" | "CARD";
+  currency: string;
+  supplier_invoice_no: string;
+  remarks?: string;
+  items: {
+    item_name: string;
+    quantity: number;
+    rate: number;
+    amount: number;
+  }[];
+};
 
 function EditGRN() {
   const router = useRouter();
@@ -72,7 +91,7 @@ function EditGRN() {
   });
 
   const { fields, append, remove } = useFieldArray({
-    control: form.control as any,
+    control: form.control,
     name: "items",
   });
 
@@ -91,12 +110,12 @@ function EditGRN() {
         if (response.status === 200) {
           const uniqueItems = Array.from(
             new Map(
-              response.data.map((item: any) => [item.item_name, item])
+              response.data.map((item: GET_ALL_INVENTORY) => [item.item_name, item])
             ).values()
           );
 
           setInventoryItems(
-            (uniqueItems as any[]).map((item: any) => ({
+            uniqueItems.map((item: GET_ALL_INVENTORY) => ({
               value: item.item_name,
               label: item.item_name,
             }))
@@ -109,7 +128,7 @@ function EditGRN() {
     fetchInventory();
   }, [id]);
 
-  const fetchGRN = async () => {
+  const fetchGRN = useCallback(async () => {
     try {
       setLoading(true);
       const response = await grnApi.getById(id as string);
@@ -128,7 +147,7 @@ function EditGRN() {
           currency: data.currency,
           supplier_invoice_no: data.supplier_invoice_no,
           remarks: data.remarks || "",
-          items: data.items.map((item: any) => ({
+          items: data.items.map((item: GRNItem) => ({
             item_name: item.item_name,
             quantity: Number(item.quantity),
             rate: Number(item.rate),
@@ -142,7 +161,7 @@ function EditGRN() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, form, router]);
 
   async function onSubmit(values: GRNFormValues) {
     try {
@@ -178,9 +197,9 @@ function EditGRN() {
         ]}
       />
 
-      <Form {...(form as any)}>
+      <Form {...form}>
         <form
-          onSubmit={form.handleSubmit(onSubmit as any)}
+          onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6"
         >
 

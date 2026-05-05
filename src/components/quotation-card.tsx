@@ -4,24 +4,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { 
-    EyeIcon, 
-    FileText, 
-    MoreVertical, 
-    PencilIcon, 
-    TrashIcon, 
+import {
+    FileText,
+    MoreVertical,
+    PencilIcon,
+    TrashIcon,
     Printer,
-    DollarSign,
     Calendar,
     User
 } from "lucide-react";
-import React from "react";
-import { 
-    DropdownMenu, 
-    DropdownMenuContent, 
-    DropdownMenuItem, 
-    DropdownMenuSeparator, 
-    DropdownMenuTrigger 
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
 } from "./ui/dropdown-menu";
 import { format } from "date-fns";
 import { QUOTATIONS } from "@/modules/quotations/types";
@@ -40,7 +37,6 @@ export function QuotationCard({
     onEdit,
     onDelete,
     onDownload,
-    onStatusChange,
     className,
 }: QuotationCardProps) {
     return (

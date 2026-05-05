@@ -23,13 +23,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Popover,
@@ -53,7 +46,6 @@ type DispatchFormValues = z.infer<typeof dispatchInvoiceScheme>;
 function EditDispatchandInvoice() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [isJobLoading, setIsJobLoading] = useState(false);
   const [JobData, setJobData] = useState<ALL_TICKETS[]>([]);
   const params = useParams();
   const [user, setUser] = useState<{
@@ -176,7 +168,6 @@ function EditDispatchandInvoice() {
     >["0"]["render"]
   ) => <FormField control={form.control} name={name} render={render} />;
 
-  const findCustomer = form.watch("job_id");
 
   const jobId = form.watch("job_id");
 

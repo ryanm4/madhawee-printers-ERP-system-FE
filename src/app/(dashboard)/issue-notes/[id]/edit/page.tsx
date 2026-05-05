@@ -35,6 +35,9 @@ import { toast } from "sonner";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
 import { Combobox } from "@/components/shared/combobox";
+import { ALL_TICKETS } from "@/modules/job-tickets/types";
+import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
+import { useCallback } from "react";
 
 type IssueNoteFormValues = z.infer<typeof issueNoteSchema>;
 
@@ -50,6 +53,7 @@ function EditIssueNote() {
   >([]);
 
   const form = useForm<IssueNoteFormValues>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(issueNoteSchema) as any,
     defaultValues: {
       date: new Date(),
@@ -61,9 +65,34 @@ function EditIssueNote() {
   });
 
   const { fields, append, remove } = useFieldArray({
-    control: form.control as any,
+    control: form.control,
     name: "items",
   });
+
+  const fetchIssueNote = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await issueNotesApi.getById(id as string);
+      if (response.status === 200) {
+        const data = response.data;
+        form.reset({
+          date: parseISO(data.date),
+          collector_name: data.collector_name,
+          job_id: data.job_id || 0,
+          remarks: data.remarks || "",
+          items: data.items.map((item) => ({
+            item_name: item.item_name,
+            quantity: Number(item.quantity)
+          }))
+        });
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Failed to fetch Issue Note details"));
+      router.push("/inventory/issue-notes");
+    } finally {
+      setLoading(false);
+    }
+  }, [id, form, router]);
 
   useEffect(() => {
     const userData = getUser();
@@ -79,7 +108,7 @@ function EditIssueNote() {
         const response = await jobTicketsApi.getAll();
         if (response.status === 200) {
           setJobs(
-            response.data.map((job: any) => ({
+            response.data.map((job: ALL_TICKETS) => ({
               value: job.job_id.toString(),
               label: job.job_number || `Job #${job.job_id}`,
             }))
@@ -96,12 +125,12 @@ function EditIssueNote() {
         if (response.status === 200) {
           const uniqueItems = Array.from(
             new Map(
-              response.data.map((item: any) => [item.item_name, item])
+              response.data.map((item) => [item.item_name, item])
             ).values()
           );
 
           setInventoryItems(
-            (uniqueItems as any[]).map((item: any) => ({
+            (uniqueItems as GET_ALL_INVENTORY[]).map((item: GET_ALL_INVENTORY) => ({
               value: item.item_name,
               label: item.item_name,
             }))
@@ -114,32 +143,9 @@ function EditIssueNote() {
 
     fetchJobs();
     fetchInventory();
-  }, [id]);
+  }, [id, fetchIssueNote]);
 
-  const fetchIssueNote = async () => {
-    try {
-      setLoading(true);
-      const response = await issueNotesApi.getById(id as string);
-      if (response.status === 200) {
-        const data = response.data;
-        form.reset({
-          date: parseISO(data.date),
-          collector_name: data.collector_name,
-          job_id: data.job_id || 0,
-          remarks: data.remarks || "",
-          items: data.items.map((item: any) => ({
-            item_name: item.item_name,
-            quantity: Number(item.quantity)
-          }))
-        });
-      }
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Failed to fetch Issue Note details"));
-      router.push("/inventory/issue-notes");
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   async function onSubmit(values: IssueNoteFormValues) {
     try {
@@ -176,8 +182,8 @@ function EditIssueNote() {
         ]}
       />
 
-      <Form {...(form as any)}>
-        <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

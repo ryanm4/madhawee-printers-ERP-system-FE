@@ -1,0 +1,400 @@
+
+> madhawee-printers-erp-system-fe@0.1.0 lint
+> eslint
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/customers/[id]/edit/page.tsx
+  260:50  warning  '_errors' is defined but never used  @typescript-eslint/no-unused-vars
+  414:55  warning  '_field' is defined but never used   @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/customers/[id]/page.tsx
+  283:71  warning  '_field' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/customers/_components/customer-table.tsx
+  44:19  warning  '_searchColumn' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+  61:19  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/customers/_components/customer-table.tsx:61:19
+  59 |     }, [searchValue])
+  60 |
+> 61 |     const table = useReactTable({
+     |                   ^^^^^^^^^^^^^ TanStack Table's `useReactTable()` API returns functions that cannot be memoized safely
+  62 |         data,
+  63 |         columns,
+  64 |         onSortingChange: setSorting,  react-hooks/incompatible-library
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/customers/create/page.tsx
+  200:9   warning  '_customerType' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  413:55  warning  '_field' is defined but never used                  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/customers/page.tsx
+  41:14  warning  '_error' is defined but never used  @typescript-eslint/no-unused-vars
+  70:14  warning  '_error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/dispatch-invoice/_components/dispatch_table.tsx
+  44:19  warning  '_searchColumn' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+  61:19  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/dispatch-invoice/_components/dispatch_table.tsx:61:19
+  59 |     }, [searchValue])
+  60 |
+> 61 |     const table = useReactTable({
+     |                   ^^^^^^^^^^^^^ TanStack Table's `useReactTable()` API returns functions that cannot be memoized safely
+  62 |         data,
+  63 |         columns,
+  64 |         onSortingChange: setSorting,  react-hooks/incompatible-library
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/grn/_components/grn-print-dialog.tsx
+  85:12  warning  '_e' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/grn/_components/grn_columns.tsx
+  48:22  warning  '_e' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/grn/_components/grn_table.tsx
+  47:5   warning  '_searchColumn' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+  75:19  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/grn/_components/grn_table.tsx:75:19
+  73 |     }, [filters, columnFilters])
+  74 |
+> 75 |     const table = useReactTable({
+     |                   ^^^^^^^^^^^^^ TanStack Table's `useReactTable()` API returns functions that cannot be memoized safely
+  76 |         data,
+  77 |         columns,
+  78 |         onSortingChange: setSorting,  react-hooks/incompatible-library
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/inventory/_components/inventory_table.tsx
+  47:19  warning  '_searchColumn' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+  75:19  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/inventory/_components/inventory_table.tsx:75:19
+  73 |     }, [filters, columnFilters])
+  74 |
+> 75 |     const table = useReactTable({
+     |                   ^^^^^^^^^^^^^ TanStack Table's `useReactTable()` API returns functions that cannot be memoized safely
+  76 |         data,
+  77 |         columns,
+  78 |         onSortingChange: setSorting,  react-hooks/incompatible-library
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/issue-notes/_components/issue_notes_columns.tsx
+  44:26  warning  '_e' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/issue-notes/_components/issue_notes_table.tsx
+  47:19  warning  '_searchColumn' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+  75:19  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/issue-notes/_components/issue_notes_table.tsx:75:19
+  73 |     }, [filters, columnFilters])
+  74 |
+> 75 |     const table = useReactTable({
+     |                   ^^^^^^^^^^^^^ TanStack Table's `useReactTable()` API returns functions that cannot be memoized safely
+  76 |         data,
+  77 |         columns,
+  78 |         onSortingChange: setSorting,  react-hooks/incompatible-library
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/job-ticket/_components/create-job-ticket-dialog.tsx
+    67:3   warning  'PO_ITEMS' is defined but never used                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   111:10  warning  '_loading' is assigned a value but never used                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+   118:10  warning  '_existingTickets' is assigned a value but never used                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+   118:28  warning  '_setExistingTickets' is assigned a value but never used                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+   253:11  warning  '_poIdValue' is assigned a value but never used                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+   314:13  warning  '_response' is assigned a value but never used                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+   367:21  error    Unexpected any. Specify a different type                                                                                                                                                                                                      @typescript-eslint/no-explicit-any
+   375:9   warning  The 'getInventoryList' function makes the dependencies of useEffect Hook (at line 404) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'getInventoryList' in its own useCallback() Hook  react-hooks/exhaustive-deps
+   384:14  warning  '_error' is defined but never used                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+   481:9   warning  '_currentYear' is assigned a value but never used                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+   532:57  error    Unexpected any. Specify a different type                                                                                                                                                                                                      @typescript-eslint/no-explicit-any
+   540:31  error    Unexpected any. Specify a different type                                                                                                                                                                                                      @typescript-eslint/no-explicit-any
+  1026:43  error    Unexpected any. Specify a different type                                                                                                                                                                                                      @typescript-eslint/no-explicit-any
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/job-ticket/_components/job-ticket-print-dialog.tsx
+  134:22  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  135:9   warning  'td' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  137:9   warning  'tdLabel' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/job-ticket/_components/job-ticket-table.tsx
+  47:5   warning  'searchColumn' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+  64:19  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/job-ticket/_components/job-ticket-table.tsx:64:19
+  62 |     }, [searchValue])
+  63 |
+> 64 |     const table = useReactTable({
+     |                   ^^^^^^^^^^^^^ TanStack Table's `useReactTable()` API returns functions that cannot be memoized safely
+  65 |         data,
+  66 |         columns,
+  67 |         onSortingChange: setSorting,  react-hooks/incompatible-library
+  88:44  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-explicit-any
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/job-ticket/_components/paper-type-combobox.tsx
+  20:10  warning  'ScrollArea' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/job-ticket/create/page.tsx
+   225:9   warning  '_currentYear' is assigned a value but never used                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+   286:13  warning  '_response' is assigned a value but never used                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+   323:14  warning  '_error' is defined but never used                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+   367:9   warning  The 'getInventoryList' function makes the dependencies of useEffect Hook (at line 344) change on every render. Move it inside the useEffect callback. Alternatively, wrap the definition of 'getInventoryList' in its own useCallback() Hook  react-hooks/exhaustive-deps
+   376:14  warning  'error' is defined but never used                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+   441:14  warning  'error' is defined but never used                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+  1056:45  error    Unexpected any. Specify a different type                                                                                                                                                                                                      @typescript-eslint/no-explicit-any
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/job-ticket/page.tsx
+   27:10  warning  'JobTicketStatus' is defined but never used  @typescript-eslint/no-unused-vars
+  128:49  error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  229:53  error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/purchase-order/[id]/edit/page.tsx
+   50:3   warning  'PURCHASE_ORDER' is defined but never used     @typescript-eslint/no-unused-vars
+   88:14  warning  'error' is defined but never used              @typescript-eslint/no-unused-vars
+  100:14  warning  'error' is defined but never used              @typescript-eslint/no-unused-vars
+  175:13  warning  'response' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  222:34  error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  224:34  error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/purchase-order/[id]/view/page.tsx
+   69:14  warning  'error' is defined but never used                       @typescript-eslint/no-unused-vars
+   81:14  warning  'error' is defined but never used                       @typescript-eslint/no-unused-vars
+  112:13  warning  'appendItemDetails' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  113:13  warning  'removeItemDetails' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  119:27  warning  'data' is defined but never used                        @typescript-eslint/no-unused-vars
+  149:34  error    Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/purchase-order/_components/purchase-order-columns.tsx
+  4:63  warning  'DropdownMenuLabel' is defined but never used      @typescript-eslint/no-unused-vars
+  4:82  warning  'DropdownMenuSeparator' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/purchase-order/_components/purchase-order-table.tsx
+  46:5   warning  'searchColumn' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+  63:19  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/purchase-order/_components/purchase-order-table.tsx:63:19
+  61 |     }, [searchValue])
+  62 |
+> 63 |     const table = useReactTable({
+     |                   ^^^^^^^^^^^^^ TanStack Table's `useReactTable()` API returns functions that cannot be memoized safely
+  64 |         data,
+  65 |         columns,
+  66 |         onSortingChange: setSorting,  react-hooks/incompatible-library
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/purchase-order/create/page.tsx
+   89:14  warning  'error' is defined but never used              @typescript-eslint/no-unused-vars
+  101:14  warning  'error' is defined but never used              @typescript-eslint/no-unused-vars
+  189:13  warning  'response' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/quotation-management/[id]/edit/page.tsx
+   11:10  warning  'zodResolver' is defined but never used                                                                        @typescript-eslint/no-unused-vars
+   45:3   warning  'CREATE_QUOTATION_REQUEST' is defined but never used                                                           @typescript-eslint/no-unused-vars
+  163:11  warning  'updatedItems' is assigned a value but never used                                                              @typescript-eslint/no-unused-vars
+  212:6   warning  React Hook useEffect has a missing dependency: 'form'. Either include it or remove the dependency array        react-hooks/exhaustive-deps
+  285:13  warning  'response' is assigned a value but never used                                                                  @typescript-eslint/no-unused-vars
+  360:6   warning  React Hook useEffect has a missing dependency: 'user?.name'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/quotation-management/_components/quotation_columns.tsx
+  9:10  warning  'Download' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/quotation-management/_components/quotation_table.tsx
+  44:5   warning  'searchColumn' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+  70:19  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/quotation-management/_components/quotation_table.tsx:70:19
+  68 |     }, [searchValue])
+  69 |
+> 70 |     const table = useReactTable({
+     |                   ^^^^^^^^^^^^^ TanStack Table's `useReactTable()` API returns functions that cannot be memoized safely
+  71 |         data,
+  72 |         columns,
+  73 |         onSortingChange: setSorting,  react-hooks/incompatible-library
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/quotation-management/create/page.tsx
+   11:10  warning  'zodResolver' is defined but never used                                                                  @typescript-eslint/no-unused-vars
+  179:11  warning  'updatedItems' is assigned a value but never used                                                        @typescript-eslint/no-unused-vars
+  228:6   warning  React Hook useEffect has a missing dependency: 'form'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  301:13  warning  'response' is assigned a value but never used                                                            @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/quotation-management/page.tsx
+   15:10  warning  'Tabs' is defined but never used            @typescript-eslint/no-unused-vars
+   15:16  warning  'TabsContent' is defined but never used     @typescript-eslint/no-unused-vars
+   15:29  warning  'TabsList' is defined but never used        @typescript-eslint/no-unused-vars
+   15:39  warning  'TabsTrigger' is defined but never used     @typescript-eslint/no-unused-vars
+   16:10  warning  'LayoutPanelTop' is defined but never used  @typescript-eslint/no-unused-vars
+   16:44  warning  'Table2' is defined but never used          @typescript-eslint/no-unused-vars
+   17:10  warning  'QuotationCard' is defined but never used   @typescript-eslint/no-unused-vars
+  141:56  error    Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  142:56  error    Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/reports/_components/reports-table.tsx
+  37:11  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+  49:39  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+  69:19  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/reports/_components/reports-table.tsx:69:19
+  67 |     }, [data]);
+  68 |
+> 69 |     const table = useReactTable({
+     |                   ^^^^^^^^^^^^^ TanStack Table's `useReactTable()` API returns functions that cannot be memoized safely
+  70 |         data,
+  71 |         columns,
+  72 |         onSortingChange: setSorting,  react-hooks/incompatible-library
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/reports/page.tsx
+   28:10  warning  'Card' is defined but never used          @typescript-eslint/no-unused-vars
+   28:16  warning  'CardContent' is defined but never used   @typescript-eslint/no-unused-vars
+  115:40  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/suppliers/[id]/edit/page.tsx
+    7:28  warning  'useRef' is defined but never used        @typescript-eslint/no-unused-vars
+   23:10  warning  'cn' is defined but never used            @typescript-eslint/no-unused-vars
+  109:52  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  147:55  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/suppliers/[id]/page.tsx
+   74:62  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  208:82  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/suppliers/create/page.tsx
+   30:3   warning  'CloudUpload' is defined but never used            @typescript-eslint/no-unused-vars
+   31:3   warning  'FileArchive' is defined but never used            @typescript-eslint/no-unused-vars
+   35:3   warning  'X' is defined but never used                      @typescript-eslint/no-unused-vars
+   55:10  warning  'uploadedFile' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  130:9   warning  'handleDrop' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  136:9   warning  'removeFile' is assigned a value but never used    @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/suppliers/page.tsx
+  47:66  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  48:66  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  87:18  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/users/_components/user-columns.tsx
+  9:38  warning  'TrashIcon' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/users/_components/user-table.tsx
+  44:5   warning  'searchColumn' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+  70:19  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/users/_components/user-table.tsx:70:19
+  68 |     }, [searchValue])
+  69 |
+> 70 |     const table = useReactTable({
+     |                   ^^^^^^^^^^^^^ TanStack Table's `useReactTable()` API returns functions that cannot be memoized safely
+  71 |         data,
+  72 |         columns,
+  73 |         onSortingChange: setSorting,  react-hooks/incompatible-library
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/users/create/page.tsx
+  60:13  warning  'response' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/(dashboard)/users/page.tsx
+  20:10  warning  'deleteId' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  20:20  warning  'setDeleteId' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/api/customers/route.ts
+   6:27  warning  'request' is defined but never used  @typescript-eslint/no-unused-vars
+  71:14  warning  'error' is defined but never used    @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/api/dispatch/route.ts
+   6:27  warning  'request' is defined but never used  @typescript-eslint/no-unused-vars
+  69:14  warning  'error' is defined but never used    @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/api/grn/[id]/route.ts
+   74:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  104:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/api/grn/route.ts
+   6:27  warning  'request' is defined but never used  @typescript-eslint/no-unused-vars
+  68:14  warning  'error' is defined but never used    @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/api/inventory/route.ts
+   6:27  warning  'request' is defined but never used  @typescript-eslint/no-unused-vars
+  70:14  warning  'error' is defined but never used    @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/api/issue-notes/[id]/route.ts
+   74:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  104:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/api/issue-notes/route.ts
+   6:27  warning  'request' is defined but never used  @typescript-eslint/no-unused-vars
+  30:22  warning  '_' is defined but never used        @typescript-eslint/no-unused-vars
+  76:14  warning  'error' is defined but never used    @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/api/jobs/route.ts
+   6:27  warning  'request' is defined but never used  @typescript-eslint/no-unused-vars
+  72:14  warning  'error' is defined but never used    @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/api/purchase-orders/route.ts
+   6:27  warning  'request' is defined but never used  @typescript-eslint/no-unused-vars
+  70:14  warning  'error' is defined but never used    @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/api/quotes/route.ts
+   6:27  warning  'request' is defined but never used  @typescript-eslint/no-unused-vars
+  69:14  warning  'error' is defined but never used    @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/api/reports/dashboard/insights/route.ts
+  32:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/api/reports/route.ts
+  32:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/api/reports/summary/route.ts
+  32:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/api/users/route.ts
+   5:27  warning  'request' is defined but never used  @typescript-eslint/no-unused-vars
+  68:12  warning  'error' is defined but never used    @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/app/layout.tsx
+  2:15  warning  'Metadata' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/components/additional-kpis.tsx
+  1:29  warning  'CardDescription' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/components/dispatch-card.tsx
+  13:5  warning  'Box' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/components/inventory-card.tsx
+   7:5  warning  'Box' is defined but never used  @typescript-eslint/no-unused-vars
+  14:5  warning  'Tag' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/components/job-ticket-card.tsx
+  10:5  warning  'FileText' is defined but never used        @typescript-eslint/no-unused-vars
+  15:5  warning  'ArrowRightIcon' is defined but never used  @typescript-eslint/no-unused-vars
+  16:5  warning  'History' is defined but never used         @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/components/layout/app-sidebar.tsx
+   5:3   warning  'IconHelp' is defined but never used      @typescript-eslint/no-unused-vars
+   7:3   warning  'IconSearch' is defined but never used    @typescript-eslint/no-unused-vars
+   8:3   warning  'IconSettings' is defined but never used  @typescript-eslint/no-unused-vars
+  20:3   warning  'SidebarInput' is defined but never used  @typescript-eslint/no-unused-vars
+  41:10  warning  'NavSecondary' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/components/layout/nav-main.tsx
+  11:3  warning  'SidebarGroup' is defined but never used         @typescript-eslint/no-unused-vars
+  12:3  warning  'SidebarGroupContent' is defined but never used  @typescript-eslint/no-unused-vars
+  14:3  warning  'SidebarMenuAction' is defined but never used    @typescript-eslint/no-unused-vars
+
+/Users/anupaindula/Desktop/Projects/madhawee-printers-ERP-system-FE/src/components/pdf-generator.tsx
+   18:7   warning  'detectImageFormat' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  164:15  warning  'formatPhone' is assigned a value but never used        @typescript-eslint/no-unused-vars
+
+✖ 162 problems (23 errors, 139 warnings)
+

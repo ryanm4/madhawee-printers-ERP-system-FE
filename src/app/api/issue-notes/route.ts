@@ -20,14 +20,14 @@ export async function GET(request: NextRequest) {
         });
 
         if (!response.ok) {
-            let errorText = await response.text();
+            const errorText = await response.text();
             try {
                 const errorData = JSON.parse(errorText);
                 return NextResponse.json(
                     { message: errorData.message || `Backend error: ${response.status}` },
                     { status: response.status }
                 );
-            } catch (e) {
+            } catch (_) {
                 return NextResponse.json(
                     { message: `Backend error: ${response.status}`, details: errorText },
                     { status: response.status }
@@ -37,10 +37,10 @@ export async function GET(request: NextRequest) {
 
         const data = await response.json();
         return NextResponse.json(data.data || data);
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Issue Notes API Error:', error);
         return NextResponse.json(
-            { message: "Internal server error", error: error.message },
+            { message: "Internal server error", error: (error as Error).message },
             { status: 500 }
         );
     }

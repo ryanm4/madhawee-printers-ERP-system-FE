@@ -19,9 +19,7 @@ import {
 import {
     Pagination,
     PaginationContent,
-    PaginationEllipsis,
     PaginationItem,
-    PaginationLink,
 } from "@/components/ui/pagination"
 
 interface DataTablePaginationProps<TData> {
@@ -43,7 +41,7 @@ export function DataTablePagination<TData>({
             for (let i = 0; i < pageCount; i++) pages.push(i)
         } else {
             let start = Math.max(0, pageIndex - 2)
-            let end = Math.min(pageCount - 1, start + showMax - 1)
+            const end = Math.min(pageCount - 1, start + showMax - 1)
 
             if (end === pageCount - 1) {
                 start = Math.max(0, end - showMax + 1)

@@ -158,18 +158,16 @@ function CreateCustomerRelationship() {
         vat_type: data.vat_type ?? "",
         vat_no: data.vat_no ?? "",
         logo_url: data.logoUrl ?? "",
-        contact_persons: JSON.stringify(
-          data.contactPersons.map((cp) => ({
-            name: cp.name,
-            email: cp.email ?? "",
-            phone: cp.phone ?? "",
-          }))
-        ),
+        contacts: data.contactPersons.map((cp) => ({
+          name: cp.name,
+          email: cp.email ?? "",
+          phone: cp.phone ?? "",
+        })),
         created_by: user?.name || "User",
         updated_by: user?.name || "User",
         status: "CREATED",
       };
-      const response = await CustomerApi.create(payload);
+      await CustomerApi.create(payload);
 
       toast(`Customer Created`, {
         description: `The customer has been created successfully.`,
@@ -197,7 +195,7 @@ function CreateCustomerRelationship() {
     >["0"]["render"]
   ) => <FormField control={form.control} name={name} render={render} />;
 
-  const customerType = form.watch("customer_type");
+  const _customerType = form.watch("customer_type");
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       {isLoading && <FullPageLoader />}
@@ -302,7 +300,7 @@ function CreateCustomerRelationship() {
                 <div className="flex flex-row gap-4">
                   {renderFormField("vat_type", ({ field }) => (
                     <FormItem className="w-full">
-                      <FormLabel>Vat Type</FormLabel>
+                      <FormLabel>VAT Type</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
@@ -410,7 +408,7 @@ function CreateCustomerRelationship() {
                     ))}
                   </div>
                 </div>
-                {renderFormField("logoUrl", ({ field }) => (
+                {renderFormField("logoUrl", ({ field: _field }) => (
                   <FormItem>
                     <FormLabel>Company Logo</FormLabel>
                     <FormControl>

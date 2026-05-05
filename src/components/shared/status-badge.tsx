@@ -2,11 +2,11 @@ import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-export type StatusType = 
-  | "QUOTATION" 
-  | "PURCHASE_ORDER" 
-  | "JOB_TICKET" 
-  | "CUSTOMER" 
+export type StatusType =
+  | "QUOTATION"
+  | "PURCHASE_ORDER"
+  | "JOB_TICKET"
+  | "CUSTOMER"
   | "INVENTORY"
   | "TAX"
   | "DISPATCH_INVOICE";
@@ -50,14 +50,14 @@ const statusStyles: Record<string, string> = {
   "NONE": "border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200",
 };
 
-export function StatusBadge({ status, type, className }: StatusBadgeProps) {
+export function StatusBadge({ status, className }: StatusBadgeProps) {
   if (!status) return null;
   const normalizedStatus = status.toUpperCase();
   const style = statusStyles[normalizedStatus] || "border-gray-200 bg-gray-50 text-gray-800 hover:bg-gray-100";
 
   return (
-    <Badge 
-      variant="outline" 
+    <Badge
+      variant="outline"
       className={cn(
         "uppercase font-bold border shadow-none transition-colors whitespace-nowrap tracking-wide flex items-center justify-center",
         // Default size/rounding if no specific classes provided

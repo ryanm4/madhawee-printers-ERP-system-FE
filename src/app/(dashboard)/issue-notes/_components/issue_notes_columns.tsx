@@ -36,24 +36,29 @@ export const issueNotesColumns = (
         },
         {
             accessorKey: "date",
-            header: "Date",
+            header: "Issued Date",
             cell: ({ row }) => {
                 const date = row.original.date
                 try {
                     return date ? format(parseISO(date), "PPP") : "-"
-                } catch (e) {
+                } catch (_e) {
                     return date || "-"
                 }
             },
         },
         {
-            accessorKey: "collector_name",
-            header: "Collector Name",
+            accessorKey: "job_number",
+            header: "Job Number",
         },
         {
             accessorKey: "job_name",
-            header: "Related Job",
+            header: "Job Name",
         },
+        {
+            accessorKey: "collector_name",
+            header: "Collector Name",
+        },
+
         {
             accessorKey: "remarks",
             header: "Remarks",

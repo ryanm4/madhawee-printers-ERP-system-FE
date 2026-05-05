@@ -27,12 +27,9 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
-  CloudUpload,
-  FileArchive,
   Loader2,
   Plus,
   Trash2,
-  X,
 } from "lucide-react";
 import {
   Select,

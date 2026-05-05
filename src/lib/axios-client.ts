@@ -4,7 +4,7 @@ import axios, {
     AxiosError,
     InternalAxiosRequestConfig
 } from 'axios';
-import { getToken, removeToken, clearAuth } from './auth';
+import { getToken, clearAuth } from './auth';
 
 // Create axios instance with base configuration
 const apiClient: AxiosInstance = axios.create({
@@ -65,7 +65,7 @@ apiClient.interceptors.response.use(
 
         // Extract error message
         const errorMessage =
-            (error.response?.data as any)?.message ||
+            (error.response?.data as { message?: string })?.message ||
             error.message ||
             'An unexpected error occurred';
 

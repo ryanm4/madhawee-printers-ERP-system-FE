@@ -4,7 +4,7 @@ import PageTitleWithBreadcrumb from '@/components/shared/page-title-with-breadcr
 import { customerSchema } from '@/modules/customer/validation'
 import { useParams, useRouter } from 'next/navigation'
 import React, { useEffect, useRef, useState } from 'react'
-import { FieldPath, useForm, SubmitHandler } from 'react-hook-form'
+import { FieldPath, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -16,7 +16,6 @@ import { cn } from '@/lib/utils'
 import { CloudUpload, FileArchive, X, Edit } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CustomerType, VatType } from '@/config/enum'
-import { CREATE_CUSTOMER } from '@/modules/customer/types'
 import { CustomerApi } from '@/modules/customer/api'
 import { toast } from 'sonner'
 import { FullPageLoader } from "@/components/shared/loader";
@@ -42,13 +41,13 @@ function ViewCustomerRelationship() {
         vat_no: "",
         logoUrl: "",
         contactPersons: [
-          {
-            name: "",
-            email: "",
-            phone: "",
-          }
+            {
+                name: "",
+                email: "",
+                phone: "",
+            }
         ],
-        created_by: "", 
+        created_by: "",
         status: "Active",
     }
 
@@ -81,8 +80,8 @@ function ViewCustomerRelationship() {
                     vat_no: data.vat_no,
                     logoUrl: data.logo_url,
                     contactPersons: (() => {
-                        const arr = Array.isArray(data.contact_persons) ? data.contact_persons : (typeof data.contact_persons === 'string' && data.contact_persons ? JSON.parse(data.contact_persons) : []);
-                        return arr.length > 0 ? arr.map((cp: any) => ({
+                        const arr = Array.isArray(data.contacts) ? data.contacts : [];
+                        return arr.length > 0 ? arr.map((cp: { id?: number; name?: string; email?: string; phone?: string }) => ({
                             id: cp.id || undefined,
                             name: cp.name || "",
                             email: cp.email || "",
@@ -94,7 +93,7 @@ function ViewCustomerRelationship() {
                 });
             } catch (error) {
                 console.error("Failed to fetch customer:", error);
-                ("Failed to load customer data");
+                toast("Failed to load customer data");
                 router.push("/customers");
             } finally {
                 setIsLoading(false);
@@ -258,7 +257,7 @@ function ViewCustomerRelationship() {
                                 <div className='flex flex-row gap-4'>
                                     {renderFormField("vat_type", ({ field }) => (
                                         <FormItem className='w-full'>
-                                            <FormLabel>Vat Type</FormLabel>
+                                            <FormLabel>VAT Type</FormLabel>
                                             <Select disabled onValueChange={field.onChange} value={field.value}>
                                                 <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Vat Type" /></SelectTrigger></FormControl>
                                                 <SelectContent>
@@ -281,7 +280,7 @@ function ViewCustomerRelationship() {
                                     ))}
 
                                 </div>
-                                {renderFormField("logoUrl", ({ field }) => (
+                                {renderFormField("logoUrl", ({ field: _field }) => (
                                     <FormItem>
                                         <FormLabel>
                                             Company Logo
@@ -348,7 +347,7 @@ function ViewCustomerRelationship() {
                                     <p className="text-xs text-muted-foreground mb-4">View your contact person details here</p>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    {form.watch("contactPersons")?.map((contact: any, index: number) => (
+                                    {form.watch("contactPersons")?.map((contact, index) => (
                                         <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 border rounded-lg bg-accent/5">
                                             {renderFormField(`contactPersons.${index}.name`, ({ field }) => (
                                                 <FormItem>

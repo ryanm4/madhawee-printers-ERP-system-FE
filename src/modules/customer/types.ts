@@ -16,12 +16,13 @@ export interface CUSTOMER {
     vat_type: string,
     vat_no: string,
     logo_url: string,
-    contact_persons: string,
+    contacts: CONTACT_PERSON[];
     created_on: string,
     created_by: string,
     updated_on: string,
     updated_by: string,
-    status: string
+    status: string;
+    [key: string]: unknown;
 }
 
 export interface CREATE_CUSTOMER {
@@ -34,7 +35,7 @@ export interface CREATE_CUSTOMER {
     vat_type: string,
     vat_no: string,
     logo_url: string,
-    contact_persons: string,
+    contacts: CONTACT_PERSON[];
     created_by: string,
     updated_by: string,
     status: string,

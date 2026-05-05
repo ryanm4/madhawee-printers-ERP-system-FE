@@ -131,7 +131,7 @@ export function JobTicketPrintDialog({
 }
 
 export function buildPrintHTML(data: JobTicketPrintData): string {
-  const safe = (val: any) => (val !== undefined && val !== null && String(val).trim() !== "" ? String(val) : "&nbsp;");
+  const safe = (val: unknown) => (val !== undefined && val !== null && String(val).trim() !== "" ? String(val) : "&nbsp;");
   const td = (content: string, style = "") =>
     `<td style="border:1px solid #333;padding:5px 8px;${style}">${safe(content)}</td>`;
   const tdLabel = (content: string, style = "") =>

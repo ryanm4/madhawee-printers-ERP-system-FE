@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { GET_ALL_INVENTORY } from '@/modules/inventory/types'
 import { inventoryApi } from '@/modules/inventory/api'
 import { inventoryManagementScheme } from '@/modules/inventory/validation'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -48,8 +48,7 @@ function ViewInventoryItem() {
             try {
                 setIsLoading(true);
                 const response = await inventoryApi.getById(id);
-                // @ts-ignore
-                const data = response.data[0] || response.data; // Handle potential array response or single object
+                const data = (Array.isArray(response.data) ? response.data[0] : response.data) as GET_ALL_INVENTORY;
 
                 // Populate form with fetched data
                 form.reset({
@@ -58,7 +57,6 @@ function ViewInventoryItem() {
                     item_name: data.item_name,
                     size: data.size,
                     // Parse quantity as number because schema expects number, but API might return string
-                    // @ts-ignore
                     quantity: Number(data.quantity) || 0,
                     unit_of_measure: data.unit_of_measure,
                     reorder_level: data.reorder_level,

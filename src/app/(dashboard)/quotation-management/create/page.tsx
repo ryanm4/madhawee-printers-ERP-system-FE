@@ -38,7 +38,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
 import { CustomerApi } from "@/modules/customer/api";
-import { CUSTOMER } from "@/modules/customer/types";
+import { CUSTOMER, CONTACT_PERSON } from "@/modules/customer/types";
 import { quotationApi } from "@/modules/quotations/api";
 import { toast } from "sonner";
 import { CREATE_QUOTATION_REQUEST } from "@/modules/quotations/types";
@@ -145,8 +145,7 @@ function CreateQuotation({
   };
 
   const form = useForm<QuotationFormValues>({
-    resolver: zodResolver(createQuotationSchema),
-    defaultValues: baseDefaultValues as any,
+    defaultValues: baseDefaultValues as QuotationFormValues,
   });
 
   useEffect(() => {
@@ -175,7 +174,7 @@ function CreateQuotation({
   const watchTaxType = form.watch("tax_type_id");
 
   // Helper to calculate totals
-  const calculateTotals = (currentItems: any[], taxTypeId: number) => {
+  const calculateTotals = (currentItems: QuotationFormValues["items"], taxTypeId: number) => {
     let subTotal = 0;
     const updatedItems = currentItems.map((item) => {
       const qty = parseFloat(item.item_qty || "0");
@@ -305,7 +304,7 @@ function CreateQuotation({
         description: `Quotation has been created successfully.`,
       });
 
-      form.reset(baseDefaultValues as any);
+      form.reset(baseDefaultValues as QuotationFormValues);
       form.clearErrors();
 
       router.push("/quotation-management");
@@ -402,11 +401,14 @@ function CreateQuotation({
                           const selectedCustomer = customer.find(
                             (c) => String(c.customer_id) === value
                           );
-                          if (selectedCustomer) {
-                            // Auto-populate first contact person by default
-                            const firstContact = selectedCustomer.contact_persons?.[0];
-                            form.setValue("contact_person", firstContact?.name || "");
-                          } else {
+                            if (selectedCustomer) {
+                              // Auto-populate first contact person by default
+                              const contactPersons = Array.isArray(selectedCustomer.contact_persons) 
+                                ? selectedCustomer.contact_persons 
+                                : [];
+                              const firstContact = contactPersons[0];
+                              form.setValue("contact_person", firstContact?.name || "");
+                            } else {
                             form.setValue("contact_person", "");
                           }
                         }}
@@ -439,7 +441,9 @@ function CreateQuotation({
                     const selectedCustomer = customer.find(
                       (c) => c.customer_id === form.watch("customer_id")
                     );
-                    const contacts = selectedCustomer?.contact_persons || [];
+                    const contacts = Array.isArray(selectedCustomer?.contact_persons) 
+                      ? selectedCustomer.contact_persons 
+                      : [];
 
                     return (
                       <FormItem>
@@ -451,7 +455,7 @@ function CreateQuotation({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {contacts.map((cp, idx) => (
+                            {contacts.map((cp: CONTACT_PERSON, idx: number) => (
                               <SelectItem key={idx} value={cp.name}>
                                 {cp.name}
                               </SelectItem>
@@ -473,7 +477,10 @@ function CreateQuotation({
                           const selectedCustomerId = form.watch("customer_id");
                           const selectedContactName = form.watch("contact_person");
                           const selectedCustomer = customer.find(c => c.customer_id === selectedCustomerId);
-                          const contact = selectedCustomer?.contact_persons?.find(cp => cp.name === selectedContactName);
+                          const contactPersons = Array.isArray(selectedCustomer?.contact_persons) 
+                            ? selectedCustomer.contact_persons 
+                            : [];
+                          const contact = contactPersons.find((cp: CONTACT_PERSON) => cp.name === selectedContactName);
                           return contact?.phone || "";
                         })()
                       }

@@ -1,9 +1,9 @@
 export interface GRNItem {
-    id: number;
+    id?: number;
     item_name: string;
     quantity: number;
-    rate: string;
-    amount: string;
+    rate: string | number;
+    amount: string | number;
 }
 
 export interface GRN {
@@ -22,4 +22,5 @@ export interface GRN {
     updated_on: string | null;
     updated_by: string | null;
     items: GRNItem[];
+    [key: string]: unknown;
 }

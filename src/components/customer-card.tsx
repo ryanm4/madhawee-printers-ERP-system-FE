@@ -105,7 +105,11 @@ export function CustomerCard({
                         <span className="text-muted-foreground text-[12px] uppercase tracking-wider font-semibold">Contact Person</span>
                         <div className="flex items-center gap-2">
                              <User className="h-3 w-3 text-primary" />
-                             <span className="font-medium truncate" title={customer.contact_persons?.[0]?.name}>{customer.contact_persons?.[0]?.name || "N/A"}</span>
+                             {(() => {
+                                 const contact = Array.isArray(customer.contact_persons) ? customer.contact_persons[0] : null;
+                                 const name = contact ? contact.name : (typeof customer.contact_persons === 'string' ? customer.contact_persons : "N/A");
+                                 return <span className="font-medium truncate" title={name}>{name || "N/A"}</span>;
+                             })()}
                         </div>
                     </div>
                     <div className="flex flex-col items-end gap-0.5 shrink-0 ml-4">

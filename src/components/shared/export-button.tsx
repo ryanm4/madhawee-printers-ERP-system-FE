@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/error-utils";
 
 interface ExportButtonProps {
-    data: any[];
+    data: Record<string, unknown>[];
     filename: string;
 }
 

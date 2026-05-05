@@ -70,12 +70,12 @@ function ViewSupplierProfile() {
                     vat_no: data.vat_no,
                     logoUrl: data.logo_url,
                     contactPersons: (() => {
-                        const arr = Array.isArray(data.contact_persons) ? data.contact_persons : (typeof data.contact_persons === 'string' && data.contact_persons ? JSON.parse(data.contact_persons) : []);
-                        return arr.length > 0 ? arr.map((cp: any) => ({
-                            id: cp.id || undefined,
-                            name: cp.name || "",
-                            email: cp.email || "",
-                            phone: cp.phone || "",
+                        const arr = Array.isArray(data.contact_persons) ? data.contact_persons : (typeof data.contact_persons === 'string' && data.contact_persons ? JSON.parse(data.contact_persons) : []) as Array<Record<string, unknown>>;
+                        return arr.length > 0 ? arr.map((cp) => ({
+                            id: (cp.id as number) || undefined,
+                            name: (cp.name as string) || "",
+                            email: (cp.email as string) || "",
+                            phone: (cp.phone as string) || "",
                         })) : [{ name: "", email: "", phone: "" }];
                     })(),
                     created_by: data.created_by,
@@ -205,7 +205,7 @@ function ViewSupplierProfile() {
                                     <p className="text-xs text-muted-foreground mb-4">Contact individuals for this supplier.</p>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    {form.watch("contactPersons")?.map((contact: any, index: number) => (
+                                    {form.watch("contactPersons")?.map((_, index) => (
                                         <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 border rounded-lg bg-accent/5">
                                             {renderFormField(`contactPersons.${index}.name`, ({ field }) => (
                                                 <FormItem>

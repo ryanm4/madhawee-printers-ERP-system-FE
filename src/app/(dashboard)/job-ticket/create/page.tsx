@@ -14,12 +14,11 @@ import {
   X,
   FileArchive,
 } from "lucide-react"; // Import icons
-import { format, addYears } from "date-fns";
+import { format } from "date-fns";
 import { useState, useRef, useEffect } from "react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 
 import {
   Form,
@@ -56,7 +55,6 @@ import {
   JobTicketStatus,
   PLATES_STATUS,
   PRODUCT_TYPES,
-  PurchaseOrderStatus,
   PurchaseOrderType,
 } from "@/config/enum";
 import { PaperTypeCombobox } from "../_components/paper-type-combobox";
@@ -64,6 +62,7 @@ import { Combobox } from "@/components/shared/combobox";
 import {
   PURCHASE_ORDER,
   PURCHASE_ORDER_ID,
+  PO_ITEMS,
 } from "@/modules/purchase-order/types";
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { toMySQLDateTime } from "@/hooks/sql-date-time";
@@ -223,7 +222,7 @@ function CreateJobTicket() {
   };
 
   const now = new Date();
-  const currentYear = now.getFullYear();
+  const _currentYear = now.getFullYear();
 
   async function onSubmit(data: JobTicketFormValues) {
     try {
@@ -284,7 +283,7 @@ function CreateJobTicket() {
         created_by: user?.name || "User",
       };
 
-      const response = await jobTicketsApi.create(payload);
+      const _response = await jobTicketsApi.create(payload);
 
       toast("Job Ticket Created", {
         description: "The job ticket has been created successfully.",
@@ -321,28 +320,16 @@ function CreateJobTicket() {
       setPrintData(pd);
       setShowPrintDialog(true);
       setIsLoading(false);
-    } catch (error) {
+    } catch (_error) {
       toast("Failed to Create Job Ticket", {
-        description: getErrorMessage(error, "An error occurred while creating the job ticket. Please try again."),
+        description: getErrorMessage(_error, "An error occurred while creating the job ticket. Please try again."),
       });
     } finally {
       setIsLoading(false);
     }
   }
 
-  useEffect(() => {
-    fetchData();
-    getInventoryList();
-    const userData = getUser();
-    console.log(userData)
-    if (userData) {
-      setUser({
-        name: userData.name || "User",
-        email: userData.email,
-        avatar: "",
-      });
-    }
-  }, []);
+
 
   const fetchData = async () => {
     try {
@@ -380,7 +367,19 @@ function CreateJobTicket() {
       setIsLoading(false);
     }
   };
-
+  useEffect(() => {
+    fetchData();
+    getInventoryList();
+    const userData = getUser();
+    console.log(userData)
+    if (userData) {
+      setUser({
+        name: userData.name || "User",
+        email: userData.email,
+        avatar: "",
+      });
+    }
+  }, [getInventoryList]);
   const selectedPoId = form.watch("customer_po");
 
 
@@ -500,7 +499,7 @@ function CreateJobTicket() {
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <Combobox
-                        items={selectedPoItems.map((item: any) => ({
+                        items={selectedPoItems.map((item: PO_ITEMS) => ({
                           value: item.description,
                           label: item.description,
                         }))}
@@ -508,7 +507,7 @@ function CreateJobTicket() {
                         onValueChange={(value) => {
                           field.onChange(value);
                           const selectedItem = selectedPoItems.find(
-                            (i: any) => i.item_code === value
+                            (i: PO_ITEMS) => i.item_code === value
                           );
                           if (selectedItem) {
                             form.setValue(
@@ -633,17 +632,7 @@ function CreateJobTicket() {
                       <FormMessage />
                     </FormItem>
                   ))}
-                  {/* {renderFormField("jobName", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>Job Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter Job Name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))} */}
                 </div>
-                {/* Product Details */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   {renderFormField("productType", ({ field }) => (
                     <FormItem>
@@ -732,7 +721,6 @@ function CreateJobTicket() {
                   ))}
                 </div>
 
-                {/* Dates */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {renderFormField("packingDate", ({ field }) => (
                     <FormItem>
@@ -904,9 +892,7 @@ function CreateJobTicket() {
                           )}
                         </div>
 
-                        {/* Raw Materials for this Paper Type */}
-
-                        {rawMaterials.map((_rm: any, rmIndex: number) => (
+                        {rawMaterials.map((_rm, rmIndex: number) => (
                           <div
                             key={rmIndex}
                             className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-2"
@@ -1067,7 +1053,7 @@ function CreateJobTicket() {
                                     form.setValue(
                                       `paperTypes.${index}.rawMaterials`,
                                       current.filter(
-                                        (_: any, i: number) => i !== rmIndex
+                                        (_: unknown, i: number) => i !== rmIndex
                                       )
                                     );
                                   }
@@ -1141,8 +1127,6 @@ function CreateJobTicket() {
                   </div>
                 </div>
 
-
-                {/* CTP Plates */}
                 <div>
                   <h3 className="text-sm font-medium mb-2">CTP Plates</h3>
                   <p className="text-xs text-muted-foreground mb-4">
@@ -1248,7 +1232,6 @@ function CreateJobTicket() {
                   </div>
                 </div>
 
-                {/* Ink Section with updated delete logic */}
                 <div>
                   <h3 className="text-sm font-medium">Ink</h3>
                   <p className="text-xs text-muted-foreground mb-4">

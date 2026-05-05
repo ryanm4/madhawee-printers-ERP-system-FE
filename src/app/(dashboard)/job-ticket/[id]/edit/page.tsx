@@ -1,8 +1,6 @@
 "use client";
 
 import { getErrorMessage } from "@/lib/error-utils";
-import axios from "axios";
-
 import { FieldPath, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -15,12 +13,11 @@ import {
   X,
   FileArchive,
 } from "lucide-react"; // Import icons
-import { format, addYears } from "date-fns";
+import { format } from "date-fns";
 import { useState, useRef, useEffect } from "react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 
 import {
   Form,
@@ -64,6 +61,7 @@ import { Combobox } from "@/components/shared/combobox";
 import {
   PURCHASE_ORDER,
   PURCHASE_ORDER_ID,
+  PO_ITEMS,
 } from "@/modules/purchase-order/types";
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { PaperTypeCombobox } from "../../_components/paper-type-combobox";
@@ -284,7 +282,7 @@ function EditJobTicket() {
         status: ticketStatus,
       };
 
-      const response = await jobTicketsApi.update(id, formattedData as any);
+      const response = await jobTicketsApi.update(id, formattedData as CREATE_TICKETS);
 
       if (response.status === 200) {
         toast("Job Ticket updated successfully");
@@ -344,7 +342,7 @@ function EditJobTicket() {
         const inventory = inventoryResponse.data;
         
         // Initial filter for Approved POs
-        const filteredPOs = pos.filter((p: any) => p.status === PurchaseOrderStatus.APPROVED);
+        const filteredPOs = pos.filter((p: PURCHASE_ORDER) => p.status === PurchaseOrderStatus.APPROVED);
 
         setPurchaseOrderData(filteredPOs);
         setCustomerData(customers);
@@ -358,7 +356,7 @@ function EditJobTicket() {
           setTicketStatus(jt.status);
 
           // 3. Ensure the currently linked PO is in the list even if not APPROVED
-          const currentPo = pos.find((p: any) => String(p.po_id) === String(jt.po_id));
+          const currentPo = pos.find((p: PURCHASE_ORDER) => String(p.po_id) === String(jt.po_id));
           if (currentPo && !filteredPOs.some(p => String(p.po_id) === String(jt.po_id))) {
             setPurchaseOrderData(prev => [...prev, currentPo]);
           }
@@ -599,7 +597,7 @@ function EditJobTicket() {
                     <FormLabel>Item</FormLabel>
                     <Combobox
                       items={(() => {
-                        const baseItems = selectedPoItems.map((item: any) => ({
+                        const baseItems = selectedPoItems.map((item: PO_ITEMS) => ({
                           value: String(item.item_code),
                           label: String(item.item_code),
                         }));
@@ -613,7 +611,7 @@ function EditJobTicket() {
                       onValueChange={(value) => {
                         field.onChange(value);
                         const selectedItem = selectedPoItems.find(
-                          (i: any) => i.item_code === value
+                          (i: PO_ITEMS) => i.item_code === value
                         );
                         if (selectedItem) {
                           form.setValue(
@@ -955,7 +953,7 @@ function EditJobTicket() {
                       <h5 className="text-xs font-medium mb-2 mt-2">
                         Raw Materials
                       </h5>
-                      {rawMaterials.map((_rm: any, rmIndex: number) => (
+                      {rawMaterials.map((_rm, rmIndex: number) => (
                         <div
                           key={rmIndex}
                           className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-2"
@@ -1116,7 +1114,7 @@ function EditJobTicket() {
                                   form.setValue(
                                     `paperTypes.${index}.rawMaterials`,
                                     current.filter(
-                                      (_: any, i: number) => i !== rmIndex
+                                      (_, i: number) => i !== rmIndex
                                     )
                                   );
                                 }

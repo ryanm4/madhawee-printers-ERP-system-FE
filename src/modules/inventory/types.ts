@@ -13,7 +13,7 @@ export interface GET_ALL_INVENTORY {
     created_by: string;
     updated_on: string;
     updated_by: string;
-
+    [key: string]: unknown;
 }
 
 export interface CREATE_INVENTORY {

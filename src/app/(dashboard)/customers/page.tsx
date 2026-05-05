@@ -14,9 +14,6 @@ import { appToast } from "@/lib/toast-utils";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutPanelTop, Table2 } from "lucide-react";
-import { CustomerCard } from "@/components/customer-card";
 
 export default function CRMPage() {
   const router = useRouter();
@@ -34,14 +31,14 @@ export default function CRMPage() {
       const response = await CustomerApi.getAll();
 
       if (response.status === 200) {
-        const sortedData = response.data.sort((a: any, b: any) => {
-          const dateA = new Date(a.created_on || a.created_at || 0).getTime();
-          const dateB = new Date(b.created_on || b.created_at || 0).getTime();
+        const sortedData = response.data.sort((a: CUSTOMER, b: CUSTOMER) => {
+          const dateA = new Date(a.created_on || 0).getTime();
+          const dateB = new Date(b.created_on || 0).getTime();
           return dateB - dateA;
         });
         setData(sortedData);
       }
-    } catch (error) {
+    } catch (_error) {
       console.error("Failed to fetch inventory");
     } finally {
       setIsLoading(false);
@@ -70,7 +67,7 @@ export default function CRMPage() {
       await CustomerApi.delete(deleteId);
       appToast.success("Customer Deleted", "Customer has been deleted successfully.");
       await fetchData();
-    } catch (error) {
+    } catch (_error) {
       console.error("Failed to delete inventory item");
       appToast.error("Failed to Delete Customer", "An error occurred while deleting the customer. Please try again.");
     } finally {

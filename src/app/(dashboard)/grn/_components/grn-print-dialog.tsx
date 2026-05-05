@@ -8,7 +8,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Printer, Download } from "lucide-react";
+import { Printer } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { GRN } from "@/modules/inventory/grn/types";
 
@@ -77,12 +77,12 @@ export function GRNPrintDialog({
 }
 
 export function buildGRNPrintHTML(data: GRN): string {
-  const safe = (val: any) => (val !== undefined && val !== null && String(val).trim() !== "" ? String(val) : "");
+  const safe = (val: string | number | null | undefined) => (val !== undefined && val !== null && String(val).trim() !== "" ? String(val) : "");
 
   let formattedDate = "";
   try {
     formattedDate = data.received_date ? format(parseISO(data.received_date), "dd/MM/yyyy") : "";
-  } catch (e) {
+  } catch (_e) {
     formattedDate = safe(data.received_date);
   }
 

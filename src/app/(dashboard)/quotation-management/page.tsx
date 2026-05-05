@@ -6,20 +6,19 @@ import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcr
 import { getErrorMessage } from "@/lib/error-utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { QUOTATIONS } from "@/modules/quotations/types";
+import { QUOTATIONS, QuotationItems } from "@/modules/quotations/types";
 import { quotationColumns } from "./_components/quotation_columns";
 import { quotationApi } from "@/modules/quotations/api";
 import { CustomerApi } from "@/modules/customer/api";
 import { DataTable } from "./_components/quotation_table";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutPanelTop, PlusIcon, Search, Table2 } from "lucide-react";
-import { QuotationCard } from "@/components/quotation-card";
+import { PlusIcon, Search } from "lucide-react";
 import { appToast } from "@/lib/toast-utils";
 import { EmptyState } from "@/components/shared/empty-page";
 import { generateQuotationPDF } from "@/components/pdf-generator";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
+import { CONTACT_PERSON } from "@/modules/customer/types";
 
 function QuotationsManagement() {
   const router = useRouter();
@@ -57,7 +56,9 @@ function QuotationsManagement() {
                   customer_phone: customer.phone || pdfData.customer_phone,
                   customer_email: customer.email || pdfData.customer_email,
                   contact_person:
-                    customer.contact_persons?.[0]?.name || pdfData.contact_person,
+                    (Array.isArray(customer.contact_persons) && customer.contact_persons.length > 0)
+                      ? (customer.contact_persons[0] as CONTACT_PERSON).name
+                      : pdfData.contact_person,
                 };
               }
             } catch (custError) {
@@ -68,7 +69,10 @@ function QuotationsManagement() {
             }
           }
 
-          await generateQuotationPDF(pdfData);
+          await generateQuotationPDF({
+            ...pdfData,
+            items: pdfData.items || [],
+          } as QUOTATIONS & { items: QuotationItems[] });
         } else {
           appToast.error("Data Error", "Failed to load quotation details");
         }
@@ -82,7 +86,7 @@ function QuotationsManagement() {
         setLoading(true);
         const response = await quotationApi.getById(Number(id));
         if (response.data) {
-          const data = response.data as any;
+          const data = response.data;
           const payload = {
             quote_id: Number(data.quote_id),
             customer_id: Number(data.customer_id),
@@ -100,7 +104,7 @@ function QuotationsManagement() {
             no_of_items: data.no_of_items,
             net_total: data.net_total,
             updated_by: data.updated_by || getUser()?.name || "User",
-            items: (data.items || []).map((item: any) => ({
+            items: (data.items || []).map((item) => ({
               item_id: item.item_id,
               item_category: item.item_category,
               item_qty: String(item.item_qty),
@@ -110,7 +114,7 @@ function QuotationsManagement() {
               item_total_price: String(item.item_total_price),
             })),
           };
-          await quotationApi.update(Number(id), payload as any);
+          await quotationApi.update(Number(id), payload);
           appToast.success("Status Updated", `Quotation status updated to ${status}`);
           await fetchData();
         } else {
@@ -137,9 +141,9 @@ function QuotationsManagement() {
       const response = await quotationApi.getAll();
 
       if (response.status === 200) {
-        const sortedData = response.data.sort((a: any, b: any) => {
-          const dateA = new Date(a.created_on || a.created_at || a.quote_date || 0).getTime();
-          const dateB = new Date(b.created_on || b.created_at || b.quote_date || 0).getTime();
+        const sortedData = response.data.sort((a, b) => {
+          const dateA = new Date(a.created_on || (a as Record<string, unknown>).created_at as string || a.quote_date || 0).getTime();
+          const dateB = new Date(b.created_on || (b as Record<string, unknown>).created_at as string || b.quote_date || 0).getTime();
           return dateB - dateA;
         });
         setData(sortedData);

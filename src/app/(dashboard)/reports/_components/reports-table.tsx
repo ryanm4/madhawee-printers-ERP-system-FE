@@ -34,7 +34,7 @@ import { DataTablePagination } from "@/components/shared/data-table-pagination"
 import { ExportButton } from "@/components/shared/export-button"
 
 interface ReportsTableProps {
-    data: any[]
+    data: Record<string, unknown>[]
 }
 
 export function ReportsTable({ data }: ReportsTableProps) {
@@ -46,7 +46,7 @@ export function ReportsTable({ data }: ReportsTableProps) {
         pageSize: 10,
     })
 
-    const columns = useMemo<ColumnDef<any>[]>(() => {
+    const columns = useMemo<ColumnDef<Record<string, unknown>>[]>(() => {
         if (!data || data.length === 0) return [];
 
         const firstItem = data[0];

@@ -14,6 +14,7 @@ export const supplierSchema = z.object({
     vat_no: z.string().optional(),
     logoUrl: z.string().optional(),
     contactPersons: z.array(z.object({
+        id: z.number().optional(),
         name: z.string().min(1, "Name is required"),
         email: z.string()
             .regex(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, "Invalid email address format")

@@ -10,7 +10,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, TrendingUp, Package, Truck, ClipboardList, CheckCircle2, AlertCircle, Clock, FileText, Banknote, BarChart3 } from "lucide-react";
+import { CalendarIcon, TrendingUp, Package, Truck, ClipboardList, CheckCircle2, AlertCircle, Clock, FileText, Banknote, BarChart3, LucideIcon } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { DashboardApi } from "@/modules/dashboard/api";
 import { KPIItem, AnalyticsData } from "@/modules/dashboard/types";
 import { PageLoader } from "@/components/shared/loader";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 
 import { ChartRadialShape } from "@/components/chart-radial-shape";
 import { AdditionalKPIs } from "@/components/additional-kpis";
@@ -58,7 +58,7 @@ function DashboardPage({
     }
   }, []);
 
-  const handleGenerateKPI = async () => {
+  const handleGenerateKPI = React.useCallback(async () => {
     setIsLoading(true);
     try {
       const formData = {
@@ -78,13 +78,13 @@ function DashboardPage({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [date]);
 
   useEffect(() => {
     handleGenerateKPI();
-  }, [date]);
+  }, [handleGenerateKPI]);
 
-  const KAR_CONFIG: Record<string, { label: string, color: string, badgeBg: string, icon: any }> = {
+  const KAR_CONFIG: Record<string, { label: string, color: string, badgeBg: string, icon: LucideIcon }> = {
     totalRevenue: { label: "Total Revenue", color: "#8b5cf6", badgeBg: "#8b5cf615", icon: Banknote },
     avgQuoteValue: { label: "Total dispatched revenue", color: "#f59e0b", badgeBg: "#f59e0b15", icon: BarChart3 },
     totalQuotations: { label: "Total Quotations", color: "#223F7A", badgeBg: "#223F7A15", icon: FileText },

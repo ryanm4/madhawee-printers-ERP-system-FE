@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/error-utils";
 import { companyData as mockCompanyData } from "@/modules/quotations/mockData";
 import CompanyLogo from "../assets/Images/company_logo.jpeg";
+import { QUOTATIONS, QuotationItems } from "@/modules/quotations/types";
 
 const getImageBytes = async (url: string) => {
     const response = await fetch(url);
@@ -37,7 +38,7 @@ const hexToRgb = (hex: string) => {
 const wrapText = (text: string, width: number, font: PDFFont, fontSize: number): string[] => {
     // Normalize newlines and split into paragraphs
     const paragraphs = text.replace(/\r/g, '').split('\n');
-    let result: string[] = [];
+    const result: string[] = [];
 
     for (const paragraph of paragraphs) {
         if (!paragraph) {
@@ -63,7 +64,7 @@ const wrapText = (text: string, width: number, font: PDFFont, fontSize: number):
     return result;
 };
 
-export const generateQuotationPDF = async (data: any) => {
+export const generateQuotationPDF = async (data: QUOTATIONS & { showAccountDetails?: boolean; items: QuotationItems[] }) => {
     try {
         const pdfDoc = await PDFDocument.create();
         const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -345,7 +346,7 @@ export const generateQuotationPDF = async (data: any) => {
             const rate = Number(p.item_unit_price);
             const itemTotal = qty * rate;
             // tax_type_id mapping: 0: VAT, 1: TIEP, 2: NONE
-            const vatAmount = (data?.tax_type_id === 0 || data?.tax_type_id === 1) ? itemTotal * 0.18 : 0; 
+            const vatAmount = (data?.tax_type_id === 0 || data?.tax_type_id === 1) ? itemTotal * 0.18 : 0;
             // If API returns IDs, we need logic. For now, assuming tax logic based on previous string check isn't directly compatible without lookup. 
             // However, usually detailed items might have tax info.
             // Let's stick to simple logic or 0 if unknown, or maybe 18% if tax_type suggests.
@@ -435,8 +436,8 @@ export const generateQuotationPDF = async (data: any) => {
         const subtotalVal = parseFloat(data.sub_total || "0");
         const netTotalVal = parseFloat(data.net_total || "0");
         const taxAmount = netTotalVal - subtotalVal;
-        
-        const totalDiscount = (data.items || []).reduce((acc: number, item: any) => 
+
+        const totalDiscount = (data.items || []).reduce((acc: number, item: QuotationItems) =>
             acc + (parseFloat(item.item_qty || "0") * parseFloat(item.item_unit_discount || "0")), 0
         );
 
@@ -453,9 +454,9 @@ export const generateQuotationPDF = async (data: any) => {
 
         summaryLines.forEach(line => {
             currentPage = checkPageBreak(25);
-            
+
             // Removed highlight background as requested
-            
+
             currentPage.drawText(line.label, {
                 x: summaryX,
                 y: yPosition - 10,
@@ -467,7 +468,7 @@ export const generateQuotationPDF = async (data: any) => {
             const currentFont = line.highlight ? helveticaBold : helvetica;
             const currentSize = line.highlight ? summaryFontSize + 2 : summaryFontSize;
             const textWidth = currentFont.widthOfTextAtSize(line.value, currentSize);
-            
+
             currentPage.drawText(line.value, {
                 x: valueX - textWidth,
                 y: yPosition - 10,
