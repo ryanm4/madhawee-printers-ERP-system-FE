@@ -55,11 +55,11 @@ export function LoginForm({
 
       toast("Login successful!");
       router.push("/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed:", error);
-      const errorMessage = getErrorMessage(error, "Invalid username or password");
-      setError(errorMessage);
-      toast(errorMessage);
+      const message = "Unable to sign in. Please verify your credentials and try again.";
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
