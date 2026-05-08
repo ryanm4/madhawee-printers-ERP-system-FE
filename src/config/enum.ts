@@ -218,6 +218,7 @@ export enum COATING_TYPES {
     FOILED = "FOILED",
     EMBOSING = "EMBOSING",
     SAND_UV_VARNISHED = "SAND UV VARNISHED",
+    NONE = "NONE",
 
 }
 
