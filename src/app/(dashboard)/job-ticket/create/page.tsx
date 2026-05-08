@@ -15,7 +15,7 @@ import {
   FileArchive,
 } from "lucide-react"; // Import icons
 import { format } from "date-fns";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -331,16 +331,13 @@ function CreateJobTicket() {
 
 
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
       const [poResponse, customerResponse] = await Promise.all([
         purchaseOrderApi.getAll(),
         CustomerApi.getAll(),
       ]);
-
-
-
 
       setPurchaseOrderData(poResponse.data);
       setCustomerData(customerResponse.data);
@@ -350,9 +347,9 @@ function CreateJobTicket() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const getInventoryList = async () => {
+  const getInventoryList = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await inventoryApi.getAll();
@@ -366,12 +363,11 @@ function CreateJobTicket() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [dispatch]);
   useEffect(() => {
     fetchData();
     getInventoryList();
     const userData = getUser();
-    console.log(userData)
     if (userData) {
       setUser({
         name: userData.name || "User",
@@ -379,7 +375,7 @@ function CreateJobTicket() {
         avatar: "",
       });
     }
-  }, [getInventoryList]);
+  }, [fetchData, getInventoryList]);
   const selectedPoId = form.watch("customer_po");
 
 
@@ -427,10 +423,7 @@ function CreateJobTicket() {
     >["0"]["render"]
   ) => <FormField control={form.control} name={name} render={render} />;
 
-  useEffect(() => {
-    fetchCustomerData();
-  }, []);
-  const fetchCustomerData = async () => {
+  const fetchCustomerData = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await CustomerApi.getAll();
@@ -443,7 +436,11 @@ function CreateJobTicket() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchCustomerData();
+  }, [fetchCustomerData]);
 
   return (
     <>
