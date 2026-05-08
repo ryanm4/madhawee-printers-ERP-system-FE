@@ -57,9 +57,10 @@ export function LoginForm({
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Login failed:", error);
-      const message = "Unable to sign in. Please verify your credentials and try again.";
-      setError(message);
-      toast.error(message);
+      const errorMessage = getErrorMessage(error, "Unable to sign in. Please verify your credentials and try again.");
+      setError("Unable to sign in. Please verify your credentials and try again.");
+
+      toast(errorMessage);
     } finally {
       setIsLoading(false);
     }
