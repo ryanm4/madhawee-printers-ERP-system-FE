@@ -18,7 +18,7 @@ import {
   FileArchive,
 } from "lucide-react"; // Import icons
 import { format } from "date-fns";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -371,7 +371,7 @@ export function CreateJobTicketDialog({
     }
   }
 
-  const getInventoryList = async () => {
+  const getInventoryList = useCallback(async () => {
     try {
       setLoading(true);
       const response = await inventoryApi.getAll();
@@ -385,26 +385,9 @@ export function CreateJobTicketDialog({
     } finally {
       setLoading(false);
     }
-  };
+  }, [dispatch]);
 
-  useEffect(() => {
-    if (open) {
-      fetchData();
-      getInventoryList();
-      const userData = getUser();
-      if (userData) {
-        setUser({
-          name: userData.name || "User",
-          email: userData.email,
-          avatar: "",
-        });
-      }
-    }
-  }, [open, getInventoryList]);
-
-
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const [poResponse, customerResponse] = await Promise.all([
@@ -419,7 +402,22 @@ export function CreateJobTicketDialog({
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      fetchData();
+      getInventoryList();
+      const userData = getUser();
+      if (userData) {
+        setUser({
+          name: userData.name || "User",
+          email: userData.email,
+          avatar: "",
+        });
+      }
+    }
+  }, [open, fetchData, getInventoryList]);
 
   const selectedPoId = form.watch("customer_po");
   const selectedPoItems = selectedPoDetails?.po_items ?? [];
