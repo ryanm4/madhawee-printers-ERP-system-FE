@@ -413,7 +413,7 @@ function CreateGRN() {
                         control={form.control}
                         name={`items.${index}.item_name`}
                         render={({ field }) => (
-                          <FormItem className="flex flex-col mt-2">
+                          <FormItem className="flex flex-col ">
                             <FormLabel>Item Name</FormLabel>
                             <Combobox
                               items={inventoryItems}
