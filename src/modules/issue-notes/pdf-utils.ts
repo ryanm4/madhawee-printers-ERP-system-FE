@@ -63,7 +63,7 @@ export const generateIssueNotePdf = (issueNote: IssueNote) => {
 
     autoTable(doc, {
         startY: currY + lineHeight * 5,
-        head: [["No:", "Item:", "Unit:", "Quantity"]],
+        head: [["NO", "Item", "Unit", "Quantity"]],
         body: tableData,
         theme: "striped",
         headStyles: {
