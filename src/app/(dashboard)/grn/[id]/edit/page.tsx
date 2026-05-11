@@ -3,7 +3,7 @@ import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcr
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { grnSchema } from "@/modules/inventory/grn/validation";
+import { grnSchema } from "@/modules/grn/validation";
 import { cn } from "@/lib/utils";
 import { useRouter, useParams } from "next/navigation";
 import { useFieldArray, useForm } from "react-hook-form";
@@ -35,7 +35,7 @@ import { CalendarIcon, Loader2, PlusIcon, Trash2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
 import { useEffect, useState } from "react";
-import { grnApi } from "@/modules/inventory/grn/api";
+import { grnApi } from "@/modules/grn/api";
 import { appToast } from "@/lib/toast-utils";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
@@ -43,7 +43,7 @@ import { SupplierCombobox } from "../../_components/supplier-combobox";
 import { inventoryApi } from "@/modules/inventory/api";
 import { Combobox } from "@/components/shared/combobox";
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
-import { GRNItem } from "@/modules/inventory/grn/types";
+import { GRNItem } from "@/modules/grn/types";
 import { useCallback } from "react";
 
 type GRNFormValues = {
@@ -157,7 +157,7 @@ function EditGRN() {
       }
     } catch (error) {
       appToast.error(getErrorMessage(error, "Failed to fetch GRN details"));
-      router.push("/inventory/grn");
+      router.push("/grn");
     } finally {
       setLoading(false);
     }
@@ -176,7 +176,7 @@ function EditGRN() {
 
       if (response.status === 200) {
         appToast.updated("GRN Updated successfully");
-        router.push("/inventory/grn");
+        router.push("/grn");
       }
     } catch (error) {
       appToast.error(getErrorMessage(error, "Failed to update GRN"));
@@ -525,7 +525,7 @@ function EditGRN() {
               size="lg"
               variant="outline"
               type="button"
-              onClick={() => router.push("/inventory/grn")}
+              onClick={() => router.push("/grn")}
               disabled={isSubmitting}
             >
               Cancel

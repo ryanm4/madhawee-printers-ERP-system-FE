@@ -3,7 +3,7 @@ import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcr
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { grnSchema } from "@/modules/inventory/grn/validation";
+import { grnSchema } from "@/modules/grn/validation";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useFieldArray, useForm } from "react-hook-form";
@@ -35,7 +35,7 @@ import { CalendarIcon, Loader2, PlusIcon, Trash2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
-import { grnApi } from "@/modules/inventory/grn/api";
+import { grnApi } from "@/modules/grn/api";
 import { appToast } from "@/lib/toast-utils";
 import { getUser } from "@/lib/auth";
 import { SupplierCombobox } from "../_components/supplier-combobox";
@@ -139,7 +139,7 @@ function CreateGRN() {
 
       if (response.status === 201 || response.status === 200) {
         appToast.success("GRN Created successfully");
-        router.push("/inventory/grn");
+        router.push("/grn");
       }
     } catch (error) {
       console.error("Failed to create GRN:", error);
@@ -520,7 +520,7 @@ function CreateGRN() {
               size="lg"
               variant="outline"
               type="button"
-              onClick={() => router.push("/inventory/grn")}
+              onClick={() => router.push("/grn")}
               disabled={isSubmitting}
             >
               Cancel

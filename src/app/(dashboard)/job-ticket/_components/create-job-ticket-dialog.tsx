@@ -309,7 +309,7 @@ export function CreateJobTicketDialog({
 
         status: JobTicketStatus.CREATED,
         created_by: user?.name || "User",
-        created_on: new Date(),
+        created_on: toMySQLDateTime(new Date()),
       };
 
       const _response = await jobTicketsApi.create(payload);

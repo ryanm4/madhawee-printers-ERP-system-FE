@@ -3,22 +3,23 @@ import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcr
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { issueNotesApi } from "@/modules/inventory/issue-notes/api";
+import { issueNotesApi } from "@/modules/issue-notes/api";
 import { PlusIcon, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { DataTable } from "./_components/issue_notes_table";
 import { issueNotesColumns } from "./_components/issue_notes_columns";
-import { IssueNote } from "@/modules/inventory/issue-notes/types";
+import { IssueNote } from "@/modules/issue-notes/types";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
 import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
 import { useMemo } from "react";
-import { generateIssueNotePdf } from "@/modules/inventory/issue-notes/pdf-utils";
+import { generateIssueNotePdf } from "@/modules/issue-notes/pdf-utils";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
 import { ALL_TICKETS } from "@/modules/job-tickets/types";
+import { inventoryApi } from "@/modules/inventory/api";
 
 function IssueNotesManagement() {
   const router = useRouter();
@@ -31,11 +32,24 @@ function IssueNotesManagement() {
     name: string;
     job_number: number | string;
   }[]>([]);
+  const [inventory, setInventory] = useState<any[]>([]);
 
   useEffect(() => {
     fetchData();
     fetchJobs();
+    fetchInventory();
   }, []);
+
+  const fetchInventory = async () => {
+    try {
+      const response = await inventoryApi.getAll();
+      if (response.status === 200) {
+        setInventory(response.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch inventory", err);
+    }
+  };
 
   const fetchJobs = async () => {
     try {
@@ -54,6 +68,7 @@ function IssueNotesManagement() {
     }
   };
 
+  console.log(jobs)
   const fetchData = async () => {
     try {
       setIsLoading(true);
@@ -150,10 +165,20 @@ function IssueNotesManagement() {
           <DataTable
             columns={columns}
             data={data.map(item => {
-              const job = jobs.find(j => j.id === item.job_id)
+              const job = jobs.find(j => String(j.id) === String(item.job_id))
+              
+              // Enrich items with sizes
+              const enrichedItems = item.items.map(it => {
+                const invItem = inventory.find(inv => inv.item_name === it.item_name);
+                return {
+                  ...it,
+                  item_name: invItem?.size ? `${it.item_name} (${invItem.size})` : it.item_name
+                };
+              });
 
               return {
                 ...item,
+                items: enrichedItems,
                 job_name: job?.name || (item.job_id ? `Job #${item.job_id}` : "-"),
                 job_number: job?.job_number || "-"
               }

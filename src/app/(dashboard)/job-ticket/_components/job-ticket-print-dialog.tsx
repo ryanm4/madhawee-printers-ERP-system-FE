@@ -70,6 +70,13 @@ function formatMonthYear(date?: Date | string): string {
   }
 }
 
+function formatNumber(value?: string | number): string {
+  if (value === undefined || value === null || value === "") return "";
+  const num = Number(value);
+  if (isNaN(num)) return String(value);
+  return num.toLocaleString();
+}
+
 export function handleJobTicketPrint(data: JobTicketPrintData) {
   // Build the printable HTML that matches the reference layout
   const printContent = buildPrintHTML(data);
@@ -232,7 +239,7 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
       <td colspan="2" class="label">Order Rec Date</td>
       <td colspan="4" class="value">${safe(formatDate(data.orderReceivedDate))}</td>
       <td colspan="2" class="label">Quantity:</td>
-      <td colspan="4" class="value value-bold" style="font-size: 20px;">${safe(data.quantity)}</td>
+      <td colspan="4" class="value value-bold" style="font-size: 20px;">${safe(formatNumber(data.quantity))}</td>
     </tr>
 
     <!-- Row 3: Open Date & Paper Type -->
@@ -307,12 +314,12 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
     <tr>
       <td rowspan="2" colspan="2" class="group-label">CTP Plates</td>
       <td colspan="4" style="padding-left: 24px;">Old Plates</td>
-      <td colspan="2" class="center">${safe(data.oldPlatesQuantity || 0)}</td>
+      <td colspan="2" class="center">${safe(formatNumber(data.oldPlatesQuantity || 0))}</td>
       <td colspan="4">&nbsp;</td>
     </tr>
     <tr>
       <td colspan="4" style="padding-left: 24px;">New Plates</td>
-      <td colspan="2" class="center">${safe(data.newPlatesQuantity || 0)}</td>
+      <td colspan="2" class="center">${safe(formatNumber(data.newPlatesQuantity || 0))}</td>
       <td colspan="4">&nbsp;</td>
     </tr>
 
@@ -321,7 +328,7 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
       ? `<tr>
       <td rowspan="${data.rawMaterials!.length}" colspan="2" class="group-label">Raw Material</td>
       <td colspan="4" style="padding-left: 24px;">${safe(data.rawMaterials![0].material_name)} ${data.rawMaterials![0].size ? "- " + data.rawMaterials![0].size : ""}</td>
-      <td colspan="2" class="center">${safe(data.rawMaterials![0].quantity)}</td>
+      <td colspan="2" class="center">${safe(formatNumber(data.rawMaterials![0].quantity))}</td>
       <td colspan="4">${safe(data.rawMaterials![0].remarks)}</td>
     </tr>${(data.rawMaterials || [])
         .slice(1)
@@ -329,7 +336,7 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
           (rm) => `
     <tr>
       <td colspan="4" style="padding-left: 24px;">${safe(rm.material_name)} ${rm.size ? "- " + rm.size : ""}</td>
-      <td colspan="2" class="center">${safe(rm.quantity)}</td>
+      <td colspan="2" class="center">${safe(formatNumber(rm.quantity))}</td>
       <td colspan="4">${safe(rm.remarks)}</td>
     </tr>`
         )
@@ -347,7 +354,7 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
       ? `<tr>
       <td rowspan="${data.inks!.length}" colspan="2" class="group-label">Ink</td>
       <td colspan="4" style="padding-left: 24px;">${safe(data.inks![0].ink)}</td>
-      <td colspan="2" class="center">${safe(data.inks![0].quantity)}</td>
+      <td colspan="2" class="center">${safe(formatNumber(data.inks![0].quantity))}</td>
       <td colspan="4">${safe(data.inks![0].remarks)}</td>
     </tr>${(data.inks || [])
         .slice(1)
@@ -355,7 +362,7 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
           (ink) => `
     <tr>
       <td colspan="4" style="padding-left: 24px;">${safe(ink.ink)}</td>
-      <td colspan="2" class="center">${safe(ink.quantity)}</td>
+      <td colspan="2" class="center">${safe(formatNumber(ink.quantity))}</td>
       <td colspan="4">${safe(ink.remarks)}</td>
     </tr>`
         )

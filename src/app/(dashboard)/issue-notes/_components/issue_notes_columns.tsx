@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown, Eye, MoreHorizontal, PencilIcon, TrashIcon, Download } from "lucide-react"
-import { IssueNote } from "@/modules/inventory/issue-notes/types"
+import { IssueNote } from "@/modules/issue-notes/types"
 import { format, parseISO } from "date-fns"
 
 interface IssueNoteTableActions {

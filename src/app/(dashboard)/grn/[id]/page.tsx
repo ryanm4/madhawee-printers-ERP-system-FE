@@ -3,7 +3,7 @@ import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcr
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { grnSchema } from "@/modules/inventory/grn/validation";
+import { grnSchema } from "@/modules/grn/validation";
 import { cn } from "@/lib/utils";
 import { useRouter, useParams } from "next/navigation";
 import { useFieldArray, useForm } from "react-hook-form";
@@ -34,10 +34,10 @@ import { CalendarIcon, Edit } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
 import { useEffect, useState } from "react";
-import { grnApi } from "@/modules/inventory/grn/api";
+import { grnApi } from "@/modules/grn/api";
 import { toast } from "sonner";
 import { FullPageLoader } from "@/components/shared/loader";
-import { GRNItem } from "@/modules/inventory/grn/types";
+import { GRNItem } from "@/modules/grn/types";
 import { useCallback } from "react";
 
 type GRNFormValues = {
@@ -112,7 +112,7 @@ function ViewGRN() {
       }
     } catch (error) {
       toast.error(getErrorMessage(error, "Failed to fetch GRN details"));
-      router.push("/inventory/grn");
+      router.push("/grn");
     } finally {
       setLoading(false);
     }
@@ -142,13 +142,13 @@ function ViewGRN() {
             <Button
               variant="outline"
               type="button"
-              onClick={() => router.push("/inventory/grn")}
+              onClick={() => router.push("/grn")}
             >
               Back to List
             </Button>
             <Button
               type="button"
-              onClick={() => router.push(`/inventory/grn/${id}/edit`)}
+              onClick={() => router.push(`/grn/${id}/edit`)}
               className="bg-primary hover:bg-primary/90"
             >
               <Edit className="mr-2 h-4 w-4" /> Edit GRN

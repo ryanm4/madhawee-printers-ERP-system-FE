@@ -166,10 +166,10 @@ export interface CREATE_TICKETS {
 
   status?: string;
   created_by?: string;
-  created_on?: Date;
+  created_on?: string | Date;
 
   updated_by?: string;
-  updated_on?: Date;
+  updated_on?: string | Date;
 }
 
 

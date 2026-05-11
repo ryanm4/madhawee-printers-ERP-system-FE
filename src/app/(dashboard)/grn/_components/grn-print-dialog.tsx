@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { GRN } from "@/modules/inventory/grn/types";
+import { GRN } from "@/modules/grn/types";
 
 interface GRNPrintDialogProps {
   open: boolean;

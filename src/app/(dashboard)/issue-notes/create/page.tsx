@@ -3,7 +3,7 @@ import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcr
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { issueNoteSchema } from "@/modules/inventory/issue-notes/validation";
+import { issueNoteSchema } from "@/modules/issue-notes/validation";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useFieldArray, useForm } from "react-hook-form";
@@ -28,7 +28,7 @@ import { CalendarIcon, Loader2, PlusIcon, Trash2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
-import { issueNotesApi } from "@/modules/inventory/issue-notes/api";
+import { issueNotesApi } from "@/modules/issue-notes/api";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
 import { inventoryApi } from "@/modules/inventory/api";
 import { toast } from "sonner";
@@ -83,7 +83,7 @@ function CreateIssueNote() {
         if (response.status === 200) {
           const uniqueItems = Array.from(
             new Map(
-              response.data.map((item: GET_ALL_INVENTORY) => [item.item_name, item])
+              response.data.map((item: GET_ALL_INVENTORY) => [`${item.item_name}-${item.size || ""}`, item])
             ).values()
           );
 
@@ -151,7 +151,7 @@ function CreateIssueNote() {
           }
         }
         toast.success("Issue Note Created successfully");
-        router.push("/inventory/issue-notes");
+        router.push("/issue-notes");
       }
     } catch (error) {
       console.error("Failed to create Issue Note:", error);
@@ -168,7 +168,7 @@ function CreateIssueNote() {
         title="Create Issue Material"
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
-          { title: "Issue Material", href: "/inventory/issue-notes" },
+          { title: "Issue Material", href: "/issue-notes" },
         ]}
       />
 
@@ -338,7 +338,7 @@ function CreateIssueNote() {
               size="lg"
               variant="outline"
               type="button"
-              onClick={() => router.push("/inventory/issue-notes")}
+              onClick={() => router.push("/issue-notes")}
               disabled={isSubmitting}
             >
               Cancel

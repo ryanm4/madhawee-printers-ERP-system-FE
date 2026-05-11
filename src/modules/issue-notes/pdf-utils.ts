@@ -47,6 +47,7 @@ export const generateIssueNotePdf = (issueNote: IssueNote) => {
     addField("GOODS ISSUE NOTE NO", issueNote.id.toString(), leftX, currY + lineHeight);
     addField("DATE", issueNote.date ? format(new Date(issueNote.date), "dd/MM/yyyy") : "-", leftX, currY + lineHeight * 2);
     addField("RELATED JOB", issueNote.job_name || (issueNote.job_id ? `Job #${issueNote.job_id}` : "-"), leftX, currY + lineHeight * 3);
+    addField("JOB NUMBER", (issueNote as any).job_number || "-", leftX, currY + lineHeight * 4);
 
     // Right column fields
     addField("REMARKS", issueNote.remarks, rightX, currY + lineHeight, 45);
@@ -69,12 +70,11 @@ export const generateIssueNotePdf = (issueNote: IssueNote) => {
             fillColor: primaryColor as [number, number, number],
             textColor: [255, 255, 255] as [number, number, number],
             fontSize: 10,
-            halign: "center",
         },
         columnStyles: {
             0: { cellWidth: 10, halign: "center" },
             1: { cellWidth: 30, halign: "center" },
-            2: { cellWidth: 160 },
+            2: { cellWidth: 160, halign: "left" },
             3: { halign: "right" },
         },
         margin: { left: 14, right: 14 },
