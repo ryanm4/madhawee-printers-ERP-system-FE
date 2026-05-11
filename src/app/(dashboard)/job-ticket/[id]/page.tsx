@@ -394,7 +394,11 @@ function JobViewTicket() {
                                     <FormItem>
                                         <FormLabel>Product Type</FormLabel>
                                         <Select value={field.value} disabled>
-                                            <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Product Type" /></SelectTrigger></FormControl>
+                                            <FormControl>
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue placeholder="Select Product Type" />
+                                                </SelectTrigger>
+                                            </FormControl>
                                             <SelectContent>
                                                 {Object.entries(PRODUCT_TYPES).map(([key, value]) => (
                                                     <SelectItem key={key} value={value}>

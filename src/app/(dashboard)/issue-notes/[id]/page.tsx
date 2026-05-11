@@ -3,7 +3,7 @@ import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcr
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { issueNoteSchema } from "@/modules/inventory/issue-notes/validation";
+import { issueNoteSchema } from "@/modules/issue-notes/validation";
 import { cn } from "@/lib/utils";
 import { useRouter, useParams } from "next/navigation";
 import { useFieldArray, useForm } from "react-hook-form";
@@ -27,8 +27,9 @@ import { CalendarIcon, Edit } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
 import { useEffect, useState } from "react";
-import { issueNotesApi } from "@/modules/inventory/issue-notes/api";
+import { issueNotesApi } from "@/modules/issue-notes/api";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
+import { inventoryApi } from "@/modules/inventory/api";
 import { toast } from "sonner";
 import { FullPageLoader } from "@/components/shared/loader";
 import { Combobox } from "@/components/shared/combobox";
@@ -42,6 +43,7 @@ function ViewIssueNote() {
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState<{ value: string; label: string }[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<any[]>([]);
 
   const form = useForm<IssueNoteFormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -79,7 +81,7 @@ function ViewIssueNote() {
       }
     } catch (error) {
       toast.error(getErrorMessage(error, "Failed to fetch Issue Note details"));
-      router.push("/inventory/issue-notes");
+      router.push("/issue-notes");
     } finally {
       setLoading(false);
     }
@@ -103,7 +105,18 @@ function ViewIssueNote() {
         console.error("Failed to fetch jobs", err);
       }
     };
+    const fetchInventory = async () => {
+      try {
+        const response = await inventoryApi.getAll();
+        if (response.status === 200) {
+          setInventoryItems(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch inventory", error);
+      }
+    };
     fetchJobs();
+    fetchInventory();
   }, [id, fetchIssueNote]);
 
   const readonlyClass = "disabled:opacity-100 disabled:text-black disabled:cursor-default bg-muted/50";
@@ -126,13 +139,13 @@ function ViewIssueNote() {
             <Button
               variant="outline"
               type="button"
-              onClick={() => router.push("/inventory/issue-notes")}
+              onClick={() => router.push("/issue-notes")}
             >
               Back to List
             </Button>
             <Button
               type="button"
-              onClick={() => router.push(`/inventory/issue-notes/${id}/edit`)}
+              onClick={() => router.push(`/issue-notes/${id}/edit`)}
               className="bg-primary hover:bg-primary/90"
             >
               <Edit className="mr-2 h-4 w-4" /> Edit Note
@@ -223,12 +236,16 @@ function ViewIssueNote() {
                       <FormField
                         control={form.control}
                         name={`items.${index}.item_name`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Item Name</FormLabel>
-                            <FormControl><Input {...field} disabled className={readonlyClass} /></FormControl>
-                          </FormItem>
-                        )}
+                        render={({ field }) => {
+                          const invItem = inventoryItems.find(i => i.item_name === field.value);
+                          const displayValue = invItem?.size ? `${field.value} (${invItem.size})` : field.value;
+                          return (
+                            <FormItem>
+                              <FormLabel>Item Name</FormLabel>
+                              <FormControl><Input value={displayValue} disabled className={readonlyClass} /></FormControl>
+                            </FormItem>
+                          );
+                        }}
                       />
                       <FormField
                         control={form.control}

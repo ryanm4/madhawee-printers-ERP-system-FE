@@ -3,13 +3,13 @@ import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcr
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { grnApi } from "@/modules/inventory/grn/api";
+import { grnApi } from "@/modules/grn/api";
 import { PlusIcon, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { DataTable } from "./_components/grn_table";
 import { grnColumns } from "./_components/grn_columns";
-import { GRN } from "@/modules/inventory/grn/types";
+import { GRN } from "@/modules/grn/types";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";

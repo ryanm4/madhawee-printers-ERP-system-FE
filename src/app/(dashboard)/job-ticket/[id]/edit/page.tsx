@@ -278,7 +278,7 @@ function EditJobTicket() {
           ink: ink.ink,
         })),
         updated_by: user?.name || "User",
-        updated_on: new Date(),
+        updated_on: toMySQLDateTime(new Date()),
         status: ticketStatus,
       };
 
@@ -340,7 +340,7 @@ function EditJobTicket() {
         const pos = poResponse.data;
         const customers = customerResponse.data;
         const inventory = inventoryResponse.data;
-        
+
         // Initial filter for Approved POs
         const filteredPOs = pos.filter((p: PURCHASE_ORDER) => p.status === PurchaseOrderStatus.APPROVED);
 
@@ -360,7 +360,7 @@ function EditJobTicket() {
           if (currentPo && !filteredPOs.some(p => String(p.po_id) === String(jt.po_id))) {
             setPurchaseOrderData(prev => [...prev, currentPo]);
           }
-          
+
           // Find the matching PO for fallbacks
           const matchingPo = currentPo;
 
@@ -449,7 +449,7 @@ function EditJobTicket() {
                 },
               ],
           });
-          
+
           // Mark initial load as complete after setting form data
           isInitialLoad.current = false;
         }
