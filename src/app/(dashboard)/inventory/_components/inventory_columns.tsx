@@ -48,6 +48,7 @@ export const inventoryColumns = (
             accessorKey: "size",
             id: "size",
             header: "Item Size",
+            cell: ({ row }) => row.original.size || "-",
         },
         {
             accessorKey: "quantity",

@@ -125,7 +125,7 @@ export function SupplierCombobox({
             disabled={disabled || loading}
           />
         </div>
-        <Button
+        {/* <Button
           type="button"
           variant="outline"
           size="icon"
@@ -135,7 +135,7 @@ export function SupplierCombobox({
           className="shrink-0"
         >
           <Plus className="h-4 w-4" />
-        </Button>
+        </Button> */}
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

@@ -87,9 +87,9 @@ function CreateInventoryManagement() {
         item_category: data.item_category,
         item_sub_category: data.item_sub_category,
         item_name: data.item_name,
-        size: `${data.width} x ${data.height}`,
-        width: data.width,
-        height: data.height,
+        size: (data.width && data.height) ? `${data.width} x ${data.height}` : data.size || "-",
+        width: data.width ?? "",
+        height: data.height ?? "",
         quantity: String(data.quantity),
         unit_of_measure: data.unit_of_measure,
         reorder_level: data.reorder_level,
@@ -221,57 +221,6 @@ function CreateInventoryManagement() {
                 ))}
               </div>
 
-              {/* Row 3: Width, Height and Quantity */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
-                  {renderFormField("width", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Width (cm) <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="W"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                  <div className="pb-3 text-muted-foreground font-bold text-xs">x</div>
-                  {renderFormField("height", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Height (cm) <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="H"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                </div>
-                {renderFormField("quantity", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Item Quantitiy <span className="text-red-500">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Enter Item Quantity"
-                        value={field.value}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                ))}
-              </div>
-
               {/* Row 4: UOM, Reorder Level, Status */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {renderFormField("unit_of_measure", ({ field }) => (
@@ -330,6 +279,59 @@ function CreateInventoryManagement() {
                 ))}
               </div>
 
+
+              {/* Row 3: Width, Height and Quantity */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+                  {renderFormField("width", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Width (cm)
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="W"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                  <div className="pb-3 text-muted-foreground font-bold text-xs">x</div>
+                  {renderFormField("height", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Height (cm)
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="H"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                </div>
+                {renderFormField("quantity", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Item Quantitiy <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="Enter Item Quantity"
+                        value={field.value}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </div>
+
+
               {/* Row 5: Remarks */}
               <div className="grid grid-cols-1 gap-4">
                 {renderFormField("remarks", ({ field }) => (
@@ -344,25 +346,25 @@ function CreateInventoryManagement() {
               </div>
             </CardContent>
           </Card>
-        <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-          <Button
-            size="lg"
-            variant="outline"
-            type="button"
-            onClick={() => router.push("/inventory")}
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            size="lg"
-            type="submit"
-            className="bg-primary text-white"
-            disabled={isLoading}
-          >
-            {isLoading ? "Creating..." : "Create"}
-          </Button>
-        </div>
+          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
+            <Button
+              size="lg"
+              variant="outline"
+              type="button"
+              onClick={() => router.push("/inventory")}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="lg"
+              type="submit"
+              className="bg-primary text-white"
+              disabled={isLoading}
+            >
+              {isLoading ? "Creating..." : "Create"}
+            </Button>
+          </div>
         </form>
       </Form>
     </div>
