@@ -83,14 +83,16 @@ function CreateGRN() {
         if (response.status === 200) {
           const uniqueItems = Array.from(
             new Map(
-              response.data.map((item: GET_ALL_INVENTORY) => [item.item_name, item])
+              response.data.map((item: GET_ALL_INVENTORY) => [`${item.item_name}-${item.size || ""}`, item])
             ).values()
           );
 
           setInventoryItems(
             uniqueItems.map((item: GET_ALL_INVENTORY) => ({
               value: item.item_name,
-              label: item.item_name,
+              label: item.size
+                ? `${item.item_name} (${item.size})`
+                : item.item_name,
             }))
           );
         }
@@ -411,7 +413,7 @@ function CreateGRN() {
                         control={form.control}
                         name={`items.${index}.item_name`}
                         render={({ field }) => (
-                          <FormItem className="flex flex-col mt-2">
+                          <FormItem className="flex flex-col ">
                             <FormLabel>Item Name</FormLabel>
                             <Combobox
                               items={inventoryItems}

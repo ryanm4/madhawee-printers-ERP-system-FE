@@ -98,7 +98,7 @@ function ViewIssueNote() {
         if (response.status === 200) {
           setJobs(response.data.map((job: ALL_TICKETS) => ({
             value: job.job_id.toString(),
-            label: job.job_name || `Job #${job.job_id}`
+            label: job.job_number || `Job #${job.job_id}`
           })));
         }
       } catch (err) {

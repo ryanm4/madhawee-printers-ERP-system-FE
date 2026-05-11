@@ -167,12 +167,13 @@ function IssueNotesManagement() {
             data={data.map(item => {
               const job = jobs.find(j => String(j.id) === String(item.job_id))
               
-              // Enrich items with sizes
+              // Enrich items with sizes and units
               const enrichedItems = item.items.map(it => {
                 const invItem = inventory.find(inv => inv.item_name === it.item_name);
                 return {
                   ...it,
-                  item_name: invItem?.size ? `${it.item_name} (${invItem.size})` : it.item_name
+                  item_name: invItem?.size ? `${it.item_name} (${invItem.size})` : it.item_name,
+                  unit_of_measure: invItem?.unit_of_measure || "-"
                 };
               });
 
