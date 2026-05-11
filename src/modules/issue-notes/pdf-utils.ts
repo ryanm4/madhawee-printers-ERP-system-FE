@@ -46,8 +46,9 @@ export const generateIssueNotePdf = (issueNote: IssueNote) => {
     addField("PRINTED ON", format(new Date(), "dd/MM/yyyy h:mm:ss a"), leftX, currY);
     addField("GOODS ISSUE NOTE NO", issueNote.id.toString(), leftX, currY + lineHeight);
     addField("DATE", issueNote.date ? format(new Date(issueNote.date), "dd/MM/yyyy") : "-", leftX, currY + lineHeight * 2);
-    addField("RELATED JOB", issueNote.job_name || (issueNote.job_id ? `Job #${issueNote.job_id}` : "-"), leftX, currY + lineHeight * 3);
-    addField("JOB NUMBER", (issueNote as any).job_number || "-", leftX, currY + lineHeight * 4);
+    addField("JOB NUMBER", (issueNote as any).job_number || "-", leftX, currY + lineHeight * 3);
+    addField("RELATED JOB", issueNote.job_name || (issueNote.job_id ? `Job #${issueNote.job_id}` : "-"), leftX, currY + lineHeight * 4);
+
 
     // Right column fields
     addField("REMARKS", issueNote.remarks, rightX, currY + lineHeight, 45);
