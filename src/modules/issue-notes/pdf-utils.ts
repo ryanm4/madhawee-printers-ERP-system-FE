@@ -56,14 +56,14 @@ export const generateIssueNotePdf = (issueNote: IssueNote) => {
     // Items table
     const tableData = issueNote.items.map((item, index) => [
         index + 1,
-        "OUT", // Direction
         item.item_name,
+        (item as any).unit_of_measure || "-",
         Number(item.quantity).toLocaleString(),
     ]);
 
     autoTable(doc, {
         startY: currY + lineHeight * 5,
-        head: [["#", "DIRECTION", "ITEM DETAILS", "QUANTITY"]],
+        head: [["No:", "Item:", "Unit:", "Quantity"]],
         body: tableData,
         theme: "striped",
         headStyles: {
@@ -73,9 +73,9 @@ export const generateIssueNotePdf = (issueNote: IssueNote) => {
         },
         columnStyles: {
             0: { cellWidth: 10, halign: "center" },
-            1: { cellWidth: 30, halign: "center" },
-            2: { cellWidth: 160, halign: "left" },
-            3: { halign: "right" },
+            1: { cellWidth: 160, halign: "left" },
+            2: { cellWidth: 30, halign: "left" },
+            3: { halign: "left" },
         },
         margin: { left: 14, right: 14 },
     });
@@ -86,7 +86,7 @@ export const generateIssueNotePdf = (issueNote: IssueNote) => {
 
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    
+
     doc.line(20, footerY, 70, footerY);
     doc.text("Prepared By", 45, footerY + 5, { align: "center" });
 
