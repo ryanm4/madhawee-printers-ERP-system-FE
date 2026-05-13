@@ -72,18 +72,30 @@ function EditIssueNote() {
   const fetchIssueNote = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await issueNotesApi.getById(id as string);
-      if (response.status === 200) {
-        const data = response.data;
+      const [issueNoteResponse, inventoryResponse] = await Promise.all([
+        issueNotesApi.getById(id as string),
+        inventoryApi.getAll()
+      ]);
+
+      if (issueNoteResponse.status === 200 && inventoryResponse.status === 200) {
+        const data = issueNoteResponse.data;
+        const inventory = inventoryResponse.data;
+
         form.reset({
           date: parseISO(data.date),
           collector_name: data.collector_name,
           job_id: data.job_id || 0,
           remarks: data.remarks || "",
-          items: data.items.map((item) => ({
-            item_name: item.item_name,
-            quantity: Number(item.quantity)
-          }))
+          items: data.items.map((item) => {
+            const invItem = inventory.find(inv => inv.item_name === item.item_name);
+            const enrichedName = invItem?.size 
+              ? `${item.item_name} (${invItem.size})` 
+              : item.item_name;
+            return {
+              item_name: enrichedName,
+              quantity: Number(item.quantity)
+            };
+          })
         });
       }
     } catch (error) {
@@ -130,12 +142,15 @@ function EditIssueNote() {
           );
 
           setInventoryItems(
-            (uniqueItems as GET_ALL_INVENTORY[]).map((item: GET_ALL_INVENTORY) => ({
-              value: item.item_name,
-              label: item.size
+            (uniqueItems as GET_ALL_INVENTORY[]).map((item: GET_ALL_INVENTORY) => {
+              const label = item.size
                 ? `${item.item_name} (${item.size})`
-                : item.item_name,
-            }))
+                : item.item_name;
+              return {
+                value: label,
+                label: label,
+              };
+            })
           );
         }
       } catch (error) {
