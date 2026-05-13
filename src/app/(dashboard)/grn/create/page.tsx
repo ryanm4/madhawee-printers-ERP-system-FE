@@ -88,12 +88,15 @@ function CreateGRN() {
           );
 
           setInventoryItems(
-            uniqueItems.map((item: GET_ALL_INVENTORY) => ({
-              value: item.item_name,
-              label: item.size
+            uniqueItems.map((item: GET_ALL_INVENTORY) => {
+              const label = item.size
                 ? `${item.item_name} (${item.size})`
-                : item.item_name,
-            }))
+                : item.item_name;
+              return {
+                value: label,
+                label: label,
+              };
+            })
           );
         }
       } catch (error) {

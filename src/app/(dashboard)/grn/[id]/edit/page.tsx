@@ -110,15 +110,20 @@ function EditGRN() {
         if (response.status === 200) {
           const uniqueItems = Array.from(
             new Map(
-              response.data.map((item: GET_ALL_INVENTORY) => [item.item_name, item])
+              response.data.map((item: GET_ALL_INVENTORY) => [`${item.item_name}-${item.size || ""}`, item])
             ).values()
           );
 
           setInventoryItems(
-            uniqueItems.map((item: GET_ALL_INVENTORY) => ({
-              value: item.item_name,
-              label: item.item_name,
-            }))
+            uniqueItems.map((item: GET_ALL_INVENTORY) => {
+              const label = item.size
+                ? `${item.item_name} (${item.size})`
+                : item.item_name;
+              return {
+                value: label,
+                label: label,
+              };
+            })
           );
         }
       } catch (error) {
@@ -131,9 +136,15 @@ function EditGRN() {
   const fetchGRN = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await grnApi.getById(id as string);
-      if (response.status === 200) {
-        const data = response.data;
+      const [grnResponse, inventoryResponse] = await Promise.all([
+        grnApi.getById(id as string),
+        inventoryApi.getAll()
+      ]);
+
+      if (grnResponse.status === 200 && inventoryResponse.status === 200) {
+        const data = grnResponse.data;
+        const inventory = inventoryResponse.data;
+
         form.reset({
           releated_po: data.releated_po,
           received_date: parseISO(data.received_date),
@@ -147,12 +158,18 @@ function EditGRN() {
           currency: data.currency,
           supplier_invoice_no: data.supplier_invoice_no,
           remarks: data.remarks || "",
-          items: data.items.map((item: GRNItem) => ({
-            item_name: item.item_name,
-            quantity: Number(item.quantity),
-            rate: Number(item.rate),
-            amount: Number(item.amount),
-          })),
+          items: data.items.map((item: GRNItem) => {
+            const invItem = inventory.find(inv => inv.item_name === item.item_name);
+            const enrichedName = invItem?.size 
+              ? `${item.item_name} (${invItem.size})` 
+              : item.item_name;
+            return {
+              item_name: enrichedName,
+              quantity: Number(item.quantity),
+              rate: Number(item.rate),
+              amount: Number(item.amount),
+            };
+          }),
         });
       }
     } catch (error) {
