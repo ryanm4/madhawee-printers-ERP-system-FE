@@ -83,7 +83,10 @@ function CreateGRN() {
         if (response.status === 200) {
           const uniqueItems = Array.from(
             new Map(
-              response.data.map((item: GET_ALL_INVENTORY) => [`${item.item_name}-${item.size || ""}`, item])
+              response.data.map((item: GET_ALL_INVENTORY) => [
+                `${item.item_name}-${item.size || ""}`,
+                item,
+              ])
             ).values()
           );
 
@@ -159,19 +162,11 @@ function CreateGRN() {
       {isSubmitting && <FullPageLoader />}
       <PageTitleWithBreadcrumb
         title="Create Goods Received Note (GRN)"
-        breadcrumbs={[
-          { title: "Dashboard", href: "/dashboard" },
-
-        ]}
+        breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
       />
 
       <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-6"
-        >
-
-
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
@@ -291,9 +286,7 @@ function CreateGRN() {
                   name="payee_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        Payee Name
-                      </FormLabel>
+                      <FormLabel>Payee Name</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter Payee Name" {...field} />
                       </FormControl>
