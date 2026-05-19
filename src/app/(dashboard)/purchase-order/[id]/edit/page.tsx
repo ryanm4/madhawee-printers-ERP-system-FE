@@ -279,10 +279,12 @@ function EditPurchaseOrder() {
                   <FormItem>
                     <FormLabel>Customer</FormLabel>
                     <Combobox
-                      items={customer.map((c) => ({
-                        value: String(c.customer_id),
-                        label: c.company_name,
-                      }))}
+                      items={customer
+                        .filter((c) => c.customer_type === "customer")
+                        .map((c) => ({
+                          value: String(c.customer_id),
+                          label: c.company_name,
+                        }))}
                       value={field.value || ""}
                       onValueChange={(value) => {
                         field.onChange(value);
@@ -626,10 +628,10 @@ function EditPurchaseOrder() {
                               Unit <span className="text-red-500">*</span>
                             </FormLabel>
                             <FormControl>
-                              <Input 
+                              <Input
                                 type="number"
-                                placeholder="Enter Unit" 
-                                value={field.value || ""} 
+                                placeholder="Enter Unit"
+                                value={field.value || ""}
                                 onChange={e => field.onChange(Number(e.target.value))}
                                 onBlur={field.onBlur}
                                 name={field.name}
