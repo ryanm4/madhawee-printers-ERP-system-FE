@@ -249,10 +249,12 @@ function CreatePurchaseOrder() {
                   <FormItem>
                     <FormLabel>Customer</FormLabel>
                     <Combobox
-                      items={customer.map((c) => ({
-                        value: String(c.customer_id),
-                        label: c.company_name,
-                      }))}
+                      items={customer
+                        .filter((c) => c.customer_type === "customer")
+                        .map((c) => ({
+                          value: String(c.customer_id),
+                          label: c.company_name,
+                        }))}
                       value={field.value || ""}
                       onValueChange={(value) => {
                         field.onChange(value);
