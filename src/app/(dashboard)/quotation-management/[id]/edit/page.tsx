@@ -433,7 +433,9 @@ function EditQuotation({
                         <span className="text-red-500">*</span>
                       </FormLabel>
                       <Combobox
-                        items={customer.map((c) => ({
+                        items={customer
+                        .filter((c) => c.customer_type === "customer")
+                        .map((c) => ({
                           value: String(c.customer_id),
                           label: c.company_name,
                         }))}
