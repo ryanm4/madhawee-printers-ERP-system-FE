@@ -93,7 +93,7 @@ function CreateIssueNote() {
                 ? `${item.item_name} (${item.size})`
                 : item.item_name;
               return {
-                value: label,
+                value: item.size ? `${item.item_name}|||${item.size}` : item.item_name,
                 label: label,
               };
             })
@@ -137,6 +137,10 @@ function CreateIssueNote() {
         ...values,
         date: format(values.date, "yyyy-MM-dd HH:mm:ss"),
         created_by: user?.name || "User",
+        items: values.items.map(item => ({
+          ...item,
+          item_name: item.item_name.includes("|||") ? item.item_name.split("|||")[0] : item.item_name
+        }))
       };
 
       const response = await issueNotesApi.create(payload);
@@ -293,7 +297,7 @@ function CreateIssueNote() {
                         control={form.control}
                         name={`items.${index}.item_name`}
                         render={({ field }) => (
-                          <FormItem className="flex flex-col mt-2">
+                          <FormItem className="flex flex-col">
                             <FormLabel>Item Name</FormLabel>
                             <Combobox
                               items={inventoryItems}

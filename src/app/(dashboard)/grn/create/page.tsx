@@ -83,10 +83,7 @@ function CreateGRN() {
         if (response.status === 200) {
           const uniqueItems = Array.from(
             new Map(
-              response.data.map((item: GET_ALL_INVENTORY) => [
-                `${item.item_name}-${item.size || ""}`,
-                item,
-              ])
+              response.data.map((item: GET_ALL_INVENTORY) => [`${item.item_name}-${item.size || ""}`, item])
             ).values()
           );
 
@@ -96,7 +93,7 @@ function CreateGRN() {
                 ? `${item.item_name} (${item.size})`
                 : item.item_name;
               return {
-                value: label,
+                value: item.size ? `${item.item_name}|||${item.size}` : item.item_name,
                 label: label,
               };
             })
@@ -141,6 +138,10 @@ function CreateGRN() {
         ...values,
         received_date: format(values.received_date, "yyyy-MM-dd HH:mm:ss"),
         created_by: user?.name || "User",
+        items: values.items.map(item => ({
+          ...item,
+          item_name: item.item_name.includes("|||") ? item.item_name.split("|||")[0] : item.item_name
+        }))
       };
 
       const response = await grnApi.create(payload);
@@ -162,11 +163,19 @@ function CreateGRN() {
       {isSubmitting && <FullPageLoader />}
       <PageTitleWithBreadcrumb
         title="Create Goods Received Note (GRN)"
-        breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
+        breadcrumbs={[
+          { title: "Dashboard", href: "/dashboard" },
+
+        ]}
       />
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-6"
+        >
+
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
@@ -286,7 +295,9 @@ function CreateGRN() {
                   name="payee_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Payee Name</FormLabel>
+                      <FormLabel>
+                        Payee Name
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="Enter Payee Name" {...field} />
                       </FormControl>

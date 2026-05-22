@@ -120,7 +120,7 @@ function EditGRN() {
                 ? `${item.item_name} (${item.size})`
                 : item.item_name;
               return {
-                value: label,
+                value: item.size ? `${item.item_name}|||${item.size}` : item.item_name,
                 label: label,
               };
             })
@@ -161,7 +161,7 @@ function EditGRN() {
           items: data.items.map((item: GRNItem) => {
             const invItem = inventory.find(inv => inv.item_name === item.item_name);
             const enrichedName = invItem?.size 
-              ? `${item.item_name} (${invItem.size})` 
+              ? `${item.item_name}|||${invItem.size}` 
               : item.item_name;
             return {
               item_name: enrichedName,
@@ -187,6 +187,10 @@ function EditGRN() {
         ...values,
         received_date: format(values.received_date, "yyyy-MM-dd HH:mm:ss"),
         updated_by: user?.name || "User",
+        items: values.items.map(item => ({
+          ...item,
+          item_name: item.item_name.includes("|||") ? item.item_name.split("|||")[0] : item.item_name
+        }))
       };
 
       const response = await grnApi.update(id as string, payload);
