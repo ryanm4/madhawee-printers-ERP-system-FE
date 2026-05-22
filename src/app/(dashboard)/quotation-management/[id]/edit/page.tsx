@@ -447,7 +447,7 @@ function EditQuotation({
                           );
                           if (selectedCustomer) {
                             // Auto-populate first contact person by default
-                            const contactPersons = Array.isArray(selectedCustomer.contact_persons) ? selectedCustomer.contact_persons : [];
+                            const contactPersons = Array.isArray(selectedCustomer.contacts) ? selectedCustomer.contacts : [];
                             const firstContact = contactPersons[0];
                             form.setValue("contact_person", firstContact?.name || "");
                           } else {
@@ -483,7 +483,7 @@ function EditQuotation({
                     const selectedCustomer = customer.find(
                       (c) => c.customer_id === form.watch("customer_id")
                     );
-                    const contacts = Array.isArray(selectedCustomer?.contact_persons) ? selectedCustomer.contact_persons : [];
+                    const contacts = Array.isArray(selectedCustomer?.contacts) ? selectedCustomer.contacts : [];
 
                     return (
                       <FormItem>
@@ -517,7 +517,7 @@ function EditQuotation({
                           const selectedCustomerId = form.watch("customer_id");
                           const selectedContactName = form.watch("contact_person");
                           const selectedCustomer = customer.find(c => c.customer_id === selectedCustomerId);
-                          const contactPersons = Array.isArray(selectedCustomer?.contact_persons) ? selectedCustomer.contact_persons : [];
+                          const contactPersons = Array.isArray(selectedCustomer?.contacts) ? selectedCustomer.contacts : [];
                           const contact = contactPersons.find(cp => cp.name === selectedContactName);
                           return contact?.phone || "";
                         })()

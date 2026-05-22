@@ -56,8 +56,8 @@ function QuotationsManagement() {
                   customer_phone: customer.phone || pdfData.customer_phone,
                   customer_email: customer.email || pdfData.customer_email,
                   contact_person:
-                    (Array.isArray(customer.contact_persons) && customer.contact_persons.length > 0)
-                      ? (customer.contact_persons[0] as CONTACT_PERSON).name
+                    (Array.isArray(customer.contacts) && customer.contacts.length > 0)
+                      ? (customer.contacts[0] as CONTACT_PERSON).name
                       : pdfData.contact_person,
                 };
               }

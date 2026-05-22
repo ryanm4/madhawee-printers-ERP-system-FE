@@ -14,6 +14,7 @@ import { appToast } from "@/lib/toast-utils";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
+import { CustomerType } from "@/config/enum";
 
 export default function CRMPage() {
   const router = useRouter();
@@ -31,15 +32,23 @@ export default function CRMPage() {
       const response = await CustomerApi.getAll();
 
       if (response.status === 200) {
-        const sortedData = response.data.sort((a: CUSTOMER, b: CUSTOMER) => {
-          const dateA = new Date(a.created_on || 0).getTime();
-          const dateB = new Date(b.created_on || 0).getTime();
+        // Filter for Customers or entities that serve both roles
+        const filteredData = response.data.filter(
+          (c: CUSTOMER) =>
+            c.customer_type === CustomerType.CUSTOMER ||
+            c.customer_type === CustomerType.BOTH
+        );
+
+        const sortedData = filteredData.sort((a, b) => {
+          const dateA = new Date(a.created_on || (a as Record<string, unknown>).created_at as string || 0).getTime();
+          const dateB = new Date(b.created_on || (b as Record<string, unknown>).created_at as string || 0).getTime();
           return dateB - dateA;
         });
         setData(sortedData);
       }
-    } catch (_error) {
-      console.error("Failed to fetch inventory");
+    } catch (error) {
+      console.error("Failed to fetch customers", error);
+      appToast.error("Fetch Error", "Failed to load customer data.");
     } finally {
       setIsLoading(false);
     }
