@@ -6,20 +6,36 @@ import {
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/error-utils";
 import { companyData as mockCompanyData } from "@/modules/quotations/mockData";
-import CompanyLogo from "../assets/Images/company_logo.jpeg";
 import { QUOTATIONS, QuotationItems } from "@/modules/quotations/types";
 
-const getImageBytes = async (url: string) => {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return await blob.arrayBuffer();
-};
-
-const detectImageFormat = (url: string) => {
-    return url.toLowerCase().endsWith(".jpg") ||
-        url.toLowerCase().endsWith(".jpeg")
-        ? "JPEG"
-        : "PNG";
+const getSvgAsPngBytes = (url: string): Promise<ArrayBuffer> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = async () => {
+            const canvas = document.createElement("canvas");
+            const scale = 2; // High resolution
+            canvas.width = img.naturalWidth * scale;
+            canvas.height = img.naturalHeight * scale;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+                reject(new Error("Failed to get canvas context"));
+                return;
+            }
+            ctx.scale(scale, scale);
+            ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
+            
+            canvas.toBlob(async (blob) => {
+                if (blob) {
+                    resolve(await blob.arrayBuffer());
+                } else {
+                    reject(new Error("Failed to convert canvas to blob"));
+                }
+            }, "image/png");
+        };
+        img.onerror = () => reject(new Error("Failed to load SVG"));
+        img.src = url;
+    });
 };
 
 // Helper: Convert Hex to RGB (0-1 range)
@@ -105,7 +121,7 @@ export const generateQuotationPDF = async (data: QUOTATIONS & { showAccountDetai
 
         // Construct company data from mock and imported assets, mapping to expected format
         const companyData = {
-            company_logo: CompanyLogo.src,
+            company_logo: "/images/madhawee_logo.svg",
             company_address: mockCompanyData.address,
             company_email: mockCompanyData.email,
             company_website: mockCompanyData.website,
@@ -128,9 +144,9 @@ export const generateQuotationPDF = async (data: QUOTATIONS & { showAccountDetai
         // --- LOGO ---
         if (companyData.company_logo) {
             try {
-                const imageBytes = await getImageBytes(companyData.company_logo);
-                // Assume JPEG since we imported a .jpeg
-                const image = await pdfDoc.embedJpg(imageBytes);
+                const imageBytes = await getSvgAsPngBytes(companyData.company_logo);
+                // Embed the generated PNG
+                const image = await pdfDoc.embedPng(imageBytes);
 
                 const logoDims = image.scaleToFit(200, 100);
 

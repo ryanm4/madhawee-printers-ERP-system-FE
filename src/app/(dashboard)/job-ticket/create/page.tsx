@@ -505,12 +505,16 @@ function CreateJobTicket() {
                         onValueChange={(value) => {
                           field.onChange(value);
                           const selectedItem = selectedPoItems.find(
-                            (i: PO_ITEMS) => i.item_code === value
+                            (i: PO_ITEMS) => i.description === value
                           );
                           if (selectedItem) {
                             form.setValue(
+                              "quantity",
+                              String(selectedItem.quantity)
+                            );
+                            form.setValue(
                               "jobName",
-                              selectedItem.item_code + " " + selectedItem.description
+                              selectedItem.description
                             );
                           }
                         }}
