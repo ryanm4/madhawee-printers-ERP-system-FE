@@ -218,8 +218,8 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
 
     <!-- Company Header -->
     <tr>
-      <td colspan="12" style="border: 2px solid #333; text-align: center; font-size: 14px; font-weight: bold; padding: 10px;">
-        Madhawee Printers (PVT) Ltd
+      <td colspan="12" style="border: 2px solid #333; text-align: center; padding: 10px;">
+        <img src="/images/madhawee_logo.svg" style="height: 50px; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto;" />
       </td>
     </tr>
 

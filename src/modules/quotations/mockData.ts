@@ -1,9 +1,9 @@
 
 export const companyData = {
     name: "MADHAWEE PRINTERS (PVT) LTD",
-    address: "No: 2B, Highlevel Road, Gangodawila, Nugegoda.",
-    tel: "011-2824984 / 011-2824985",
-    email: "madhaweepr@gmail.com",
+    address: "No: 624 Kandy Road, Bulugaha Junction, Kelaniya, Sri Lanka",
+    tel: "009411-2905229 , 2905263, 2905264",
+    email: "madhaweeprinters@gmail.com",
     website: "www.madhaweeprinters.lk",
     bankDetails: {
         accountName: "Madhawee Printers (Pvt) Ltd",

@@ -3,7 +3,31 @@ import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { IssueNote } from "./types";
 
-export const generateIssueNotePdf = (issueNote: IssueNote) => {
+const loadLogoAsDataUrl = (): Promise<string | null> => {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            // Use a high-res canvas for crisp output
+            const scale = 2;
+            canvas.width = img.naturalWidth * scale;
+            canvas.height = img.naturalHeight * scale;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+                resolve(null);
+                return;
+            }
+            ctx.scale(scale, scale);
+            ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
+            resolve(canvas.toDataURL("image/png"));
+        };
+        img.onerror = () => resolve(null);
+        img.src = "/images/madhawee_logo.svg";
+    });
+};
+
+export const generateIssueNotePdf = async (issueNote: IssueNote) => {
     const doc = new jsPDF({
         orientation: "landscape",
         unit: "mm",
@@ -13,27 +37,50 @@ export const generateIssueNotePdf = (issueNote: IssueNote) => {
     const primaryColor = [34, 63, 122]; // #223F7A
     const secondaryColor = [128, 128, 128];
 
-    // Header
-    doc.setFontSize(22);
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.setFont("helvetica", "bold");
-    doc.text("MADHAWEE PRINTERS", 14, 20);
+    // Try to load and embed the company logo
+    const logoDataUrl = await loadLogoAsDataUrl();
+    let headerYOffset = 20;
+
+    if (logoDataUrl) {
+        try {
+            // The SVG logo aspect ratio is roughly 407.97 x 59.61 ≈ 6.84:1
+            const logoWidth = 80;
+            const logoHeight = logoWidth / 6.84;
+            doc.addImage(logoDataUrl, "PNG", 14, 10, logoWidth, logoHeight);
+            headerYOffset = 10 + logoHeight + 5;
+        } catch (e) {
+            console.error("Error embedding logo in issue note PDF", e);
+            // Fallback to text header
+            doc.setFontSize(22);
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.setFont("helvetica", "bold");
+            doc.text("MADHAWEE PRINTERS", 14, 20);
+            headerYOffset = 25;
+        }
+    } else {
+        // Fallback to text header
+        doc.setFontSize(22);
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.setFont("helvetica", "bold");
+        doc.text("MADHAWEE PRINTERS", 14, 20);
+        headerYOffset = 25;
+    }
 
     doc.setFontSize(10);
     doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
     doc.setFont("helvetica", "normal");
-    doc.text("Quality Printing Solutions", 14, 25);
+    doc.text("Quality Printing Solutions", 14, headerYOffset);
 
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
     doc.setFont("helvetica", "bold");
-    doc.text("ISSUE NOTE", 14, 35);
+    doc.text("ISSUE NOTE", 14, headerYOffset + 10);
 
     // Metadata grid
     doc.setFontSize(9);
     const leftX = 14;
     const rightX = 150;
-    const currY = 45;
+    const currY = headerYOffset + 20;
     const lineHeight = 6;
 
     const addField = (label: string, value: string, x: number, y: number, labelOffset = 45) => {
@@ -105,3 +152,4 @@ export const generateIssueNotePdf = (issueNote: IssueNote) => {
 
     doc.save(`IssueNote_${issueNote.id}_${new Date().getTime()}.pdf`);
 };
+

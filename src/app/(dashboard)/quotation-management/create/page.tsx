@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { FieldPath, useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { getCurrencySymbol, Currency } from "@/lib/currencyUtils";
 import {
   Form,
   FormControl,
@@ -183,7 +184,7 @@ function CreateQuotation({
       subTotal += total;
       return {
         ...item,
-        item_total_price: total.toFixed(2),
+        item_total_price: String(Number(total.toFixed(4))),
       };
     });
 
@@ -198,10 +199,10 @@ function CreateQuotation({
     }
 
     return {
-      subTotal: subTotal.toFixed(2),
-      netTotal: netTotal.toFixed(2),
+      subTotal: String(Number(subTotal.toFixed(4))),
+      netTotal: String(Number(netTotal.toFixed(4))),
       noOfItems: String(currentItems.length),
-      totalWithoutTax: subTotal.toFixed(2),
+      totalWithoutTax: String(Number(subTotal.toFixed(4))),
     };
   };
 
@@ -249,7 +250,7 @@ function CreateQuotation({
         ? sanitizedValue
         : form.getValues(`items.${index}.item_unit_price`) || "0"
     );
-    const rowTotal = (qty * price).toFixed(2);
+    const rowTotal = String(Number((qty * price).toFixed(4)));
     form.setValue(`items.${index}.item_total_price`, rowTotal);
 
     // Recalculate global totals
@@ -709,13 +710,13 @@ function CreateQuotation({
                         Quantity
                       </th>
                       <th className="text-left p-2 text-sm font-medium">
-                        Rate (Rs)
+                        Rate ({getCurrencySymbol(form.watch("currency") as Currency)})
                       </th>
                       <th className="text-left p-2 text-sm font-medium">
-                        Total (VAT exclusive) (Rs)
+                        Total (VAT exclusive) ({getCurrencySymbol(form.watch("currency") as Currency)})
                       </th>
                       <th className="text-left p-2 text-sm font-medium">
-                        Total (VAT inclusive) (Rs)
+                        Total (VAT inclusive) ({getCurrencySymbol(form.watch("currency") as Currency)})
                       </th>
                       <th className="text-left p-2 text-sm font-medium">
                         Actions
@@ -841,14 +842,14 @@ function CreateQuotation({
                           <td className="p-2">
                             <Input
                               type="text"
-                              value={`Rs ${totalExclusive.toFixed(2)}`}
+                              value={`${getCurrencySymbol(form.watch("currency") as Currency)} ${Number(totalExclusive.toFixed(4))}`}
                               className="w-[120px]"
                             />
                           </td>
                           <td className="p-2">
                             <Input
                               type="text"
-                              value={`Rs ${totalInclusive.toFixed(2)}`}
+                              value={`${getCurrencySymbol(form.watch("currency") as Currency)} ${Number(totalInclusive.toFixed(4))}`}
                               className="w-[120px]"
                             />
                           </td>
@@ -947,13 +948,13 @@ function CreateQuotation({
                       <div className="flex justify-between text-sm text-muted-foreground italic">
                         <span>Sub Total (Without TAX):</span>
                         <span className="font-medium">
-                          Rs {form.watch("sub_total") || "0"}
+                          {getCurrencySymbol(form.watch("currency") as Currency)} {form.watch("sub_total") || "0"}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm text-muted-foreground italic">
                         <span>Total Amount (Without TAX):</span>
                         <span className="font-medium">
-                          Rs {form.watch("total_without_tax") || "0"}
+                          {getCurrencySymbol(form.watch("currency") as Currency)} {form.watch("total_without_tax") || "0"}
                         </span>
                       </div>
                     </>
@@ -966,15 +967,15 @@ function CreateQuotation({
                   </div>
                   {(watchTaxType === QuotationTaxType.VAT || watchTaxType === QuotationTaxType.TIEP) && (
                     <div className="flex justify-between text-sm text-muted-foreground italic">
-                      <span>VAT Amount (18%):</span>
+                      <span>{watchTaxType === QuotationTaxType.VAT ? "VAT" : "TIEP"} Amount (18%):</span>
                       <span className="font-medium">
-                        Rs {(parseFloat(form.watch("sub_total") || "0") * 0.18).toFixed(2)}
+                        {getCurrencySymbol(form.watch("currency") as Currency)} {Number((parseFloat(form.watch("sub_total") || "0") * 0.18).toFixed(4))}
                       </span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm font-bold border-t pt-2">
                     <span>Net Total:</span>
-                    <span>Rs {form.watch("net_total") || "0"}</span>
+                    <span>{getCurrencySymbol(form.watch("currency") as Currency)} {form.watch("net_total") || "0"}</span>
                   </div>
                 </div>
               </div>

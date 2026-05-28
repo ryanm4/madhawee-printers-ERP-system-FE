@@ -17,7 +17,7 @@ export const formatCurrency = (amount: number | string, currency?: Currency): st
 
     const formattedValue = numericAmount.toLocaleString("en-US", {
         minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        maximumFractionDigits: 4,
     });
 
     if (currency) {
