@@ -24,7 +24,7 @@ const getSvgAsPngBytes = (url: string): Promise<ArrayBuffer> => {
             }
             ctx.scale(scale, scale);
             ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
-            
+
             canvas.toBlob(async (blob) => {
                 if (blob) {
                     resolve(await blob.arrayBuffer());
@@ -147,11 +147,10 @@ export const generateQuotationPDF = async (data: QUOTATIONS & { showAccountDetai
                 const imageBytes = await getSvgAsPngBytes(companyData.company_logo);
                 // Embed the generated PNG
                 const image = await pdfDoc.embedPng(imageBytes);
-
-                const logoDims = image.scaleToFit(200, 100);
+                const logoDims = image.scaleToFit(280, 180);
 
                 currentPage.drawImage(image, {
-                    x: margin,
+                    x: margin - 15,
                     y: yPosition - logoDims.height,
                     width: logoDims.width,
                     height: logoDims.height,
@@ -167,7 +166,7 @@ export const generateQuotationPDF = async (data: QUOTATIONS & { showAccountDetai
         }
 
         // --- COMPANY ADDRESS ---
-        const fontSizeSmall = 9;
+        const fontSizeSmall = 11;
         if (companyData.company_address) {
             const addressLines = wrapText(companyData.company_address, 250, helvetica, fontSizeSmall);
             addressLines.forEach(line => {
@@ -217,7 +216,7 @@ export const generateQuotationPDF = async (data: QUOTATIONS & { showAccountDetai
         const sectionTopY = yPosition;
 
         // LEFT: QUOTATION Title + Details
-        const titleSize = 24;
+        const titleSize = 18;
         currentPage.drawText("QUOTATION", {
             x: leftColX,
             y: sectionTopY,
@@ -290,7 +289,7 @@ export const generateQuotationPDF = async (data: QUOTATIONS & { showAccountDetai
         const isTaxNone = Number(data?.tax_type_id) === 2;
 
         let colWidths = [30, 175, 50, 80, 80, 60, 80];
-        let colAlign: ('center' | 'left' | 'right')[] = ['center', 'left', 'right', 'right', 'right', 'right', 'right'];
+        let colAlign: ('center' | 'left' | 'right')[] = ['center', 'left', 'center', 'center', 'center', 'center', 'center'];
         let headers = [
             "#",
             "Product",
@@ -298,13 +297,13 @@ export const generateQuotationPDF = async (data: QUOTATIONS & { showAccountDetai
             `Unit Price` + "\n" + `(${currency})`,
             `Total` + "\n" + "(EX)",
             `VAT` + "\n" + "(18%)",
-            `Total` + "\n" + "(Inc)"
+            `Total` + "\n" + "(incl.)"
         ];
 
         if (isTaxNone) {
             // Remove Total(EX) and VAT(18%) columns if tax is None
             colWidths = [30, 245, 60, 100, 120];
-            colAlign = ['center', 'left', 'right', 'right', 'right'];
+            colAlign = ['center', 'left', 'center', 'center', 'center'];
             headers = [
                 "#",
                 "Product",
@@ -418,7 +417,8 @@ export const generateQuotationPDF = async (data: QUOTATIONS & { showAccountDetai
                 if (colIndex === 1) {
                     let lineY = yPosition - 12;
                     productLines.forEach(line => {
-                        currentPage.drawText(line.trim(), { x: cellX + 5, y: lineY, size: 9, font: helvetica, color: colors.text });
+                        const lineText = line.trim();
+                        currentPage.drawText(lineText, { x: cellX + 5, y: lineY, size: 9, font: helvetica, color: colors.text });
                         lineY -= 12;
                     });
                 } else {

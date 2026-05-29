@@ -68,7 +68,6 @@ function QuotationsManagement() {
               );
             }
           }
-
           await generateQuotationPDF({
             ...pdfData,
             items: pdfData.items || [],

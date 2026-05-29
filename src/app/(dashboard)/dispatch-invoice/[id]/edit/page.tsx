@@ -47,6 +47,7 @@ function EditDispatchandInvoice() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [JobData, setJobData] = useState<ALL_TICKETS[]>([]);
+  const [originalDispatchQty, setOriginalDispatchQty] = useState(0);
   const params = useParams();
   const [user, setUser] = useState<{
     name: string;
@@ -118,20 +119,25 @@ function EditDispatchandInvoice() {
         (j) => String(j.job_id) === String(data.job_id)
       );
       const jobQty = Number(selectedJob?.quantity || 0);
+      const previouslyCompleted = Number(selectedJob?.completed_qty || 0);
       const dispatchQty = Number(data.dispatch_quantity || 0);
 
-      if (dispatchQty > jobQty) {
+      // Delta between new dispatch quantity and what it originally was
+      const delta = dispatchQty - originalDispatchQty;
+      const totalDispatched = previouslyCompleted + delta;
+
+      if (totalDispatched > jobQty) {
         toast("Invalid Dispatch Quantity", {
-          description: `Dispatched quantity (${dispatchQty}) cannot exceed Job quantity (${jobQty}).`,
+          description: `Total dispatched quantity (${totalDispatched}) cannot exceed Job quantity (${jobQty}).`,
         });
         setIsLoading(false);
         return;
       }
 
-      const status =
-        dispatchQty >= jobQty
-          ? DispatchStatus.COMPLETED
-          : DispatchStatus.PARTIALLY_DISPATCHED;
+      const newJobStatus =
+        totalDispatched >= jobQty
+          ? "COMPLETED"
+          : "PARTIALLY DISPATCHED";
 
       const payload: CREATE_DISPATCH = {
         customer_id: data.customer_id || "",
@@ -142,11 +148,24 @@ function EditDispatchandInvoice() {
         no_of_bundles: data.dispatch_bundles_qty ?? "",
         description: data.dispatch_description ?? "",
         delivery_address: data.delivery_address ?? "",
-        status: status,
+        status: newJobStatus,
         updated_by: user?.name || "User",
         updated_on: new Date(),
       };
       await dispatchInventoryApi.update(id, payload);
+
+      // Patch the job ticket to reflect updated totals and status
+      if (data.job_id) {
+        try {
+          await jobTicketsApi.patch(data.job_id, {
+            status: newJobStatus,
+            completed_qty: totalDispatched,
+            updated_by: user?.name || "User",
+          });
+        } catch (err) {
+          console.error("Failed to update Job Ticket status during dispatch edit:", err);
+        }
+      }
 
       toast("Dispatch Updated Successfully");
       form.clearErrors();
@@ -226,6 +245,7 @@ function EditDispatchandInvoice() {
           form.setValue("dispatch_note", dispatch.dispatch_note);
           form.setValue("dispatch_date", new Date(dispatch.dispatch_date));
           form.setValue("dispatch_quantity", String(dispatch.dispatch_qty));
+          setOriginalDispatchQty(Number(dispatch.dispatch_qty));
           form.setValue("dispatch_bundles_qty", String(dispatch.no_of_bundles));
           form.setValue("dispatch_description", dispatch.description);
         }
