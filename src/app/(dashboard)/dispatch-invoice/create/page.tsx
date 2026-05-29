@@ -122,6 +122,14 @@ function CreateDispatchandInvoice() {
       const currentDispatchQty = Number(data.dispatch_quantity || 0);
       const totalDispatched = previouslyCompleted + currentDispatchQty;
 
+      if (totalDispatched > totalJobQty) {
+        toast("Invalid Dispatch Quantity", {
+          description: `Total dispatched quantity (${totalDispatched}) cannot exceed Job quantity (${totalJobQty}).`,
+        });
+        setIsLoading(false);
+        return;
+      }
+
       const newJobStatus =
         totalDispatched >= totalJobQty
           ? JobTicketStatus.COMPLETED
@@ -150,6 +158,7 @@ function CreateDispatchandInvoice() {
         try {
           await jobTicketsApi.patch(data.job_id, {
             status: newJobStatus,
+            completed_qty: totalDispatched,
             updated_by: user?.name || "User",
           });
         } catch (err) {

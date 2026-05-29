@@ -824,6 +824,7 @@ function EditQuotation({
                                 <FormItem>
                                   <Input
                                     type="number"
+                                    step="any"
                                     placeholder="0"
                                     className="w-[80px]"
                                     {...field}
@@ -846,6 +847,7 @@ function EditQuotation({
                                 <FormItem>
                                   <Input
                                     type="number"
+                                    step="any"
                                     placeholder="0"
                                     className="w-[100px]"
                                     {...field}

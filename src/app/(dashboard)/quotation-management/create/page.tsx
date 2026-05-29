@@ -800,6 +800,7 @@ function CreateQuotation({
                                   <FormControl>
                                     <Input
                                       type="number"
+                                      step="any"
                                       placeholder="0"
                                       className="w-[80px]"
                                       {...field}
@@ -824,6 +825,7 @@ function CreateQuotation({
                                 <FormItem>
                                   <Input
                                     type="number"
+                                    step="any"
                                     placeholder="0"
                                     className="w-[100px]"
                                     {...field}

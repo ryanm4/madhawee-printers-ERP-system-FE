@@ -210,4 +210,5 @@ export interface JobTicketPrintData {
 export interface JOB_TICKET_STATUS_UPDATE {
   updated_by: string;
   status: string;
+  completed_qty?: number;
 }

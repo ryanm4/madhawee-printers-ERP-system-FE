@@ -86,7 +86,7 @@ function DashboardPage({
 
   const KAR_CONFIG: Record<string, { label: string, color: string, badgeBg: string, icon: LucideIcon }> = {
     totalRevenue: { label: "Total Revenue", color: "#8b5cf6", badgeBg: "#8b5cf615", icon: Banknote },
-    avgQuoteValue: { label: "Total dispatched revenue", color: "#f59e0b", badgeBg: "#f59e0b15", icon: BarChart3 },
+    dispatchRevenue: { label: "Total Dispatch Revenue", color: "#f59e0b", badgeBg: "#f59e0b15", icon: Truck },
     totalQuotations: { label: "Total Quotations", color: "#223F7A", badgeBg: "#223F7A15", icon: FileText },
     approvedQuotations: { label: "Approved Quotations", color: "#10b981", badgeBg: "#10b98115", icon: CheckCircle2 },
 
@@ -188,59 +188,85 @@ function DashboardPage({
               {/* Right: KPI Grid */}
               <div className="lg:w-[480px] xl:w-[540px] p-6 lg:p-10 flex items-center">
                 <div className="grid grid-cols-2 gap-6 w-full">
-                  {Object.keys(KAR_CONFIG).map((key) => {
+                  {Object.keys(KAR_CONFIG).flatMap((key) => {
                     const item = kpiData.find(d => d.key === key)
-                    if (!item) return null
+                    if (!item) return []
 
                     const config = KAR_CONFIG[key]
                     const isCurrency = key === 'totalRevenue' || key === 'avgQuoteValue'
-                    const rawValue = Number(item.value)
+                    const isObjectValue = typeof item.value === 'object' && item.value !== null
 
-                      // Smart formatting: abbreviate large numbers to prevent clutter
-                      const formatValue = (val: number, currency: boolean) => {
-                        if (val >= 1000000000) return `${(val / 1000000000).toFixed(1)}B`
-                        if (val >= 1000000) return `${(val / 1000000).toFixed(1)}M`
-                        // For non-currency large counts, keep them full until very large
-                        if (!currency && val < 100000) return val.toLocaleString()
-                        if (val >= 10000) return `${(val / 1000).toFixed(1)}K`
-                        return val.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                    // Display the full value without abbreviation
+                    const formatValue = (val: number, currency: boolean) => {
+                      if (currency) {
+                        return val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                       }
+                      return val.toLocaleString()
+                    }
 
-                      const formattedValue = isCurrency
-                        ? `Rs. ${formatValue(rawValue, true)}`
-                        : formatValue(rawValue, false)
+                    const Icon = config.icon || TrendingUp
 
-                      const Icon = config.icon || TrendingUp
-
-                      // Dynamic font sizing based on length to prevent layout breaks
-                      const getFontSize = () => {
-                        const len = formattedValue.length
-                        if (isCurrency) {
-                          if (len > 12) return "text-xl"
-                          if (len > 8) return "text-2xl"
-                          return "text-3xl"
-                        } else {
-                          if (len > 5) return "text-4xl"
-                          return "text-6xl"
-                        }
+                    // Dynamic font sizing based on length to prevent layout breaks
+                    const getFontSize = (strVal: string) => {
+                      const len = strVal.length
+                      if (isCurrency) {
+                        if (len > 14) return "text-lg"
+                        if (len > 11) return "text-xl"
+                        if (len > 8) return "text-xl"
+                        return "text-xl"
+                      } else {
+                        if (len > 5) return "text-xl"
+                        return "text-xl"
                       }
+                    }
 
-                      return (
-                        <div key={item.key} className="bg-gray-50/80 backdrop-blur-sm border border-gray-100 rounded-[2.5rem] p-8 hover:shadow-xl hover:border-gray-200 transition-all group/kpi min-h-[160px] flex flex-col justify-between">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="text-[13px] font-bold text-gray-400 uppercase tracking-widest leading-tight">{config.label}</p>
-                            <div className="w-10 h-10 rounded-2xl flex-shrink-0 flex items-center justify-center group-hover/kpi:scale-110 transition-transform" style={{ backgroundColor: config.badgeBg }}>
-                              <Icon className="w-5 h-5" style={{ color: config.color }} />
+                    if (isObjectValue) {
+                      return Object.entries(item.value as unknown as Record<string, number>).map(([currencyCode, val]) => {
+                        const formattedString = currencyCode === 'USD'
+                          ? `$ ${formatValue(Number(val), true)}`
+                          : `Rs. ${formatValue(Number(val), true)}`;
+
+                        const flag = currencyCode === 'USD' ? '🇺🇸' : '🇱🇰';
+
+                        return (
+                          <div key={`${item.key}-${currencyCode}`} className="bg-gray-50/80 backdrop-blur-sm border border-gray-100 rounded-[2.5rem] p-8 hover:shadow-xl hover:border-gray-200 transition-all group/kpi min-h-[160px] flex flex-col justify-between">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-[13px] font-bold text-gray-400 uppercase tracking-widest leading-tight">{config.label} ({currencyCode}) {flag}</p>
+                              <div className="w-10 h-10 rounded-2xl flex-shrink-0 flex items-center justify-center group-hover/kpi:scale-110 transition-transform" style={{ backgroundColor: config.badgeBg }}>
+                                <Icon className="w-5 h-5" style={{ color: config.color }} />
+                              </div>
+                            </div>
+                            <div>
+                              <h3 className={cn("font-black tracking-tighter text-gray-900 leading-none", getFontSize(formattedString))}>
+                                {formattedString}
+                              </h3>
                             </div>
                           </div>
-                          <div>
-                            <h3 className={cn("font-black tracking-tighter text-gray-900 leading-none truncate", getFontSize())}>
-                              {formattedValue}
-                            </h3>
+                        )
+                      });
+                    }
+
+                    const rawValue = Number(item.value)
+                    const formattedValue = isCurrency
+                      ? `Rs. ${formatValue(rawValue, true)}`
+                      : formatValue(rawValue, false)
+
+                    return [
+                      <div key={item.key} className="bg-gray-50/80 backdrop-blur-sm border border-gray-100 rounded-[2.5rem] p-8 hover:shadow-xl hover:border-gray-200 transition-all group/kpi min-h-[160px] flex flex-col justify-between">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-[13px] font-bold text-gray-400 uppercase tracking-widest leading-tight">{config.label}</p>
+                          <div className="w-10 h-10 rounded-2xl flex-shrink-0 flex items-center justify-center group-hover/kpi:scale-110 transition-transform" style={{ backgroundColor: config.badgeBg }}>
+                            <Icon className="w-5 h-5" style={{ color: config.color }} />
                           </div>
                         </div>
-                      )
-                    })}
+                        <div>
+                          <h3 className={cn("font-black tracking-tighter text-gray-900 leading-none", getFontSize(formattedValue))}>
+                            {formattedValue}
+                          </h3>
+                        </div>
+                      </div>
+                    ]
+                  })}
                 </div>
               </div>
             </div>
