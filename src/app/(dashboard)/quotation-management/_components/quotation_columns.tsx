@@ -22,8 +22,12 @@ interface QuotationTableActions {
 }
 
 export const quotationColumns = (
-    actions: QuotationTableActions
-): ColumnDef<QUOTATIONS>[] => [
+    actions: QuotationTableActions,
+    options?: { canModify?: boolean }
+): ColumnDef<QUOTATIONS>[] => {
+    const canModify = options?.canModify ?? true;
+
+    return [
         {
             accessorKey: "quote_id",
             header: ({ column }) => {
@@ -140,50 +144,53 @@ export const quotationColumns = (
 
                 return (
                     <div className="flex flex-row gap-2 items-center">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <MoreHorizontal />
-                                </Button>
-                            </DropdownMenuTrigger>
+                        {canModify && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                        <MoreHorizontal />
+                                    </Button>
+                                </DropdownMenuTrigger>
 
-                            <DropdownMenuContent align="end">
-                                {(() => {
-                                    const nextStatus = getNextQuotationStatus(quotation.status);
-                                    if (nextStatus) {
-                                        return (
-                                            <DropdownMenuItem
-                                                onClick={() => actions.onStatusChange(quotation.quote_id, nextStatus)}
-                                            >
-                                                <ArrowRightIcon className="mr-2 h-4 w-4" />
-                                                Update Status to {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1).toLowerCase()}
-                                            </DropdownMenuItem>
-                                        );
-                                    }
-                                    return null;
-                                })()}
-                                <DropdownMenuItem
-                                    onClick={() => actions.onEdit(quotation.quote_id)}
-                                >
-                                    <PencilIcon className="mr-2 h-4 w-4" />
-                                    Edit Quotation
-                                </DropdownMenuItem>
+                                <DropdownMenuContent align="end">
+                                    {(() => {
+                                        const nextStatus = getNextQuotationStatus(quotation.status);
+                                        if (nextStatus) {
+                                            return (
+                                                <DropdownMenuItem
+                                                    onClick={() => actions.onStatusChange(quotation.quote_id, nextStatus)}
+                                                >
+                                                    <ArrowRightIcon className="mr-2 h-4 w-4" />
+                                                    Update Status to {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1).toLowerCase()}
+                                                </DropdownMenuItem>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
+                                    <DropdownMenuItem
+                                        onClick={() => actions.onEdit(quotation.quote_id)}
+                                    >
+                                        <PencilIcon className="mr-2 h-4 w-4" />
+                                        Edit Quotation
+                                    </DropdownMenuItem>
 
-                                <DropdownMenuItem
-                                    variant="destructive"
-                                    onClick={() => actions.onDelete(quotation.quote_id)}
-                                >
-                                    <TrashIcon className="mr-2 h-4 w-4" />
-                                    Delete Quotation
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                                    <DropdownMenuItem
+                                        variant="destructive"
+                                        onClick={() => actions.onDelete(quotation.quote_id)}
+                                    >
+                                        <TrashIcon className="mr-2 h-4 w-4" />
+                                        Delete Quotation
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
 
-                        <Button onClick={() => actions.onDownload(quotation.quote_id)} variant="outline" size="icon" aria-label="Submit">
+                        <Button onClick={() => actions.onDownload(quotation.quote_id)} variant="outline" size="icon" aria-label="Download quotation PDF">
                             <Printer />
                         </Button>
                     </div>
                 )
             },
         },
-    ]
+    ];
+};

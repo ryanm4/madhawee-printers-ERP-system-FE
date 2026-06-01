@@ -17,8 +17,12 @@ interface PurchaseOrderTableActions {
 }
 
 export const purchaseOrderColumns = (
-    actions: PurchaseOrderTableActions
-): ColumnDef<PURCHASE_ORDER>[] => [
+    actions: PurchaseOrderTableActions,
+    options?: { canModify?: boolean }
+): ColumnDef<PURCHASE_ORDER>[] => {
+    const canModify = options?.canModify ?? true;
+
+    return [
         {
             accessorKey: "po_id",
             header: ({ column }) => {
@@ -97,48 +101,48 @@ export const purchaseOrderColumns = (
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-
-                            {(() => {
-                                const nextStatus = getNextPurchaseOrderStatus(po.status);
-                                if (nextStatus) {
-                                    return (
-                                        <>
-                                            <DropdownMenuItem
-                                                onClick={() => actions.onStatusChange(po.po_id, nextStatus)}
-                                            >
-                                                <ArrowRightIcon className="mr-2 h-4 w-4" />
-                                                Update Status to {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1).toLowerCase()}
-                                            </DropdownMenuItem>
-
-                                        </>
-                                    );
-                                }
-                                return null;
-                            })()}
+                            {canModify && (
+                                <>
+                                    {(() => {
+                                        const nextStatus = getNextPurchaseOrderStatus(po.status);
+                                        if (nextStatus) {
+                                            return (
+                                                <DropdownMenuItem
+                                                    onClick={() => actions.onStatusChange(po.po_id, nextStatus)}
+                                                >
+                                                    <ArrowRightIcon className="mr-2 h-4 w-4" />
+                                                    Update Status to {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1).toLowerCase()}
+                                                </DropdownMenuItem>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
+                                    <DropdownMenuItem
+                                        onClick={() => actions.onEdit(po.po_id)}
+                                    >
+                                        <PencilIcon className="mr-2 h-4 w-4" />
+                                        Edit PO
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        variant="destructive"
+                                        onClick={() => actions.onDelete(po.po_id)}
+                                        disabled={po.jobs && po.jobs.length > 0}
+                                    >
+                                        <TrashIcon className="mr-2 h-4 w-4" />
+                                        Delete PO
+                                    </DropdownMenuItem>
+                                </>
+                            )}
                             <DropdownMenuItem
                                 onClick={() => actions.onView(po.po_id)}
                             >
                                 <EyeIcon className="mr-2 h-4 w-4" />
                                 View PO
                             </DropdownMenuItem>
-
-                            <DropdownMenuItem
-                                onClick={() => actions.onEdit(po.po_id)}
-                            >
-                                <PencilIcon className="mr-2 h-4 w-4" />
-                                Edit PO
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                variant="destructive"
-                                onClick={() => actions.onDelete(po.po_id)}
-                                disabled={po.jobs && po.jobs.length > 0}
-                            >
-                                <TrashIcon className="mr-2 h-4 w-4" />
-                                Delete PO
-                            </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 )
             },
         },
-    ]
+    ];
+};

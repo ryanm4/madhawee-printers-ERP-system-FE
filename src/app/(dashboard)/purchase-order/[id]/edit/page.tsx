@@ -51,10 +51,13 @@ import {
 } from "@/modules/purchase-order/types";
 import { Combobox } from "@/components/shared/combobox";
 import { getUser } from "@/lib/auth";
+import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
+import { usePermissions } from "@/hooks/use-permissions";
 
 type PurchaseOrderFormValues = z.infer<typeof purchaseOrderScheme>;
 
 function EditPurchaseOrder() {
+  const { isAdmin } = usePermissions();
   const router = useRouter();
   const params = useParams();
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
@@ -243,6 +246,10 @@ function EditPurchaseOrder() {
       fetchPurchaseOrder();
     }
   }, [id, form]);
+
+  if (!isAdmin) {
+    return <RestrictedRouteGuard />;
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">

@@ -24,8 +24,10 @@ import { PURCHASE_ORDER } from "@/modules/purchase-order/types";
 import { PurchaseOrderStatus, JobTicketStatus } from "@/config/enum";
 import { DataTable } from "./_components/purchase-order-table";
 import { purchaseOrderColumns } from "./_components/purchase-order-columns";
+import { usePermissions } from "@/hooks/use-permissions";
 
 function PurchaseOrderPage() {
+  const { canModify, canExportList } = usePermissions();
   const [data, setData] = useState<PURCHASE_ORDER[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -126,9 +128,9 @@ function PurchaseOrderPage() {
   const columns = purchaseOrderColumns({
     onEdit: (id) => router.push(`/purchase-order/${id}/edit`),
     onDelete: (id) => handleDelete(id),
-    onView: (id) => router.push(`/purchase-order/${id}`),
+    onView: (id) => router.push(`/purchase-order/${id}/view`),
     onStatusChange: handleStatusChange,
-  });
+  }, { canModify });
 
   const filteredData = data.filter((item) => {
     const matchesSearch = !search || (() => {
@@ -216,7 +218,7 @@ function PurchaseOrderPage() {
               <Table2 />
             </TabsTrigger>
           </TabsList>
-          <ExportButton data={data} filename="purchase-orders" />
+          {canExportList && <ExportButton data={data} filename="purchase-orders" />}
           <Button
             onClick={() => router.push("/purchase-order/create")}
             disabled={loading}
@@ -255,6 +257,7 @@ function PurchaseOrderPage() {
                     onDelete={handleDelete}
                     onRefresh={fetchData}
                     onStatusChange={handleStatusChange}
+                    permissions={{ canModify }}
                   />
                 ))}
               </div>

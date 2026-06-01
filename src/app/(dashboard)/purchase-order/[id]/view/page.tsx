@@ -45,11 +45,13 @@ import { purchaseOrderApi } from "@/modules/purchase-order/api";
 
 
 import { FullPageLoader } from "@/components/shared/loader";
+import { usePermissions } from "@/hooks/use-permissions";
 
 type PurchaseOrderFormValues = z.infer<typeof purchaseOrderScheme>;
 
 function ViewPurchaseOrder() {
   const router = useRouter();
+  const { canModify } = usePermissions();
   const params = useParams();
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
   const [quotationList, setQuotationList] = useState<QUOTATIONS[]>([]);
@@ -197,14 +199,16 @@ function ViewPurchaseOrder() {
             >
               Back to List
             </Button>
-            <Button
-              size="lg"
-              type="button"
-              className="bg-primary hover:bg-primary/90"
-              onClick={() => router.push(`/purchase-order/${id}/edit`)}
-            >
-              <Edit2 className="mr-2 h-4 w-4" /> Edit Purchase Order
-            </Button>
+            {canModify && (
+              <Button
+                size="lg"
+                type="button"
+                className="bg-primary hover:bg-primary/90"
+                onClick={() => router.push(`/purchase-order/${id}/edit`)}
+              >
+                <Edit2 className="mr-2 h-4 w-4" /> Edit Purchase Order
+              </Button>
+            )}
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">

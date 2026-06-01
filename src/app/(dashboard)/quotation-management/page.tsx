@@ -19,9 +19,11 @@ import { generateQuotationPDF } from "@/components/pdf-generator";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
 import { CONTACT_PERSON } from "@/modules/customer/types";
+import { usePermissions } from "@/hooks/use-permissions";
 
 function QuotationsManagement() {
   const router = useRouter();
+  const { canModify, canExportList } = usePermissions();
   const [data, setData] = useState<QUOTATIONS[]>([]);
   const [loading, setLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -128,7 +130,7 @@ function QuotationsManagement() {
     },
   };
 
-  const columns = quotationColumns(handlers);
+  const columns = quotationColumns(handlers, { canModify });
 
   useEffect(() => {
     fetchData();
@@ -189,7 +191,7 @@ function QuotationsManagement() {
           />
         </div>
 
-        <ExportButton data={data} filename="quotations-list" />
+        {canExportList && <ExportButton data={data} filename="quotations-list" />}
         <Button onClick={() => router.push("/quotation-management/create")}>
           <PlusIcon /> Create New
         </Button>
