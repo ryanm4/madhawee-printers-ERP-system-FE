@@ -36,10 +36,13 @@ import { CustomerApi } from "@/modules/customer/api";
 import { toast } from "sonner";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
+import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
+import { usePermissions } from "@/hooks/use-permissions";
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
 
 function EditCustomerRelationship() {
+  const { isAdmin } = usePermissions();
   const router = useRouter();
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -242,6 +245,11 @@ function EditCustomerRelationship() {
       form.clearErrors("creditPeriod");
     }
   }, [supplierType, form]);
+
+  if (!isAdmin) {
+    return <RestrictedRouteGuard />;
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       {isLoading && <FullPageLoader />}

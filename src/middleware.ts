@@ -1,8 +1,22 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { getDefaultRoute, isRouteAllowedForUser } from '@/lib/permissions'
+
+function getUserRoleFromRequest(request: NextRequest): string | undefined {
+    const userCookie = request.cookies.get('user')?.value
+    if (!userCookie) return undefined
+
+    try {
+        const user = JSON.parse(userCookie) as { user_role?: string }
+        return user.user_role
+    } catch {
+        return undefined
+    }
+}
 
 export function middleware(request: NextRequest) {
     const token = request.cookies.get('auth_token')?.value
+    const userRole = getUserRoleFromRequest(request)
     const { pathname } = request.nextUrl
 
     // Define public routes that don't require authentication
@@ -11,20 +25,22 @@ export function middleware(request: NextRequest) {
     // check if the route is public
     const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
 
-    // If the user is on a public route and has a token, redirect to dashboard
+    // If the user is on a public route and has a token, redirect to their home page
     if (isPublicRoute && token) {
-        // If user is already logged in, redirect away from login page to dashboard
         if (pathname === '/login') {
-            return NextResponse.redirect(new URL('/', request.url))
+            return NextResponse.redirect(new URL(getDefaultRoute(userRole), request.url))
         }
     }
 
     // If the user is not on a public route and doesn't have a token, redirect to login
     if (!isPublicRoute && !token) {
         const loginUrl = new URL('/login', request.url)
-        // Optional: Add redirect param to return to the original page after login
-        // loginUrl.searchParams.set('redirect', pathname) 
         return NextResponse.redirect(loginUrl)
+    }
+
+    // Restrict USER role to allowed pages only
+    if (token && !isPublicRoute && !isRouteAllowedForUser(pathname, userRole)) {
+        return NextResponse.redirect(new URL(getDefaultRoute(userRole), request.url))
     }
 
     return NextResponse.next()

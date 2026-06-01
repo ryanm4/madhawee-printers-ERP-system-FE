@@ -56,6 +56,8 @@ import {
 } from "@/config/enum";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
+import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
+import { usePermissions } from "@/hooks/use-permissions";
 
 type QuotationFormValues = z.infer<typeof createQuotationSchema>;
 
@@ -68,6 +70,7 @@ function EditQuotation({
     avatar: string;
   };
 }) {
+  const { isAdmin } = usePermissions();
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -359,6 +362,10 @@ function EditQuotation({
       fetchQuotation();
     }
   }, [id, form]);
+
+  if (!isAdmin) {
+    return <RestrictedRouteGuard />;
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">

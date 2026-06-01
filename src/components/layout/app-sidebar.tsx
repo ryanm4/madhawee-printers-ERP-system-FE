@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { getUser } from "@/lib/auth";
+import { isAdminRole } from "@/lib/permissions";
 import {
   IconHelp,
   IconInnerShadowTop,
@@ -148,7 +150,29 @@ const data = {
   ],
 };
 
+const USER_ROLE_NAV_URLS = new Set([
+  "/quotation-management",
+  "/customers",
+  "/purchase-order",
+]);
+
+function getNavGroupsForRole(isAdmin: boolean) {
+  if (isAdmin) return data.navGroups;
+
+  return data.navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => USER_ROLE_NAV_URLS.has(item.url)),
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const user = getUser();
+  const isAdmin = isAdminRole(user?.user_role);
+  const navGroups = getNavGroupsForRole(isAdmin);
+  const homeHref = isAdmin ? "/dashboard" : "/quotation-management";
+
   return (
     <Sidebar {...props}>
       <SidebarHeader>
@@ -159,7 +183,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="/dashboard">
+              <a href={homeHref}>
                 <div className="flex aspect-square size-8 items-center justify-center ">
                   <Image
                     src={company_logo}
@@ -183,7 +207,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent className="gap-0">
-        {data.navGroups.map((group) => (
+        {navGroups.map((group) => (
           <SidebarGroup key={group.title} className="py-1">
             <SidebarGroupLabel className="h-5 mb-0 px-2 text-xs font-semibold">{group.title}</SidebarGroupLabel>
             <SidebarGroupContent>

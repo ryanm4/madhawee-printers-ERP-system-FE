@@ -19,11 +19,13 @@ import { CustomerType, VatType } from '@/config/enum'
 import { CustomerApi } from '@/modules/customer/api'
 import { toast } from 'sonner'
 import { FullPageLoader } from "@/components/shared/loader";
+import { usePermissions } from "@/hooks/use-permissions";
 
 type CustomerFormValues = z.infer<typeof customerSchema>
 
 function ViewCustomerRelationship() {
     const router = useRouter()
+    const { canModify } = usePermissions()
     const [uploadedFile, setUploadedFile] = useState<File | null>(null)
     const [isLoading, setIsLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -181,13 +183,15 @@ function ViewCustomerRelationship() {
                         >
                             Back to List
                         </Button>
-                        <Button
-                            type="button"
-                            onClick={() => router.push(`/customers/${id}/edit`)}
-                            className="bg-primary hover:bg-primary/90"
-                        >
-                            <Edit className="mr-2 h-4 w-4" /> Edit Customer
-                        </Button>
+                        {canModify && (
+                            <Button
+                                type="button"
+                                onClick={() => router.push(`/customers/${id}/edit`)}
+                                className="bg-primary hover:bg-primary/90"
+                            >
+                                <Edit className="mr-2 h-4 w-4" /> Edit Customer
+                            </Button>
+                        )}
                     </div>
 
                     <div className='grid grid-cols-2 md:grid-cols-2 gap-4'>

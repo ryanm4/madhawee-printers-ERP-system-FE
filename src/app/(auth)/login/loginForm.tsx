@@ -20,6 +20,7 @@ import Image from "next/image";
 import company_logo from "@/assets/Images/company_logo.jpeg";
 import { loginApi } from "@/modules/login/api";
 import { setToken, setUser } from "@/lib/auth";
+import { getDefaultRoute } from "@/lib/permissions";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -54,7 +55,7 @@ export function LoginForm({
       setUser(response.data.user);
 
       toast("Login successful!");
-      router.push("/dashboard");
+      router.push(getDefaultRoute(response.data.user?.user_role));
     } catch (error: any) {
       console.error("Login failed:", error);
       const errorMessage = getErrorMessage(error, "Unable to sign in. Please verify your credentials and try again.");

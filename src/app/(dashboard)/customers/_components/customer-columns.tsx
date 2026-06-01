@@ -22,8 +22,12 @@ const formatPhone = (phone: string) => {
 }
 
 export const customerColumns = (
-    actions: CustomerTableActions
-): ColumnDef<CUSTOMER>[] => [
+    actions: CustomerTableActions,
+    options?: { canModify?: boolean }
+): ColumnDef<CUSTOMER>[] => {
+    const canModify = options?.canModify ?? true;
+
+    return [
         {
             accessorKey: "customer_id",
             header: ({ column }) => {
@@ -78,23 +82,28 @@ export const customerColumns = (
                                 View Customer
                             </DropdownMenuItem>
 
-                            <DropdownMenuItem
-                                onClick={() => actions.onEdit(customer.customer_id)}
-                            >
-                                <PencilIcon className="mr-2 h-4 w-4" />
-                                Edit Customer
-                            </DropdownMenuItem>
+                            {canModify && (
+                                <>
+                                    <DropdownMenuItem
+                                        onClick={() => actions.onEdit(customer.customer_id)}
+                                    >
+                                        <PencilIcon className="mr-2 h-4 w-4" />
+                                        Edit Customer
+                                    </DropdownMenuItem>
 
-                            <DropdownMenuItem
-                                variant="destructive"
-                                onClick={() => actions.onDelete(customer.customer_id)}
-                            >
-                                <TrashIcon className="mr-2 h-4 w-4" />
-                                Delete Customer
-                            </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        variant="destructive"
+                                        onClick={() => actions.onDelete(customer.customer_id)}
+                                    >
+                                        <TrashIcon className="mr-2 h-4 w-4" />
+                                        Delete Customer
+                                    </DropdownMenuItem>
+                                </>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 )
             },
         },
-    ]
+    ];
+};

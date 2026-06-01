@@ -15,9 +15,11 @@ import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
 import { CustomerType } from "@/config/enum";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function CRMPage() {
   const router = useRouter();
+  const { canModify, canExportList } = usePermissions();
   const [data, setData] = useState<CUSTOMER[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -66,7 +68,7 @@ export default function CRMPage() {
     },
   };
 
-  const columns = customerColumns(handlers);
+  const columns = customerColumns(handlers, { canModify });
 
   const handleDelete = async () => {
     if (deleteId === null) return;
@@ -103,7 +105,7 @@ export default function CRMPage() {
             />
           </div>
 
-          <ExportButton data={data} filename="customers-list" />
+          {canExportList && <ExportButton data={data} filename="customers-list" />}
           <Button onClick={() => router.push("/customers/create")}>
             <PlusIcon /> Create New
           </Button>
