@@ -16,6 +16,7 @@ import { getNextPurchaseOrderStatus } from "@/lib/status-workflow";
 import { JobTicketStatus, PurchaseOrderStatus } from "@/config/enum";
 import { ArrowRightIcon } from "lucide-react";
 import { appToast } from "@/lib/toast-utils";
+import { parseLocalDate } from "@/hooks/sql-date-time";
 import { Badge } from "./ui/badge";
 
 export interface PurchaseOrderCardOptions {
@@ -219,7 +220,7 @@ export function PurchaseOrderCard({
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-end gap-0.5 shrink-0 min-w-fit ml-2">
-                                    <span className="text-[14px] text-muted-foreground">{job.job_open_date ? format(new Date(job.job_open_date), "dd MMM yyyy") : "N/A"}</span>
+                                    <span className="text-[14px] text-muted-foreground">{job.job_open_date ? format(parseLocalDate(job.job_open_date), "dd MMM yyyy") : "N/A"}</span>
                                     <StatusBadge status={job.status} type="JOB_TICKET" />
                                 </div>
                             </div>

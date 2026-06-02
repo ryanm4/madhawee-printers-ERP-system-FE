@@ -1,7 +1,7 @@
 "use client";
 
 import { getErrorMessage } from "@/lib/error-utils";
-import { FieldPath, useFieldArray, useForm } from "react-hook-form";
+import { FieldErrors, FieldPath, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
@@ -67,10 +67,14 @@ import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { PaperTypeCombobox } from "../../_components/paper-type-combobox";
 import { JobTicketPrintDialog } from "../../_components/job-ticket-print-dialog";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
-import { CREATE_TICKETS, JobTicketPrintData } from "@/modules/job-tickets/types";
+import {
+  CREATE_TICKETS,
+  JOB_TICKET_DETAIL,
+  JobTicketPrintData,
+} from "@/modules/job-tickets/types";
 import { toast } from "sonner";
 
-import { toMySQLDateTime } from "@/hooks/sql-date-time";
+import { parseLocalDate, toMySQLDateTime } from "@/hooks/sql-date-time";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
@@ -81,10 +85,101 @@ import { AppDispatch } from "@/store/store";
 
 type JobTicketFormValues = z.infer<typeof jobTicketSchema>;
 
+const emptyRawMaterial = {
+  item_id: undefined,
+  material_name: "",
+  material_type: "",
+  size: "",
+  material_description: "",
+  quantity: 0,
+  status: "",
+  remarks: "",
+};
+
+function mapRawMaterials(
+  materials: unknown
+): JobTicketFormValues["paperTypes"][number]["rawMaterials"] {
+  if (!Array.isArray(materials)) {
+    return [{ ...emptyRawMaterial }];
+  }
+
+  const mapped = materials.map((rm: Record<string, unknown>) => ({
+    item_id: rm.item_id ? Number(rm.item_id) : undefined,
+    material_name: String(rm.material_name ?? ""),
+    material_type: String(rm.material_type ?? ""),
+    size: String(rm.size ?? ""),
+    material_description: String(rm.material_description ?? ""),
+    quantity: Number(rm.quantity ?? 0),
+    status: String(rm.status ?? ""),
+    remarks: String(rm.remarks ?? ""),
+  }));
+
+  return mapped.length > 0 ? mapped : [{ ...emptyRawMaterial }];
+}
+
+function mapPaperTypesFromTicket(
+  jt: JOB_TICKET_DETAIL
+): JobTicketFormValues["paperTypes"] {
+  const record = jt as Record<string, unknown>;
+  const rawList =
+    jt.paperCoating ??
+    jt.paper_coating ??
+    (Array.isArray(record.paperCoatingData) ? record.paperCoatingData : null);
+
+  if (Array.isArray(rawList) && rawList.length > 0) {
+    return rawList.map((pt: Record<string, unknown>) => ({
+      paper: String(pt.paper ?? pt.paper_type ?? ""),
+      coating: String(pt.coating ?? ""),
+      rawMaterials: mapRawMaterials(pt.materials ?? pt.raw_materials),
+    }));
+  }
+
+  if (jt.paper_type_id || jt.coating) {
+    return [
+      {
+        paper: String(jt.paper_type_id ?? ""),
+        coating: String(jt.coating ?? ""),
+        rawMaterials: [{ ...emptyRawMaterial }],
+      },
+    ];
+  }
+
+  return [
+    {
+      paper: "",
+      coating: "",
+      rawMaterials: [{ ...emptyRawMaterial }],
+    },
+  ];
+}
+
+function getFirstValidationMessage(
+  errors: FieldErrors<JobTicketFormValues>
+): string {
+  const walk = (value: unknown): string | undefined => {
+    if (!value || typeof value !== "object") return undefined;
+    if ("message" in value && typeof (value as { message?: unknown }).message === "string") {
+      return (value as { message: string }).message;
+    }
+    for (const nested of Object.values(value)) {
+      const message = walk(nested);
+      if (message) return message;
+    }
+    return undefined;
+  };
+
+  return (
+    walk(errors) ??
+    "Please complete all required fields (Product Type, Quantity, Paper Type, and Coating)."
+  );
+}
+
 function EditJobTicket() {
   const router = useRouter();
   const { id } = useParams() as { id: string };
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isInitialLoad = useRef(true);
   const [customerData, setCustomerData] = useState<CUSTOMER[]>([]);
   const [purchaseOrderData, setPurchaseOrderData] = useState<PURCHASE_ORDER[]>(
     []
@@ -103,8 +198,8 @@ function EditJobTicket() {
   const [printData, setPrintData] = useState<JobTicketPrintData | null>(null);
   const [ticketStatus, setTicketStatus] = useState<string>(JobTicketStatus.CREATED);
 
-  const baseDefaultValues = {
-    poNumber: "",
+  const baseDefaultValues: JobTicketFormValues = {
+    customer_po: "",
     item: "",
     orderReceivedDate: undefined,
     jobNumber: "",
@@ -220,9 +315,15 @@ function EditJobTicket() {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + sizes[i];
   };
 
+  const onInvalid = (errors: FieldErrors<JobTicketFormValues>) => {
+    toast.error("Cannot save job ticket", {
+      description: getFirstValidationMessage(errors),
+    });
+  };
+
   async function onSubmit(data: JobTicketFormValues) {
     try {
-      setIsLoading(true);
+      setIsSubmitting(true);
       const formattedData: Partial<CREATE_TICKETS> = {
         po_id: Number(data.customer_po),
         job_item: data.item,
@@ -320,7 +421,7 @@ function EditJobTicket() {
       console.error("Failed to update Job Ticket:", error);
       toast(getErrorMessage(error, "Failed to update Job Ticket"));
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   }
 
@@ -328,7 +429,8 @@ function EditJobTicket() {
   useEffect(() => {
     const fetchDataAndTicket = async () => {
       try {
-        setIsLoading(true);
+        setIsPageLoading(true);
+        isInitialLoad.current = true;
 
         // 1. Fetch reference data first
         const [poResponse, customerResponse, inventoryResponse] = await Promise.all([
@@ -368,20 +470,22 @@ function EditJobTicket() {
             item: String(jt.job_item),
             customer_po: String(jt.po_id),
             po_id: Number(jt.po_id),
-            orderReceivedDate: jt.created_on
-              ? new Date(jt.created_on)
-              : undefined,
+            orderReceivedDate: jt.order_received_date
+              ? parseLocalDate(jt.order_received_date)
+              : jt.created_on
+                ? parseLocalDate(jt.created_on)
+                : undefined,
             jobNumber: jt.job_number || String(jt.job_id),
             jobOpenDate: jt.job_open_date
-              ? new Date(jt.job_open_date)
+              ? parseLocalDate(jt.job_open_date)
               : jt.created_on
-                ? new Date(jt.created_on)
+                ? parseLocalDate(jt.created_on)
                 : undefined,
             customer: String(jt.customer_id),
             jobName: jt.job_name,
-            productType: jt.product_type,
-            quantity: String(jt.quantity),
-            deliveryDate: jt.delivery_date ? new Date(jt.delivery_date) : undefined,
+            productType: jt.product_type || "",
+            quantity: jt.quantity != null ? String(jt.quantity) : "",
+            deliveryDate: jt.delivery_date ? parseLocalDate(jt.delivery_date) : undefined,
             wastage: jt.wastage || "",
             packingDate: jt.packing_date ? String(jt.packing_date) : "",
             expiryDate: jt.expiry_date ? String(jt.expiry_date) : "",
@@ -406,48 +510,7 @@ function EditJobTicket() {
                 { ink: "Magenta", quantity: "", status: "", remarks: "" },
                 { ink: "Yellow", quantity: "", status: "", remarks: "" },
               ],
-            paperTypes: jt.paperCoating?.map((pt) => ({
-              paper: pt.paper,
-              coating: pt.coating,
-              rawMaterials: pt.materials?.map((rm) => ({
-                item_id: rm.item_id,
-                material_name: rm.material_name,
-                material_type: rm.material_type,
-                size: rm.size || "",
-                material_description: rm.material_description || "",
-                quantity: rm.quantity,
-                status: rm.status || "",
-                remarks: rm.remarks || "",
-              })) || [
-                  {
-                    item_id: undefined,
-                    material_name: "",
-                    material_type: "",
-                    size: "",
-                    material_description: "",
-                    quantity: 0,
-                    status: "",
-                    remarks: "",
-                  },
-                ],
-            })) || [
-                {
-                  paper: "",
-                  coating: "",
-                  rawMaterials: [
-                    {
-                      item_id: undefined,
-                      material_name: "",
-                      material_type: "",
-                      size: "",
-                      material_description: "",
-                      quantity: 0,
-                      status: "",
-                      remarks: "",
-                    },
-                  ],
-                },
-              ],
+            paperTypes: mapPaperTypesFromTicket(jt),
           });
 
           // Mark initial load as complete after setting form data
@@ -457,12 +520,12 @@ function EditJobTicket() {
         console.error("Failed to fetch initial data or job ticket:", error);
         toast(getErrorMessage(error, "Failed to load job ticket data"));
       } finally {
-        setIsLoading(false);
+        setIsPageLoading(false);
       }
     };
 
     fetchDataAndTicket();
-  }, [id, form, dispatch]);
+  }, [id, dispatch]);
 
   useEffect(() => {
     const userData = getUser();
@@ -479,7 +542,6 @@ function EditJobTicket() {
   const selectedPoItems = selectedPoDetails?.po_items ?? [];
 
 
-  const isInitialLoad = useRef(true);
   useEffect(() => {
     const fetchPoDetails = async () => {
       if (!selectedPoId) {
@@ -530,7 +592,7 @@ function EditJobTicket() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      {isLoading && <FullPageLoader />}
+      {isPageLoading && <FullPageLoader />}
       <PageTitleWithBreadcrumb
         title="Edit Job Ticket"
         breadcrumbs={[
@@ -540,14 +602,14 @@ function EditJobTicket() {
       />
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-0">
+        <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-6 pb-0">
           <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
             <Button
               size="lg"
               variant="outline"
               type="button"
               onClick={() => router.push("/job-ticket")}
-              disabled={isLoading}
+              disabled={isPageLoading || isSubmitting}
             >
               Cancel
             </Button>
@@ -555,9 +617,9 @@ function EditJobTicket() {
               size="lg"
               type="submit"
               className="bg-primary text-white"
-              disabled={isLoading}
+              disabled={isPageLoading || isSubmitting}
             >
-              {isLoading ? "Saving..." : "Save"}
+              {isSubmitting ? "Saving..." : "Save"}
             </Button>
           </div>
           <Card

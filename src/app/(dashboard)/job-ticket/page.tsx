@@ -25,6 +25,7 @@ import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { JobTicketCard } from "@/components/job-ticket-card";
 import { CUSTOMER } from "@/modules/customer/types";
 import { JobTicketStatus } from "@/config/enum";
+import { toMySQLDateTime } from "@/hooks/sql-date-time";
 
 type JobTicketWithCustomer = ALL_TICKETS & { customer_name?: string };
 
@@ -180,7 +181,7 @@ function JobTicketComponent() {
               return undefined;
             }
 
-            return parsed.toISOString().slice(0, 10);
+            return toMySQLDateTime(parsed);
           };
           // Construct payload matching CREATE_TICKETS interface
           const payload = {

@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { parseLocalDate } from "@/hooks/sql-date-time";
 import {
     Barcode,
     Calendar,
@@ -117,7 +118,7 @@ export function JobTicketCard({
                             <Calendar className="h-3.5 w-3.5" /> Open Date
                         </span>
                         <span className="font-semibold text-sm truncate">
-                            {ticket.job_open_date ? format(new Date(ticket.job_open_date), "dd MMM yyyy") : "N/A"}
+                            {ticket.job_open_date ? format(parseLocalDate(ticket.job_open_date), "dd MMM yyyy") : "N/A"}
                         </span>
                     </div>
                 </div>
