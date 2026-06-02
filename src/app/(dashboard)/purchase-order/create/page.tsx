@@ -37,7 +37,11 @@ import { CalendarIcon, Edit2, Loader2, PlusIcon, Trash2 } from "lucide-react";
 import { FullPageLoader } from "@/components/shared/loader";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { PRODUCT_TYPES, PurchaseOrderStatus, PurchaseOrderType } from "@/config/enum";
+import {
+  PRODUCT_TYPES,
+  PurchaseOrderStatus,
+  PurchaseOrderType,
+} from "@/config/enum";
 import { useEffect, useState } from "react";
 import { CustomerApi } from "@/modules/customer/api";
 import { CUSTOMER } from "@/modules/customer/types";
@@ -74,7 +78,7 @@ function CreatePurchaseOrder() {
     if (userData) {
       setUser({
         name: userData.name || "User",
-        email: userData.email,
+        email: userData.email ?? "",
         avatar: "",
       });
     }
@@ -107,7 +111,7 @@ function CreatePurchaseOrder() {
 
   const getUserList = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
       const response = await userApi.getAll();
       if (response.status === 200) {
         setUserList(response?.data?.users);
@@ -118,7 +122,7 @@ function CreatePurchaseOrder() {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   const baseDefaultValues: PurchaseOrderFormValues = {
     customer: "",
@@ -133,9 +137,7 @@ function CreatePurchaseOrder() {
     salesRef: "",
     poDate: new Date(),
     currency: "LKR",
-    itemDetails: [
-      { description: "", quantity: "", unit: 0, price: "" },
-    ],
+    itemDetails: [{ description: "", quantity: "", unit: 0, price: "" }],
   };
 
   const form = useForm<PurchaseOrderFormValues>({
@@ -200,7 +202,10 @@ function CreatePurchaseOrder() {
     } catch (error) {
       console.error("Failed to submit PO:", error);
       toast("Failed to Create Purchase Order", {
-        description: getErrorMessage(error, "An error occurred while creating the purchase order. Please try again."),
+        description: getErrorMessage(
+          error,
+          "An error occurred while creating the purchase order. Please try again.",
+        ),
       });
     } finally {
       setIsSubmitting(false);
@@ -212,7 +217,7 @@ function CreatePurchaseOrder() {
     name: TName,
     render: Parameters<
       typeof FormField<PurchaseOrderFormValues, TName>
-    >["0"]["render"]
+    >["0"]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
 
   return (
@@ -231,11 +236,10 @@ function CreatePurchaseOrder() {
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6  pb-0"
         >
-
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
@@ -260,21 +264,21 @@ function CreatePurchaseOrder() {
                         field.onChange(value);
 
                         const selectedCustomer = customer.find(
-                          (c) => String(c.customer_id) === value
+                          (c) => String(c.customer_id) === value,
                         );
 
                         if (selectedCustomer) {
                           form.setValue(
                             "customerAddress",
-                            selectedCustomer.address
+                            selectedCustomer.address,
                           );
                           form.setValue(
                             "customerPhone",
-                            selectedCustomer.phone
+                            selectedCustomer.phone,
                           );
                           form.setValue(
                             "customerEmail",
-                            selectedCustomer.email
+                            selectedCustomer.email,
                           );
                         }
                       }}
@@ -322,7 +326,7 @@ function CreatePurchaseOrder() {
             </Card>
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
@@ -429,7 +433,10 @@ function CreatePurchaseOrder() {
                   {renderFormField("salesRef", ({ field }) => (
                     <FormItem>
                       <FormLabel>Marketing Person</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select contact person" />
@@ -461,7 +468,7 @@ function CreatePurchaseOrder() {
                               variant={"outline"}
                               className={cn(
                                 "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
+                                !field.value && "text-muted-foreground",
                               )}
                             >
                               {field.value
@@ -507,12 +514,11 @@ function CreatePurchaseOrder() {
                 </div>
               </CardContent>
             </Card>
-
           </div>
 
           <Card
             className={cn(
-              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
@@ -528,7 +534,6 @@ function CreatePurchaseOrder() {
                   variant="secondary"
                   onClick={() =>
                     appendItemDetails({
-
                       description: "",
                       quantity: "",
                       unit: 0,
@@ -550,10 +555,12 @@ function CreatePurchaseOrder() {
                       {renderFormField(
                         `itemDetails.${index}.unit`,
                         ({ field }) => {
-                          const groupedItems = Object.values(PRODUCT_TYPES).map((type, idx) => ({
-                            value: String(idx + 1),
-                            label: type,
-                          }));
+                          const groupedItems = Object.values(PRODUCT_TYPES).map(
+                            (type, idx) => ({
+                              value: String(idx + 1),
+                              label: type,
+                            }),
+                          );
 
                           return (
                             <FormItem>
@@ -563,11 +570,13 @@ function CreatePurchaseOrder() {
                                 value={field.value ? String(field.value) : ""}
                                 onValueChange={(value) => {
                                   const selectedGroupItem = groupedItems.find(
-                                    (i) => i.value === value
+                                    (i) => i.value === value,
                                   );
 
                                   if (selectedGroupItem) {
-                                    field.onChange(parseInt(selectedGroupItem.value, 10));
+                                    field.onChange(
+                                      parseInt(selectedGroupItem.value, 10),
+                                    );
                                   }
                                 }}
                                 placeholder="Select Item"
@@ -576,7 +585,7 @@ function CreatePurchaseOrder() {
                               <FormMessage />
                             </FormItem>
                           );
-                        }
+                        },
                       )}
 
                       {renderFormField(
@@ -591,12 +600,11 @@ function CreatePurchaseOrder() {
                               <Textarea
                                 placeholder="Enter Description"
                                 {...field}
-
                               />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
-                        )
+                        ),
                       )}
                       {renderFormField(
                         `itemDetails.${index}.quantity`,
@@ -610,9 +618,7 @@ function CreatePurchaseOrder() {
                                 type="number"
                                 placeholder="Enter Quantity"
                                 value={field.value}
-                                onChange={(e) =>
-                                  field.onChange(e.target.value)
-                                }
+                                onChange={(e) => field.onChange(e.target.value)}
                                 onBlur={field.onBlur}
                                 name={field.name}
                                 ref={field.ref}
@@ -620,7 +626,7 @@ function CreatePurchaseOrder() {
                             </FormControl>
                             <FormMessage />
                           </FormItem>
-                        )
+                        ),
                       )}
 
                       {renderFormField(
@@ -635,9 +641,7 @@ function CreatePurchaseOrder() {
                                 type="number"
                                 placeholder="Enter Price"
                                 value={field.value}
-                                onChange={(e) =>
-                                  field.onChange(e.target.value)
-                                }
+                                onChange={(e) => field.onChange(e.target.value)}
                                 onBlur={field.onBlur}
                                 name={field.name}
                                 ref={field.ref}
@@ -645,7 +649,7 @@ function CreatePurchaseOrder() {
                             </FormControl>
                             <FormMessage />
                           </FormItem>
-                        )
+                        ),
                       )}
                     </div>
                     <div className="flex space-x-2 items-start pt-5">
@@ -653,7 +657,7 @@ function CreatePurchaseOrder() {
                         type="button"
                         variant="outline"
                         size="icon"
-                        onClick={() => { }}
+                        onClick={() => {}}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
@@ -699,7 +703,6 @@ function CreatePurchaseOrder() {
               )}
             </Button>
           </div>
-
         </form>
       </Form>
     </div>

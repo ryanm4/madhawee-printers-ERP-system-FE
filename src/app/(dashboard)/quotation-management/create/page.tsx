@@ -101,7 +101,7 @@ function CreateQuotation({
 
   const getUserList = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
       const response = await userApi.getAll();
       if (response.status === 200) {
         setUserList(response?.data?.users);
@@ -112,9 +112,7 @@ function CreateQuotation({
     } finally {
       setLoading(false);
     }
-  }
-
-
+  };
 
   const baseDefaultValues: Partial<QuotationFormValues> = {
     customer_id: 0,
@@ -155,7 +153,7 @@ function CreateQuotation({
       const name = userData.name || "User";
       setUser({
         name: name,
-        email: userData.email,
+        email: userData.email ?? "",
         avatar: "", // GET_ALL_USER doesn't have avatar
       });
       form.setValue("created_by", name);
@@ -175,7 +173,10 @@ function CreateQuotation({
   const watchTaxType = form.watch("tax_type_id");
 
   // Helper to calculate totals
-  const calculateTotals = (currentItems: QuotationFormValues["items"], taxTypeId: number) => {
+  const calculateTotals = (
+    currentItems: QuotationFormValues["items"],
+    taxTypeId: number,
+  ) => {
     let subTotal = 0;
     const updatedItems = currentItems.map((item) => {
       const qty = parseFloat(item.item_qty || "0");
@@ -232,7 +233,7 @@ function CreateQuotation({
   const handleItemChange = (
     index: number,
     field: "item_qty" | "item_unit_price",
-    value: string
+    value: string,
   ) => {
     let sanitizedValue = value.replace(/^0+(?!$)/, "");
     if (sanitizedValue === "" && value !== "") sanitizedValue = "0";
@@ -243,12 +244,12 @@ function CreateQuotation({
     const qty = parseFloat(
       field === "item_qty"
         ? sanitizedValue
-        : form.getValues(`items.${index}.item_qty`) || "0"
+        : form.getValues(`items.${index}.item_qty`) || "0",
     );
     const price = parseFloat(
       field === "item_unit_price"
         ? sanitizedValue
-        : form.getValues(`items.${index}.item_unit_price`) || "0"
+        : form.getValues(`items.${index}.item_unit_price`) || "0",
     );
     const rowTotal = String(Number((qty * price).toFixed(4)));
     form.setValue(`items.${index}.item_total_price`, rowTotal);
@@ -312,7 +313,10 @@ function CreateQuotation({
     } catch (error) {
       console.error("Failed to submit quotation:", error);
       toast("Failed to Create Quotation", {
-        description: getErrorMessage(error, "An error occurred while creating the quotation. Please try again."),
+        description: getErrorMessage(
+          error,
+          "An error occurred while creating the quotation. Please try again.",
+        ),
       });
     } finally {
       setIsSubmitting(false);
@@ -323,7 +327,7 @@ function CreateQuotation({
     name: TName,
     render: Parameters<
       typeof FormField<QuotationFormValues, TName>
-    >[0]["render"]
+    >[0]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
 
   return (
@@ -339,13 +343,11 @@ function CreateQuotation({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-0">
-
-
           {/* Card 1: Customer Selection */}
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
               className={cn(
-                "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
@@ -393,25 +395,30 @@ function CreateQuotation({
                       </FormLabel>
                       <Combobox
                         items={customer
-                        .filter((c) => c.customer_type === "customer")
-                        .map((c) => ({
-                          value: String(c.customer_id),
-                          label: c.company_name,
-                        }))}
+                          .filter((c) => c.customer_type === "customer")
+                          .map((c) => ({
+                            value: String(c.customer_id),
+                            label: c.company_name,
+                          }))}
                         value={field.value === 0 ? "" : String(field.value)}
                         onValueChange={(value) => {
                           field.onChange(parseInt(value));
                           const selectedCustomer = customer.find(
-                            (c) => String(c.customer_id) === value
+                            (c) => String(c.customer_id) === value,
                           );
-                            if (selectedCustomer) {
-                              // Auto-populate first contact person by default
-                              const contactPersons = Array.isArray(selectedCustomer.contacts) 
-                                ? selectedCustomer.contacts 
-                                : [];
-                              const firstContact = contactPersons[0];
-                              form.setValue("contact_person", firstContact?.name || "");
-                            } else {
+                          if (selectedCustomer) {
+                            // Auto-populate first contact person by default
+                            const contactPersons = Array.isArray(
+                              selectedCustomer.contacts,
+                            )
+                              ? selectedCustomer.contacts
+                              : [];
+                            const firstContact = contactPersons[0];
+                            form.setValue(
+                              "contact_person",
+                              firstContact?.name || "",
+                            );
+                          } else {
                             form.setValue("contact_person", "");
                           }
                         }}
@@ -431,7 +438,7 @@ function CreateQuotation({
                     className="resize-none"
                     value={
                       customer.find(
-                        (c) => c.customer_id === form.watch("customer_id")
+                        (c) => c.customer_id === form.watch("customer_id"),
                       )?.address || ""
                     }
                     readOnly
@@ -442,16 +449,19 @@ function CreateQuotation({
                   {/* Contact Person */}
                   {renderFormField("contact_person", ({ field }) => {
                     const selectedCustomer = customer.find(
-                      (c) => c.customer_id === form.watch("customer_id")
+                      (c) => c.customer_id === form.watch("customer_id"),
                     );
-                    const contacts = Array.isArray(selectedCustomer?.contacts) 
-                      ? selectedCustomer.contacts 
+                    const contacts = Array.isArray(selectedCustomer?.contacts)
+                      ? selectedCustomer.contacts
                       : [];
 
                     return (
                       <FormItem>
                         <FormLabel>Contact Person</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select contact person" />
@@ -475,18 +485,24 @@ function CreateQuotation({
                     <FormLabel>Mobile Number</FormLabel>
                     <Input
                       placeholder="Mobile Number"
-                      value={
-                        (() => {
-                          const selectedCustomerId = form.watch("customer_id");
-                          const selectedContactName = form.watch("contact_person");
-                          const selectedCustomer = customer.find(c => c.customer_id === selectedCustomerId);
-                          const contactPersons = Array.isArray(selectedCustomer?.contacts) 
-                            ? selectedCustomer.contacts 
-                            : [];
-                          const contact = contactPersons.find((cp: CONTACT_PERSON) => cp.name === selectedContactName);
-                          return contact?.phone || "";
-                        })()
-                      }
+                      value={(() => {
+                        const selectedCustomerId = form.watch("customer_id");
+                        const selectedContactName =
+                          form.watch("contact_person");
+                        const selectedCustomer = customer.find(
+                          (c) => c.customer_id === selectedCustomerId,
+                        );
+                        const contactPersons = Array.isArray(
+                          selectedCustomer?.contacts,
+                        )
+                          ? selectedCustomer.contacts
+                          : [];
+                        const contact = contactPersons.find(
+                          (cp: CONTACT_PERSON) =>
+                            cp.name === selectedContactName,
+                        );
+                        return contact?.phone || "";
+                      })()}
                       readOnly
                     />
                   </FormItem>
@@ -497,7 +513,7 @@ function CreateQuotation({
             {/* Card 2: Quotation Overview */}
             <Card
               className={cn(
-                "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
@@ -640,7 +656,10 @@ function CreateQuotation({
                   {renderFormField("marketing_person", ({ field }) => (
                     <FormItem>
                       <FormLabel>Marketing Person</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select contact person" />
@@ -685,7 +704,7 @@ function CreateQuotation({
           {/* Card 3: Item Table */}
           <Card
             className={cn(
-              "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col",
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
@@ -710,13 +729,16 @@ function CreateQuotation({
                         Quantity
                       </th>
                       <th className="text-left p-2 text-sm font-medium">
-                        Rate ({getCurrencySymbol(form.watch("currency") as Currency)})
+                        Rate (
+                        {getCurrencySymbol(form.watch("currency") as Currency)})
                       </th>
                       <th className="text-left p-2 text-sm font-medium">
-                        Total (VAT exclusive) ({getCurrencySymbol(form.watch("currency") as Currency)})
+                        Total (VAT exclusive) (
+                        {getCurrencySymbol(form.watch("currency") as Currency)})
                       </th>
                       <th className="text-left p-2 text-sm font-medium">
-                        Total (VAT inclusive) ({getCurrencySymbol(form.watch("currency") as Currency)})
+                        Total (VAT inclusive) (
+                        {getCurrencySymbol(form.watch("currency") as Currency)})
                       </th>
                       <th className="text-left p-2 text-sm font-medium">
                         Actions
@@ -726,15 +748,15 @@ function CreateQuotation({
                   <tbody>
                     {itemFields.map((item, index) => {
                       const qty = parseFloat(
-                        form.watch(`items.${index}.item_qty`) || "0"
+                        form.watch(`items.${index}.item_qty`) || "0",
                       );
                       const price = parseFloat(
-                        form.watch(`items.${index}.item_unit_price`) || "0"
+                        form.watch(`items.${index}.item_unit_price`) || "0",
                       );
                       const totalExclusive = qty * price;
                       const totalInclusive =
                         watchTaxType === QuotationTaxType.VAT ||
-                          watchTaxType === QuotationTaxType.TIEP
+                        watchTaxType === QuotationTaxType.TIEP
                           ? totalExclusive * 1.18
                           : totalExclusive;
 
@@ -744,7 +766,9 @@ function CreateQuotation({
                             {renderFormField(
                               `items.${index}.item_category`,
                               ({ field }) => {
-                                const groupedItems = Object.values(PRODUCT_TYPES).map((type, idx) => ({
+                                const groupedItems = Object.values(
+                                  PRODUCT_TYPES,
+                                ).map((type, idx) => ({
                                   value: String(idx + 1),
                                   label: type,
                                 }));
@@ -754,18 +778,30 @@ function CreateQuotation({
                                     <Combobox
                                       items={groupedItems}
                                       value={
-                                        field.value ? String(groupedItems.find(i => i.label === field.value)?.value || "") : ""
+                                        field.value
+                                          ? String(
+                                              groupedItems.find(
+                                                (i) => i.label === field.value,
+                                              )?.value || "",
+                                            )
+                                          : ""
                                       }
                                       onValueChange={(value) => {
-                                        const selectedGroupItem = groupedItems.find(
-                                          (i) => i.value === value
-                                        );
+                                        const selectedGroupItem =
+                                          groupedItems.find(
+                                            (i) => i.value === value,
+                                          );
 
                                         if (selectedGroupItem) {
-                                          field.onChange(selectedGroupItem.label);
+                                          field.onChange(
+                                            selectedGroupItem.label,
+                                          );
                                           form.setValue(
                                             `items.${index}.item_id`,
-                                            parseInt(selectedGroupItem.value, 10)
+                                            parseInt(
+                                              selectedGroupItem.value,
+                                              10,
+                                            ),
                                           );
                                         }
                                       }}
@@ -775,7 +811,7 @@ function CreateQuotation({
                                     <FormMessage />
                                   </FormItem>
                                 );
-                              }
+                              },
                             )}
                           </td>
                           <td className="p-2">
@@ -789,7 +825,7 @@ function CreateQuotation({
                                     {...field}
                                   />
                                 </FormItem>
-                              )
+                              ),
                             )}
                           </td>
                           <td className="p-2">
@@ -808,14 +844,14 @@ function CreateQuotation({
                                         handleItemChange(
                                           index,
                                           "item_qty",
-                                          e.target.value
+                                          e.target.value,
                                         )
                                       }
                                     />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
-                              )
+                              ),
                             )}
                           </td>
                           <td className="p-2">
@@ -833,12 +869,12 @@ function CreateQuotation({
                                       handleItemChange(
                                         index,
                                         "item_unit_price",
-                                        e.target.value
+                                        e.target.value,
                                       )
                                     }
                                   />
                                 </FormItem>
-                              )
+                              ),
                             )}
                           </td>
                           <td className="p-2">
@@ -869,17 +905,17 @@ function CreateQuotation({
                                     form.getValues("tax_type_id");
                                   const totals = calculateTotals(
                                     currentItems,
-                                    currentTaxType
+                                    currentTaxType,
                                   );
 
                                   form.setValue("sub_total", totals.subTotal);
                                   form.setValue(
                                     "no_of_items",
-                                    totals.noOfItems
+                                    totals.noOfItems,
                                   );
                                   form.setValue(
                                     "total_without_tax",
-                                    totals.totalWithoutTax
+                                    totals.totalWithoutTax,
                                   );
                                   form.setValue("net_total", totals.netTotal);
                                   toast("Totals updated");
@@ -950,13 +986,19 @@ function CreateQuotation({
                       <div className="flex justify-between text-sm text-muted-foreground italic">
                         <span>Sub Total (Without TAX):</span>
                         <span className="font-medium">
-                          {getCurrencySymbol(form.watch("currency") as Currency)} {form.watch("sub_total") || "0"}
+                          {getCurrencySymbol(
+                            form.watch("currency") as Currency,
+                          )}{" "}
+                          {form.watch("sub_total") || "0"}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm text-muted-foreground italic">
                         <span>Total Amount (Without TAX):</span>
                         <span className="font-medium">
-                          {getCurrencySymbol(form.watch("currency") as Currency)} {form.watch("total_without_tax") || "0"}
+                          {getCurrencySymbol(
+                            form.watch("currency") as Currency,
+                          )}{" "}
+                          {form.watch("total_without_tax") || "0"}
                         </span>
                       </div>
                     </>
@@ -967,17 +1009,29 @@ function CreateQuotation({
                       {form.watch("no_of_items") || "0"}
                     </span>
                   </div>
-                  {(watchTaxType === QuotationTaxType.VAT || watchTaxType === QuotationTaxType.TIEP) && (
+                  {(watchTaxType === QuotationTaxType.VAT ||
+                    watchTaxType === QuotationTaxType.TIEP) && (
                     <div className="flex justify-between text-sm text-muted-foreground italic">
-                      <span>{watchTaxType === QuotationTaxType.VAT ? "VAT" : "TIEP"} Amount (18%):</span>
+                      <span>
+                        {watchTaxType === QuotationTaxType.VAT ? "VAT" : "TIEP"}{" "}
+                        Amount (18%):
+                      </span>
                       <span className="font-medium">
-                        {getCurrencySymbol(form.watch("currency") as Currency)} {Number((parseFloat(form.watch("sub_total") || "0") * 0.18).toFixed(4))}
+                        {getCurrencySymbol(form.watch("currency") as Currency)}{" "}
+                        {Number(
+                          (
+                            parseFloat(form.watch("sub_total") || "0") * 0.18
+                          ).toFixed(4),
+                        )}
                       </span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm font-bold border-t pt-2">
                     <span>Net Total:</span>
-                    <span>{getCurrencySymbol(form.watch("currency") as Currency)} {form.watch("net_total") || "0"}</span>
+                    <span>
+                      {getCurrencySymbol(form.watch("currency") as Currency)}{" "}
+                      {form.watch("net_total") || "0"}
+                    </span>
                   </div>
                 </div>
               </div>

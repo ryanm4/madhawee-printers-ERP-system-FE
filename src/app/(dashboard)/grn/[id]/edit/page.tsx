@@ -110,8 +110,11 @@ function EditGRN() {
         if (response.status === 200) {
           const uniqueItems = Array.from(
             new Map(
-              response.data.map((item: GET_ALL_INVENTORY) => [`${item.item_name}-${item.size || ""}`, item])
-            ).values()
+              response.data.map((item: GET_ALL_INVENTORY) => [
+                `${item.item_name}-${item.size || ""}`,
+                item,
+              ]),
+            ).values(),
           );
 
           setInventoryItems(
@@ -120,10 +123,12 @@ function EditGRN() {
                 ? `${item.item_name} (${item.size})`
                 : item.item_name;
               return {
-                value: item.size ? `${item.item_name}|||${item.size}` : item.item_name,
+                value: item.size
+                  ? `${item.item_name}|||${item.size}`
+                  : item.item_name,
                 label: label,
               };
-            })
+            }),
           );
         }
       } catch (error) {
@@ -138,7 +143,7 @@ function EditGRN() {
       setLoading(true);
       const [grnResponse, inventoryResponse] = await Promise.all([
         grnApi.getById(id as string),
-        inventoryApi.getAll()
+        inventoryApi.getAll(),
       ]);
 
       if (grnResponse.status === 200 && inventoryResponse.status === 200) {
@@ -159,9 +164,11 @@ function EditGRN() {
           supplier_invoice_no: data.supplier_invoice_no,
           remarks: data.remarks || "",
           items: data.items.map((item: GRNItem) => {
-            const invItem = inventory.find(inv => inv.item_name === item.item_name);
-            const enrichedName = invItem?.size 
-              ? `${item.item_name}|||${invItem.size}` 
+            const invItem = inventory.find(
+              (inv) => inv.item_name === item.item_name,
+            );
+            const enrichedName = invItem?.size
+              ? `${item.item_name}|||${invItem.size}`
               : item.item_name;
             return {
               item_name: enrichedName,
@@ -187,10 +194,12 @@ function EditGRN() {
         ...values,
         received_date: format(values.received_date, "yyyy-MM-dd HH:mm:ss"),
         updated_by: user?.name || "User",
-        items: values.items.map(item => ({
+        items: values.items.map((item) => ({
           ...item,
-          item_name: item.item_name.includes("|||") ? item.item_name.split("|||")[0] : item.item_name
-        }))
+          item_name: item.item_name.includes("|||")
+            ? item.item_name.split("|||")[0]
+            : item.item_name,
+        })),
       };
 
       const response = await grnApi.update(id as string, payload);
@@ -219,12 +228,7 @@ function EditGRN() {
       />
 
       <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-6"
-        >
-
-
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
@@ -261,7 +265,7 @@ function EditGRN() {
                               variant={"outline"}
                               className={cn(
                                 "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
+                                !field.value && "text-muted-foreground",
                               )}
                             >
                               {field.value ? (
@@ -471,11 +475,11 @@ function EditGRN() {
                                   const val = Number(e.target.value);
                                   field.onChange(val);
                                   const rate = form.getValues(
-                                    `items.${index}.rate`
+                                    `items.${index}.rate`,
                                   );
                                   form.setValue(
                                     `items.${index}.amount`,
-                                    val * rate
+                                    val * rate,
                                   );
                                 }}
                               />
@@ -498,11 +502,11 @@ function EditGRN() {
                                   const val = Number(e.target.value);
                                   field.onChange(val);
                                   const qty = form.getValues(
-                                    `items.${index}.quantity`
+                                    `items.${index}.quantity`,
                                   );
                                   form.setValue(
                                     `items.${index}.amount`,
-                                    val * qty
+                                    val * qty,
                                   );
                                 }}
                               />

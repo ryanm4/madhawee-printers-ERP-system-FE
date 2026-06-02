@@ -74,7 +74,7 @@ function CreateInventoryManagement() {
     if (userData) {
       setUser({
         name: userData.name || "User",
-        email: userData.email,
+        email: userData.email ?? "",
         avatar: "",
       });
     }
@@ -87,7 +87,10 @@ function CreateInventoryManagement() {
         item_category: data.item_category,
         item_sub_category: data.item_sub_category,
         item_name: data.item_name,
-        size: (data.width && data.height) ? `${data.width} x ${data.height}` : data.size || "-",
+        size:
+          data.width && data.height
+            ? `${data.width} x ${data.height}`
+            : data.size || "-",
         width: data.width ?? "",
         height: data.height ?? "",
         quantity: String(data.quantity),
@@ -99,23 +102,32 @@ function CreateInventoryManagement() {
       };
       await inventoryApi.create(payload);
 
-      appToast.success("Inventory Item Created", "The inventory item has been added successfully.");
+      appToast.success(
+        "Inventory Item Created",
+        "The inventory item has been added successfully.",
+      );
       form.reset(baseDefaultValues);
       form.clearErrors();
       router.push("/inventory");
     } catch (error) {
       console.error("Failed to submit inventory:", error);
-      appToast.error("Failed to Create Inventory Item", getErrorMessage(error, "An error occurred while adding the inventory item. Please try again."));
+      appToast.error(
+        "Failed to Create Inventory Item",
+        getErrorMessage(
+          error,
+          "An error occurred while adding the inventory item. Please try again.",
+        ),
+      );
     } finally {
       setIsLoading(false);
     }
   }
 
   const renderFormField = <
-    TName extends FieldPath<InventoryManagementFormValues>
+    TName extends FieldPath<InventoryManagementFormValues>,
   >(
     name: TName,
-    render: ControllerProps<InventoryManagementFormValues, TName>["render"]
+    render: ControllerProps<InventoryManagementFormValues, TName>["render"],
   ) => (
     <FormField<InventoryManagementFormValues, TName>
       control={form.control}
@@ -140,11 +152,9 @@ function CreateInventoryManagement() {
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6  pb-0"
         >
-
-
           <Card
             className={cn(
-              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
@@ -161,7 +171,10 @@ function CreateInventoryManagement() {
                     <FormLabel>
                       Item Category <span className="text-red-500">*</span>
                     </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined}>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || undefined}
+                    >
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select Item Category" />
@@ -183,18 +196,23 @@ function CreateInventoryManagement() {
                     <FormLabel>
                       Item Sub Category <span className="text-red-500">*</span>
                     </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined}>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || undefined}
+                    >
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select Item Sub Category" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.entries(ITEM_SUB_CATEGORY).map(([key, value]) => (
-                          <SelectItem key={key} value={value}>
-                            {value}
-                          </SelectItem>
-                        ))}
+                        {Object.entries(ITEM_SUB_CATEGORY).map(
+                          ([key, value]) => (
+                            <SelectItem key={key} value={value}>
+                              {value}
+                            </SelectItem>
+                          ),
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -229,7 +247,10 @@ function CreateInventoryManagement() {
                       Unit of Measure <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Select onValueChange={field.onChange} value={field.value || undefined}>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || undefined}
+                      >
                         <FormControl>
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select Unit of Meassure" />
@@ -263,7 +284,10 @@ function CreateInventoryManagement() {
                     <FormLabel>
                       Status <span className="text-red-500">*</span>
                     </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined}>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || undefined}
+                    >
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select Status" />
@@ -279,35 +303,26 @@ function CreateInventoryManagement() {
                 ))}
               </div>
 
-
               {/* Row 3: Width, Height and Quantity */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
                   {renderFormField("width", ({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        Width (cm)
-                      </FormLabel>
+                      <FormLabel>Width (cm)</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="W"
-                          {...field}
-                        />
+                        <Input placeholder="W" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   ))}
-                  <div className="pb-3 text-muted-foreground font-bold text-xs">x</div>
+                  <div className="pb-3 text-muted-foreground font-bold text-xs">
+                    x
+                  </div>
                   {renderFormField("height", ({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        Height (cm)
-                      </FormLabel>
+                      <FormLabel>Height (cm)</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="H"
-                          {...field}
-                        />
+                        <Input placeholder="H" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -331,14 +346,17 @@ function CreateInventoryManagement() {
                 ))}
               </div>
 
-
               {/* Row 5: Remarks */}
               <div className="grid grid-cols-1 gap-4">
                 {renderFormField("remarks", ({ field }) => (
                   <FormItem>
                     <FormLabel>Remarks</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Enter Remarks" className="h-20 min-h-[80px]" {...field} />
+                      <Textarea
+                        placeholder="Enter Remarks"
+                        className="h-20 min-h-[80px]"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

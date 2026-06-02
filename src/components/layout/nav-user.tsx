@@ -1,20 +1,16 @@
-"use client"
+"use client";
 
-import { clearAuth, getUser } from "@/lib/auth"
-import { useEffect, useState } from "react"
-import { Button } from "../ui/button"
-import { useRouter } from "next/navigation"
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar"
+import { clearAuth, getUser } from "@/lib/auth";
+import { useEffect, useState } from "react";
+import { Button } from "../ui/button";
+import { useRouter } from "next/navigation";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
-import { Power } from "lucide-react"
+} from "@/components/ui/sidebar";
+import { Power } from "lucide-react";
 
 const LIGHT_AVATAR_COLORS = [
   "b3e5fc",
@@ -25,32 +21,32 @@ const LIGHT_AVATAR_COLORS = [
   "f0f4c3",
   "bbdefb",
   "e1bee7",
-]
+];
 
 export function NavUser() {
-  const router = useRouter()
-  const [user, setUser] = useState({ name: "User", email: "", avatar: "" })
+  const router = useRouter();
+  const [user, setUser] = useState({ name: "User", email: "", avatar: "" });
 
   useEffect(() => {
-    const userData = getUser()
+    const userData = getUser();
     if (userData) {
       const avatarUrl = `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${encodeURIComponent(
-        userData.email || "user"
-      )}&backgroundColor=${LIGHT_AVATAR_COLORS.join(",")}`
+        userData.email || "user",
+      )}&backgroundColor=${LIGHT_AVATAR_COLORS.join(",")}`;
 
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setUser({
         name: userData.name || "User",
-        email: userData.email || "",
+        email: userData.email ?? "",
         avatar: avatarUrl,
-      })
+      });
     }
-  }, [])
+  }, []);
 
   const handleLogout = () => {
-    clearAuth()
-    router.push("/login")
-  }
+    clearAuth();
+    router.push("/login");
+  };
 
   return (
     <SidebarMenu>
@@ -64,7 +60,9 @@ export function NavUser() {
             <div className="flex items-center gap-2">
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">{user.name?.charAt(0) || "U"}</AvatarFallback>
+                <AvatarFallback className="rounded-lg">
+                  {user.name?.charAt(0) || "U"}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
@@ -86,5 +84,5 @@ export function NavUser() {
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
-  )
+  );
 }

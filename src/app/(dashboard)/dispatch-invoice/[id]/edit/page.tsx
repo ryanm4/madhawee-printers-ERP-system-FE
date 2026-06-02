@@ -81,7 +81,7 @@ function EditDispatchandInvoice() {
     if (userData) {
       setUser({
         name: userData.name || "User",
-        email: userData.email,
+        email: userData.email ?? "",
         avatar: "",
       });
     }
@@ -98,7 +98,7 @@ function EditDispatchandInvoice() {
             x.status === "PRINTING COMPLETED" ||
             x.status === "PARTIALLY DISPATCHED" ||
             x.status === "DISPATCHED" ||
-            x.status === "COMPLETED"
+            x.status === "COMPLETED",
         );
 
         setJobData(completedJobs);
@@ -116,7 +116,7 @@ function EditDispatchandInvoice() {
       setIsLoading(true);
 
       const selectedJob = JobData.find(
-        (j) => String(j.job_id) === String(data.job_id)
+        (j) => String(j.job_id) === String(data.job_id),
       );
       const jobQty = Number(selectedJob?.quantity || 0);
       const previouslyCompleted = Number(selectedJob?.completed_qty || 0);
@@ -135,9 +135,7 @@ function EditDispatchandInvoice() {
       }
 
       const newJobStatus =
-        totalDispatched >= jobQty
-          ? "COMPLETED"
-          : "PARTIALLY DISPATCHED";
+        totalDispatched >= jobQty ? "COMPLETED" : "PARTIALLY DISPATCHED";
 
       const payload: CREATE_DISPATCH = {
         customer_id: data.customer_id || "",
@@ -163,7 +161,10 @@ function EditDispatchandInvoice() {
             updated_by: user?.name || "User",
           });
         } catch (err) {
-          console.error("Failed to update Job Ticket status during dispatch edit:", err);
+          console.error(
+            "Failed to update Job Ticket status during dispatch edit:",
+            err,
+          );
         }
       }
 
@@ -173,7 +174,10 @@ function EditDispatchandInvoice() {
     } catch (error) {
       console.error("Failed to update dispatch record:", error);
       toast("Failed to update dispatch", {
-        description: getErrorMessage(error, "An error occurred while updating the dispatch record. Please try again."),
+        description: getErrorMessage(
+          error,
+          "An error occurred while updating the dispatch record. Please try again.",
+        ),
       });
     } finally {
       setIsLoading(false);
@@ -184,9 +188,8 @@ function EditDispatchandInvoice() {
     name: TName,
     render: Parameters<
       typeof FormField<DispatchFormValues, TName>
-    >["0"]["render"]
+    >["0"]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
-
 
   const jobId = form.watch("job_id");
 
@@ -203,7 +206,7 @@ function EditDispatchandInvoice() {
       try {
         setIsLoading(true);
         const selectedJob = JobData.find(
-          (job) => String(job.job_id) === String(jobId)
+          (job) => String(job.job_id) === String(jobId),
         );
         if (!selectedJob) return;
         const customerId = selectedJob.customer_id;
@@ -289,12 +292,10 @@ function EditDispatchandInvoice() {
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6  pb-0"
         >
-
-
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
@@ -311,10 +312,11 @@ function EditDispatchandInvoice() {
                       <Combobox
                         items={JobData.map((job) => ({
                           value: String(job.job_id),
-                          label: `Job-${job.job_id} (${job.job_name.length > 25
-                            ? job.job_name.substring(0, 25) + "..."
-                            : job.job_name
-                            })`,
+                          label: `Job-${job.job_id} (${
+                            job.job_name.length > 25
+                              ? job.job_name.substring(0, 25) + "..."
+                              : job.job_name
+                          })`,
                         }))}
                         value={field.value ? String(field.value) : ""}
                         onValueChange={field.onChange}
@@ -333,7 +335,8 @@ function EditDispatchandInvoice() {
                         className="bg-gray-50 border-gray-200 cursor-not-allowed"
                         value={
                           JobData.find(
-                            (j) => String(j.job_id) === String(form.watch("job_id"))
+                            (j) =>
+                              String(j.job_id) === String(form.watch("job_id")),
                           )?.quantity || ""
                         }
                       />
@@ -364,21 +367,21 @@ function EditDispatchandInvoice() {
                           onChange={(e) => {
                             const digitsOnly = e.target.value.replace(
                               /\D/g,
-                              ""
+                              "",
                             );
                             field.onChange(digitsOnly);
                           }}
                           onBlur={() => {
                             if (!field.value) return;
                             const formatted = formatPhone(
-                              field.value as string
+                              field.value as string,
                             );
                             field.onChange(formatted);
                           }}
                           onFocus={() => {
                             if (!field.value) return;
                             field.onChange(
-                              (field.value as string).replace(/\D/g, "")
+                              (field.value as string).replace(/\D/g, ""),
                             );
                           }}
                         />
@@ -418,7 +421,7 @@ function EditDispatchandInvoice() {
 
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
@@ -447,7 +450,7 @@ function EditDispatchandInvoice() {
                             variant={"outline"}
                             className={cn(
                               "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
+                              !field.value && "text-muted-foreground",
                             )}
                           >
                             {field.value

@@ -410,7 +410,7 @@ export function CreateJobTicketDialog({
       if (userData) {
         setUser({
           name: userData.name || "User",
-          email: userData.email,
+          email: userData.email ?? "",
           avatar: "",
         });
       }

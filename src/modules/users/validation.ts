@@ -5,11 +5,11 @@ export const userSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z
     .string()
-    .min(1, "Email is required")
     .regex(
       /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-      "Invalid email address format"
-    ),
+      "Invalid email address format",
+    )
+    .optional(),
   password: z.string().min(1, "Password is required"),
 });
 

@@ -26,11 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import {
-  Loader2,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -98,7 +94,7 @@ function CreateSupplierProfile() {
     if (userData) {
       setUser({
         name: userData.name || "User",
-        email: userData.email,
+        email: userData.email ?? "",
         avatar: "",
       });
     }
@@ -118,7 +114,7 @@ function CreateSupplierProfile() {
         setUploadedFile(file);
       } else {
         alert(
-          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB."
+          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB.",
         );
       }
     }
@@ -169,7 +165,7 @@ function CreateSupplierProfile() {
     } catch (error) {
       console.error("Failed to create supplier:", error);
       toast.error(
-        getErrorMessage(error, "Failed to create supplier. Please try again.")
+        getErrorMessage(error, "Failed to create supplier. Please try again."),
       );
     } finally {
       setIsLoading(false);
@@ -180,7 +176,7 @@ function CreateSupplierProfile() {
     name: TName,
     render: Parameters<
       typeof FormField<SupplierFormValues, TName>
-    >["0"]["render"]
+    >["0"]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
 
   return (
@@ -202,7 +198,7 @@ function CreateSupplierProfile() {
           <div className="grid grid-cols-1 gap-4">
             <Card
               className={cn(
-                "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
@@ -363,7 +359,7 @@ function CreateSupplierProfile() {
                               </FormControl>
                               <FormMessage />
                             </FormItem>
-                          )
+                          ),
                         )}
                         {renderFormField(
                           `contactPersons.${index}.email`,
@@ -375,7 +371,7 @@ function CreateSupplierProfile() {
                               </FormControl>
                               <FormMessage />
                             </FormItem>
-                          )
+                          ),
                         )}
                         {renderFormField(
                           `contactPersons.${index}.phone`,
@@ -387,7 +383,7 @@ function CreateSupplierProfile() {
                               </FormControl>
                               <FormMessage />
                             </FormItem>
-                          )
+                          ),
                         )}
                       </div>
                     ))}
