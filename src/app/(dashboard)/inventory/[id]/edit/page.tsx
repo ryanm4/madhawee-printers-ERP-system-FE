@@ -75,7 +75,7 @@ function EditInventoryManagement() {
     if (userData) {
       setUser({
         name: userData.name || "User",
-        email: userData.email,
+        email: userData.email ?? "",
         avatar: "",
       });
     }
@@ -134,7 +134,10 @@ function EditInventoryManagement() {
         item_category: data.item_category,
         item_sub_category: data.item_sub_category,
         item_name: data.item_name,
-        size: (data.width && data.height) ? `${data.width} x ${data.height}` : data.size || "-",
+        size:
+          data.width && data.height
+            ? `${data.width} x ${data.height}`
+            : data.size || "-",
         width: data.width ?? "",
         height: data.height ?? "",
         quantity: String(data.quantity),
@@ -146,23 +149,32 @@ function EditInventoryManagement() {
       };
       await inventoryApi.update(id, payload);
 
-      appToast.updated("Inventory Item Updated", "The inventory item has been updated successfully.");
+      appToast.updated(
+        "Inventory Item Updated",
+        "The inventory item has been updated successfully.",
+      );
       form.reset(baseDefaultValues);
       form.clearErrors();
       router.push("/inventory");
     } catch (error) {
       console.error("Failed to update inventory:", error);
-      appToast.error("Failed to Update Inventory Item", getErrorMessage(error, "An error occurred while updating the inventory item. Please try again."));
+      appToast.error(
+        "Failed to Update Inventory Item",
+        getErrorMessage(
+          error,
+          "An error occurred while updating the inventory item. Please try again.",
+        ),
+      );
     } finally {
       setIsLoading(false);
     }
   }
 
   const renderFormField = <
-    TName extends FieldPath<InventoryManagementFormValues>
+    TName extends FieldPath<InventoryManagementFormValues>,
   >(
     name: TName,
-    render: ControllerProps<InventoryManagementFormValues, TName>["render"]
+    render: ControllerProps<InventoryManagementFormValues, TName>["render"],
   ) => (
     <FormField<InventoryManagementFormValues, TName>
       control={form.control}
@@ -187,11 +199,9 @@ function EditInventoryManagement() {
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6  pb-0"
         >
-
-
           <Card
             className={cn(
-              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
@@ -208,7 +218,10 @@ function EditInventoryManagement() {
                     <FormLabel>
                       Item Category <span className="text-red-500">*</span>
                     </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined}>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || undefined}
+                    >
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select Item Category" />
@@ -230,18 +243,23 @@ function EditInventoryManagement() {
                     <FormLabel>
                       Item Sub Category <span className="text-red-500">*</span>
                     </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined}>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || undefined}
+                    >
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select Item Sub Category" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.entries(ITEM_SUB_CATEGORY).map(([key, value]) => (
-                          <SelectItem key={key} value={value}>
-                            {value}
-                          </SelectItem>
-                        ))}
+                        {Object.entries(ITEM_SUB_CATEGORY).map(
+                          ([key, value]) => (
+                            <SelectItem key={key} value={value}>
+                              {value}
+                            </SelectItem>
+                          ),
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -277,25 +295,21 @@ function EditInventoryManagement() {
                         Width (cm) <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="W"
-                          {...field}
-                        />
+                        <Input placeholder="W" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   ))}
-                  <div className="pb-3 text-muted-foreground font-bold text-xs">x</div>
+                  <div className="pb-3 text-muted-foreground font-bold text-xs">
+                    x
+                  </div>
                   {renderFormField("height", ({ field }) => (
                     <FormItem>
                       <FormLabel>
                         Height (cm) <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="H"
-                          {...field}
-                        />
+                        <Input placeholder="H" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -327,7 +341,10 @@ function EditInventoryManagement() {
                       Unit of Measure <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Select onValueChange={field.onChange} value={field.value || undefined}>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || undefined}
+                      >
                         <FormControl>
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select Unit of Meassure" />
@@ -361,7 +378,10 @@ function EditInventoryManagement() {
                     <FormLabel>
                       Status <span className="text-red-500">*</span>
                     </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined}>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || undefined}
+                    >
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select Status" />
@@ -383,7 +403,11 @@ function EditInventoryManagement() {
                   <FormItem>
                     <FormLabel>Remarks</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Enter Remarks" className="h-20 min-h-[80px]" {...field} />
+                      <Textarea
+                        placeholder="Enter Remarks"
+                        className="h-20 min-h-[80px]"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -391,25 +415,25 @@ function EditInventoryManagement() {
               </div>
             </CardContent>
           </Card>
-        <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-          <Button
-            size="lg"
-            variant="outline"
-            type="button"
-            onClick={() => router.push("/inventory")}
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            size="lg"
-            type="submit"
-            className="bg-primary text-white"
-            disabled={isLoading}
-          >
-            {isLoading ? "Updating..." : "Update"}
-          </Button>
-        </div>
+          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
+            <Button
+              size="lg"
+              variant="outline"
+              type="button"
+              onClick={() => router.push("/inventory")}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="lg"
+              type="submit"
+              className="bg-primary text-white"
+              disabled={isLoading}
+            >
+              {isLoading ? "Updating..." : "Update"}
+            </Button>
+          </div>
         </form>
       </Form>
     </div>

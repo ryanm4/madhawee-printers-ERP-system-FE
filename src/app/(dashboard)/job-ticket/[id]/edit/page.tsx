@@ -1,7 +1,12 @@
 "use client";
 
 import { getErrorMessage } from "@/lib/error-utils";
-import { FieldErrors, FieldPath, useFieldArray, useForm } from "react-hook-form";
+import {
+  FieldErrors,
+  FieldPath,
+  useFieldArray,
+  useForm,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
@@ -97,7 +102,7 @@ const emptyRawMaterial = {
 };
 
 function mapRawMaterials(
-  materials: unknown
+  materials: unknown,
 ): JobTicketFormValues["paperTypes"][number]["rawMaterials"] {
   if (!Array.isArray(materials)) {
     return [{ ...emptyRawMaterial }];
@@ -118,7 +123,7 @@ function mapRawMaterials(
 }
 
 function mapPaperTypesFromTicket(
-  jt: JOB_TICKET_DETAIL
+  jt: JOB_TICKET_DETAIL,
 ): JobTicketFormValues["paperTypes"] {
   const record = jt as Record<string, unknown>;
   const rawList =
@@ -154,11 +159,14 @@ function mapPaperTypesFromTicket(
 }
 
 function getFirstValidationMessage(
-  errors: FieldErrors<JobTicketFormValues>
+  errors: FieldErrors<JobTicketFormValues>,
 ): string {
   const walk = (value: unknown): string | undefined => {
     if (!value || typeof value !== "object") return undefined;
-    if ("message" in value && typeof (value as { message?: unknown }).message === "string") {
+    if (
+      "message" in value &&
+      typeof (value as { message?: unknown }).message === "string"
+    ) {
       return (value as { message: string }).message;
     }
     for (const nested of Object.values(value)) {
@@ -182,7 +190,7 @@ function EditJobTicket() {
   const isInitialLoad = useRef(true);
   const [customerData, setCustomerData] = useState<CUSTOMER[]>([]);
   const [purchaseOrderData, setPurchaseOrderData] = useState<PURCHASE_ORDER[]>(
-    []
+    [],
   );
   const [selectedPoDetails, setSelectedPoDetails] =
     useState<PURCHASE_ORDER_ID | null>(null);
@@ -196,7 +204,9 @@ function EditJobTicket() {
   const dispatch = useDispatch<AppDispatch>();
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [printData, setPrintData] = useState<JobTicketPrintData | null>(null);
-  const [ticketStatus, setTicketStatus] = useState<string>(JobTicketStatus.CREATED);
+  const [ticketStatus, setTicketStatus] = useState<string>(
+    JobTicketStatus.CREATED,
+  );
 
   const baseDefaultValues: JobTicketFormValues = {
     customer_po: "",
@@ -288,7 +298,7 @@ function EditJobTicket() {
         setUploadedFile(file);
       } else {
         alert(
-          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB."
+          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB.",
         );
       }
     }
@@ -383,15 +393,21 @@ function EditJobTicket() {
         status: ticketStatus,
       };
 
-      const response = await jobTicketsApi.update(id, formattedData as CREATE_TICKETS);
+      const response = await jobTicketsApi.update(
+        id,
+        formattedData as CREATE_TICKETS,
+      );
 
       if (response.status === 200) {
         toast("Job Ticket updated successfully");
 
         // Build print data and show print dialog
         const firstPaperType = data.paperTypes?.[0];
-        const allRawMaterials = data.paperTypes?.flatMap((p) => p.rawMaterials || []) || [];
-        const matchingPo = purchaseOrderData.find((po) => String(po.po_id) === data.customer_po);
+        const allRawMaterials =
+          data.paperTypes?.flatMap((p) => p.rawMaterials || []) || [];
+        const matchingPo = purchaseOrderData.find(
+          (po) => String(po.po_id) === data.customer_po,
+        );
         const pd: JobTicketPrintData = {
           jobNumber: data.jobNumber,
           productType: data.productType,
@@ -399,7 +415,9 @@ function EditJobTicket() {
           quantity: data.quantity,
           jobOpenDate: data.jobOpenDate || new Date(),
           paperType: firstPaperType?.paper,
-          customer: customerData.find((c) => String(c.customer_id) === data.customer)?.company_name || data.customer,
+          customer:
+            customerData.find((c) => String(c.customer_id) === data.customer)
+              ?.company_name || data.customer,
           coating: firstPaperType?.coating,
           jobName: data.jobName,
           customerDeliveryDate: data.deliveryDate,
@@ -425,7 +443,6 @@ function EditJobTicket() {
     }
   }
 
-
   useEffect(() => {
     const fetchDataAndTicket = async () => {
       try {
@@ -433,18 +450,21 @@ function EditJobTicket() {
         isInitialLoad.current = true;
 
         // 1. Fetch reference data first
-        const [poResponse, customerResponse, inventoryResponse] = await Promise.all([
-          purchaseOrderApi.getAll(),
-          CustomerApi.getAll(),
-          inventoryApi.getAll(),
-        ]);
+        const [poResponse, customerResponse, inventoryResponse] =
+          await Promise.all([
+            purchaseOrderApi.getAll(),
+            CustomerApi.getAll(),
+            inventoryApi.getAll(),
+          ]);
 
         const pos = poResponse.data;
         const customers = customerResponse.data;
         const inventory = inventoryResponse.data;
 
         // Initial filter for Approved POs
-        const filteredPOs = pos.filter((p: PURCHASE_ORDER) => p.status === PurchaseOrderStatus.APPROVED);
+        const filteredPOs = pos.filter(
+          (p: PURCHASE_ORDER) => p.status === PurchaseOrderStatus.APPROVED,
+        );
 
         setPurchaseOrderData(filteredPOs);
         setCustomerData(customers);
@@ -458,9 +478,14 @@ function EditJobTicket() {
           setTicketStatus(jt.status);
 
           // 3. Ensure the currently linked PO is in the list even if not APPROVED
-          const currentPo = pos.find((p: PURCHASE_ORDER) => String(p.po_id) === String(jt.po_id));
-          if (currentPo && !filteredPOs.some(p => String(p.po_id) === String(jt.po_id))) {
-            setPurchaseOrderData(prev => [...prev, currentPo]);
+          const currentPo = pos.find(
+            (p: PURCHASE_ORDER) => String(p.po_id) === String(jt.po_id),
+          );
+          if (
+            currentPo &&
+            !filteredPOs.some((p) => String(p.po_id) === String(jt.po_id))
+          ) {
+            setPurchaseOrderData((prev) => [...prev, currentPo]);
           }
 
           // Find the matching PO for fallbacks
@@ -485,7 +510,9 @@ function EditJobTicket() {
             jobName: jt.job_name,
             productType: jt.product_type || "",
             quantity: jt.quantity != null ? String(jt.quantity) : "",
-            deliveryDate: jt.delivery_date ? parseLocalDate(jt.delivery_date) : undefined,
+            deliveryDate: jt.delivery_date
+              ? parseLocalDate(jt.delivery_date)
+              : undefined,
             wastage: jt.wastage || "",
             packingDate: jt.packing_date ? String(jt.packing_date) : "",
             expiryDate: jt.expiry_date ? String(jt.expiry_date) : "",
@@ -493,10 +520,14 @@ function EditJobTicket() {
             tcNo: jt.tc_no || matchingPo?.TC_E_PR_No || "",
             batchRef: jt.batch_ref || matchingPo?.batch_ref || "",
             remarks: jt.remarks,
-            oldPlatesQuantity: jt.old_plate_quantity ? String(jt.old_plate_quantity) : "",
+            oldPlatesQuantity: jt.old_plate_quantity
+              ? String(jt.old_plate_quantity)
+              : "",
             oldPlatesStatus: jt.old_plate_status || "",
             oldPlatesRemarks: jt.old_plate_remarks || "",
-            newPlatesQuantity: jt.new_plate_quantity ? String(jt.new_plate_quantity) : "",
+            newPlatesQuantity: jt.new_plate_quantity
+              ? String(jt.new_plate_quantity)
+              : "",
             newPlatesStatus: jt.new_plate_status || "",
             newPlatesRemarks: jt.new_plate_remarks || "",
             inks: jt.inks?.map((ink) => ({
@@ -505,11 +536,11 @@ function EditJobTicket() {
               status: ink.status || "",
               remarks: ink.remarks || "",
             })) || [
-                { ink: "Black", quantity: "", status: "", remarks: "" },
-                { ink: "Cyan", quantity: "", status: "", remarks: "" },
-                { ink: "Magenta", quantity: "", status: "", remarks: "" },
-                { ink: "Yellow", quantity: "", status: "", remarks: "" },
-              ],
+              { ink: "Black", quantity: "", status: "", remarks: "" },
+              { ink: "Cyan", quantity: "", status: "", remarks: "" },
+              { ink: "Magenta", quantity: "", status: "", remarks: "" },
+              { ink: "Yellow", quantity: "", status: "", remarks: "" },
+            ],
             paperTypes: mapPaperTypesFromTicket(jt),
           });
 
@@ -532,7 +563,7 @@ function EditJobTicket() {
     if (userData) {
       setUser({
         name: userData.name || "User",
-        email: userData.email,
+        email: userData.email ?? "",
         avatar: "",
       });
     }
@@ -540,7 +571,6 @@ function EditJobTicket() {
 
   const selectedPoId = form.watch("customer_po");
   const selectedPoItems = selectedPoDetails?.po_items ?? [];
-
 
   useEffect(() => {
     const fetchPoDetails = async () => {
@@ -562,7 +592,10 @@ function EditJobTicket() {
                 form.setValue("customer", String(po.customer.customer_id));
               }
             }
-            if (po.po_date && (!isInitialLoad.current || !form.getValues("orderReceivedDate"))) {
+            if (
+              po.po_date &&
+              (!isInitialLoad.current || !form.getValues("orderReceivedDate"))
+            ) {
               form.setValue("orderReceivedDate", new Date(po.po_date));
             }
 
@@ -587,7 +620,7 @@ function EditJobTicket() {
     name: TName,
     render: Parameters<
       typeof FormField<JobTicketFormValues, TName>
-    >["0"]["render"]
+    >["0"]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
 
   return (
@@ -602,7 +635,10 @@ function EditJobTicket() {
       />
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-6 pb-0">
+        <form
+          onSubmit={form.handleSubmit(onSubmit, onInvalid)}
+          className="space-y-6 pb-0"
+        >
           <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
             <Button
               size="lg"
@@ -624,7 +660,7 @@ function EditJobTicket() {
           </div>
           <Card
             className={cn(
-              "w-full shdow-sm hover:shadow-md transition-shadow flex flex-col"
+              "w-full shdow-sm hover:shadow-md transition-shadow flex flex-col",
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
@@ -659,13 +695,21 @@ function EditJobTicket() {
                     <FormLabel>Item</FormLabel>
                     <Combobox
                       items={(() => {
-                        const baseItems = selectedPoItems.map((item: PO_ITEMS) => ({
-                          value: String(item.item_code),
-                          label: String(item.item_code),
-                        }));
+                        const baseItems = selectedPoItems.map(
+                          (item: PO_ITEMS) => ({
+                            value: String(item.item_code),
+                            label: String(item.item_code),
+                          }),
+                        );
                         const currentValue = String(field.value || "");
-                        if (currentValue && !baseItems.some(i => i.value === currentValue)) {
-                          return [{ value: currentValue, label: currentValue }, ...baseItems];
+                        if (
+                          currentValue &&
+                          !baseItems.some((i) => i.value === currentValue)
+                        ) {
+                          return [
+                            { value: currentValue, label: currentValue },
+                            ...baseItems,
+                          ];
                         }
                         return baseItems;
                       })()}
@@ -673,12 +717,12 @@ function EditJobTicket() {
                       onValueChange={(value) => {
                         field.onChange(value);
                         const selectedItem = selectedPoItems.find(
-                          (i: PO_ITEMS) => i.item_code === value
+                          (i: PO_ITEMS) => i.item_code === value,
                         );
                         if (selectedItem) {
                           form.setValue(
                             "quantity",
-                            String(selectedItem.quantity)
+                            String(selectedItem.quantity),
                           );
                           form.setValue("jobName", selectedItem.description);
                         }
@@ -720,7 +764,7 @@ function EditJobTicket() {
                             variant={"outline"}
                             className={cn(
                               "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
+                              !field.value && "text-muted-foreground",
                             )}
                           >
                             {field.value
@@ -758,7 +802,7 @@ function EditJobTicket() {
                             variant={"outline"}
                             className={cn(
                               "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
+                              !field.value && "text-muted-foreground",
                             )}
                           >
                             {field.value
@@ -858,7 +902,7 @@ function EditJobTicket() {
                             variant={"outline"}
                             className={cn(
                               "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
+                              !field.value && "text-muted-foreground",
                             )}
                           >
                             {field.value
@@ -873,9 +917,7 @@ function EditJobTicket() {
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
-                          disabled={(date) =>
-                            date < new Date("1900-01-01")
-                          }
+                          disabled={(date) => date < new Date("1900-01-01")}
                           initialFocus
                         />
                       </PopoverContent>
@@ -924,7 +966,7 @@ function EditJobTicket() {
                             type="button"
                             variant="outline"
                             size="icon"
-                            onClick={() => { }}
+                            onClick={() => {}}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
@@ -957,19 +999,19 @@ function EditJobTicket() {
                                     const selectedPaper = inventoryList.find(
                                       (item) =>
                                         `${item.item_sub_category} ${item.item_name}` ===
-                                        val
+                                        val,
                                     );
                                     if (selectedPaper) {
                                       const rawMaterialsData = form.getValues(
-                                        `paperTypes.${index}.rawMaterials`
+                                        `paperTypes.${index}.rawMaterials`,
                                       );
                                       rawMaterialsData?.forEach(
                                         (_, rmIndex) => {
                                           form.setValue(
                                             `paperTypes.${index}.rawMaterials.${rmIndex}.size`,
-                                            selectedPaper.size
+                                            selectedPaper.size,
                                           );
-                                        }
+                                        },
                                       );
                                     }
                                   }
@@ -977,7 +1019,7 @@ function EditJobTicket() {
                               />
                               <FormMessage />
                             </FormItem>
-                          )
+                          ),
                         )}
                         {renderFormField(
                           `paperTypes.${index}.coating`,
@@ -1001,13 +1043,13 @@ function EditJobTicket() {
                                       <SelectItem key={key} value={value}>
                                         {value}
                                       </SelectItem>
-                                    )
+                                    ),
                                   )}
                                 </SelectContent>
                               </Select>
                               <FormMessage />
                             </FormItem>
-                          )
+                          ),
                         )}
                       </div>
 
@@ -1024,12 +1066,12 @@ function EditJobTicket() {
                             `paperTypes.${index}.rawMaterials.${rmIndex}.size`,
                             ({ field }) => {
                               const selectedPaperName = form.watch(
-                                `paperTypes.${index}.paper`
+                                `paperTypes.${index}.paper`,
                               );
                               const filteredInventory = inventoryList.filter(
                                 (item) =>
                                   `${item.item_sub_category} ${item.item_name}` ===
-                                  selectedPaperName
+                                  selectedPaperName,
                               );
 
                               return (
@@ -1044,20 +1086,20 @@ function EditJobTicket() {
                                       field.onChange(val);
                                       const selectedMaterial =
                                         filteredInventory.find(
-                                          (item) => item.size === val
+                                          (item) => item.size === val,
                                         );
                                       if (selectedMaterial) {
                                         form.setValue(
                                           `paperTypes.${index}.rawMaterials.${rmIndex}.item_id`,
-                                          selectedMaterial.item_id
+                                          selectedMaterial.item_id,
                                         );
                                         form.setValue(
                                           `paperTypes.${index}.rawMaterials.${rmIndex}.material_type`,
-                                          selectedMaterial.item_sub_category
+                                          selectedMaterial.item_sub_category,
                                         );
                                         form.setValue(
                                           `paperTypes.${index}.rawMaterials.${rmIndex}.material_name`,
-                                          selectedMaterial.item_name
+                                          selectedMaterial.item_name,
                                         );
                                       }
                                     }}
@@ -1082,7 +1124,7 @@ function EditJobTicket() {
                                   <FormMessage />
                                 </FormItem>
                               );
-                            }
+                            },
                           )}
                           {renderFormField(
                             `paperTypes.${index}.rawMaterials.${rmIndex}.quantity`,
@@ -1102,14 +1144,14 @@ function EditJobTicket() {
                                       field.onChange(
                                         e.target.value === ""
                                           ? 0
-                                          : Number(e.target.value)
+                                          : Number(e.target.value),
                                       )
                                     }
                                   />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
-                            )
+                            ),
                           )}
                           {renderFormField(
                             `paperTypes.${index}.rawMaterials.${rmIndex}.status`,
@@ -1135,13 +1177,13 @@ function EditJobTicket() {
                                         <SelectItem key={key} value={value}>
                                           {value}
                                         </SelectItem>
-                                      )
+                                      ),
                                     )}
                                   </SelectContent>
                                 </Select>
                                 <FormMessage />
                               </FormItem>
-                            )
+                            ),
                           )}
                           {renderFormField(
                             `paperTypes.${index}.rawMaterials.${rmIndex}.remarks`,
@@ -1160,7 +1202,7 @@ function EditJobTicket() {
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
-                            )
+                            ),
                           )}
                           <div className="flex items-end pb-2">
                             <Button
@@ -1170,14 +1212,14 @@ function EditJobTicket() {
                               onClick={() => {
                                 const current =
                                   form.getValues(
-                                    `paperTypes.${index}.rawMaterials`
+                                    `paperTypes.${index}.rawMaterials`,
                                   ) || [];
                                 if (current.length > 1) {
                                   form.setValue(
                                     `paperTypes.${index}.rawMaterials`,
                                     current.filter(
-                                      (_, i: number) => i !== rmIndex
-                                    )
+                                      (_, i: number) => i !== rmIndex,
+                                    ),
                                   );
                                 }
                               }}
@@ -1196,7 +1238,7 @@ function EditJobTicket() {
                           onClick={() => {
                             const current =
                               form.getValues(
-                                `paperTypes.${index}.rawMaterials`
+                                `paperTypes.${index}.rawMaterials`,
                               ) || [];
                             form.setValue(`paperTypes.${index}.rawMaterials`, [
                               ...current,
@@ -1253,7 +1295,10 @@ function EditJobTicket() {
                   <FormItem>
                     <FormLabel>Packing Date</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter Packing Date e.g. Apr 2026" {...field} />
+                      <Input
+                        placeholder="Enter Packing Date e.g. Apr 2026"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1262,7 +1307,10 @@ function EditJobTicket() {
                   <FormItem>
                     <FormLabel>Expiry Date</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter Expiry Date e.g. Apr 2031" {...field} />
+                      <Input
+                        placeholder="Enter Expiry Date e.g. Apr 2031"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1283,7 +1331,11 @@ function EditJobTicket() {
                   <FormItem>
                     <FormLabel>Batch Ref</FormLabel>
                     <FormControl>
-                      <Input readOnly placeholder="Enter Batch Ref" {...field} />
+                      <Input
+                        readOnly
+                        placeholder="Enter Batch Ref"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1456,7 +1508,7 @@ function EditJobTicket() {
                             </FormControl>
                             <FormMessage />
                           </FormItem>
-                        )
+                        ),
                       )}
                       {renderFormField(`inks.${index}.status`, ({ field }) => (
                         <FormItem>
@@ -1478,7 +1530,7 @@ function EditJobTicket() {
                                   <SelectItem key={key} value={value}>
                                     {value}
                                   </SelectItem>
-                                )
+                                ),
                               )}
                             </SelectContent>
                           </Select>
@@ -1502,7 +1554,7 @@ function EditJobTicket() {
                         type="button"
                         variant="outline"
                         size="icon"
-                        onClick={() => { }}
+                        onClick={() => {}}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>

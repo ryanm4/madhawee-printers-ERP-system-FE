@@ -96,7 +96,7 @@ function CreateCustomerRelationship() {
       const name = userData.name || "User";
       setUser({
         name: name,
-        email: userData.email,
+        email: userData.email ?? "",
         avatar: "",
       });
       form.setValue("created_by", name);
@@ -118,7 +118,7 @@ function CreateCustomerRelationship() {
         setUploadedFile(file);
       } else {
         alert(
-          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB."
+          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB.",
         );
       }
     }
@@ -180,7 +180,7 @@ function CreateCustomerRelationship() {
       toast(`Failed to Create Customer`, {
         description: getErrorMessage(
           error,
-          `An error occurred while creating the customer. Please try again.`
+          `An error occurred while creating the customer. Please try again.`,
         ),
       });
     } finally {
@@ -192,7 +192,7 @@ function CreateCustomerRelationship() {
     name: TName,
     render: Parameters<
       typeof FormField<CustomerFormValues, TName>
-    >["0"]["render"]
+    >["0"]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
 
   const _customerType = form.watch("customer_type");
@@ -229,7 +229,7 @@ function CreateCustomerRelationship() {
           <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
@@ -378,7 +378,7 @@ function CreateCustomerRelationship() {
                               </FormControl>
                               <FormMessage />
                             </FormItem>
-                          )
+                          ),
                         )}
                         {renderFormField(
                           `contactPersons.${index}.email`,
@@ -390,7 +390,7 @@ function CreateCustomerRelationship() {
                               </FormControl>
                               <FormMessage />
                             </FormItem>
-                          )
+                          ),
                         )}
                         {renderFormField(
                           `contactPersons.${index}.phone`,
@@ -402,7 +402,7 @@ function CreateCustomerRelationship() {
                               </FormControl>
                               <FormMessage />
                             </FormItem>
-                          )
+                          ),
                         )}
                       </div>
                     ))}

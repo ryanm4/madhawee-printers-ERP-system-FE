@@ -5,7 +5,12 @@ import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcr
 import { supplierSchema } from "@/modules/supplier/validation";
 import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
-import { FieldPath, useForm, SubmitHandler, useFieldArray } from "react-hook-form";
+import {
+  FieldPath,
+  useForm,
+  SubmitHandler,
+  useFieldArray,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -82,7 +87,11 @@ function EditSupplierRelationship() {
     defaultValues: baseDefaultValues,
   });
 
-  const { fields: contactFields, append: appendContact, remove: removeContact } = useFieldArray({
+  const {
+    fields: contactFields,
+    append: appendContact,
+    remove: removeContact,
+  } = useFieldArray({
     control: form.control,
     name: "contactPersons",
   });
@@ -92,7 +101,7 @@ function EditSupplierRelationship() {
     if (userData) {
       setUser({
         name: userData.name || "User",
-        email: userData.email,
+        email: userData.email ?? "",
       });
     }
 
@@ -114,13 +123,15 @@ function EditSupplierRelationship() {
           vat_no: data.vat_no,
           logoUrl: data.logo_url,
           contactPersons: (() => {
-              const arr = Array.isArray(data.contacts) ? data.contacts : [];
-              return arr.length > 0 ? arr.map((cp: SUPPLIER_CONTACT) => ({
+            const arr = Array.isArray(data.contacts) ? data.contacts : [];
+            return arr.length > 0
+              ? arr.map((cp: SUPPLIER_CONTACT) => ({
                   id: cp.id,
                   name: cp.name || "",
                   email: cp.email || "",
                   phone: cp.phone || "",
-              })) : [{ name: "", email: "", phone: "" }];
+                }))
+              : [{ name: "", email: "", phone: "" }];
           })(),
           created_by: data.created_by,
           status: data.status,
@@ -153,12 +164,19 @@ function EditSupplierRelationship() {
         vat_type: data.vat_type ?? "",
         vat_no: data.vat_no ?? "",
         logo_url: data.logoUrl ?? "",
-        contacts: data.contactPersons.map((cp: { id?: number; name: string; email?: string; phone?: string }) => ({
-          ...(cp.id && { id: cp.id }),
-          name: cp.name,
-          email: cp.email ?? "",
-          phone: cp.phone ?? "",
-        })),
+        contacts: data.contactPersons.map(
+          (cp: {
+            id?: number;
+            name: string;
+            email?: string;
+            phone?: string;
+          }) => ({
+            ...(cp.id && { id: cp.id }),
+            name: cp.name,
+            email: cp.email ?? "",
+            phone: cp.phone ?? "",
+          }),
+        ),
         updated_by: user?.name || "User",
         status: data.status ?? "Active",
       };
@@ -171,7 +189,9 @@ function EditSupplierRelationship() {
       }
     } catch (error) {
       console.error("Failed to update supplier:", error);
-      toast.error(getErrorMessage(error, "Failed to update supplier. Please try again."));
+      toast.error(
+        getErrorMessage(error, "Failed to update supplier. Please try again."),
+      );
     } finally {
       setIsLoading(false);
     }
@@ -179,7 +199,9 @@ function EditSupplierRelationship() {
 
   const renderFormField = <TName extends FieldPath<SupplierFormValues>>(
     name: TName,
-    render: Parameters<typeof FormField<SupplierFormValues, TName>>["0"]["render"]
+    render: Parameters<
+      typeof FormField<SupplierFormValues, TName>
+    >["0"]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
 
   return (
@@ -196,20 +218,26 @@ function EditSupplierRelationship() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-
-
           <div className="grid grid-cols-1 gap-4">
             <Card className="w-full shadow-sm">
               <CardHeader>
-                <h3 className="text-md font-medium">Update Supplier Information</h3>
-                <p className="text-xs text-muted-foreground">Modify the details for this supplier profile.</p>
+                <h3 className="text-md font-medium">
+                  Update Supplier Information
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Modify the details for this supplier profile.
+                </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
                 {renderFormField("customer_type", ({ field }) => (
                   <FormItem>
                     <FormLabel>Entity Type</FormLabel>
                     <FormControl>
-                      <Input readOnly {...field} className="bg-muted cursor-not-allowed" />
+                      <Input
+                        readOnly
+                        {...field}
+                        className="bg-muted cursor-not-allowed"
+                      />
                     </FormControl>
                   </FormItem>
                 ))}
@@ -217,15 +245,21 @@ function EditSupplierRelationship() {
                 <div className="flex flex-row gap-4">
                   {renderFormField("companyName", ({ field }) => (
                     <FormItem className="w-full">
-                      <FormLabel>Company Name <span className="text-red-500">*</span></FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
+                      <FormLabel>
+                        Company Name <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   ))}
                   {renderFormField("phone", ({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>Company Phone</FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   ))}
@@ -234,7 +268,9 @@ function EditSupplierRelationship() {
                 {renderFormField("address", ({ field }) => (
                   <FormItem>
                     <FormLabel>Supplier Address</FormLabel>
-                    <FormControl><Textarea {...field} className="resize-none" /></FormControl>
+                    <FormControl>
+                      <Textarea {...field} className="resize-none" />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 ))}
@@ -243,14 +279,18 @@ function EditSupplierRelationship() {
                   {renderFormField("email", ({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>Company Email</FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   ))}
                   {renderFormField("creditPeriod", ({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>Credit Period (Days)</FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   ))}
@@ -260,12 +300,21 @@ function EditSupplierRelationship() {
                   {renderFormField("vat_type", ({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>VAT Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
                         <FormControl>
-                          <SelectTrigger><SelectValue placeholder="Select VAT Type" /></SelectTrigger>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select VAT Type" />
+                          </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {Object.values(VatType).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                          {Object.values(VatType).map((t) => (
+                            <SelectItem key={t} value={t}>
+                              {t}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -274,7 +323,9 @@ function EditSupplierRelationship() {
                   {renderFormField("vat_no", ({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>VAT Number</FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   ))}
@@ -287,7 +338,9 @@ function EditSupplierRelationship() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => appendContact({ name: "", email: "", phone: "" })}
+                      onClick={() =>
+                        appendContact({ name: "", email: "", phone: "" })
+                      }
                       className="flex items-center gap-2"
                     >
                       <Plus className="h-4 w-4" /> Add Contact
@@ -296,7 +349,10 @@ function EditSupplierRelationship() {
 
                   <div className="space-y-6">
                     {contactFields.map((field, index) => (
-                      <div key={field.id} className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 pr-14 border rounded-lg relative bg-accent/5">
+                      <div
+                        key={field.id}
+                        className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 pr-14 border rounded-lg relative bg-accent/5"
+                      >
                         {contactFields.length > 1 && (
                           <Button
                             type="button"
@@ -308,27 +364,44 @@ function EditSupplierRelationship() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
-                        {renderFormField(`contactPersons.${index}.name`, ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Name <span className="text-red-500">*</span></FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        ))}
-                        {renderFormField(`contactPersons.${index}.email`, ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        ))}
-                        {renderFormField(`contactPersons.${index}.phone`, ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Phone</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        ))}
+                        {renderFormField(
+                          `contactPersons.${index}.name`,
+                          ({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                Name <span className="text-red-500">*</span>
+                              </FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          ),
+                        )}
+                        {renderFormField(
+                          `contactPersons.${index}.email`,
+                          ({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          ),
+                        )}
+                        {renderFormField(
+                          `contactPersons.${index}.phone`,
+                          ({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          ),
+                        )}
                       </div>
                     ))}
                   </div>

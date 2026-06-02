@@ -82,7 +82,7 @@ function CreateDispatchandInvoice() {
     if (userData) {
       setUser({
         name: userData.name || "User",
-        email: userData.email,
+        email: userData.email ?? "",
         avatar: "",
       });
     }
@@ -97,7 +97,7 @@ function CreateDispatchandInvoice() {
         const completedJobs = response.data.filter(
           (x) =>
             x.status === JobTicketStatus.IN_PRODUCTION ||
-            x.status === JobTicketStatus.PARTIALLY_DISPATCHED
+            x.status === JobTicketStatus.PARTIALLY_DISPATCHED,
         );
 
         setJobData(completedJobs);
@@ -115,7 +115,7 @@ function CreateDispatchandInvoice() {
       setIsLoading(true);
 
       const selectedJob = JobData.find(
-        (j) => String(j.job_id) === String(data.job_id)
+        (j) => String(j.job_id) === String(data.job_id),
       );
       const previouslyCompleted = Number(selectedJob?.completed_qty || 0);
       const totalJobQty = Number(selectedJob?.quantity || 0);
@@ -164,7 +164,7 @@ function CreateDispatchandInvoice() {
         } catch (err) {
           console.error(
             "Failed to update Job Ticket status during dispatch:",
-            err
+            err,
           );
         }
       }
@@ -175,7 +175,8 @@ function CreateDispatchandInvoice() {
 
       // Prepare print data
       const pData: DispatchPrintData = {
-        dispatch_id: (response.data as { dispatch_id?: string }).dispatch_id || "N/A",
+        dispatch_id:
+          (response.data as { dispatch_id?: string }).dispatch_id || "N/A",
         dispatch_date: new Date(),
         customer_name: data.customer_name || "",
         customer_address: data.customer_address || "",
@@ -202,7 +203,7 @@ function CreateDispatchandInvoice() {
       toast("Failed to Create Dispatch", {
         description: getErrorMessage(
           error,
-          "An error occurred while creating the dispatch record. Please try again."
+          "An error occurred while creating the dispatch record. Please try again.",
         ),
       });
     } finally {
@@ -214,10 +215,8 @@ function CreateDispatchandInvoice() {
     name: TName,
     render: Parameters<
       typeof FormField<DispatchFormValues, TName>
-    >["0"]["render"]
+    >["0"]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
-
-
 
   const jobId = form.watch("job_id");
 
@@ -234,7 +233,7 @@ function CreateDispatchandInvoice() {
       try {
         setIsLoading(true);
         const selectedJob = JobData.find(
-          (job) => String(job.job_id) === String(jobId)
+          (job) => String(job.job_id) === String(jobId),
         );
         if (!selectedJob) return;
         const customerId = selectedJob.customer_id;
@@ -279,11 +278,10 @@ function CreateDispatchandInvoice() {
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6  pb-0"
         >
-
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
@@ -303,10 +301,11 @@ function CreateDispatchandInvoice() {
 
                           return {
                             value: String(job.job_id),
-                            label: `Job-${job.job_number} (${jobName.length > 25
-                              ? jobName.substring(0, 25) + "..."
-                              : jobName
-                              })`,
+                            label: `Job-${job.job_number} (${
+                              jobName.length > 25
+                                ? jobName.substring(0, 25) + "..."
+                                : jobName
+                            })`,
                           };
                         })}
                         value={field.value ? String(field.value) : ""}
@@ -327,7 +326,7 @@ function CreateDispatchandInvoice() {
                         value={
                           JobData.find(
                             (j) =>
-                              String(j.job_id) === String(form.watch("job_id"))
+                              String(j.job_id) === String(form.watch("job_id")),
                           )?.quantity || ""
                         }
                       />
@@ -358,21 +357,21 @@ function CreateDispatchandInvoice() {
                           onChange={(e) => {
                             const digitsOnly = e.target.value.replace(
                               /\D/g,
-                              ""
+                              "",
                             );
                             field.onChange(digitsOnly);
                           }}
                           onBlur={() => {
                             if (!field.value) return;
                             const formatted = formatPhone(
-                              field.value as string
+                              field.value as string,
                             );
                             field.onChange(formatted);
                           }}
                           onFocus={() => {
                             if (!field.value) return;
                             field.onChange(
-                              (field.value as string).replace(/\D/g, "")
+                              (field.value as string).replace(/\D/g, ""),
                             );
                           }}
                         />
@@ -412,7 +411,7 @@ function CreateDispatchandInvoice() {
 
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
@@ -441,7 +440,7 @@ function CreateDispatchandInvoice() {
                             variant={"outline"}
                             className={cn(
                               "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
+                              !field.value && "text-muted-foreground",
                             )}
                           >
                             {field.value
@@ -536,7 +535,6 @@ function CreateDispatchandInvoice() {
               )}
             </Button>
           </div>
-
         </form>
       </Form>
     </div>
