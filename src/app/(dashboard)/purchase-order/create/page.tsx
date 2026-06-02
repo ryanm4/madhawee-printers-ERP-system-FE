@@ -172,8 +172,7 @@ function CreatePurchaseOrder() {
         po_type_id: poTypeMap[data.purchaseOrderType] || 1,
         batch_ref: data.batchRef,
         sales_ref: data.salesRef,
-        po_date:
-          data.poDate instanceof Date ? formatDate(data.poDate) : data.poDate,
+        po_date: format(data.poDate, "yyyy-MM-dd HH:mm:ss"),
         TC_E_PR_No: data.tceprNo,
         created_by: user?.name || "User",
         created_on: new Date(),
