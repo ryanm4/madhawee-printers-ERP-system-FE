@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { CalendarIcon, Edit2 } from "lucide-react" // Import icons
 import { format } from "date-fns"
+import { parseLocalDate } from "@/hooks/sql-date-time"
 import { useState, useEffect } from "react"
 
 import { cn } from "@/lib/utils"
@@ -138,13 +139,19 @@ function JobViewTicket() {
                         customer_po: data.customer_po ? String(data.customer_po) : (data.po_id ? String(data.po_id) : ""),
                         item: data.item_code ? String(data.item_code) : "",
                         jobNumber: data.job_number || "",
-                        orderReceivedDate: data.order_received_date ? new Date(data.order_received_date) : undefined,
-                        jobOpenDate: data.created_on ? new Date(data.created_on) : undefined,
+                        orderReceivedDate: data.order_received_date
+                            ? parseLocalDate(data.order_received_date)
+                            : undefined,
+                        jobOpenDate: data.job_open_date
+                            ? parseLocalDate(data.job_open_date)
+                            : data.created_on
+                                ? parseLocalDate(data.created_on)
+                                : undefined,
                         customer: data.customer_id ? String(data.customer_id) : "",
                         jobName: data.job_name || "",
                         productType: data.product_type || "",
                         quantity: data.quantity ? String(data.quantity) : "",
-                        deliveryDate: data.delivery_date ? new Date(data.delivery_date) : undefined,
+                        deliveryDate: data.delivery_date ? parseLocalDate(data.delivery_date) : undefined,
                         wastage: data.wastage ? String(data.wastage) : "",
                         packingDate: data.packing_date ? String(data.packing_date) : "",
                         expiryDate: data.expiry_date ? String(data.expiry_date) : "",

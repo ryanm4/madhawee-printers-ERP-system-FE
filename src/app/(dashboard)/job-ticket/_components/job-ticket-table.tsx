@@ -23,6 +23,7 @@ import { useEffect, useState } from "react"
 import { QUOTATIONS, QuotationItems } from "@/modules/quotations/types"
 import { Button } from "@/components/ui/button"
 import { format } from "date-fns"
+import { parseLocalDate } from "@/hooks/sql-date-time"
 import { utils, writeFile } from "xlsx"
 import {
     DropdownMenu,
@@ -102,9 +103,9 @@ export function DataTable<TData, TValue>({
                 "Wastage": row.wastage,
                 "Status": row.status,
                 "Remarks": row.remarks,
-                "Job Open Date": row.job_open_date ? format(new Date(row.job_open_date as string), "yyyy-MM-dd") : "",
-                "Packing Date": row.packing_date ? format(new Date(row.packing_date as string), "yyyy-MM-dd") : "",
-                "Expiry Date": row.expiry_date ? format(new Date(row.expiry_date as string), "yyyy-MM-dd") : "",
+                "Job Open Date": row.job_open_date ? format(parseLocalDate(row.job_open_date as string), "yyyy-MM-dd") : "",
+                "Packing Date": row.packing_date ? format(parseLocalDate(row.packing_date as string), "yyyy-MM-dd") : "",
+                "Expiry Date": row.expiry_date ? format(parseLocalDate(row.expiry_date as string), "yyyy-MM-dd") : "",
                 "Old Plate Qty": row.old_plate_quantity,
                 "Old Plate Status": row.old_plate_status,
                 "Old Plate Remarks": row.old_plate_remarks,

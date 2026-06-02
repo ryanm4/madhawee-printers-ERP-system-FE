@@ -1,11 +1,7 @@
 "use client";
 import { getErrorMessage } from "@/lib/error-utils";
 
-import {
-  useFieldArray,
-  useForm,
-  FieldPath,
-} from "react-hook-form";
+import { useFieldArray, useForm, FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
@@ -71,9 +67,13 @@ import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { CustomerApi } from "@/modules/customer/api";
 import { CUSTOMER } from "@/modules/customer/types";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
-import { ALL_TICKETS, CREATE_TICKETS, JobTicketPrintData } from "@/modules/job-tickets/types";
+import {
+  ALL_TICKETS,
+  CREATE_TICKETS,
+  JobTicketPrintData,
+} from "@/modules/job-tickets/types";
 import { toast } from "sonner";
-import { toMySQLDateTime } from "@/hooks/sql-date-time";
+import { parseLocalDate, toMySQLDateTime } from "@/hooks/sql-date-time";
 import { inventoryApi } from "@/modules/inventory/api";
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
 import { useDispatch } from "react-redux";
@@ -93,9 +93,7 @@ interface CreateJobTicketDialogProps {
 import { PaperTypeCombobox } from "./paper-type-combobox";
 import { Combobox } from "@/components/shared/combobox";
 import { getUser } from "@/lib/auth";
-import {
-  JobTicketPrintDialog,
-} from "./job-ticket-print-dialog";
+import { JobTicketPrintDialog } from "./job-ticket-print-dialog";
 
 export function CreateJobTicketDialog({
   open,
@@ -104,7 +102,7 @@ export function CreateJobTicketDialog({
   onSuccess,
 }: CreateJobTicketDialogProps) {
   const [purchaseOrderData, setPurchaseOrderData] = useState<PURCHASE_ORDER[]>(
-    []
+    [],
   );
   const [customerData, setCustomerData] = useState<CUSTOMER[]>([]);
   const [selectedPoDetails, setSelectedPoDetails] =
@@ -212,7 +210,7 @@ export function CreateJobTicketDialog({
         setUploadedFile(file);
       } else {
         alert(
-          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB."
+          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB.",
         );
       }
     }
@@ -239,7 +237,6 @@ export function CreateJobTicketDialog({
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + sizes[i];
   };
 
-
   async function onSubmit(data: JobTicketFormValues) {
     try {
       setLoading(true);
@@ -248,7 +245,7 @@ export function CreateJobTicketDialog({
       let _poIdValue = data.customer_po ? Number(data.customer_po) : undefined;
       if (data.customer_po && isNaN(Number(data.customer_po))) {
         const matchingPo = purchaseOrderData.find(
-          (po) => String(po.customer_po) === data.customer_po
+          (po) => String(po.customer_po) === data.customer_po,
         );
         if (matchingPo) {
           _poIdValue = matchingPo.po_id;
@@ -258,10 +255,11 @@ export function CreateJobTicketDialog({
       const payload: CREATE_TICKETS = {
         po_id: data.customer_po ? Number(data.customer_po) : undefined,
         job_item: data.item,
-        job_number: `MPL/####/YY/${PurchaseOrderType[Number(selectedPoDetails?.po_type_id)]
-          }`,
+        job_number: `MPL/####/YY/${
+          PurchaseOrderType[Number(selectedPoDetails?.po_type_id)]
+        }`,
         order_received_date: toMySQLDateTime(
-          data.orderReceivedDate || new Date()
+          data.orderReceivedDate || new Date(),
         ),
         job_open_date: toMySQLDateTime(data.jobOpenDate || new Date()),
         customer_id: data.customer,
@@ -355,7 +353,7 @@ export function CreateJobTicketDialog({
           },
           {
             keepDefaultValues: false,
-          }
+          },
         );
         form.clearErrors();
       } else {
@@ -421,7 +419,7 @@ export function CreateJobTicketDialog({
 
   const selectedPoId = form.watch("customer_po");
   const selectedPoItems = selectedPoDetails?.po_items ?? [];
-  console.log("PSD", selectedPoItems)
+  console.log("PSD", selectedPoItems);
 
   useEffect(() => {
     const fetchPoDetails = async () => {
@@ -444,7 +442,7 @@ export function CreateJobTicketDialog({
             form.setValue("customer", String(po.customer.customer_id));
           }
           if (po.po_date) {
-            form.setValue("orderReceivedDate", new Date(po.po_date));
+            form.setValue("orderReceivedDate", parseLocalDate(po.po_date));
           }
           form.setValue("tcNo", po.TC_E_PR_No);
           form.setValue("batchRef", po.batch_ref);
@@ -470,9 +468,8 @@ export function CreateJobTicketDialog({
     name: TName,
     render: Parameters<
       typeof FormField<JobTicketFormValues, TName>
-    >["0"]["render"]
+    >["0"]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
-
 
   const now = new Date();
   const _currentYear = now.getFullYear();
@@ -534,17 +531,14 @@ export function CreateJobTicketDialog({
                       onValueChange={(value) => {
                         field.onChange(value);
                         const selectedItem = selectedPoItems.find(
-                          (i: PO_ITEMS) => i.description === value
+                          (i: PO_ITEMS) => i.description === value,
                         );
                         if (selectedItem) {
                           form.setValue(
                             "quantity",
-                            String(selectedItem.quantity)
+                            String(selectedItem.quantity),
                           );
-                          form.setValue(
-                            "jobName",
-                            selectedItem.description
-                          );
+                          form.setValue("jobName", selectedItem.description);
                         }
                       }}
                       placeholder={
@@ -584,7 +578,7 @@ export function CreateJobTicketDialog({
                             variant={"outline"}
                             className={cn(
                               "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
+                              !field.value && "text-muted-foreground",
                             )}
                           >
                             {field.value
@@ -622,7 +616,7 @@ export function CreateJobTicketDialog({
                             variant={"outline"}
                             className={cn(
                               "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
+                              !field.value && "text-muted-foreground",
                             )}
                           >
                             {field.value
@@ -657,17 +651,17 @@ export function CreateJobTicketDialog({
                           label: cust.company_name,
                         })),
                         ...(field.value &&
-                          !customerData.some(
-                            (c) => String(c.customer_id) === field.value
-                          )
+                        !customerData.some(
+                          (c) => String(c.customer_id) === field.value,
+                        )
                           ? [
-                            {
-                              value: field.value,
-                              label:
-                                selectedPoDetails?.customer?.name ||
-                                field.value,
-                            },
-                          ]
+                              {
+                                value: field.value,
+                                label:
+                                  selectedPoDetails?.customer?.name ||
+                                  field.value,
+                              },
+                            ]
                           : []),
                       ]}
                       value={field.value || ""}
@@ -728,7 +722,6 @@ export function CreateJobTicketDialog({
                   </FormItem>
                 ))}
 
-
                 {renderFormField("wastage", ({ field }) => (
                   <FormItem>
                     <FormLabel>Wastage %</FormLabel>
@@ -750,7 +743,7 @@ export function CreateJobTicketDialog({
                   <FormItem>
                     <FormLabel>Packing Date</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter Packing Date "{...field} />
+                      <Input placeholder="Enter Packing Date " {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -801,7 +794,6 @@ export function CreateJobTicketDialog({
                 </FormItem>
               ))}
 
-
               <div>
                 <h3 className="text-sm font-medium mb-2">
                   Paper & Raw Material
@@ -828,7 +820,7 @@ export function CreateJobTicketDialog({
                             type="button"
                             variant="outline"
                             size="icon"
-                            onClick={() => { }}
+                            onClick={() => {}}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
@@ -862,16 +854,16 @@ export function CreateJobTicketDialog({
                                     const selectedPaper = inventoryList.find(
                                       (item) =>
                                         `${item.item_sub_category} ${item.item_name}` ===
-                                        val
+                                        val,
                                     );
                                     if (selectedPaper) {
                                       const rawMaterials = form.getValues(
-                                        `paperTypes.${index}.rawMaterials`
+                                        `paperTypes.${index}.rawMaterials`,
                                       );
                                       rawMaterials?.forEach((_, rmIndex) => {
                                         form.setValue(
                                           `paperTypes.${index}.rawMaterials.${rmIndex}.size`,
-                                          selectedPaper.size
+                                          selectedPaper.size,
                                         );
                                       });
                                     }
@@ -905,7 +897,7 @@ export function CreateJobTicketDialog({
                                       <SelectItem key={key} value={value}>
                                         {value}
                                       </SelectItem>
-                                    )
+                                    ),
                                   )}
                                 </SelectContent>
                               </Select>
@@ -929,12 +921,12 @@ export function CreateJobTicketDialog({
                             name={`paperTypes.${index}.rawMaterials.${rmIndex}.size`}
                             render={({ field }) => {
                               const selectedPaperName = form.watch(
-                                `paperTypes.${index}.paper`
+                                `paperTypes.${index}.paper`,
                               );
                               const filteredInventory = inventoryList.filter(
                                 (item) =>
                                   `${item.item_sub_category} ${item.item_name}` ===
-                                  selectedPaperName
+                                  selectedPaperName,
                               );
 
                               return (
@@ -949,20 +941,20 @@ export function CreateJobTicketDialog({
                                       field.onChange(val);
                                       const selectedMaterial =
                                         filteredInventory.find(
-                                          (item) => item.size === val
+                                          (item) => item.size === val,
                                         );
                                       if (selectedMaterial) {
                                         form.setValue(
                                           `paperTypes.${index}.rawMaterials.${rmIndex}.item_id`,
-                                          selectedMaterial.item_id
+                                          selectedMaterial.item_id,
                                         );
                                         form.setValue(
                                           `paperTypes.${index}.rawMaterials.${rmIndex}.material_type`,
-                                          selectedMaterial.item_sub_category
+                                          selectedMaterial.item_sub_category,
                                         );
                                         form.setValue(
                                           `paperTypes.${index}.rawMaterials.${rmIndex}.material_name`,
-                                          selectedMaterial.item_name
+                                          selectedMaterial.item_name,
                                         );
                                       }
                                     }}
@@ -1008,7 +1000,7 @@ export function CreateJobTicketDialog({
                                       field.onChange(
                                         e.target.value === ""
                                           ? 0
-                                          : Number(e.target.value)
+                                          : Number(e.target.value),
                                       )
                                     }
                                   />
@@ -1072,14 +1064,14 @@ export function CreateJobTicketDialog({
                               onClick={() => {
                                 const current =
                                   form.getValues(
-                                    `paperTypes.${index}.rawMaterials`
+                                    `paperTypes.${index}.rawMaterials`,
                                   ) || [];
                                 if (current.length > 1) {
                                   form.setValue(
                                     `paperTypes.${index}.rawMaterials`,
                                     current.filter(
-                                      (_: unknown, i: number) => i !== rmIndex
-                                    )
+                                      (_: unknown, i: number) => i !== rmIndex,
+                                    ),
                                   );
                                 }
                               }}
@@ -1098,7 +1090,7 @@ export function CreateJobTicketDialog({
                           onClick={() => {
                             const current =
                               form.getValues(
-                                `paperTypes.${index}.rawMaterials`
+                                `paperTypes.${index}.rawMaterials`,
                               ) || [];
                             form.setValue(`paperTypes.${index}.rawMaterials`, [
                               ...current,
@@ -1148,7 +1140,6 @@ export function CreateJobTicketDialog({
                   </Button>
                 </div>
               </div>
-
 
               {/* CTP Plates */}
               <div>
@@ -1326,7 +1317,7 @@ export function CreateJobTicketDialog({
                                     <SelectItem key={key} value={value}>
                                       {value}
                                     </SelectItem>
-                                  )
+                                  ),
                                 )}
                               </SelectContent>
                             </Select>
@@ -1355,7 +1346,7 @@ export function CreateJobTicketDialog({
                         type="button"
                         variant="outline"
                         size="icon"
-                        onClick={() => { }}
+                        onClick={() => {}}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
@@ -1492,7 +1483,7 @@ export function CreateJobTicketDialog({
               onSuccess?.();
               form.reset(
                 { ...baseDefaultValues, addAnotherJob: false },
-                { keepDefaultValues: false }
+                { keepDefaultValues: false },
               );
               form.clearErrors();
             }
@@ -1505,7 +1496,7 @@ export function CreateJobTicketDialog({
             onSuccess?.();
             form.reset(
               { ...baseDefaultValues, addAnotherJob: false },
-              { keepDefaultValues: false }
+              { keepDefaultValues: false },
             );
             form.clearErrors();
           }}

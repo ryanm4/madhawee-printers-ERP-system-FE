@@ -158,8 +158,7 @@ function EditPurchaseOrder() {
         po_type_id: poTypeMap[data.purchaseOrderType] || 1,
         batch_ref: data.batchRef,
         sales_ref: data.salesRef,
-        po_date:
-          data.poDate instanceof Date ? formatDate(data.poDate) : data.poDate,
+        po_date: format(data.poDate, "yyyy-MM-dd HH:mm:ss"),
         TC_E_PR_No: data.tceprNo,
         updated_on: new Date(),
         updated_by: user?.name || "User",
@@ -167,7 +166,7 @@ function EditPurchaseOrder() {
         customer_po: data.customer_po,
         currency: data.currency,
         po_items: data.itemDetails.map((item) => ({
-          item_code: item.itemCode,
+          item_code: item.itemCode ? String(item.itemCode) : "",
           description: item.description,
           quantity: String(item.quantity),
           uom: item.unit,
@@ -189,7 +188,10 @@ function EditPurchaseOrder() {
     } catch (error) {
       console.error("Failed to submit PO:", error);
       toast("Failed to Update Purchase Order", {
-        description: getErrorMessage(error, "An error occurred while updating the purchase order. Please try again."),
+        description: getErrorMessage(
+          error,
+          "An error occurred while updating the purchase order. Please try again.",
+        ),
       });
     } finally {
       setIsSubmitting(false);
@@ -201,7 +203,7 @@ function EditPurchaseOrder() {
     name: TName,
     render: Parameters<
       typeof FormField<PurchaseOrderFormValues, TName>
-    >["0"]["render"]
+    >["0"]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
 
   useEffect(() => {
@@ -223,10 +225,10 @@ function EditPurchaseOrder() {
             purchaseOrderType: poData.po_type_id as PurchaseOrderType,
             batchRef: poData.batch_ref,
             salesRef: poData.sales_ref || "",
-            poDate: new Date(poData.po_date),
+            poDate: poData.po_date,
             currency: poData.currency || "LKR",
             itemDetails: poData.po_items.map((item) => ({
-              itemCode: item.item_code,
+              item_code: item.itemCode ? String(item.itemCode) : "",
               description: item.description,
               quantity: String(item.quantity),
               unit: Number(item.uom) || 0,
@@ -267,12 +269,10 @@ function EditPurchaseOrder() {
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6  pb-0"
         >
-
-
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
@@ -297,21 +297,21 @@ function EditPurchaseOrder() {
                         field.onChange(value);
 
                         const selectedCustomer = customer.find(
-                          (c) => String(c.customer_id) === value
+                          (c) => String(c.customer_id) === value,
                         );
 
                         if (selectedCustomer) {
                           form.setValue(
                             "customerAddress",
-                            selectedCustomer.address
+                            selectedCustomer.address,
                           );
                           form.setValue(
                             "customerPhone",
-                            selectedCustomer.phone
+                            selectedCustomer.phone,
                           );
                           form.setValue(
                             "customerEmail",
-                            selectedCustomer.email
+                            selectedCustomer.email,
                           );
                         }
                       }}
@@ -359,7 +359,7 @@ function EditPurchaseOrder() {
             </Card>
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
@@ -421,7 +421,7 @@ function EditPurchaseOrder() {
                           {Object.values(PurchaseOrderType)
                             .filter(
                               (v): v is PurchaseOrderType =>
-                                typeof v === "number"
+                                typeof v === "number",
                             )
                             .map((type) => (
                               <div
@@ -486,7 +486,7 @@ function EditPurchaseOrder() {
                               variant={"outline"}
                               className={cn(
                                 "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
+                                !field.value && "text-muted-foreground",
                               )}
                             >
                               {field.value
@@ -531,14 +531,13 @@ function EditPurchaseOrder() {
                     </FormItem>
                   ))}
                 </div>
-
               </CardContent>
             </Card>
           </div>
 
           <Card
             className={cn(
-              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
@@ -583,7 +582,7 @@ function EditPurchaseOrder() {
                             </FormControl>
                             <FormMessage />
                           </FormItem>
-                        )
+                        ),
                       )}
                       {renderFormField(
                         `itemDetails.${index}.description`,
@@ -601,7 +600,7 @@ function EditPurchaseOrder() {
                             </FormControl>
                             <FormMessage />
                           </FormItem>
-                        )
+                        ),
                       )}
                       {renderFormField(
                         `itemDetails.${index}.quantity`,
@@ -615,9 +614,7 @@ function EditPurchaseOrder() {
                                 type="number"
                                 placeholder="Enter Quantity"
                                 value={field.value}
-                                onChange={(e) =>
-                                  field.onChange(e.target.value)
-                                }
+                                onChange={(e) => field.onChange(e.target.value)}
                                 onBlur={field.onBlur}
                                 name={field.name}
                                 ref={field.ref}
@@ -625,7 +622,7 @@ function EditPurchaseOrder() {
                             </FormControl>
                             <FormMessage />
                           </FormItem>
-                        )
+                        ),
                       )}
                       {renderFormField(
                         `itemDetails.${index}.unit`,
@@ -639,7 +636,9 @@ function EditPurchaseOrder() {
                                 type="number"
                                 placeholder="Enter Unit"
                                 value={field.value || ""}
-                                onChange={e => field.onChange(Number(e.target.value))}
+                                onChange={(e) =>
+                                  field.onChange(Number(e.target.value))
+                                }
                                 onBlur={field.onBlur}
                                 name={field.name}
                                 ref={field.ref}
@@ -647,7 +646,7 @@ function EditPurchaseOrder() {
                             </FormControl>
                             <FormMessage />
                           </FormItem>
-                        )
+                        ),
                       )}
                       {renderFormField(
                         `itemDetails.${index}.price`,
@@ -661,9 +660,7 @@ function EditPurchaseOrder() {
                                 type="number"
                                 placeholder="Enter Price"
                                 value={field.value}
-                                onChange={(e) =>
-                                  field.onChange(e.target.value)
-                                }
+                                onChange={(e) => field.onChange(e.target.value)}
                                 onBlur={field.onBlur}
                                 name={field.name}
                                 ref={field.ref}
@@ -671,7 +668,7 @@ function EditPurchaseOrder() {
                             </FormControl>
                             <FormMessage />
                           </FormItem>
-                        )
+                        ),
                       )}
                     </div>
                     <div className="flex space-x-2 items-start pt-5">
@@ -679,7 +676,7 @@ function EditPurchaseOrder() {
                         type="button"
                         variant="outline"
                         size="icon"
-                        onClick={() => { }}
+                        onClick={() => {}}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>

@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { format } from "date-fns";
+import { parseLocalDate } from "@/hooks/sql-date-time";
 
 export interface JobTicketPrintData {
   jobNumber?: string;
@@ -55,7 +56,7 @@ interface JobTicketPrintDialogProps {
 function formatDate(date?: Date | string): string {
   if (!date) return "";
   try {
-    return format(new Date(date), "dd/MM/yyyy");
+    return format(parseLocalDate(date), "dd/MM/yyyy");
   } catch {
     return String(date);
   }
@@ -64,7 +65,7 @@ function formatDate(date?: Date | string): string {
 function formatMonthYear(date?: Date | string): string {
   if (!date) return "";
   try {
-    return format(new Date(date), "MMM yyyy");
+    return format(parseLocalDate(date), "MMM yyyy");
   } catch {
     return String(date);
   }

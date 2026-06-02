@@ -16,6 +16,7 @@ import {
 } from "lucide-react"; // Import icons
 import { format } from "date-fns";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { parseLocalDate } from "@/hooks/sql-date-time";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -66,15 +67,15 @@ import {
 } from "@/modules/purchase-order/types";
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { toMySQLDateTime } from "@/hooks/sql-date-time";
-import { CREATE_TICKETS, JobTicketPrintData } from "@/modules/job-tickets/types";
+import {
+  CREATE_TICKETS,
+  JobTicketPrintData,
+} from "@/modules/job-tickets/types";
 import { toast } from "sonner";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
-import {
-  JobTicketPrintDialog,
-
-} from "../_components/job-ticket-print-dialog";
+import { JobTicketPrintDialog } from "../_components/job-ticket-print-dialog";
 
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
 import { inventoryApi } from "@/modules/inventory/api";
@@ -90,7 +91,7 @@ function CreateJobTicket() {
   const [isLoading, setIsLoading] = useState(false);
   const [customerData, setCustomerData] = useState<CUSTOMER[]>([]);
   const [purchaseOrderData, setPurchaseOrderData] = useState<PURCHASE_ORDER[]>(
-    []
+    [],
   );
   const [selectedPoDetails, setSelectedPoDetails] =
     useState<PURCHASE_ORDER_ID | null>(null);
@@ -194,7 +195,7 @@ function CreateJobTicket() {
         setUploadedFile(file);
       } else {
         alert(
-          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB."
+          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB.",
         );
       }
     }
@@ -226,14 +227,17 @@ function CreateJobTicket() {
 
   async function onSubmit(data: JobTicketFormValues) {
     try {
+      console.log(data.jobOpenDate);
+      console.log(toMySQLDateTime(data.jobOpenDate!));
       setIsLoading(true);
       const payload: CREATE_TICKETS = {
         po_id: data.customer_po ? Number(data.customer_po) : undefined,
         job_item: data.item,
-        job_number: `MPL/####/YY/${PurchaseOrderType[Number(selectedPoDetails?.po_type_id)]
-          }`,
+        job_number: `MPL/####/YY/${
+          PurchaseOrderType[Number(selectedPoDetails?.po_type_id)]
+        }`,
         order_received_date: toMySQLDateTime(
-          data.orderReceivedDate || new Date()
+          data.orderReceivedDate || new Date(),
         ),
         job_open_date: toMySQLDateTime(data.jobOpenDate || new Date()),
         customer_id: data.customer,
@@ -323,14 +327,15 @@ function CreateJobTicket() {
       setIsLoading(false);
     } catch (_error) {
       toast("Failed to Create Job Ticket", {
-        description: getErrorMessage(_error, "An error occurred while creating the job ticket. Please try again."),
+        description: getErrorMessage(
+          _error,
+          "An error occurred while creating the job ticket. Please try again.",
+        ),
       });
     } finally {
       setIsLoading(false);
     }
   }
-
-
 
   const fetchData = useCallback(async () => {
     try {
@@ -379,7 +384,6 @@ function CreateJobTicket() {
   }, [fetchData, getInventoryList]);
   const selectedPoId = form.watch("customer_po");
 
-
   useEffect(() => {
     const fetchPoDetails = async () => {
       if (!selectedPoId) {
@@ -400,7 +404,7 @@ function CreateJobTicket() {
             form.setValue("customer", String(po.customer.customer_id));
           }
           if (po.po_date) {
-            form.setValue("orderReceivedDate", new Date(po.po_date));
+            form.setValue("orderReceivedDate", parseLocalDate(po.po_date));
           }
           form.setValue("tcNo", po.TC_E_PR_No);
           form.setValue("batchRef", po.batch_ref);
@@ -416,12 +420,12 @@ function CreateJobTicket() {
     form.setValue("item", "");
   }, [selectedPoId, form]);
   const selectedPoItems = selectedPoDetails?.po_items ?? [];
-  console.log(selectedPoItems)
+  console.log(selectedPoItems);
   const renderFormField = <TName extends FieldPath<JobTicketFormValues>>(
     name: TName,
     render: Parameters<
       typeof FormField<JobTicketFormValues, TName>
-    >["0"]["render"]
+    >["0"]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
 
   const fetchCustomerData = useCallback(async () => {
@@ -460,10 +464,9 @@ function CreateJobTicket() {
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-6 pb-0"
           >
-
             <Card
               className={cn(
-                "w-full shdow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full shdow-sm hover:shadow-md transition-shadow flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
@@ -505,17 +508,14 @@ function CreateJobTicket() {
                         onValueChange={(value) => {
                           field.onChange(value);
                           const selectedItem = selectedPoItems.find(
-                            (i: PO_ITEMS) => i.description === value
+                            (i: PO_ITEMS) => i.description === value,
                           );
                           if (selectedItem) {
                             form.setValue(
                               "quantity",
-                              String(selectedItem.quantity)
+                              String(selectedItem.quantity),
                             );
-                            form.setValue(
-                              "jobName",
-                              selectedItem.description
-                            );
+                            form.setValue("jobName", selectedItem.description);
                           }
                         }}
                         placeholder={
@@ -540,7 +540,11 @@ function CreateJobTicket() {
                     <FormItem>
                       <FormLabel>Job Number</FormLabel>
                       <FormControl>
-                        <Input readOnly placeholder="MPL/####/YY/TIEP" {...field} />
+                        <Input
+                          readOnly
+                          placeholder="MPL/####/YY/TIEP"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -555,7 +559,7 @@ function CreateJobTicket() {
                               variant={"outline"}
                               className={cn(
                                 "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
+                                !field.value && "text-muted-foreground",
                               )}
                             >
                               {field.value
@@ -593,7 +597,7 @@ function CreateJobTicket() {
                               variant={"outline"}
                               className={cn(
                                 "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
+                                !field.value && "text-muted-foreground",
                               )}
                             >
                               {field.value
@@ -686,7 +690,7 @@ function CreateJobTicket() {
                               variant={"outline"}
                               className={cn(
                                 "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
+                                !field.value && "text-muted-foreground",
                               )}
                             >
                               {field.value
@@ -758,7 +762,11 @@ function CreateJobTicket() {
                     <FormItem>
                       <FormLabel>Batch Ref</FormLabel>
                       <FormControl>
-                        <Input readOnly placeholder="Enter Batch Ref" {...field} />
+                        <Input
+                          readOnly
+                          placeholder="Enter Batch Ref"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -778,7 +786,6 @@ function CreateJobTicket() {
                     <FormMessage />
                   </FormItem>
                 ))}
-
 
                 <div>
                   <h3 className="text-sm font-medium mb-2">
@@ -806,7 +813,7 @@ function CreateJobTicket() {
                               type="button"
                               variant="outline"
                               size="icon"
-                              onClick={() => { }}
+                              onClick={() => {}}
                             >
                               <Edit2 className="h-4 w-4" />
                             </Button>
@@ -841,16 +848,16 @@ function CreateJobTicket() {
                                       const selectedPaper = inventoryList.find(
                                         (item) =>
                                           `${item.item_sub_category} ${item.item_name}` ===
-                                          val
+                                          val,
                                       );
                                       if (selectedPaper) {
                                         const rawMaterials = form.getValues(
-                                          `paperTypes.${index}.rawMaterials`
+                                          `paperTypes.${index}.rawMaterials`,
                                         );
                                         rawMaterials?.forEach((_, rmIndex) => {
                                           form.setValue(
                                             `paperTypes.${index}.rawMaterials.${rmIndex}.size`,
-                                            selectedPaper.size
+                                            selectedPaper.size,
                                           );
                                         });
                                       }
@@ -859,7 +866,7 @@ function CreateJobTicket() {
                                 />
                                 <FormMessage />
                               </FormItem>
-                            )
+                            ),
                           )}
                           {renderFormField(
                             `paperTypes.${index}.coating`,
@@ -884,13 +891,13 @@ function CreateJobTicket() {
                                         <SelectItem key={key} value={value}>
                                           {value}
                                         </SelectItem>
-                                      )
+                                      ),
                                     )}
                                   </SelectContent>
                                 </Select>
                                 <FormMessage />
                               </FormItem>
-                            )
+                            ),
                           )}
                         </div>
 
@@ -903,12 +910,12 @@ function CreateJobTicket() {
                               `paperTypes.${index}.rawMaterials.${rmIndex}.size`,
                               ({ field }) => {
                                 const selectedPaperName = form.watch(
-                                  `paperTypes.${index}.paper`
+                                  `paperTypes.${index}.paper`,
                                 );
                                 const filteredInventory = inventoryList.filter(
                                   (item) =>
                                     `${item.item_sub_category} ${item.item_name}` ===
-                                    selectedPaperName
+                                    selectedPaperName,
                                 );
 
                                 return (
@@ -923,20 +930,20 @@ function CreateJobTicket() {
                                         field.onChange(val);
                                         const selectedMaterial =
                                           filteredInventory.find(
-                                            (item) => item.size === val
+                                            (item) => item.size === val,
                                           );
                                         if (selectedMaterial) {
                                           form.setValue(
                                             `paperTypes.${index}.rawMaterials.${rmIndex}.item_id`,
-                                            selectedMaterial.item_id
+                                            selectedMaterial.item_id,
                                           );
                                           form.setValue(
                                             `paperTypes.${index}.rawMaterials.${rmIndex}.material_type`,
-                                            selectedMaterial.item_sub_category
+                                            selectedMaterial.item_sub_category,
                                           );
                                           form.setValue(
                                             `paperTypes.${index}.rawMaterials.${rmIndex}.material_name`,
-                                            selectedMaterial.item_name
+                                            selectedMaterial.item_name,
                                           );
                                         }
                                       }}
@@ -961,7 +968,7 @@ function CreateJobTicket() {
                                     <FormMessage />
                                   </FormItem>
                                 );
-                              }
+                              },
                             )}
                             {renderFormField(
                               `paperTypes.${index}.rawMaterials.${rmIndex}.quantity`,
@@ -981,14 +988,14 @@ function CreateJobTicket() {
                                         field.onChange(
                                           e.target.value === ""
                                             ? 0
-                                            : Number(e.target.value)
+                                            : Number(e.target.value),
                                         )
                                       }
                                     />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
-                              )
+                              ),
                             )}
                             {renderFormField(
                               `paperTypes.${index}.rawMaterials.${rmIndex}.status`,
@@ -1014,13 +1021,13 @@ function CreateJobTicket() {
                                           <SelectItem key={key} value={value}>
                                             {value}
                                           </SelectItem>
-                                        )
+                                        ),
                                       )}
                                     </SelectContent>
                                   </Select>
                                   <FormMessage />
                                 </FormItem>
-                              )
+                              ),
                             )}
                             {renderFormField(
                               `paperTypes.${index}.rawMaterials.${rmIndex}.remarks`,
@@ -1039,7 +1046,7 @@ function CreateJobTicket() {
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
-                              )
+                              ),
                             )}
                             <div className="flex items-end pb-2">
                               <Button
@@ -1049,14 +1056,15 @@ function CreateJobTicket() {
                                 onClick={() => {
                                   const current =
                                     form.getValues(
-                                      `paperTypes.${index}.rawMaterials`
+                                      `paperTypes.${index}.rawMaterials`,
                                     ) || [];
                                   if (current.length > 1) {
                                     form.setValue(
                                       `paperTypes.${index}.rawMaterials`,
                                       current.filter(
-                                        (_: unknown, i: number) => i !== rmIndex
-                                      )
+                                        (_: unknown, i: number) =>
+                                          i !== rmIndex,
+                                      ),
                                     );
                                   }
                                 }}
@@ -1075,7 +1083,7 @@ function CreateJobTicket() {
                             onClick={() => {
                               const current =
                                 form.getValues(
-                                  `paperTypes.${index}.rawMaterials`
+                                  `paperTypes.${index}.rawMaterials`,
                                 ) || [];
                               form.setValue(
                                 `paperTypes.${index}.rawMaterials`,
@@ -1091,7 +1099,7 @@ function CreateJobTicket() {
                                     status: "",
                                     remarks: "",
                                   },
-                                ]
+                                ],
                               );
                             }}
                           >
@@ -1166,7 +1174,7 @@ function CreateJobTicket() {
                                 <SelectItem key={key} value={value}>
                                   {value}
                                 </SelectItem>
-                              )
+                              ),
                             )}
                           </SelectContent>
                         </Select>
@@ -1215,7 +1223,7 @@ function CreateJobTicket() {
                                 <SelectItem key={key} value={value}>
                                   {value}
                                 </SelectItem>
-                              )
+                              ),
                             )}
                           </SelectContent>
                         </Select>
@@ -1285,7 +1293,7 @@ function CreateJobTicket() {
                               </FormControl>
                               <FormMessage />
                             </FormItem>
-                          )
+                          ),
                         )}
                         {renderFormField(
                           `inks.${index}.status`,
@@ -1311,13 +1319,13 @@ function CreateJobTicket() {
                                       <SelectItem key={key} value={value}>
                                         {value}
                                       </SelectItem>
-                                    )
+                                    ),
                                   )}
                                 </SelectContent>
                               </Select>
                               <FormMessage />
                             </FormItem>
-                          )
+                          ),
                         )}
                         {renderFormField(
                           `inks.${index}.remarks`,
@@ -1333,7 +1341,7 @@ function CreateJobTicket() {
                               </FormControl>
                               <FormMessage />
                             </FormItem>
-                          )
+                          ),
                         )}
                       </div>
                       <div className="flex space-x-2 items-end pb-2">
@@ -1341,7 +1349,7 @@ function CreateJobTicket() {
                           type="button"
                           variant="outline"
                           size="icon"
-                          onClick={() => { }}
+                          onClick={() => {}}
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
@@ -1435,7 +1443,6 @@ function CreateJobTicket() {
               </CardContent>
             </Card>
             <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-
               <Button
                 size="lg"
                 type="submit"
@@ -1446,30 +1453,28 @@ function CreateJobTicket() {
               </Button>
             </div>
           </form>
-        </Form >
-      </div >
+        </Form>
+      </div>
 
       {/* Print dialog — shown after successful save */}
-      {
-        printData && (
-          <JobTicketPrintDialog
-            open={showPrintDialog}
-            onOpenChange={(open) => {
-              if (!open) {
-                setShowPrintDialog(false);
-                setPrintData(null);
-                router.push("/job-ticket");
-              }
-            }}
-            data={printData}
-            onDecline={() => {
+      {printData && (
+        <JobTicketPrintDialog
+          open={showPrintDialog}
+          onOpenChange={(open) => {
+            if (!open) {
               setShowPrintDialog(false);
               setPrintData(null);
               router.push("/job-ticket");
-            }}
-          />
-        )
-      }
+            }
+          }}
+          data={printData}
+          onDecline={() => {
+            setShowPrintDialog(false);
+            setPrintData(null);
+            router.push("/job-ticket");
+          }}
+        />
+      )}
     </>
   );
 }

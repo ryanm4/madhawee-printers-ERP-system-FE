@@ -8,6 +8,7 @@ import { ArrowUpDown, EyeIcon, MoreHorizontal, PencilIcon, TrashIcon, ArrowRight
 import { StatusBadge } from "@/components/shared/status-badge"
 import { format } from "date-fns"
 import { getNextJobTicketStatus } from "@/lib/status-workflow"
+import { parseLocalDate } from "@/hooks/sql-date-time"
 
 interface JobTicketTableActions {
     onEdit: (id: number) => void
@@ -66,7 +67,7 @@ export const jobTicketColumns = (
                 const date = row.original.job_open_date
 
                 return date
-                    ? format(new Date(date), "dd MMM yyyy")
+                    ? format(parseLocalDate(date), "dd MMM yyyy")
                     : "-"
             },
         },
