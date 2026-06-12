@@ -2,8 +2,8 @@
 import * as z from "zod"
 
 export const quotationItemsSchema = z.object({
-    item_id: z.number().min(1, "Item is required"),
-    item_category: z.string().min(1, "Item category required"),
+    item_id: z.number().optional(),
+    item_category: z.string().optional(),
     item_qty: z.string().min(1, "Item quantity required"),
     item_description: z.string().optional(),
     item_unit_price: z.string().min(1, "Unit price required"),
@@ -16,6 +16,7 @@ export const createQuotationSchema = z.object({
     customer_id: z.number().min(1, "Customer is required"),
     type_id: z.number().min(1, "Quotation type is required"),
     delivery_days: z.string().min(1, "Delivery days required"),
+    validity_period: z.string().regex(/^\d+$/, "Validity period must be a number").min(1, "Validity period required"),
     tax_type_id: z.number().min(0, "Tax type is required"),
     currency: z.string().min(1, "Currency required"),
     contact_person: z.string().optional(),

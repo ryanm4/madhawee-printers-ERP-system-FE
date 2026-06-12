@@ -107,6 +107,7 @@ function EditQuotation({
     customer_id: 0,
     type_id: QuotationType.NORMAL,
     delivery_days: "",
+    validity_period: "",
     tax_type_id: QuotationTaxType.NONE,
     currency: "LKR",
     contact_person: "",
@@ -133,6 +134,7 @@ function EditQuotation({
   };
 
   const form = useForm<QuotationFormValues>({
+    resolver: zodResolver(createQuotationSchema),
     defaultValues: baseDefaultValues as QuotationFormValues,
   });
 
@@ -264,6 +266,7 @@ function EditQuotation({
         customer_id: data.customer_id,
         type_id: data.type_id,
         delivery_days: data.delivery_days,
+        validity_period: data.validity_period,
         tax_type_id: data.tax_type_id,
         currency: data.currency,
         contact_person: data.contact_person ?? null,
@@ -279,8 +282,8 @@ function EditQuotation({
         updated_by: user?.name || "User",
         updated_on: new Date(),
         items: data.items.map((item) => ({
-          item_id: item.item_id,
-          item_category: item.item_category,
+          item_id: item.item_id || 0,
+          item_category: item.item_category || "Uncategorized",
           item_qty: item.item_qty,
           item_description: item.item_description,
           item_unit_price: item.item_unit_price,
@@ -331,6 +334,7 @@ function EditQuotation({
             customer_id: quoteData.customer_id,
             type_id: quoteData.type_id,
             delivery_days: String(quoteData.delivery_days || ""),
+            validity_period: String(quoteData.validity_period || ""),
             tax_type_id: quoteData.tax_type_id,
             currency: quoteData.currency || "LKR",
             contact_person: quoteData.contact_person,
@@ -620,6 +624,19 @@ function EditQuotation({
                       </FormLabel>
                       <FormControl>
                         <Input type="number" placeholder="1" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+
+                  {/* Validity Period */}
+                  {renderFormField("validity_period", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Validity Period (Days) <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="30" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

@@ -118,6 +118,7 @@ function CreateQuotation({
     customer_id: 0,
     type_id: QuotationType.NORMAL,
     delivery_days: "",
+    validity_period: "",
     tax_type_id: QuotationTaxType.NONE,
     currency: "LKR",
     contact_person: "",
@@ -144,6 +145,7 @@ function CreateQuotation({
   };
 
   const form = useForm<QuotationFormValues>({
+    resolver: zodResolver(createQuotationSchema),
     defaultValues: baseDefaultValues as QuotationFormValues,
   });
 
@@ -273,6 +275,7 @@ function CreateQuotation({
         customer_id: data.customer_id,
         type_id: data.type_id,
         delivery_days: data.delivery_days,
+        validity_period: data.validity_period,
         tax_type_id: data.tax_type_id,
         currency: data.currency,
         contact_person: data.contact_person ?? null,
@@ -290,8 +293,8 @@ function CreateQuotation({
         created_on: new Date(),
 
         items: data.items.map((item) => ({
-          item_id: item.item_id,
-          item_category: item.item_category,
+          item_id: item.item_id || 0,
+          item_category: item.item_category || "Uncategorized",
           item_qty: item.item_qty,
           item_description: item.item_description,
           item_unit_price: item.item_unit_price,
@@ -523,7 +526,7 @@ function CreateQuotation({
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Quotation Type */}
                   {renderFormField("type_id", ({ field }) => {
                     const quotationTypeLabels: Record<QuotationType, string> = {
@@ -570,6 +573,19 @@ function CreateQuotation({
                       </FormLabel>
                       <FormControl>
                         <Input type="number" placeholder="1" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+
+                  {/* Validity Period */}
+                  {renderFormField("validity_period", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Validity Period (Days) <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="30" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -756,7 +772,7 @@ function CreateQuotation({
                       const totalExclusive = qty * price;
                       const totalInclusive =
                         watchTaxType === QuotationTaxType.VAT ||
-                        watchTaxType === QuotationTaxType.TIEP
+                          watchTaxType === QuotationTaxType.TIEP
                           ? totalExclusive * 1.18
                           : totalExclusive;
 
@@ -780,10 +796,10 @@ function CreateQuotation({
                                       value={
                                         field.value
                                           ? String(
-                                              groupedItems.find(
-                                                (i) => i.label === field.value,
-                                              )?.value || "",
-                                            )
+                                            groupedItems.find(
+                                              (i) => i.label === field.value,
+                                            )?.value || "",
+                                          )
                                           : ""
                                       }
                                       onValueChange={(value) => {
@@ -1011,21 +1027,21 @@ function CreateQuotation({
                   </div>
                   {(watchTaxType === QuotationTaxType.VAT ||
                     watchTaxType === QuotationTaxType.TIEP) && (
-                    <div className="flex justify-between text-sm text-muted-foreground italic">
-                      <span>
-                        {watchTaxType === QuotationTaxType.VAT ? "VAT" : "TIEP"}{" "}
-                        Amount (18%):
-                      </span>
-                      <span className="font-medium">
-                        {getCurrencySymbol(form.watch("currency") as Currency)}{" "}
-                        {Number(
-                          (
-                            parseFloat(form.watch("sub_total") || "0") * 0.18
-                          ).toFixed(4),
-                        )}
-                      </span>
-                    </div>
-                  )}
+                      <div className="flex justify-between text-sm text-muted-foreground italic">
+                        <span>
+                          {watchTaxType === QuotationTaxType.VAT ? "VAT" : "TIEP"}{" "}
+                          Amount (18%):
+                        </span>
+                        <span className="font-medium">
+                          {getCurrencySymbol(form.watch("currency") as Currency)}{" "}
+                          {Number(
+                            (
+                              parseFloat(form.watch("sub_total") || "0") * 0.18
+                            ).toFixed(4),
+                          )}
+                        </span>
+                      </div>
+                    )}
                   <div className="flex justify-between text-sm font-bold border-t pt-2">
                     <span>Net Total:</span>
                     <span>

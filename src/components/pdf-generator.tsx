@@ -276,7 +276,7 @@ export const generateQuotationPDF = async (
       font: helvetica,
     });
     leftY -= leftSpacing;
-    const validity = data.delivery_days || 7;
+    const validity = data.validity_period || data.delivery_days || 7;
     currentPage.drawText(`Validity Period : ${validity} Days`, {
       x: leftColX,
       y: leftY,
