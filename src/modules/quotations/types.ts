@@ -8,6 +8,7 @@ export interface QUOTATIONS {
     customer_email: string;
     type_id: number;
     delivery_days: string;
+    validity_period: string;
     tax_type_id: number;
     currency: string;
     contact_person: string;
@@ -44,6 +45,7 @@ export interface CREATE_QUOTATION_REQUEST {
     customer_id: number;
     type_id: number;
     delivery_days: string;
+    validity_period: string;
     tax_type_id: number;
     currency: string;
     contact_person: string | null;
@@ -65,6 +67,7 @@ export interface UPDATE_QUOTATION_REQUEST {
     customer_id?: number;
     type_id?: number;
     delivery_days?: string;
+    validity_period?: string;
     tax_type_id?: number;
     currency?: string;
     contact_person?: string | null;

@@ -10,7 +10,7 @@ import { Download, MoreHorizontal, PencilIcon, Printer, TrashIcon, ArrowRightIco
 import { QUOTATIONS } from "@/modules/quotations/types"
 import { ArrowUpDown } from "lucide-react"
 import { StatusBadge } from "@/components/shared/status-badge";
-import { TaxTypes } from "@/config/enum"
+import { TaxTypes, QuotationStatus } from "@/config/enum"
 import { format } from "date-fns"
 import { getNextQuotationStatus } from "@/lib/status-workflow"
 
@@ -185,9 +185,11 @@ export const quotationColumns = (
                             </DropdownMenu>
                         )}
 
-                        <Button onClick={() => actions.onDownload(quotation.quote_id)} variant="outline" size="icon" aria-label="Download quotation PDF">
-                            <Printer />
-                        </Button>
+                        {quotation.status === QuotationStatus.ACCEPTED && (
+                            <Button onClick={() => actions.onDownload(quotation.quote_id)} variant="outline" size="icon" aria-label="Download quotation PDF">
+                                <Printer />
+                            </Button>
+                        )}
                     </div>
                 )
             },

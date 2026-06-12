@@ -22,6 +22,7 @@ import {
 } from "./ui/dropdown-menu";
 import { format } from "date-fns";
 import { QUOTATIONS } from "@/modules/quotations/types";
+import { QuotationStatus } from "@/config/enum";
 
 export interface QuotationCardProps {
     quotation: QUOTATIONS;
@@ -64,10 +65,12 @@ export function QuotationCard({
                             <PencilIcon className="mr-2 h-4 w-4" />
                             Edit Quotation
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => onDownload(quotation.quote_id)}>
-                            <Printer className="mr-2 h-4 w-4" />
-                            Download PDF
-                        </DropdownMenuItem>
+                        {quotation.status === QuotationStatus.ACCEPTED && (
+                            <DropdownMenuItem onSelect={() => onDownload(quotation.quote_id)}>
+                                <Printer className="mr-2 h-4 w-4" />
+                                Download PDF
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                             onSelect={() => onDelete(quotation.quote_id)}
@@ -124,6 +127,12 @@ export function QuotationCard({
                         <span className="text-muted-foreground text-[12px] uppercase tracking-wider font-semibold">Delivery</span>
                         <span className="font-bold text-amber-600">
                             {quotation.delivery_days} Days
+                        </span>
+                    </div>
+                    <div className="flex flex-col items-end gap-0.5 shrink-0 ml-4">
+                        <span className="text-muted-foreground text-[12px] uppercase tracking-wider font-semibold">Validity</span>
+                        <span className="font-bold text-blue-600">
+                            {quotation.validity_period || quotation.delivery_days || "N/A"} Days
                         </span>
                     </div>
                 </div>
