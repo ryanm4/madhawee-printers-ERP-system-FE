@@ -227,8 +227,6 @@ function CreateJobTicket() {
 
   async function onSubmit(data: JobTicketFormValues) {
     try {
-      console.log(data.jobOpenDate);
-      console.log(toMySQLDateTime(data.jobOpenDate!));
       setIsLoading(true);
       const payload: CREATE_TICKETS = {
         po_id: data.customer_po ? Number(data.customer_po) : undefined,
