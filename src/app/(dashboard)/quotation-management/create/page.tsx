@@ -237,7 +237,7 @@ function CreateQuotation({
     field: "item_qty" | "item_unit_price",
     value: string,
   ) => {
-    let sanitizedValue = value.replace(/^0+(?!$)/, "");
+    let sanitizedValue = value.replace(/^0+(?=\d)/, "");
     if (sanitizedValue === "" && value !== "") sanitizedValue = "0";
 
     form.setValue(`items.${index}.${field}`, sanitizedValue);

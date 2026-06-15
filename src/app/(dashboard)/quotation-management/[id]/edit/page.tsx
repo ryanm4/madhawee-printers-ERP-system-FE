@@ -227,7 +227,7 @@ function EditQuotation({
     value: string,
   ) => {
     // Strip leading zeros unless it's just "0"
-    let sanitizedValue = value.replace(/^0+(?!$)/, "");
+    let sanitizedValue = value.replace(/^0+(?=\d)/, "");
     if (sanitizedValue === "" && value !== "") sanitizedValue = "0";
 
     form.setValue(`items.${index}.${field}`, sanitizedValue);
