@@ -36,6 +36,9 @@ function QuotationsManagement() {
     onDelete: (id: string | number) => {
       setDeleteId(Number(id));
     },
+    onView: (id: string | number) => {
+      router.push(`/quotation-management/${id}`);
+    },
     async onDownload(id: string | number) {
       try {
         const response = await quotationApi.getById(Number(id));
@@ -91,9 +94,11 @@ function QuotationsManagement() {
             customer_id: Number(data.customer_id),
             type_id: Number(data.type_id),
             delivery_days: data.delivery_days,
+            validity_period: data.validity_period,
             tax_type_id: Number(data.tax_type_id),
             currency: data.currency,
-            contact_person: data.contact_person,
+            contact_person: data.contact_person ?? null,
+            marketing_person: data.marketing_person ?? null,
             notes: data.notes || "",
             status: status,
             ...(Number(data.tax_type_id) !== 2 && {
@@ -102,7 +107,7 @@ function QuotationsManagement() {
             }),
             no_of_items: data.no_of_items,
             net_total: data.net_total,
-            updated_by: data.updated_by || getUser()?.name || "User",
+            updated_by: getUser()?.name || data.updated_by || "User",
             items: (data.items || []).map((item) => ({
               item_id: item.item_id,
               item_category: item.item_category,

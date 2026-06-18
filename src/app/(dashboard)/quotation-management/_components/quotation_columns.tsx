@@ -6,7 +6,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ColumnDef } from "@tanstack/react-table"
-import { Download, MoreHorizontal, PencilIcon, Printer, TrashIcon, ArrowRightIcon } from "lucide-react"
+import { Download, MoreHorizontal, PencilIcon, Printer, TrashIcon, ArrowRightIcon, EyeIcon } from "lucide-react"
 import { QUOTATIONS } from "@/modules/quotations/types"
 import { ArrowUpDown } from "lucide-react"
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -16,6 +16,7 @@ import { getNextQuotationStatus } from "@/lib/status-workflow"
 
 interface QuotationTableActions {
     onEdit: (id: number) => void
+    onView: (id: number) => void
     onDelete: (id: number) => void
     onDownload: (id: number) => void
     onStatusChange: (id: number, status: string) => void
@@ -49,10 +50,6 @@ export const quotationColumns = (
         {
             accessorKey: "customer_address",
             header: "Customer Address",
-        },
-        {
-            accessorKey: "customer_type",
-            header: "Customer Type",
         },
         {
             accessorKey: "customer_phone",
@@ -172,6 +169,12 @@ export const quotationColumns = (
                                     >
                                         <PencilIcon className="mr-2 h-4 w-4" />
                                         Edit Quotation
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onClick={() => actions.onView(quotation.quote_id)}
+                                    >
+                                        <EyeIcon className="mr-2 h-4 w-4" />
+                                        View Quotation
                                     </DropdownMenuItem>
 
                                     <DropdownMenuItem

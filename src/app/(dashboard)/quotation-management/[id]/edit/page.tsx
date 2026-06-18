@@ -577,7 +577,7 @@ function EditQuotation({
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Quotation Type */}
                   {renderFormField("type_id", ({ field }) => {
                     const quotationTypeLabels: Record<QuotationType, string> = {
@@ -812,7 +812,7 @@ function EditQuotation({
                       const totalExclusive = qty * price;
                       const totalInclusive =
                         watchTaxType === QuotationTaxType.VAT ||
-                        watchTaxType === QuotationTaxType.TIEP
+                          watchTaxType === QuotationTaxType.TIEP
                           ? totalExclusive * 1.18
                           : totalExclusive;
 
@@ -836,10 +836,10 @@ function EditQuotation({
                                       value={
                                         field.value
                                           ? String(
-                                              groupedItems.find(
-                                                (i) => i.label === field.value,
-                                              )?.value || "",
-                                            )
+                                            groupedItems.find(
+                                              (i) => i.label === field.value,
+                                            )?.value || "",
+                                          )
                                           : ""
                                       }
                                       onValueChange={(value) => {
@@ -1064,21 +1064,21 @@ function EditQuotation({
                   </div>
                   {(watchTaxType === QuotationTaxType.VAT ||
                     watchTaxType === QuotationTaxType.TIEP) && (
-                    <div className="flex justify-between text-sm text-muted-foreground italic">
-                      <span>
-                        {watchTaxType === QuotationTaxType.VAT ? "VAT" : "TIEP"}{" "}
-                        Amount (18%):
-                      </span>
-                      <span className="font-medium">
-                        {getCurrencySymbol(form.watch("currency") as Currency)}{" "}
-                        {Number(
-                          (
-                            parseFloat(form.watch("sub_total") || "0") * 0.18
-                          ).toFixed(4),
-                        )}
-                      </span>
-                    </div>
-                  )}
+                      <div className="flex justify-between text-sm text-muted-foreground italic">
+                        <span>
+                          {watchTaxType === QuotationTaxType.VAT ? "VAT" : "TIEP"}{" "}
+                          Amount (18%):
+                        </span>
+                        <span className="font-medium">
+                          {getCurrencySymbol(form.watch("currency") as Currency)}{" "}
+                          {Number(
+                            (
+                              parseFloat(form.watch("sub_total") || "0") * 0.18
+                            ).toFixed(4),
+                          )}
+                        </span>
+                      </div>
+                    )}
                   <div className="flex justify-between text-sm font-bold border-t pt-2">
                     <span>Net Total:</span>
                     <span>
