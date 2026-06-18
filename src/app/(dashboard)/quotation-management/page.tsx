@@ -57,12 +57,10 @@ function QuotationsManagement() {
                     customer.address || pdfData.customer_address,
                   customer_phone: customer.phone || pdfData.customer_phone,
                   customer_email: customer.email || pdfData.customer_email,
-                  contact_person:
-                    (Array.isArray(customer.contacts) && customer.contacts.length > 0)
-                      ? (customer.contacts[0] as CONTACT_PERSON).name
-                      : pdfData.contact_person,
+                  contact_person: pdfData.contact_person,
                 };
               }
+
             } catch (custError) {
               console.warn(
                 "Failed to fetch customer details for PDF, using quotation data",
