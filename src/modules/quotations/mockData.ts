@@ -1,8 +1,8 @@
 
 export const companyData = {
     name: "MADHAWEE PRINTERS (PVT) LTD",
-    address: "No: 624 Kandy Road, Bulugaha Junction, Kelaniya, Sri Lanka",
-    tel: "+94 11-2905229 , 2905263, 2905264",
+    address: "No: 624 Kandy Road, Bulugaha Junction, Kelaniya, Sri Lanka.",
+    tel: "+94 11-2905229, 2905264",
     email: "madhaweeprinters@gmail.com",
     website: "www.madhaweeprinters.lk",
     bankDetails: {

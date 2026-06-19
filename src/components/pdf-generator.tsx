@@ -40,10 +40,10 @@ const hexToRgb = (hex: string) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result
     ? rgb(
-        parseInt(result[1], 16) / 255,
-        parseInt(result[2], 16) / 255,
-        parseInt(result[3], 16) / 255
-      )
+      parseInt(result[1], 16) / 255,
+      parseInt(result[2], 16) / 255,
+      parseInt(result[3], 16) / 255
+    )
     : rgb(0, 0, 0);
 };
 
@@ -127,7 +127,7 @@ export const generateQuotationPDF = async (
     const companyData = {
       company_logo: "/images/madhawee_logo.svg",
       company_address: mockCompanyData.address,
-      company_email: mockCompanyData.email,
+      company_email: "",
       company_website: mockCompanyData.website,
       company_phone: mockCompanyData.tel,
       payment_terms: mockCompanyData.terms,
@@ -276,14 +276,26 @@ export const generateQuotationPDF = async (
       font: helvetica,
     });
     leftY -= leftSpacing;
-    const validity = data.validity_period || data.delivery_days || 7;
-    currentPage.drawText(`Validity Period : ${validity} Days`, {
-      x: leftColX,
-      y: leftY,
-      size: labelSize,
-      font: helvetica,
-    });
-    leftY -= leftSpacing;
+    const validity = data.validity_period;
+    if (validity) {
+      currentPage.drawText(`Validity Period : ${validity} Days`, {
+        x: leftColX,
+        y: leftY,
+        size: labelSize,
+        font: helvetica,
+      });
+      leftY -= leftSpacing;
+    }
+
+    if (data.delivery_days) {
+      currentPage.drawText(`Delivery Days : ${data.delivery_days} Days`, {
+        x: leftColX,
+        y: leftY,
+        size: labelSize,
+        font: helvetica,
+      });
+      leftY -= leftSpacing;
+    }
     if (data.marketing_person) {
       currentPage.drawText(`Marketing : ${data.marketing_person}`, {
         x: leftColX,
@@ -563,33 +575,33 @@ export const generateQuotationPDF = async (
       (acc: number, item: QuotationItems) =>
         acc +
         parseFloat(item.item_qty || "0") *
-          parseFloat(item.item_unit_discount || "0"),
+        parseFloat(item.item_unit_discount || "0"),
       0
     );
 
     const summaryLines = isTaxNone
       ? [
-          { label: "Subtotal :", value: formatCurrency(subtotalVal, currency) },
-          { label: "No. of Items :", value: data.no_of_items || "0" },
-          {
-            label: "TOTAL :",
-            value: formatCurrency(netTotalVal, currency),
-            highlight: true,
-          },
-        ]
+        { label: "Subtotal :", value: formatCurrency(subtotalVal, currency) },
+        { label: "No. of Items :", value: data.no_of_items || "0" },
+        {
+          label: "TOTAL :",
+          value: formatCurrency(netTotalVal, currency),
+          highlight: true,
+        },
+      ]
       : [
-          { label: "Subtotal :", value: formatCurrency(subtotalVal, currency) },
-          { label: `Tax (18%) :`, value: formatCurrency(taxAmount, currency) },
-          {
-            label: "Discount :",
-            value: formatCurrency(totalDiscount, currency),
-          },
-          {
-            label: "TOTAL :",
-            value: formatCurrency(netTotalVal, currency),
-            highlight: true,
-          },
-        ];
+        { label: "Subtotal :", value: formatCurrency(subtotalVal, currency) },
+        { label: `Tax (18%) :`, value: formatCurrency(taxAmount, currency) },
+        {
+          label: "Discount :",
+          value: formatCurrency(totalDiscount, currency),
+        },
+        {
+          label: "TOTAL :",
+          value: formatCurrency(netTotalVal, currency),
+          highlight: true,
+        },
+      ];
 
     summaryLines.forEach((line) => {
       currentPage = checkPageBreak(25);
@@ -731,9 +743,8 @@ export const generateQuotationPDF = async (
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${
-      customerName ? customerName : data.quote_id || "quotation"
-    }.pdf`;
+    link.download = `${customerName ? customerName : data.quote_id || "quotation"
+      }.pdf`;
     link.click();
     URL.revokeObjectURL(url);
   } catch (error) {

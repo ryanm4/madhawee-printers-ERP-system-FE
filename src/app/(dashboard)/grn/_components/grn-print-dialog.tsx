@@ -264,7 +264,7 @@ export function buildGRNPrintHTML(data: GRN): string {
           <img src="/images/madhawee_logo.svg" class="company-logo" style="height: 80px; margin-bottom: 10px;" />
           <div class="address-details">
             <b>Office & Factory :</b><br/>
-            No. 624, Kandy Rd, Bulugaha Junction, Kelaniya. Tel : 2905229, 2905263/4<br/>
+            No. 624, Kandy Rd, Bulugaha Junction, Kelaniya. Tel : 2905229<br/>
             E Mail - Madhaweeprinters@gmail.com
           </div>
         </td>

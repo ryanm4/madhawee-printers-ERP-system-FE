@@ -264,7 +264,7 @@ export function buildDispatchPrintHTML(data: DispatchPrintData): string {
       <div class="company-section">
         <img src="/images/madhawee_logo.svg?v=1" class="company-logo-img" />
         <div class="company-details">
-          No. 624, Bulugaha Junction, Kandy Rd, Kelaniya. Tele: 2905263, 2905264, 2905229, 2907967<br/>
+          No. 624, Bulugaha Junction, Kandy Rd, Kelaniya. Tele: 011 2905264, 2905229, 2907967<br/>
           Fax: 2905574 E-mail: madhaweeprinters@gmail.com
         </div>
       </div>
