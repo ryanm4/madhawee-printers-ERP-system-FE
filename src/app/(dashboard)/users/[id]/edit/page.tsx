@@ -64,7 +64,7 @@ function EditUser() {
     setEditingUser(user);
 
     form.reset({
-      user_role: (user.user_role || "").toLowerCase().trim(),
+      user_role: user.user_role || "",
       name: user.name,
 
       email: user.email,
@@ -157,8 +157,16 @@ function EditUser() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="user">User</SelectItem>
+                      <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
+                      <SelectItem value="DIRECTOR_GM">Director/GM</SelectItem>
+                      <SelectItem value="MARKETING_EXECUTIVE_MANAGER">Marketing Executive/Manager</SelectItem>
+                      <SelectItem value="ADMIN_OFFICER">Admin Officer</SelectItem>
+                      <SelectItem value="PRODUCTION_MANAGER">Production Manager</SelectItem>
+                      <SelectItem value="PRODUCTION_EXECUTIVE">Production Executive</SelectItem>
+                      <SelectItem value="PROCUREMENT_MANAGER">Procurement Manager</SelectItem>
+                      <SelectItem value="STORE_KEEPER">Store Keeper</SelectItem>
+                      <SelectItem value="DISPATCH_DELIVERY_OFFICER">Dispatch/Delivery Officer</SelectItem>
+                      <SelectItem value="FINANCE_MANAGER_ACCOUNTANT">Finance Manager/Accountant</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
