@@ -51,6 +51,11 @@ function EditIssueNote() {
   const [inventoryItems, setInventoryItems] = useState<
     { value: string; label: string }[]
   >([]);
+  const [jobMaterials, setJobMaterials] = useState<
+    { value: string; label: string; quantity: number }[]
+  >([]);
+  const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+  const [isFetchingJob, setIsFetchingJob] = useState(false);
 
   const form = useForm<IssueNoteFormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -162,6 +167,67 @@ function EditIssueNote() {
     fetchInventory();
   }, [id, fetchIssueNote]);
 
+  const fetchJobById = async (jobId: number) => {
+    try {
+      setIsFetchingJob(true);
+      const response = await jobTicketsApi.getById(jobId);
+      if (response.status === 200 && response.data) {
+        const jobData = response.data;
+        
+        // Extract materials from paperCoating array
+        const materials: { value: string; label: string; quantity: number }[] = [];
+        
+        if (jobData.paperCoating && Array.isArray(jobData.paperCoating)) {
+          jobData.paperCoating.forEach((pc: any) => {
+            if (pc.materials && Array.isArray(pc.materials)) {
+              pc.materials.forEach((material: any) => {
+                const itemLabel = `${material.material_type} ${material.material_name} ${material.size}`.trim();
+                materials.push({
+                  value: itemLabel,
+                  label: itemLabel,
+                  quantity: material.quantity || 0,
+                });
+              });
+            }
+          });
+        }
+        
+        setJobMaterials(materials);
+      }
+    } catch (error) {
+      console.error("Failed to fetch job details:", error);
+      setJobMaterials([]);
+    } finally {
+      setIsFetchingJob(false);
+    }
+  };
+
+  const handleJobChange = (jobId: string) => {
+    const id = Number(jobId);
+    setSelectedJobId(id);
+    if (id > 0) {
+      fetchJobById(id);
+    } else {
+      setJobMaterials([]);
+    }
+  };
+
+  const handleItemChange = (index: number, itemValue: string) => {
+    const selectedMaterial = jobMaterials.find(m => m.value === itemValue);
+    if (selectedMaterial) {
+      form.setValue(`items.${index}.quantity`, selectedMaterial.quantity);
+    }
+  };
+
+  // Load job materials when issue note is loaded
+  useEffect(() => {
+    const currentJobId = form.getValues("job_id");
+    if (currentJobId && currentJobId > 0) {
+      setSelectedJobId(currentJobId);
+      fetchJobById(currentJobId);
+    }
+  }, [form]);
+
 
 
   async function onSubmit(values: IssueNoteFormValues) {
@@ -257,7 +323,10 @@ function EditIssueNote() {
                       <Combobox
                         items={jobs}
                         value={field.value ? field.value.toString() : ""}
-                        onValueChange={(val) => field.onChange(val ? Number(val) : 0)}
+                        onValueChange={(val) => {
+                          field.onChange(val ? Number(val) : 0);
+                          handleJobChange(val);
+                        }}
                         placeholder="Select Job"
                         searchPlaceholder="Search job..."
                       />
@@ -297,11 +366,15 @@ function EditIssueNote() {
                           <FormItem className="flex flex-col mt-2">
                             <FormLabel>Item Name</FormLabel>
                             <Combobox
-                              items={inventoryItems}
+                              items={jobMaterials}
                               value={field.value}
-                              onValueChange={field.onChange}
-                              placeholder="Select Item"
+                              onValueChange={(val) => {
+                                field.onChange(val);
+                                handleItemChange(index, val);
+                              }}
+                              placeholder={isFetchingJob ? "Loading..." : "Select Item"}
                               searchPlaceholder="Search item..."
+                              disabled={isFetchingJob}
                             />
                             <FormMessage />
                           </FormItem>

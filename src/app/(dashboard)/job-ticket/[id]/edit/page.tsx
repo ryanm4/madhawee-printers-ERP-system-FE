@@ -102,7 +102,7 @@ const emptyRawMaterial = {
 };
 
 function mapRawMaterials(
-  materials: unknown,
+  materials: unknown
 ): JobTicketFormValues["paperTypes"][number]["rawMaterials"] {
   if (!Array.isArray(materials)) {
     return [{ ...emptyRawMaterial }];
@@ -123,7 +123,7 @@ function mapRawMaterials(
 }
 
 function mapPaperTypesFromTicket(
-  jt: JOB_TICKET_DETAIL,
+  jt: JOB_TICKET_DETAIL
 ): JobTicketFormValues["paperTypes"] {
   const record = jt as Record<string, unknown>;
   const rawList =
@@ -159,7 +159,7 @@ function mapPaperTypesFromTicket(
 }
 
 function getFirstValidationMessage(
-  errors: FieldErrors<JobTicketFormValues>,
+  errors: FieldErrors<JobTicketFormValues>
 ): string {
   const walk = (value: unknown): string | undefined => {
     if (!value || typeof value !== "object") return undefined;
@@ -190,7 +190,7 @@ function EditJobTicket() {
   const isInitialLoad = useRef(true);
   const [customerData, setCustomerData] = useState<CUSTOMER[]>([]);
   const [purchaseOrderData, setPurchaseOrderData] = useState<PURCHASE_ORDER[]>(
-    [],
+    []
   );
   const [selectedPoDetails, setSelectedPoDetails] =
     useState<PURCHASE_ORDER_ID | null>(null);
@@ -201,11 +201,14 @@ function EditJobTicket() {
     avatar: string;
   } | null>(null);
   const [inventoryList, setInventoryList] = useState<GET_ALL_INVENTORY[]>([]);
+  const [inkItems, setInkItems] = useState<{ value: string; label: string }[]>(
+    []
+  );
   const dispatch = useDispatch<AppDispatch>();
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [printData, setPrintData] = useState<JobTicketPrintData | null>(null);
   const [ticketStatus, setTicketStatus] = useState<string>(
-    JobTicketStatus.CREATED,
+    JobTicketStatus.CREATED
   );
 
   const baseDefaultValues: JobTicketFormValues = {
@@ -232,12 +235,7 @@ function EditJobTicket() {
     newPlatesQuantity: "",
     newPlatesStatus: "",
     newPlatesRemarks: "",
-    inks: [
-      { ink: "Black", quantity: "", status: "", remarks: "" },
-      { ink: "Cyan", quantity: "", status: "", remarks: "" },
-      { ink: "Magenta", quantity: "", status: "", remarks: "" },
-      { ink: "Yellow", quantity: "", status: "", remarks: "" },
-    ],
+    inks: [{ ink: "", quantity: "", status: "", remarks: "" }],
     paperTypes: [
       {
         paper: "",
@@ -298,7 +296,7 @@ function EditJobTicket() {
         setUploadedFile(file);
       } else {
         alert(
-          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB.",
+          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB."
         );
       }
     }
@@ -395,7 +393,7 @@ function EditJobTicket() {
 
       const response = await jobTicketsApi.update(
         id,
-        formattedData as CREATE_TICKETS,
+        formattedData as CREATE_TICKETS
       );
 
       if (response.status === 200) {
@@ -406,7 +404,7 @@ function EditJobTicket() {
         const allRawMaterials =
           data.paperTypes?.flatMap((p) => p.rawMaterials || []) || [];
         const matchingPo = purchaseOrderData.find(
-          (po) => String(po.po_id) === data.customer_po,
+          (po) => String(po.po_id) === data.customer_po
         );
         const pd: JobTicketPrintData = {
           jobNumber: data.jobNumber,
@@ -463,13 +461,22 @@ function EditJobTicket() {
 
         // Initial filter for Approved POs
         const filteredPOs = pos.filter(
-          (p: PURCHASE_ORDER) => p.status === PurchaseOrderStatus.APPROVED,
+          (p: PURCHASE_ORDER) => p.status === PurchaseOrderStatus.APPROVED
         );
 
         setPurchaseOrderData(filteredPOs);
         setCustomerData(customers);
         setInventoryList(inventory);
         dispatch(setReduxInventoryList(inventory));
+
+        // Filter ink items from inventory
+        const inkItems = inventory
+          .filter((item: GET_ALL_INVENTORY) => item.item_category === "INK")
+          .map((item: GET_ALL_INVENTORY) => ({
+            value: item.item_name,
+            label: item.item_name,
+          }));
+        setInkItems(inkItems);
 
         // 2. Now fetch the ticket detail
         const ticketResponse = await jobTicketsApi.getById(id);
@@ -479,7 +486,7 @@ function EditJobTicket() {
 
           // 3. Ensure the currently linked PO is in the list even if not APPROVED
           const currentPo = pos.find(
-            (p: PURCHASE_ORDER) => String(p.po_id) === String(jt.po_id),
+            (p: PURCHASE_ORDER) => String(p.po_id) === String(jt.po_id)
           );
           if (
             currentPo &&
@@ -498,14 +505,14 @@ function EditJobTicket() {
             orderReceivedDate: jt.order_received_date
               ? parseLocalDate(jt.order_received_date)
               : jt.created_on
-                ? parseLocalDate(jt.created_on)
-                : undefined,
+              ? parseLocalDate(jt.created_on)
+              : undefined,
             jobNumber: jt.job_number || String(jt.job_id),
             jobOpenDate: jt.job_open_date
               ? parseLocalDate(jt.job_open_date)
               : jt.created_on
-                ? parseLocalDate(jt.created_on)
-                : undefined,
+              ? parseLocalDate(jt.created_on)
+              : undefined,
             customer: String(jt.customer_id),
             jobName: jt.job_name,
             productType: jt.product_type || "",
@@ -535,12 +542,7 @@ function EditJobTicket() {
               quantity: String(ink.quantity || ""),
               status: ink.status || "",
               remarks: ink.remarks || "",
-            })) || [
-              { ink: "Black", quantity: "", status: "", remarks: "" },
-              { ink: "Cyan", quantity: "", status: "", remarks: "" },
-              { ink: "Magenta", quantity: "", status: "", remarks: "" },
-              { ink: "Yellow", quantity: "", status: "", remarks: "" },
-            ],
+            })) || [{ ink: "", quantity: "", status: "", remarks: "" }],
             paperTypes: mapPaperTypesFromTicket(jt),
           });
 
@@ -620,7 +622,7 @@ function EditJobTicket() {
     name: TName,
     render: Parameters<
       typeof FormField<JobTicketFormValues, TName>
-    >["0"]["render"],
+    >["0"]["render"]
   ) => <FormField control={form.control} name={name} render={render} />;
 
   return (
@@ -660,7 +662,7 @@ function EditJobTicket() {
           </div>
           <Card
             className={cn(
-              "w-full shdow-sm hover:shadow-md transition-shadow flex flex-col",
+              "w-full shdow-sm hover:shadow-md transition-shadow flex flex-col"
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
@@ -699,7 +701,7 @@ function EditJobTicket() {
                           (item: PO_ITEMS) => ({
                             value: String(item.item_code),
                             label: String(item.item_code),
-                          }),
+                          })
                         );
                         const currentValue = String(field.value || "");
                         if (
@@ -717,12 +719,12 @@ function EditJobTicket() {
                       onValueChange={(value) => {
                         field.onChange(value);
                         const selectedItem = selectedPoItems.find(
-                          (i: PO_ITEMS) => i.item_code === value,
+                          (i: PO_ITEMS) => i.item_code === value
                         );
                         if (selectedItem) {
                           form.setValue(
                             "quantity",
-                            String(selectedItem.quantity),
+                            String(selectedItem.quantity)
                           );
                           form.setValue("jobName", selectedItem.description);
                         }
@@ -731,8 +733,8 @@ function EditJobTicket() {
                         fetchingDetails
                           ? "Loading items..."
                           : selectedPoItems.length > 0
-                            ? "Select Item"
-                            : "No items found"
+                          ? "Select Item"
+                          : "No items found"
                       }
                       disabled={!selectedPoId || fetchingDetails}
                       searchPlaceholder="Search item..."
@@ -764,7 +766,7 @@ function EditJobTicket() {
                             variant={"outline"}
                             className={cn(
                               "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground",
+                              !field.value && "text-muted-foreground"
                             )}
                           >
                             {field.value
@@ -802,7 +804,7 @@ function EditJobTicket() {
                             variant={"outline"}
                             className={cn(
                               "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground",
+                              !field.value && "text-muted-foreground"
                             )}
                           >
                             {field.value
@@ -902,7 +904,7 @@ function EditJobTicket() {
                             variant={"outline"}
                             className={cn(
                               "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground",
+                              !field.value && "text-muted-foreground"
                             )}
                           >
                             {field.value
@@ -999,19 +1001,19 @@ function EditJobTicket() {
                                     const selectedPaper = inventoryList.find(
                                       (item) =>
                                         `${item.item_sub_category} ${item.item_name}` ===
-                                        val,
+                                        val
                                     );
                                     if (selectedPaper) {
                                       const rawMaterialsData = form.getValues(
-                                        `paperTypes.${index}.rawMaterials`,
+                                        `paperTypes.${index}.rawMaterials`
                                       );
                                       rawMaterialsData?.forEach(
                                         (_, rmIndex) => {
                                           form.setValue(
                                             `paperTypes.${index}.rawMaterials.${rmIndex}.size`,
-                                            selectedPaper.size,
+                                            selectedPaper.size
                                           );
-                                        },
+                                        }
                                       );
                                     }
                                   }
@@ -1019,7 +1021,7 @@ function EditJobTicket() {
                               />
                               <FormMessage />
                             </FormItem>
-                          ),
+                          )
                         )}
                         {renderFormField(
                           `paperTypes.${index}.coating`,
@@ -1043,13 +1045,13 @@ function EditJobTicket() {
                                       <SelectItem key={key} value={value}>
                                         {value}
                                       </SelectItem>
-                                    ),
+                                    )
                                   )}
                                 </SelectContent>
                               </Select>
                               <FormMessage />
                             </FormItem>
-                          ),
+                          )
                         )}
                       </div>
 
@@ -1066,12 +1068,12 @@ function EditJobTicket() {
                             `paperTypes.${index}.rawMaterials.${rmIndex}.size`,
                             ({ field }) => {
                               const selectedPaperName = form.watch(
-                                `paperTypes.${index}.paper`,
+                                `paperTypes.${index}.paper`
                               );
                               const filteredInventory = inventoryList.filter(
                                 (item) =>
                                   `${item.item_sub_category} ${item.item_name}` ===
-                                  selectedPaperName,
+                                  selectedPaperName
                               );
 
                               return (
@@ -1086,20 +1088,20 @@ function EditJobTicket() {
                                       field.onChange(val);
                                       const selectedMaterial =
                                         filteredInventory.find(
-                                          (item) => item.size === val,
+                                          (item) => item.size === val
                                         );
                                       if (selectedMaterial) {
                                         form.setValue(
                                           `paperTypes.${index}.rawMaterials.${rmIndex}.item_id`,
-                                          selectedMaterial.item_id,
+                                          selectedMaterial.item_id
                                         );
                                         form.setValue(
                                           `paperTypes.${index}.rawMaterials.${rmIndex}.material_type`,
-                                          selectedMaterial.item_sub_category,
+                                          selectedMaterial.item_sub_category
                                         );
                                         form.setValue(
                                           `paperTypes.${index}.rawMaterials.${rmIndex}.material_name`,
-                                          selectedMaterial.item_name,
+                                          selectedMaterial.item_name
                                         );
                                       }
                                     }}
@@ -1124,7 +1126,7 @@ function EditJobTicket() {
                                   <FormMessage />
                                 </FormItem>
                               );
-                            },
+                            }
                           )}
                           {renderFormField(
                             `paperTypes.${index}.rawMaterials.${rmIndex}.quantity`,
@@ -1144,14 +1146,14 @@ function EditJobTicket() {
                                       field.onChange(
                                         e.target.value === ""
                                           ? 0
-                                          : Number(e.target.value),
+                                          : Number(e.target.value)
                                       )
                                     }
                                   />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
-                            ),
+                            )
                           )}
                           {renderFormField(
                             `paperTypes.${index}.rawMaterials.${rmIndex}.status`,
@@ -1177,13 +1179,13 @@ function EditJobTicket() {
                                         <SelectItem key={key} value={value}>
                                           {value}
                                         </SelectItem>
-                                      ),
+                                      )
                                     )}
                                   </SelectContent>
                                 </Select>
                                 <FormMessage />
                               </FormItem>
-                            ),
+                            )
                           )}
                           {renderFormField(
                             `paperTypes.${index}.rawMaterials.${rmIndex}.remarks`,
@@ -1202,7 +1204,7 @@ function EditJobTicket() {
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
-                            ),
+                            )
                           )}
                           <div className="flex items-end pb-2">
                             <Button
@@ -1212,14 +1214,14 @@ function EditJobTicket() {
                               onClick={() => {
                                 const current =
                                   form.getValues(
-                                    `paperTypes.${index}.rawMaterials`,
+                                    `paperTypes.${index}.rawMaterials`
                                   ) || [];
                                 if (current.length > 1) {
                                   form.setValue(
                                     `paperTypes.${index}.rawMaterials`,
                                     current.filter(
-                                      (_, i: number) => i !== rmIndex,
-                                    ),
+                                      (_, i: number) => i !== rmIndex
+                                    )
                                   );
                                 }
                               }}
@@ -1238,7 +1240,7 @@ function EditJobTicket() {
                           onClick={() => {
                             const current =
                               form.getValues(
-                                `paperTypes.${index}.rawMaterials`,
+                                `paperTypes.${index}.rawMaterials`
                               ) || [];
                             form.setValue(`paperTypes.${index}.rawMaterials`, [
                               ...current,
@@ -1473,22 +1475,14 @@ function EditJobTicket() {
                           <FormLabel className={index !== 0 ? "sr-only" : ""}>
                             Ink
                           </FormLabel>
-                          <FormControl>
-                            <div>
-                              <Input
-                                list={`ink-options-${index}`}
-                                placeholder="Enter or select Ink"
-                                {...field}
-                                value={field.value || ""}
-                              />
-                              <datalist id={`ink-options-${index}`}>
-                                <option value="Black" />
-                                <option value="Cyan" />
-                                <option value="Magenta" />
-                                <option value="Yellow" />
-                              </datalist>
-                            </div>
-                          </FormControl>
+                          <Combobox
+                            items={inkItems}
+                            value={field.value || ""}
+                            onValueChange={field.onChange}
+                            placeholder="Select or enter Ink"
+                            searchPlaceholder="Search or enter ink..."
+                            allowCreate
+                          />
                           <FormMessage />
                         </FormItem>
                       ))}
@@ -1508,7 +1502,7 @@ function EditJobTicket() {
                             </FormControl>
                             <FormMessage />
                           </FormItem>
-                        ),
+                        )
                       )}
                       {renderFormField(`inks.${index}.status`, ({ field }) => (
                         <FormItem>
@@ -1530,7 +1524,7 @@ function EditJobTicket() {
                                   <SelectItem key={key} value={value}>
                                     {value}
                                   </SelectItem>
-                                ),
+                                )
                               )}
                             </SelectContent>
                           </Select>
