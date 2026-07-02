@@ -537,12 +537,14 @@ function EditJobTicket() {
               : "",
             newPlatesStatus: jt.new_plate_status || "",
             newPlatesRemarks: jt.new_plate_remarks || "",
-            inks: jt.inks?.map((ink) => ({
-              ink: ink.ink,
-              quantity: String(ink.quantity || ""),
-              status: ink.status || "",
-              remarks: ink.remarks || "",
-            })) || [{ ink: "", quantity: "", status: "", remarks: "" }],
+            inks: jt.inks?.length
+              ? jt.inks.map((ink) => ({
+                  ink: ink.ink,
+                  quantity: String(ink.quantity || ""),
+                  status: ink.status || "",
+                  remarks: ink.remarks || "",
+                }))
+              : [{ ink: "", quantity: "", status: "", remarks: "" }],
             paperTypes: mapPaperTypesFromTicket(jt),
           });
 

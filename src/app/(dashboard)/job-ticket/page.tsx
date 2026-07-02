@@ -219,8 +219,10 @@ function JobTicketComponent() {
               paper: p.paper || p.paper_type,
               coating: p.coating,
               delivery_date: formatDate(p.delivery_date as any),
+              materials: p.materials || (p as any).raw_materials || [],
             })),
 
+            inks: currentTicket.inks || [],
             status: status,
             created_by: (currentTicket as Record<string, unknown>).created_by as string || "User",
           };
