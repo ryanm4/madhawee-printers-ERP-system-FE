@@ -104,9 +104,9 @@ function EditInventoryManagement() {
           item_category: data.item_category,
           item_sub_category: data.item_sub_category,
           item_name: data.item_name,
-          width: width,
-          height: height,
-          size: data.size,
+          width: data?.width as string | undefined,
+          height: data?.height as string | undefined,
+          size: `${data.width} x ${data.height}`,
           quantity: Number(data.quantity),
           unit_of_measure: data.unit_of_measure,
           reorder_level: data.reorder_level,
@@ -151,7 +151,7 @@ function EditInventoryManagement() {
 
       appToast.updated(
         "Inventory Item Updated",
-        "The inventory item has been updated successfully.",
+        "The inventory item has been updated successfully."
       );
       form.reset(baseDefaultValues);
       form.clearErrors();
@@ -162,8 +162,8 @@ function EditInventoryManagement() {
         "Failed to Update Inventory Item",
         getErrorMessage(
           error,
-          "An error occurred while updating the inventory item. Please try again.",
-        ),
+          "An error occurred while updating the inventory item. Please try again."
+        )
       );
     } finally {
       setIsLoading(false);
@@ -171,10 +171,10 @@ function EditInventoryManagement() {
   }
 
   const renderFormField = <
-    TName extends FieldPath<InventoryManagementFormValues>,
+    TName extends FieldPath<InventoryManagementFormValues>
   >(
     name: TName,
-    render: ControllerProps<InventoryManagementFormValues, TName>["render"],
+    render: ControllerProps<InventoryManagementFormValues, TName>["render"]
   ) => (
     <FormField<InventoryManagementFormValues, TName>
       control={form.control}
@@ -201,7 +201,7 @@ function EditInventoryManagement() {
         >
           <Card
             className={cn(
-              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
+              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
@@ -258,7 +258,7 @@ function EditInventoryManagement() {
                             <SelectItem key={key} value={value}>
                               {value}
                             </SelectItem>
-                          ),
+                          )
                         )}
                       </SelectContent>
                     </Select>

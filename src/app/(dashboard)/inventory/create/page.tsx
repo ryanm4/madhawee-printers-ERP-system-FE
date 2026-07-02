@@ -87,10 +87,8 @@ function CreateInventoryManagement() {
         item_category: data.item_category,
         item_sub_category: data.item_sub_category,
         item_name: data.item_name,
-        size:
-          data.width && data.height
-            ? `${data.width} x ${data.height}`
-            : data.size || "-",
+
+        size: `${data.width} x ${data.height}`,
         width: data.width ?? "",
         height: data.height ?? "",
         quantity: String(data.quantity),
@@ -104,7 +102,7 @@ function CreateInventoryManagement() {
 
       appToast.success(
         "Inventory Item Created",
-        "The inventory item has been added successfully.",
+        "The inventory item has been added successfully."
       );
       form.reset(baseDefaultValues);
       form.clearErrors();
@@ -115,8 +113,8 @@ function CreateInventoryManagement() {
         "Failed to Create Inventory Item",
         getErrorMessage(
           error,
-          "An error occurred while adding the inventory item. Please try again.",
-        ),
+          "An error occurred while adding the inventory item. Please try again."
+        )
       );
     } finally {
       setIsLoading(false);
@@ -124,10 +122,10 @@ function CreateInventoryManagement() {
   }
 
   const renderFormField = <
-    TName extends FieldPath<InventoryManagementFormValues>,
+    TName extends FieldPath<InventoryManagementFormValues>
   >(
     name: TName,
-    render: ControllerProps<InventoryManagementFormValues, TName>["render"],
+    render: ControllerProps<InventoryManagementFormValues, TName>["render"]
   ) => (
     <FormField<InventoryManagementFormValues, TName>
       control={form.control}
@@ -154,7 +152,7 @@ function CreateInventoryManagement() {
         >
           <Card
             className={cn(
-              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
+              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
@@ -211,7 +209,7 @@ function CreateInventoryManagement() {
                             <SelectItem key={key} value={value}>
                               {value}
                             </SelectItem>
-                          ),
+                          )
                         )}
                       </SelectContent>
                     </Select>

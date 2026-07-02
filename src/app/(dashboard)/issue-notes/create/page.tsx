@@ -52,6 +52,14 @@ function CreateIssueNote() {
     { value: string; label: string }[]
   >([]);
 
+  const [jobMaterials, setJobMaterials] = useState<
+    { value: string; label: string; quantity: number }[]
+  >([]);
+
+  const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+
+  const [isFetchingJob, setIsFetchingJob] = useState(false);
+
   useEffect(() => {
     const userData = getUser();
     if (userData) {
@@ -83,20 +91,27 @@ function CreateIssueNote() {
         if (response.status === 200) {
           const uniqueItems = Array.from(
             new Map(
-              response.data.map((item: GET_ALL_INVENTORY) => [`${item.item_name}-${item.size || ""}`, item])
+              response.data.map((item: GET_ALL_INVENTORY) => [
+                `${item.item_name}-${item.size || ""}`,
+                item,
+              ])
             ).values()
           );
 
           setInventoryItems(
-            (uniqueItems as GET_ALL_INVENTORY[]).map((item: GET_ALL_INVENTORY) => {
-              const label = item.size
-                ? `${item.item_name} (${item.size})`
-                : item.item_name;
-              return {
-                value: item.size ? `${item.item_name}|||${item.size}` : item.item_name,
-                label: label,
-              };
-            })
+            (uniqueItems as GET_ALL_INVENTORY[]).map(
+              (item: GET_ALL_INVENTORY) => {
+                const label = item.size
+                  ? `${item.item_name} (${item.size})`
+                  : item.item_name;
+                return {
+                  value: item.size
+                    ? `${item.item_name}|||${item.size}`
+                    : item.item_name,
+                  label: label,
+                };
+              }
+            )
           );
         }
       } catch (error) {
@@ -108,14 +123,74 @@ function CreateIssueNote() {
     fetchInventory();
   }, []);
 
+  const fetchJobById = async (jobId: number) => {
+    try {
+      setIsFetchingJob(true);
+
+      const response = await jobTicketsApi.getById(jobId);
+
+      if (response.status === 200 && response.data) {
+        const jobData = response.data;
+
+        const materials: {
+          value: string;
+          label: string;
+          quantity: number;
+        }[] = [];
+
+        if (jobData.paperCoating && Array.isArray(jobData.paperCoating)) {
+          jobData.paperCoating.forEach((pc: any) => {
+            if (pc.materials && Array.isArray(pc.materials)) {
+              pc.materials.forEach((material: any) => {
+                const itemLabel =
+                  `${material.material_type} ${material.material_name} ${material.size}`.trim();
+
+                materials.push({
+                  value: itemLabel,
+                  label: itemLabel,
+                  quantity: Number(material.quantity || 0),
+                });
+              });
+            }
+          });
+        }
+
+        setJobMaterials(materials);
+      }
+    } catch (error) {
+      console.error("Failed to fetch job details:", error);
+      setJobMaterials([]);
+    } finally {
+      setIsFetchingJob(false);
+    }
+  };
+
+  const handleJobChange = (jobId: string) => {
+    const id = Number(jobId);
+
+    setSelectedJobId(id);
+
+    if (id > 0) {
+      fetchJobById(id);
+    } else {
+      setJobMaterials([]);
+    }
+  };
+
+  const handleItemChange = (index: number, itemValue: string) => {
+    const selectedMaterial = jobMaterials.find((m) => m.value === itemValue);
+
+    if (selectedMaterial) {
+      form.setValue(`items.${index}.quantity`, selectedMaterial.quantity);
+    }
+  };
+
   const defaultValues: IssueNoteFormValues = {
     date: new Date(),
     collector_name: "",
     remarks: "",
     job_id: 0,
-    items: [
-      { item_name: "", quantity: 0 },
-    ],
+    items: [{ item_name: "", quantity: 0 }],
   };
 
   const form = useForm<IssueNoteFormValues>({
@@ -137,10 +212,12 @@ function CreateIssueNote() {
         ...values,
         date: format(values.date, "yyyy-MM-dd HH:mm:ss"),
         created_by: user?.name || "User",
-        items: values.items.map(item => ({
+        items: values.items.map((item) => ({
           ...item,
-          item_name: item.item_name.includes("|||") ? item.item_name.split("|||")[0] : item.item_name
-        }))
+          item_name: item.item_name.includes("|||")
+            ? item.item_name.split("|||")[0]
+            : item.item_name,
+        })),
       };
 
       const response = await issueNotesApi.create(payload);
@@ -168,6 +245,8 @@ function CreateIssueNote() {
     }
   }
 
+  const job_id = form.watch("job_id");
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       {(isLoading || isSubmitting) && <FullPageLoader />}
@@ -181,13 +260,13 @@ function CreateIssueNote() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
                 <h3 className="text-lg font-medium">Issue Note Details</h3>
-                <p className="text-sm text-muted-foreground">General information about this issue note</p>
+                <p className="text-sm text-muted-foreground">
+                  General information about this issue note
+                </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <FormField
@@ -195,7 +274,9 @@ function CreateIssueNote() {
                   name="date"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Date <span className="text-red-500">*</span></FormLabel>
+                      <FormLabel>
+                        Date <span className="text-red-500">*</span>
+                      </FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -206,7 +287,11 @@ function CreateIssueNote() {
                                 !field.value && "text-muted-foreground"
                               )}
                             >
-                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>
@@ -216,7 +301,9 @@ function CreateIssueNote() {
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                            disabled={(date) =>
+                              date > new Date() || date < new Date("1900-01-01")
+                            }
                             initialFocus
                           />
                         </PopoverContent>
@@ -231,7 +318,9 @@ function CreateIssueNote() {
                   name="collector_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Collector Name <span className="text-red-500">*</span></FormLabel>
+                      <FormLabel>
+                        Collector Name <span className="text-red-500">*</span>
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="Enter Collector Name" {...field} />
                       </FormControl>
@@ -245,11 +334,16 @@ function CreateIssueNote() {
                   name="job_id"
                   render={({ field }) => (
                     <FormItem className="flex flex-col mt-2">
-                      <FormLabel>Related Job <span className="text-red-500">*</span></FormLabel>
+                      <FormLabel>
+                        Related Job <span className="text-red-500">*</span>
+                      </FormLabel>
                       <Combobox
                         items={jobs}
                         value={field.value ? field.value.toString() : ""}
-                        onValueChange={(val) => field.onChange(val ? Number(val) : 0)}
+                        onValueChange={(val) => {
+                          field.onChange(val ? Number(val) : 0);
+                          handleJobChange(val);
+                        }}
                         placeholder="Select Job"
                         searchPlaceholder="Search job..."
                       />
@@ -265,7 +359,11 @@ function CreateIssueNote() {
                     <FormItem>
                       <FormLabel>Remarks</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Purpose of this issue" className="resize-none" {...field} />
+                        <Textarea
+                          placeholder="Purpose of this issue"
+                          className="resize-none"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -278,7 +376,9 @@ function CreateIssueNote() {
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>
                   <h3 className="text-lg font-medium">Items List</h3>
-                  <p className="text-sm text-muted-foreground">Specify items to be issued</p>
+                  <p className="text-sm text-muted-foreground">
+                    Specify items to be issued
+                  </p>
                 </div>
                 <Button
                   type="button"
@@ -291,7 +391,10 @@ function CreateIssueNote() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {fields.map((item, index) => (
-                  <div key={item.id} className="flex gap-4 items-start p-4 border rounded-lg bg-muted/20 relative">
+                  <div
+                    key={item.id}
+                    className="flex gap-4 items-start p-4 border rounded-lg bg-muted/20 relative"
+                  >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
                       <FormField
                         control={form.control}
@@ -300,11 +403,17 @@ function CreateIssueNote() {
                           <FormItem className="flex flex-col">
                             <FormLabel>Item Name</FormLabel>
                             <Combobox
-                              items={inventoryItems}
+                              items={jobMaterials}
                               value={field.value}
-                              onValueChange={field.onChange}
-                              placeholder="Select Item"
+                              onValueChange={(val) => {
+                                field.onChange(val);
+                                handleItemChange(index, val);
+                              }}
+                              placeholder={
+                                isFetchingJob ? "Loading..." : "Select Item"
+                              }
                               searchPlaceholder="Search item..."
+                              disabled={isFetchingJob}
                             />
                             <FormMessage />
                           </FormItem>
@@ -317,7 +426,14 @@ function CreateIssueNote() {
                           <FormItem>
                             <FormLabel>Quantity</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                              <Input
+                                type="number"
+                                placeholder="0"
+                                {...field}
+                                onChange={(e) =>
+                                  field.onChange(Number(e.target.value))
+                                }
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
