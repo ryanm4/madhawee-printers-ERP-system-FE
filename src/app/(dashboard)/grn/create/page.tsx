@@ -92,13 +92,10 @@ function CreateGRN() {
 
           setInventoryItems(
             uniqueItems.map((item: GET_ALL_INVENTORY) => {
-              const label = item.size
-                ? ` ${item.item_sub_category} ${item.item_name} (${item.size})`
-                : item.item_name;
+              const label = `${item.item_sub_category} ${item.item_name} (${item.size})`;
+
               return {
-                value: item.size
-                  ? `${item.item_sub_category}|||${item.item_name}|||${item.size}`
-                  : item.item_name,
+                value: `${item.item_sub_category}|||${item.item_name}|||${item.size}`,
                 label: label,
               };
             })

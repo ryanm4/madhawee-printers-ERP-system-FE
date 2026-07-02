@@ -155,6 +155,19 @@ function CreateIssueNote() {
           });
         }
 
+        if (jobData.inks && Array.isArray(jobData.inks)) {
+          jobData.inks.forEach((ink: any) => {
+            if (ink.ink) {
+              const itemLabel = ink.ink.trim();
+              materials.push({
+                value: itemLabel,
+                label: itemLabel,
+                quantity: Number(ink.quantity || 0),
+              });
+            }
+          });
+        }
+
         setJobMaterials(materials);
       }
     } catch (error) {

@@ -103,6 +103,8 @@ function PurchaseOrderPage() {
           updated_by: getUser()?.name || "User", // Ideally from user context
           status: status,
           customer_po: String(data.customer_po),
+          currency: data.currency,
+          sales_ref: data.sales_ref,
           po_items: (data.po_items || []).map((item) => ({
             item_code: item.item_code,
             description: item.description,
