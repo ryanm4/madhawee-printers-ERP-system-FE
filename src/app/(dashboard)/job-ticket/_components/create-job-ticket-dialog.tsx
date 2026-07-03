@@ -116,6 +116,9 @@ export function CreateJobTicketDialog({
   } | null>(null);
   const [_existingTickets, _setExistingTickets] = useState<ALL_TICKETS[]>([]);
   const [inventoryList, setInventoryList] = useState<GET_ALL_INVENTORY[]>([]);
+  const [inkItems, setInkItems] = useState<{ value: string; label: string }[]>(
+    []
+  );
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [printData, setPrintData] = useState<JobTicketPrintData | null>(null);
   const dispatch = useDispatch<AppDispatch>();
@@ -144,12 +147,7 @@ export function CreateJobTicketDialog({
     newPlatesQuantity: "",
     newPlatesStatus: "",
     newPlatesRemarks: "",
-    inks: [
-      { ink: "Black", quantity: "", status: "", remarks: "" },
-      { ink: "Cyan", quantity: "", status: "", remarks: "" },
-      { ink: "Magenta", quantity: "", status: "", remarks: "" },
-      { ink: "Yellow", quantity: "", status: "", remarks: "" },
-    ],
+    inks: [{ ink: "", quantity: "", status: "", remarks: "" }],
     paperTypes: [
       {
         paper: "",
@@ -377,6 +375,15 @@ export function CreateJobTicketDialog({
       if (response.status === 200) {
         setInventoryList(response.data);
         dispatch(setReduxInventoryList(response.data));
+
+        // Filter ink items from inventory
+        const fetchedInkItems = response.data
+          .filter((item: GET_ALL_INVENTORY) => item.item_category === "INK")
+          .map((item: GET_ALL_INVENTORY) => ({
+            value: item.item_name,
+            label: item.item_name,
+          }));
+        setInkItems(fetchedInkItems);
       }
     } catch (_error) {
       console.error("Failed to fetch inventory");
@@ -1247,99 +1254,73 @@ export function CreateJobTicketDialog({
                 {inkFields.map((field, index) => (
                   <div key={field.id} className="flex gap-2 mb-2">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
-                      <FormField
-                        control={form.control}
-                        name={`inks.${index}.ink`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className={index !== 0 ? "sr-only" : ""}>
-                              Ink
-                            </FormLabel>
+                      {renderFormField(`inks.${index}.ink`, ({ field }) => (
+                        <FormItem>
+                          <FormLabel className={index !== 0 ? "sr-only" : ""}>
+                            Ink
+                          </FormLabel>
+                          <Combobox
+                            items={inkItems}
+                            value={field.value || ""}
+                            onValueChange={field.onChange}
+                            placeholder="Select or enter Ink"
+                            searchPlaceholder="Search or enter ink..."
+                            allowCreate
+                          />
+                          <FormMessage />
+                        </FormItem>
+                      ))}
+                      {renderFormField(`inks.${index}.quantity`, ({ field }) => (
+                        <FormItem>
+                          <FormLabel className={index !== 0 ? "sr-only" : ""}>
+                            Quantity
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="Enter Quantity"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      ))}
+                      {renderFormField(`inks.${index}.status`, ({ field }) => (
+                        <FormItem>
+                          <FormLabel className={index !== 0 ? "sr-only" : ""}>
+                            Status
+                          </FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
                             <FormControl>
-                              <>
-                                <Input
-                                  list={`ink-options-${index}`}
-                                  placeholder="Enter or select Ink"
-                                  {...field}
-                                  value={field.value || ""}
-                                />
-                                <datalist id={`ink-options-${index}`}>
-                                  <option value="Black" />
-                                  <option value="Cyan" />
-                                  <option value="Magenta" />
-                                  <option value="Yellow" />
-                                </datalist>
-                              </>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select an Status" />
+                              </SelectTrigger>
                             </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`inks.${index}.quantity`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className={index !== 0 ? "sr-only" : ""}>
-                              Quantity
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="Enter Quantity"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`inks.${index}.status`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className={index !== 0 ? "sr-only" : ""}>
-                              Status
-                            </FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Select an Status" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {Object.entries(INK_STATUS).map(
-                                  ([key, value]) => (
-                                    <SelectItem key={key} value={value}>
-                                      {value}
-                                    </SelectItem>
-                                  ),
-                                )}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`inks.${index}.remarks`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className={index !== 0 ? "sr-only" : ""}>
-                              Remarks
-                            </FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter Remarks" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                            <SelectContent>
+                              {Object.entries(INK_STATUS).map(([key, value]) => (
+                                <SelectItem key={key} value={value}>
+                                  {value}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      ))}
+                      {renderFormField(`inks.${index}.remarks`, ({ field }) => (
+                        <FormItem>
+                          <FormLabel className={index !== 0 ? "sr-only" : ""}>
+                            Remarks
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter Remarks" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      ))}
                     </div>
                     <div className="flex space-x-2 items-end pb-2">
                       <Button
