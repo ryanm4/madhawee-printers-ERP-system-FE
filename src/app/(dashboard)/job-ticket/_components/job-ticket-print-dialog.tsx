@@ -150,6 +150,7 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
 <html>
 <head>
   <meta charset="utf-8"/>
+  <base href="${window.location.origin}" />
   <title>Job Ticket - ${data.jobNumber || ""}</title>
   <style>
     @media print {
