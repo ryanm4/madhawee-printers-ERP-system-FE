@@ -53,7 +53,7 @@ function ViewIssueNote() {
       collector_name: "",
       remarks: "",
       job_id: 0,
-      items: [{ item_name: "", quantity: 0 }],
+      items: [{ item_id: 0, quantity: 0 }],
     },
   });
 
@@ -74,7 +74,7 @@ function ViewIssueNote() {
           job_id: data.job_id || 0,
           remarks: data.remarks || "",
           items: data.items.map((item) => ({
-            item_name: item.item_name,
+            item_id: item.item_id,
             quantity: Number(item.quantity)
           }))
         });
@@ -235,10 +235,12 @@ function ViewIssueNote() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
                       <FormField
                         control={form.control}
-                        name={`items.${index}.item_name`}
+                        name={`items.${index}.item_id`}
                         render={({ field }) => {
-                          const invItem = inventoryItems.find(i => i.item_name === field.value);
-                          const displayValue = invItem?.size ? `${field.value} (${invItem.size})` : field.value;
+                          const invItem = inventoryItems.find(i => i.item_id === field.value);
+                          const displayValue = invItem?.size 
+                            ? `${invItem.item_name} (${invItem.size})` 
+                            : invItem?.item_name || "";
                           return (
                             <FormItem>
                               <FormLabel>Item Name</FormLabel>

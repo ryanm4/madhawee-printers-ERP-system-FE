@@ -1,7 +1,7 @@
 export interface IssueNoteItem {
     id?: number;
     issue_note_id?: number;
-    item_name: string;
+    item_id: number;
     quantity: string | number;
     [key: string]: unknown;
 }

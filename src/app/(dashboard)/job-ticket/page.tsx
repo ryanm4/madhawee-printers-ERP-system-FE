@@ -151,7 +151,12 @@ function JobTicketComponent() {
             oldPlatesQuantity: ticket.old_plate_quantity !== undefined && ticket.old_plate_quantity !== null ? String(ticket.old_plate_quantity) : undefined,
             newPlatesQuantity: ticket.new_plate_quantity !== undefined && ticket.new_plate_quantity !== null ? String(ticket.new_plate_quantity) : undefined,
             rawMaterials: allRawMaterials,
-            inks: ticket.inks,
+            inks: ticket.inks?.map((ink: any) => ({
+              ink: ink.ink,
+              quantity: ink.quantity ?? undefined,
+              status: ink.status ?? undefined,
+              remarks: ink.remarks ?? undefined,
+            })),
           };
           console.log(pd);
           handleJobTicketPrint(pd);

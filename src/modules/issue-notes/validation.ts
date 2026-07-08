@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const issueNoteItemSchema = z.object({
-  item_name: z.string().min(1, "Item name is required"),
+  item_id: z.coerce.number().min(1, "Item is required"),
   quantity: z.coerce.number(),
 });
 
