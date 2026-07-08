@@ -53,7 +53,7 @@ function CreateIssueNote() {
   >([]);
 
   const [jobMaterials, setJobMaterials] = useState<
-    { value: string; label: string; quantity: number }[]
+    { value: number; label: string; quantity: number }[]
   >([]);
 
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
@@ -133,7 +133,7 @@ function CreateIssueNote() {
         const jobData = response.data;
 
         const materials: {
-          value: string;
+          value: number;
           label: string;
           quantity: number;
         }[] = [];
@@ -146,7 +146,7 @@ function CreateIssueNote() {
                   `${material.material_type} ${material.material_name} ${material.size}`.trim();
 
                 materials.push({
-                  value: itemLabel,
+                  value: material.item_id,
                   label: itemLabel,
                   quantity: Number(material.quantity || 0),
                 });
@@ -160,7 +160,7 @@ function CreateIssueNote() {
             if (ink.ink) {
               const itemLabel = ink.ink.trim();
               materials.push({
-                value: itemLabel,
+                value: ink.id,
                 label: itemLabel,
                 quantity: Number(ink.quantity || 0),
               });
@@ -190,7 +190,7 @@ function CreateIssueNote() {
     }
   };
 
-  const handleItemChange = (index: number, itemValue: string) => {
+  const handleItemChange = (index: number, itemValue: number) => {
     const selectedMaterial = jobMaterials.find((m) => m.value === itemValue);
 
     if (selectedMaterial) {
@@ -203,7 +203,7 @@ function CreateIssueNote() {
     collector_name: "",
     remarks: "",
     job_id: 0,
-    items: [{ item_name: "", quantity: 0 }],
+    items: [{ item_id: 0, quantity: 0 }],
   };
 
   const form = useForm<IssueNoteFormValues>({
@@ -225,12 +225,7 @@ function CreateIssueNote() {
         ...values,
         date: format(values.date, "yyyy-MM-dd HH:mm:ss"),
         created_by: user?.name || "User",
-        items: values.items.map((item) => ({
-          ...item,
-          item_name: item.item_name.includes("|||")
-            ? item.item_name.split("|||")[0]
-            : item.item_name,
-        })),
+        items: values.items,
       };
 
       const response = await issueNotesApi.create(payload);
@@ -397,7 +392,7 @@ function CreateIssueNote() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => append({ item_name: "", quantity: 0 })}
+                  onClick={() => append({ item_id: 0, quantity: 0 })}
                 >
                   <PlusIcon className="mr-2 h-4 w-4" /> Add Item
                 </Button>
@@ -411,16 +406,16 @@ function CreateIssueNote() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
                       <FormField
                         control={form.control}
-                        name={`items.${index}.item_name`}
+                        name={`items.${index}.item_id`}
                         render={({ field }) => (
                           <FormItem className="flex flex-col">
                             <FormLabel>Item Name</FormLabel>
                             <Combobox
-                              items={jobMaterials}
-                              value={field.value}
+                              items={jobMaterials.map(m => ({ value: m.value.toString(), label: m.label }))}
+                              value={field.value ? field.value.toString() : ""}
                               onValueChange={(val) => {
-                                field.onChange(val);
-                                handleItemChange(index, val);
+                                field.onChange(val ? Number(val) : 0);
+                                handleItemChange(index, val ? Number(val) : 0);
                               }}
                               placeholder={
                                 isFetchingJob ? "Loading..." : "Select Item"

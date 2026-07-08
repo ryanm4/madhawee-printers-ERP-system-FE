@@ -52,7 +52,7 @@ function EditIssueNote() {
     { value: string; label: string }[]
   >([]);
   const [jobMaterials, setJobMaterials] = useState<
-    { value: string; label: string; quantity: number }[]
+    { value: number; label: string; quantity: number }[]
   >([]);
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const [isFetchingJob, setIsFetchingJob] = useState(false);
@@ -65,7 +65,7 @@ function EditIssueNote() {
       collector_name: "",
       remarks: "",
       job_id: 0,
-      items: [{ item_name: "", quantity: 0 }],
+      items: [{ item_id: 0, quantity: 0 }],
     },
   });
 
@@ -92,12 +92,8 @@ function EditIssueNote() {
           job_id: data.job_id || 0,
           remarks: data.remarks || "",
           items: data.items.map((item) => {
-            const invItem = inventory.find(inv => inv.item_name === item.item_name);
-            const enrichedName = invItem?.size 
-              ? `${item.item_name}|||${invItem.size}` 
-              : item.item_name;
             return {
-              item_name: enrichedName,
+              item_id: item.item_id,
               quantity: Number(item.quantity)
             };
           })
@@ -175,7 +171,7 @@ function EditIssueNote() {
         const jobData = response.data;
         
         // Extract materials from paperCoating array
-        const materials: { value: string; label: string; quantity: number }[] = [];
+        const materials: { value: number; label: string; quantity: number }[] = [];
         
         if (jobData.paperCoating && Array.isArray(jobData.paperCoating)) {
           jobData.paperCoating.forEach((pc: any) => {
@@ -183,7 +179,7 @@ function EditIssueNote() {
               pc.materials.forEach((material: any) => {
                 const itemLabel = `${material.material_type} ${material.material_name} ${material.size}`.trim();
                 materials.push({
-                  value: itemLabel,
+                  value: material.item_id,
                   label: itemLabel,
                   quantity: material.quantity || 0,
                 });
@@ -197,7 +193,7 @@ function EditIssueNote() {
             if (ink.ink) {
               const itemLabel = ink.ink.trim();
               materials.push({
-                value: itemLabel,
+                value: ink.id,
                 label: itemLabel,
                 quantity: Number(ink.quantity || 0),
               });
@@ -225,7 +221,7 @@ function EditIssueNote() {
     }
   };
 
-  const handleItemChange = (index: number, itemValue: string) => {
+  const handleItemChange = (index: number, itemValue: number) => {
     const selectedMaterial = jobMaterials.find(m => m.value === itemValue);
     if (selectedMaterial) {
       form.setValue(`items.${index}.quantity`, selectedMaterial.quantity);
@@ -250,10 +246,7 @@ function EditIssueNote() {
         ...values,
         date: format(values.date, "yyyy-MM-dd HH:mm:ss"),
         updated_by: user?.name || "User",
-        items: values.items.map(item => ({
-          ...item,
-          item_name: item.item_name.includes("|||") ? item.item_name.split("|||")[0] : item.item_name
-        }))
+        items: values.items
       };
 
       const response = await issueNotesApi.update(id as string, payload);
@@ -364,7 +357,7 @@ function EditIssueNote() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <h3 className="text-lg font-medium">Items List</h3>
-                <Button type="button" variant="outline" size="sm" onClick={() => append({ item_name: "", quantity: 0 })}>
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ item_id: 0, quantity: 0 })}>
                   <PlusIcon className="mr-2 h-4 w-4" /> Add Item
                 </Button>
               </CardHeader>
@@ -374,16 +367,16 @@ function EditIssueNote() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
                       <FormField
                         control={form.control}
-                        name={`items.${index}.item_name`}
+                        name={`items.${index}.item_id`}
                         render={({ field }) => (
                           <FormItem className="flex flex-col mt-2">
                             <FormLabel>Item Name</FormLabel>
                             <Combobox
-                              items={jobMaterials}
-                              value={field.value}
+                              items={jobMaterials.map(m => ({ value: m.value.toString(), label: m.label }))}
+                              value={field.value ? field.value.toString() : ""}
                               onValueChange={(val) => {
-                                field.onChange(val);
-                                handleItemChange(index, val);
+                                field.onChange(val ? Number(val) : 0);
+                                handleItemChange(index, val ? Number(val) : 0);
                               }}
                               placeholder={isFetchingJob ? "Loading..." : "Select Item"}
                               searchPlaceholder="Search item..."
