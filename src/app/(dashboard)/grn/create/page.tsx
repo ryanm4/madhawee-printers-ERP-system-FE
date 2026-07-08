@@ -133,6 +133,7 @@ function CreateGRN() {
   });
 
   async function onSubmit(values: GRNFormValues) {
+    if (isSubmitting) return;
     try {
       setIsSubmitting(true);
 
