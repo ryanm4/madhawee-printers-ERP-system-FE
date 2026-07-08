@@ -59,7 +59,7 @@ function CreateInventoryManagement() {
     size: "",
     quantity: 0,
     unit_of_measure: "",
-    reorder_level: "",
+    reorder_level: 0,
     status: "",
     remarks: "",
   };

@@ -169,10 +169,12 @@ function IssueNotesManagement() {
               
               // Enrich items with sizes and units
               const enrichedItems = item.items.map(it => {
-                const invItem = inventory.find(inv => inv.item_name === it.item_name);
+                const invItem = inventory.find(inv => inv.item_id === it.item_id);
                 return {
                   ...it,
-                  item_name: invItem?.size ? `${it.item_name} (${invItem.size})` : it.item_name,
+                  item_name: invItem?.size 
+                    ? `${invItem.item_name} (${invItem.size})` 
+                    : invItem?.item_name || "",
                   unit_of_measure: invItem?.unit_of_measure || "-"
                 };
               });
