@@ -188,6 +188,7 @@ function EditGRN() {
   }, [id, form, router]);
 
   async function onSubmit(values: GRNFormValues) {
+    if (isSubmitting) return;
     try {
       setIsSubmitting(true);
       const payload = {
