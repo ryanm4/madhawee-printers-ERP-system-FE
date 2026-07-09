@@ -132,11 +132,23 @@ function mapPaperTypesFromTicket(
     (Array.isArray(record.paperCoatingData) ? record.paperCoatingData : null);
 
   if (Array.isArray(rawList) && rawList.length > 0) {
-    return rawList.map((pt: Record<string, unknown>) => ({
-      paper: String(pt.paper ?? pt.paper_type ?? ""),
-      coating: String(pt.coating ?? ""),
-      rawMaterials: mapRawMaterials(pt.materials ?? pt.raw_materials),
-    }));
+    return rawList.map((pt: Record<string, unknown>) => {
+      let paperValue = String(pt.paper ?? pt.paper_type ?? "");
+      const materials = pt.materials ?? pt.raw_materials;
+      
+      if (Array.isArray(materials) && materials.length > 0) {
+        const mat = materials[0] as Record<string, unknown>;
+        if (mat.material_type && mat.material_name) {
+          paperValue = `${mat.material_type} ${mat.material_name}`;
+        }
+      }
+
+      return {
+        paper: paperValue,
+        coating: String(pt.coating ?? ""),
+        rawMaterials: mapRawMaterials(materials),
+      };
+    });
   }
 
   if (jt.paper_type_id || jt.coating) {
