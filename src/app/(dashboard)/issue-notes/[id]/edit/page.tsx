@@ -48,9 +48,7 @@ function EditIssueNote() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [user, setUser] = useState<{ name: string } | null>(null);
   const [jobs, setJobs] = useState<{ value: string; label: string }[]>([]);
-  const [inventoryItems, setInventoryItems] = useState<
-    { value: string; label: string }[]
-  >([]);
+  const [inventoryItems, setInventoryItems] = useState<GET_ALL_INVENTORY[]>([]);
   const [jobMaterials, setJobMaterials] = useState<
     { value: number; label: string; quantity: number }[]
   >([]);
@@ -79,10 +77,13 @@ function EditIssueNote() {
       setLoading(true);
       const [issueNoteResponse, inventoryResponse] = await Promise.all([
         issueNotesApi.getById(id as string),
-        inventoryApi.getAll()
+        inventoryApi.getAll(),
       ]);
 
-      if (issueNoteResponse.status === 200 && inventoryResponse.status === 200) {
+      if (
+        issueNoteResponse.status === 200 &&
+        inventoryResponse.status === 200
+      ) {
         const data = issueNoteResponse.data;
         const inventory = inventoryResponse.data;
 
@@ -91,12 +92,22 @@ function EditIssueNote() {
           collector_name: data.collector_name,
           job_id: data.job_id || 0,
           remarks: data.remarks || "",
-          items: data.items.map((item) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          items: data.items.map((item: any) => {
+            // Find the item_id by matching the item_name with inventory
+            const invItem = inventory.find(
+              (i: GET_ALL_INVENTORY) => 
+                i.item_name === item.item_name || 
+                `${i.item_sub_category} ${i.item_name}` === item.item_name || 
+                `${i.item_sub_category} ${i.item_name} ${i.size || ""}`.trim() === item.item_name ||
+                `${i.item_name} ${i.size || ""}`.trim() === item.item_name
+            );
+            
             return {
-              item_id: item.item_id,
-              quantity: Number(item.quantity)
+              item_id: invItem ? invItem.item_id : 0,
+              quantity: Number(item.quantity),
             };
-          })
+          }),
         });
       }
     } catch (error) {
@@ -136,23 +147,7 @@ function EditIssueNote() {
       try {
         const response = await inventoryApi.getAll();
         if (response.status === 200) {
-          const uniqueItems = Array.from(
-            new Map(
-              response.data.map((item) => [`${item.item_name}-${item.size || ""}`, item])
-            ).values()
-          );
-
-          setInventoryItems(
-            (uniqueItems as GET_ALL_INVENTORY[]).map((item: GET_ALL_INVENTORY) => {
-              const label = item.size
-                ? `${item.item_name} (${item.size})`
-                : item.item_name;
-              return {
-                value: item.size ? `${item.item_name}|||${item.size}` : item.item_name,
-                label: label,
-              };
-            })
-          );
+          setInventoryItems(response.data as GET_ALL_INVENTORY[]);
         }
       } catch (error) {
         console.error("Failed to fetch inventory items", error);
@@ -169,15 +164,26 @@ function EditIssueNote() {
       const response = await jobTicketsApi.getById(jobId);
       if (response.status === 200 && response.data) {
         const jobData = response.data;
-        
+
         // Extract materials from paperCoating array
-        const materials: { value: number; label: string; quantity: number }[] = [];
-        
-        if (jobData.paperCoating && Array.isArray(jobData.paperCoating)) {
-          jobData.paperCoating.forEach((pc: any) => {
-            if (pc.materials && Array.isArray(pc.materials)) {
-              pc.materials.forEach((material: any) => {
-                const itemLabel = `${material.material_type} ${material.material_name} ${material.size}`.trim();
+        const materials: { value: number; label: string; quantity: number }[] =
+          [];
+
+        const pcList =
+          jobData.paperCoating ||
+          jobData.paper_coating ||
+          jobData.paperCoatingData ||
+          [];
+
+        if (Array.isArray(pcList)) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          pcList.forEach((pc: any) => {
+            const matList = pc.materials || pc.raw_materials;
+            if (Array.isArray(matList)) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              matList.forEach((material: any) => {
+                const itemLabel =
+                  `${material.material_type} ${material.material_name} ${material.size}`.trim();
                 materials.push({
                   value: material.item_id,
                   label: itemLabel,
@@ -189,6 +195,7 @@ function EditIssueNote() {
         }
 
         if (jobData.inks && Array.isArray(jobData.inks)) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           jobData.inks.forEach((ink: any) => {
             if (ink.ink) {
               const itemLabel = ink.ink.trim();
@@ -200,7 +207,7 @@ function EditIssueNote() {
             }
           });
         }
-        
+
         setJobMaterials(materials);
       }
     } catch (error) {
@@ -222,22 +229,22 @@ function EditIssueNote() {
   };
 
   const handleItemChange = (index: number, itemValue: number) => {
-    const selectedMaterial = jobMaterials.find(m => m.value === itemValue);
+    const selectedMaterial = jobMaterials.find((m) => m.value === itemValue);
     if (selectedMaterial) {
       form.setValue(`items.${index}.quantity`, selectedMaterial.quantity);
     }
   };
 
-  // Load job materials when issue note is loaded
+  const watchedJobId = form.watch("job_id");
+
+  // Load job materials when issue note is loaded or job changes
   useEffect(() => {
-    const currentJobId = form.getValues("job_id");
-    if (currentJobId && currentJobId > 0) {
-      setSelectedJobId(currentJobId);
-      fetchJobById(currentJobId);
+    if (watchedJobId && watchedJobId > 0 && watchedJobId !== selectedJobId) {
+      setSelectedJobId(watchedJobId);
+      fetchJobById(watchedJobId);
     }
-  }, [form]);
-
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedJobId]);
 
   async function onSubmit(values: IssueNoteFormValues) {
     try {
@@ -246,7 +253,7 @@ function EditIssueNote() {
         ...values,
         date: format(values.date, "yyyy-MM-dd HH:mm:ss"),
         updated_by: user?.name || "User",
-        items: values.items
+        items: values.items,
       };
 
       const response = await issueNotesApi.update(id as string, payload);
@@ -271,14 +278,11 @@ function EditIssueNote() {
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
           { title: "Issue Material", href: "/issue-notes" },
-
         ]}
       />
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
@@ -290,18 +294,35 @@ function EditIssueNote() {
                   name="date"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Date <span className="text-red-500">*</span></FormLabel>
+                      <FormLabel>
+                        Date <span className="text-red-500">*</span>
+                      </FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
-                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
                         </PopoverContent>
                       </Popover>
                       <FormMessage />
@@ -313,8 +334,12 @@ function EditIssueNote() {
                   name="collector_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Collector Name <span className="text-red-500">*</span></FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
+                      <FormLabel>
+                        Collector Name <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -325,7 +350,9 @@ function EditIssueNote() {
                   name="job_id"
                   render={({ field }) => (
                     <FormItem className="flex flex-col mt-2">
-                      <FormLabel>Related Job <span className="text-red-500">*</span></FormLabel>
+                      <FormLabel>
+                        Related Job <span className="text-red-500">*</span>
+                      </FormLabel>
                       <Combobox
                         items={jobs}
                         value={field.value ? field.value.toString() : ""}
@@ -346,7 +373,9 @@ function EditIssueNote() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Remarks</FormLabel>
-                      <FormControl><Textarea className="resize-none" {...field} /></FormControl>
+                      <FormControl>
+                        <Textarea className="resize-none" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -357,34 +386,60 @@ function EditIssueNote() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <h3 className="text-lg font-medium">Items List</h3>
-                <Button type="button" variant="outline" size="sm" onClick={() => append({ item_id: 0, quantity: 0 })}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => append({ item_id: 0, quantity: 0 })}
+                >
                   <PlusIcon className="mr-2 h-4 w-4" /> Add Item
                 </Button>
               </CardHeader>
               <CardContent className="space-y-4">
                 {fields.map((item, index) => (
-                  <div key={item.id} className="flex gap-4 items-start p-4 border rounded-lg bg-muted/20 relative">
+                  <div
+                    key={item.id}
+                    className="flex gap-4 items-start p-4 border rounded-lg bg-muted/20 relative"
+                  >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
                       <FormField
                         control={form.control}
                         name={`items.${index}.item_id`}
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col mt-2">
-                            <FormLabel>Item Name</FormLabel>
-                            <Combobox
-                              items={jobMaterials.map(m => ({ value: m.value.toString(), label: m.label }))}
-                              value={field.value ? field.value.toString() : ""}
-                              onValueChange={(val) => {
-                                field.onChange(val ? Number(val) : 0);
-                                handleItemChange(index, val ? Number(val) : 0);
-                              }}
-                              placeholder={isFetchingJob ? "Loading..." : "Select Item"}
+                        render={({ field }) => {
+                          const currentItems = jobMaterials.map((m) => ({
+                            value: m.value.toString(),
+                            label: m.label,
+                          }));
+                          // If current item is not in jobMaterials, find it in inventoryItems and add it to the list
+                          if (field.value && !currentItems.find(m => m.value === field.value.toString())) {
+                            const invItem = inventoryItems.find((i: GET_ALL_INVENTORY) => i.item_id === field.value);
+                            if (invItem) {
+                              currentItems.push({
+                                value: invItem.item_id.toString(),
+                                label: invItem.size ? `${invItem.item_name} (${invItem.size})` : invItem.item_name
+                              });
+                            }
+                          }
+                          return (
+                            <FormItem className="flex flex-col mt-2">
+                              <FormLabel>Item Name</FormLabel>
+                              <Combobox
+                                items={currentItems}
+                                value={field.value ? field.value.toString() : ""}
+                                onValueChange={(val) => {
+                                  field.onChange(val ? Number(val) : 0);
+                                  handleItemChange(index, val ? Number(val) : 0);
+                                }}
+                                placeholder={
+                                  isFetchingJob ? "Loading..." : "Select Item"
+                                }
                               searchPlaceholder="Search item..."
                               disabled={isFetchingJob}
                             />
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
                       />
                       <FormField
                         control={form.control}
@@ -392,14 +447,28 @@ function EditIssueNote() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Quantity</FormLabel>
-                            <FormControl><Input type="number" {...field} onChange={(e) => field.onChange(Number(e.target.value))} /></FormControl>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                {...field}
+                                onChange={(e) =>
+                                  field.onChange(Number(e.target.value))
+                                }
+                              />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </div>
                     {fields.length > 1 && (
-                      <Button type="button" variant="ghost" size="icon" className="text-destructive mt-8" onClick={() => remove(index)}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive mt-8"
+                        onClick={() => remove(index)}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     )}

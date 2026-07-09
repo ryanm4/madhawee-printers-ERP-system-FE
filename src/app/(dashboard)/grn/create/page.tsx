@@ -64,7 +64,6 @@ type GRNFormValues = {
 
 function CreateGRN() {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [user, setUser] = useState<{ name: string } | null>(null);
 
   const [inventoryItems, setInventoryItems] = useState<
@@ -132,11 +131,10 @@ function CreateGRN() {
     name: "items",
   });
 
-  async function onSubmit(values: GRNFormValues) {
-    if (isSubmitting) return;
-    try {
-      setIsSubmitting(true);
+  const { isSubmitting } = form.formState;
 
+  async function onSubmit(values: GRNFormValues) {
+    try {
       const payload = {
         ...values,
         received_date: format(values.received_date, "yyyy-MM-dd HH:mm:ss"),
@@ -158,8 +156,6 @@ function CreateGRN() {
     } catch (error) {
       console.error("Failed to create GRN:", error);
       appToast.error(getErrorMessage(error, "Failed to create GRN"));
-    } finally {
-      setIsSubmitting(false);
     }
   }
 

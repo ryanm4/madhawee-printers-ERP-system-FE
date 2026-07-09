@@ -178,20 +178,30 @@ function JobViewTicket() {
                             { ink: "Magenta", quantity: "", status: "", remarks: "" },
                             { ink: "Yellow", quantity: "", status: "", remarks: "" },
                         ],
-                        paperTypes: (((data as Record<string, unknown>).paperCoatingData || data.paperCoating || []) as Array<Record<string, unknown>>).map((p) => ({
-                            paper: String(p.paper || ""),
-                            coating: String(p.coating || ""),
-                            rawMaterials: (Array.isArray(p.materials) ? p.materials : []).map((rm: Record<string, unknown>) => ({
-                                item_id: rm.item_id ? Number(rm.item_id) : undefined,
-                                material_name: String(rm.material_name || ""),
-                                material_type: String(rm.material_type || ""),
-                                size: String(rm.size || ""),
-                                material_description: String(rm.material_description || ""),
-                                quantity: Number(rm.quantity || 0),
-                                status: String(rm.status || ""),
-                                remarks: String(rm.remarks || ""),
-                            })),
-                        })),
+                        paperTypes: (((data as Record<string, unknown>).paperCoatingData || data.paperCoating || []) as Array<Record<string, unknown>>).map((p) => {
+                            let paperValue = String(p.paper || "");
+                            const materials = Array.isArray(p.materials) ? p.materials : [];
+                            if (materials.length > 0) {
+                                const mat = materials[0] as Record<string, unknown>;
+                                if (mat.material_type && mat.material_name) {
+                                    paperValue = `${mat.material_type} ${mat.material_name}`;
+                                }
+                            }
+                            return {
+                                paper: paperValue,
+                                coating: String(p.coating || ""),
+                                rawMaterials: materials.map((rm: Record<string, unknown>) => ({
+                                    item_id: rm.item_id ? Number(rm.item_id) : undefined,
+                                    material_name: String(rm.material_name || ""),
+                                    material_type: String(rm.material_type || ""),
+                                    size: String(rm.size || ""),
+                                    material_description: String(rm.material_description || ""),
+                                    quantity: Number(rm.quantity || 0),
+                                    status: String(rm.status || ""),
+                                    remarks: String(rm.remarks || ""),
+                                })),
+                            };
+                        }),
                     };
 
                     form.reset(formValues);
@@ -485,10 +495,10 @@ function JobViewTicket() {
                                             <h5 className="text-xs font-medium mb-2 mt-2">Raw Materials</h5>
                                             {rawMaterials.map((_rm, rmIndex: number) => (
                                                 <div key={rmIndex} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2">
-                                                    {renderFormField(`paperTypes.${index}.rawMaterials.${rmIndex}.material_name`, ({ field }) => (
+                                                    {renderFormField(`paperTypes.${index}.rawMaterials.${rmIndex}.size`, ({ field }) => (
                                                         <FormItem>
-                                                            <FormLabel className={rmIndex !== 0 ? "sr-only" : ""}>Raw Material</FormLabel>
-                                                            <FormControl><Input placeholder="Material" {...field} value={field.value as string || ""} readOnly /></FormControl>
+                                                            <FormLabel className={rmIndex !== 0 ? "sr-only" : ""}>Raw Material Size</FormLabel>
+                                                            <FormControl><Input placeholder="Size" {...field} value={field.value as string || ""} readOnly /></FormControl>
                                                             <FormMessage />
                                                         </FormItem>
                                                     ))}

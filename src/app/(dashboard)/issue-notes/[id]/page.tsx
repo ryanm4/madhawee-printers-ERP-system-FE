@@ -15,6 +15,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +36,7 @@ import { FullPageLoader } from "@/components/shared/loader";
 import { Combobox } from "@/components/shared/combobox";
 import { ALL_TICKETS } from "@/modules/job-tickets/types";
 import { useCallback } from "react";
+import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
 
 type IssueNoteFormValues = z.infer<typeof issueNoteSchema>;
 
@@ -43,7 +45,13 @@ function ViewIssueNote() {
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState<{ value: string; label: string }[]>([]);
-  const [inventoryItems, setInventoryItems] = useState<any[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<GET_ALL_INVENTORY[]>([]);
+  const [jobMaterials, setJobMaterials] = useState<
+    { value: number; label: string; quantity: number }[]
+  >([]);
+
+  const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+  const [isFetchingJob, setIsFetchingJob] = useState(false);
 
   const form = useForm<IssueNoteFormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -65,19 +73,41 @@ function ViewIssueNote() {
   const fetchIssueNote = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await issueNotesApi.getById(id as string);
-      if (response.status === 200) {
+      const [response, inventoryResponse] = await Promise.all([
+        issueNotesApi.getById(id as string),
+        inventoryApi.getAll(),
+      ]);
+      if (response.status === 200 && inventoryResponse.status === 200) {
+        setInventoryItems(inventoryResponse.data);
         const data = response.data;
         form.reset({
           date: parseISO(data.date),
           collector_name: data.collector_name,
           job_id: data.job_id || 0,
           remarks: data.remarks || "",
-          items: data.items.map((item) => ({
-            item_id: item.item_id,
-            quantity: Number(item.quantity)
-          }))
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          items: data.items.map((item: any) => {
+            const invItem = inventoryResponse.data.find(
+              (i: GET_ALL_INVENTORY) =>
+                i.item_name === item.item_name ||
+                `${i.item_sub_category} ${i.item_name}` === item.item_name ||
+                `${i.item_sub_category} ${i.item_name} ${
+                  i.size || ""
+                }`.trim() === item.item_name ||
+                `${i.item_name} ${i.size || ""}`.trim() === item.item_name
+            );
+
+            return {
+              item_id: invItem ? invItem.item_id : 0,
+              quantity: Number(item.quantity),
+            };
+          }),
         });
+
+        if (data.job_id) {
+          setSelectedJobId(data.job_id);
+          await fetchJobById(data.job_id);
+        }
       }
     } catch (error) {
       toast.error(getErrorMessage(error, "Failed to fetch Issue Note details"));
@@ -86,6 +116,66 @@ function ViewIssueNote() {
       setLoading(false);
     }
   }, [id, form, router]);
+
+  const fetchJobById = async (jobId: number) => {
+    try {
+      setIsFetchingJob(true);
+
+      const response = await jobTicketsApi.getById(jobId);
+
+      if (response.status === 200 && response.data) {
+        const jobData = response.data;
+
+        const materials: {
+          value: number;
+          label: string;
+          quantity: number;
+        }[] = [];
+
+        const pcList =
+          jobData.paperCoating ||
+          jobData.paper_coating ||
+          jobData.paperCoatingData ||
+          [];
+
+        if (Array.isArray(pcList)) {
+          pcList.forEach((pc: any) => {
+            const matList = pc.materials || pc.raw_materials;
+
+            if (Array.isArray(matList)) {
+              matList.forEach((material: any) => {
+                materials.push({
+                  value: material.item_id,
+                  label:
+                    `${material.material_type} ${material.material_name} ${material.size}`.trim(),
+                  quantity: material.quantity || 0,
+                });
+              });
+            }
+          });
+        }
+
+        if (jobData.inks && Array.isArray(jobData.inks)) {
+          jobData.inks.forEach((ink: any) => {
+            if (ink.ink) {
+              materials.push({
+                value: ink.id,
+                label: ink.ink.trim(),
+                quantity: Number(ink.quantity || 0),
+              });
+            }
+          });
+        }
+
+        setJobMaterials(materials);
+      }
+    } catch (error) {
+      console.error("Failed to fetch job details:", error);
+      setJobMaterials([]);
+    } finally {
+      setIsFetchingJob(false);
+    }
+  };
 
   useEffect(() => {
     if (id) {
@@ -96,30 +186,22 @@ function ViewIssueNote() {
       try {
         const response = await jobTicketsApi.getAll();
         if (response.status === 200) {
-          setJobs(response.data.map((job: ALL_TICKETS) => ({
-            value: job.job_id.toString(),
-            label: job.job_number || `Job #${job.job_id}`
-          })));
+          setJobs(
+            response.data.map((job: ALL_TICKETS) => ({
+              value: job.job_id.toString(),
+              label: job.job_number || `Job #${job.job_id}`,
+            }))
+          );
         }
       } catch (err) {
         console.error("Failed to fetch jobs", err);
       }
     };
-    const fetchInventory = async () => {
-      try {
-        const response = await inventoryApi.getAll();
-        if (response.status === 200) {
-          setInventoryItems(response.data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch inventory", error);
-      }
-    };
     fetchJobs();
-    fetchInventory();
   }, [id, fetchIssueNote]);
 
-  const readonlyClass = "disabled:opacity-100 disabled:text-black disabled:cursor-default bg-muted/50";
+  const readonlyClass =
+    "disabled:opacity-100 disabled:text-black disabled:cursor-default bg-muted/50";
 
   if (loading) return <FullPageLoader />;
 
@@ -169,16 +251,28 @@ function ViewIssueNote() {
                           <FormControl>
                             <Button
                               variant={"outline"}
-                              className={cn("w-full pl-3 text-left font-normal", readonlyClass)}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                readonlyClass
+                              )}
                               disabled
                             >
-                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={field.value} initialFocus disabled />
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            initialFocus
+                            disabled
+                          />
                         </PopoverContent>
                       </Popover>
                     </FormItem>
@@ -190,7 +284,9 @@ function ViewIssueNote() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Collector Name</FormLabel>
-                      <FormControl><Input {...field} disabled className={readonlyClass} /></FormControl>
+                      <FormControl>
+                        <Input {...field} disabled className={readonlyClass} />
+                      </FormControl>
                     </FormItem>
                   )}
                 />
@@ -203,7 +299,7 @@ function ViewIssueNote() {
                       <Combobox
                         items={jobs}
                         value={field.value ? field.value.toString() : ""}
-                        onValueChange={() => { }}
+                        onValueChange={() => {}}
                         placeholder="Select Job"
                         searchPlaceholder="Search job..."
                         disabled
@@ -218,7 +314,13 @@ function ViewIssueNote() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Remarks</FormLabel>
-                      <FormControl><Textarea className={cn("resize-none", readonlyClass)} {...field} disabled /></FormControl>
+                      <FormControl>
+                        <Textarea
+                          className={cn("resize-none", readonlyClass)}
+                          {...field}
+                          disabled
+                        />
+                      </FormControl>
                     </FormItem>
                   )}
                 />
@@ -231,20 +333,56 @@ function ViewIssueNote() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {fields.map((item, index) => (
-                  <div key={item.id} className="flex gap-4 items-start p-4 border rounded-lg bg-muted/10 relative">
+                  <div
+                    key={item.id}
+                    className="flex gap-4 items-start p-4 border rounded-lg bg-muted/10 relative"
+                  >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
                       <FormField
                         control={form.control}
                         name={`items.${index}.item_id`}
                         render={({ field }) => {
-                          const invItem = inventoryItems.find(i => i.item_id === field.value);
-                          const displayValue = invItem?.size 
-                            ? `${invItem.item_name} (${invItem.size})` 
-                            : invItem?.item_name || "";
+                          const currentItems = jobMaterials.map((m) => ({
+                            value: m.value.toString(),
+                            label: m.label,
+                          }));
+                          // If current item is not in jobMaterials, find it in inventoryItems and add it to the list
+                          if (
+                            field.value &&
+                            !currentItems.find(
+                              (m) => m.value === field.value.toString()
+                            )
+                          ) {
+                            const invItem = inventoryItems.find(
+                              (i: GET_ALL_INVENTORY) =>
+                                i.item_id === field.value
+                            );
+                            if (invItem) {
+                              currentItems.push({
+                                value: invItem.item_id.toString(),
+                                label: invItem.size
+                                  ? `${invItem.item_name} (${invItem.size})`
+                                  : invItem.item_name,
+                              });
+                            }
+                          }
                           return (
-                            <FormItem>
+                            <FormItem className="flex flex-col mt-2">
                               <FormLabel>Item Name</FormLabel>
-                              <FormControl><Input value={displayValue} disabled className={readonlyClass} /></FormControl>
+                              <Combobox
+                                items={currentItems}
+                                value={
+                                  field.value ? field.value.toString() : ""
+                                }
+                                onValueChange={() => {}}
+                                placeholder={
+                                  isFetchingJob ? "Loading..." : "Select Item"
+                                }
+                                searchPlaceholder="Search item..."
+                                disabled
+                                className={readonlyClass}
+                              />
+                              <FormMessage />
                             </FormItem>
                           );
                         }}
@@ -255,7 +393,14 @@ function ViewIssueNote() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Quantity</FormLabel>
-                            <FormControl><Input type="number" {...field} disabled className={readonlyClass} /></FormControl>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                {...field}
+                                disabled
+                                className={readonlyClass}
+                              />
+                            </FormControl>
                           </FormItem>
                         )}
                       />
