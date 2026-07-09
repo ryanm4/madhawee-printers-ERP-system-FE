@@ -48,9 +48,7 @@ function EditIssueNote() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [user, setUser] = useState<{ name: string } | null>(null);
   const [jobs, setJobs] = useState<{ value: string; label: string }[]>([]);
-  const [inventoryItems, setInventoryItems] = useState<
-    { value: string; label: string }[]
-  >([]);
+  const [inventoryItems, setInventoryItems] = useState<GET_ALL_INVENTORY[]>([]);
   const [jobMaterials, setJobMaterials] = useState<
     { value: number; label: string; quantity: number }[]
   >([]);
@@ -94,6 +92,7 @@ function EditIssueNote() {
           collector_name: data.collector_name,
           job_id: data.job_id || 0,
           remarks: data.remarks || "",
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           items: data.items.map((item: any) => {
             // Find the item_id by matching the item_name with inventory
             const invItem = inventory.find(
@@ -148,15 +147,6 @@ function EditIssueNote() {
       try {
         const response = await inventoryApi.getAll();
         if (response.status === 200) {
-          const uniqueItems = Array.from(
-            new Map(
-              response.data.map((item) => [
-                `${item.item_name}-${item.size || ""}`,
-                item,
-              ])
-            ).values()
-          );
-
           setInventoryItems(response.data as GET_ALL_INVENTORY[]);
         }
       } catch (error) {
@@ -186,9 +176,11 @@ function EditIssueNote() {
           [];
 
         if (Array.isArray(pcList)) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           pcList.forEach((pc: any) => {
             const matList = pc.materials || pc.raw_materials;
             if (Array.isArray(matList)) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               matList.forEach((material: any) => {
                 const itemLabel =
                   `${material.material_type} ${material.material_name} ${material.size}`.trim();
@@ -203,6 +195,7 @@ function EditIssueNote() {
         }
 
         if (jobData.inks && Array.isArray(jobData.inks)) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           jobData.inks.forEach((ink: any) => {
             if (ink.ink) {
               const itemLabel = ink.ink.trim();
@@ -419,7 +412,7 @@ function EditIssueNote() {
                           }));
                           // If current item is not in jobMaterials, find it in inventoryItems and add it to the list
                           if (field.value && !currentItems.find(m => m.value === field.value.toString())) {
-                            const invItem = inventoryItems.find((i: any) => i.item_id === field.value);
+                            const invItem = inventoryItems.find((i: GET_ALL_INVENTORY) => i.item_id === field.value);
                             if (invItem) {
                               currentItems.push({
                                 value: invItem.item_id.toString(),

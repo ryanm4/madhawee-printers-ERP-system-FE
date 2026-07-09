@@ -15,6 +15,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,6 +46,12 @@ function ViewIssueNote() {
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState<{ value: string; label: string }[]>([]);
   const [inventoryItems, setInventoryItems] = useState<GET_ALL_INVENTORY[]>([]);
+  const [jobMaterials, setJobMaterials] = useState<
+    { value: number; label: string; quantity: number }[]
+  >([]);
+
+  const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+  const [isFetchingJob, setIsFetchingJob] = useState(false);
 
   const form = useForm<IssueNoteFormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -78,20 +85,29 @@ function ViewIssueNote() {
           collector_name: data.collector_name,
           job_id: data.job_id || 0,
           remarks: data.remarks || "",
-          items: data.items.map((item: Record<string, unknown>) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          items: data.items.map((item: any) => {
             const invItem = inventoryResponse.data.find(
-              (i: GET_ALL_INVENTORY) => 
-                i.item_name === item.item_name || 
-                `${i.item_sub_category} ${i.item_name}` === item.item_name || 
-                `${i.item_sub_category} ${i.item_name} ${i.size || ""}`.trim() === item.item_name ||
+              (i: GET_ALL_INVENTORY) =>
+                i.item_name === item.item_name ||
+                `${i.item_sub_category} ${i.item_name}` === item.item_name ||
+                `${i.item_sub_category} ${i.item_name} ${
+                  i.size || ""
+                }`.trim() === item.item_name ||
                 `${i.item_name} ${i.size || ""}`.trim() === item.item_name
             );
+
             return {
               item_id: invItem ? invItem.item_id : 0,
               quantity: Number(item.quantity),
             };
           }),
         });
+
+        if (data.job_id) {
+          setSelectedJobId(data.job_id);
+          await fetchJobById(data.job_id);
+        }
       }
     } catch (error) {
       toast.error(getErrorMessage(error, "Failed to fetch Issue Note details"));
@@ -100,6 +116,66 @@ function ViewIssueNote() {
       setLoading(false);
     }
   }, [id, form, router]);
+
+  const fetchJobById = async (jobId: number) => {
+    try {
+      setIsFetchingJob(true);
+
+      const response = await jobTicketsApi.getById(jobId);
+
+      if (response.status === 200 && response.data) {
+        const jobData = response.data;
+
+        const materials: {
+          value: number;
+          label: string;
+          quantity: number;
+        }[] = [];
+
+        const pcList =
+          jobData.paperCoating ||
+          jobData.paper_coating ||
+          jobData.paperCoatingData ||
+          [];
+
+        if (Array.isArray(pcList)) {
+          pcList.forEach((pc: any) => {
+            const matList = pc.materials || pc.raw_materials;
+
+            if (Array.isArray(matList)) {
+              matList.forEach((material: any) => {
+                materials.push({
+                  value: material.item_id,
+                  label:
+                    `${material.material_type} ${material.material_name} ${material.size}`.trim(),
+                  quantity: material.quantity || 0,
+                });
+              });
+            }
+          });
+        }
+
+        if (jobData.inks && Array.isArray(jobData.inks)) {
+          jobData.inks.forEach((ink: any) => {
+            if (ink.ink) {
+              materials.push({
+                value: ink.id,
+                label: ink.ink.trim(),
+                quantity: Number(ink.quantity || 0),
+              });
+            }
+          });
+        }
+
+        setJobMaterials(materials);
+      }
+    } catch (error) {
+      console.error("Failed to fetch job details:", error);
+      setJobMaterials([]);
+    } finally {
+      setIsFetchingJob(false);
+    }
+  };
 
   useEffect(() => {
     if (id) {
@@ -266,22 +342,47 @@ function ViewIssueNote() {
                         control={form.control}
                         name={`items.${index}.item_id`}
                         render={({ field }) => {
-                          const invItem = inventoryItems.find(
-                            (i) => i.item_id === field.value
-                          );
-                          const displayValue = invItem?.size
-                            ? `${invItem.item_name} (${invItem.size})`
-                            : invItem?.item_name || "";
+                          const currentItems = jobMaterials.map((m) => ({
+                            value: m.value.toString(),
+                            label: m.label,
+                          }));
+                          // If current item is not in jobMaterials, find it in inventoryItems and add it to the list
+                          if (
+                            field.value &&
+                            !currentItems.find(
+                              (m) => m.value === field.value.toString()
+                            )
+                          ) {
+                            const invItem = inventoryItems.find(
+                              (i: GET_ALL_INVENTORY) =>
+                                i.item_id === field.value
+                            );
+                            if (invItem) {
+                              currentItems.push({
+                                value: invItem.item_id.toString(),
+                                label: invItem.size
+                                  ? `${invItem.item_name} (${invItem.size})`
+                                  : invItem.item_name,
+                              });
+                            }
+                          }
                           return (
-                            <FormItem>
+                            <FormItem className="flex flex-col mt-2">
                               <FormLabel>Item Name</FormLabel>
-                              <FormControl>
-                                <Input
-                                  value={displayValue}
-                                  disabled
-                                  className={readonlyClass}
-                                />
-                              </FormControl>
+                              <Combobox
+                                items={currentItems}
+                                value={
+                                  field.value ? field.value.toString() : ""
+                                }
+                                onValueChange={() => {}}
+                                placeholder={
+                                  isFetchingJob ? "Loading..." : "Select Item"
+                                }
+                                searchPlaceholder="Search item..."
+                                disabled
+                                className={readonlyClass}
+                              />
+                              <FormMessage />
                             </FormItem>
                           );
                         }}
