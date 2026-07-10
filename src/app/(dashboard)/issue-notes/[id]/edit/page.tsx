@@ -96,13 +96,15 @@ function EditIssueNote() {
           items: data.items.map((item: any) => {
             // Find the item_id by matching the item_name with inventory
             const invItem = inventory.find(
-              (i: GET_ALL_INVENTORY) => 
-                i.item_name === item.item_name || 
-                `${i.item_sub_category} ${i.item_name}` === item.item_name || 
-                `${i.item_sub_category} ${i.item_name} ${i.size || ""}`.trim() === item.item_name ||
+              (i: GET_ALL_INVENTORY) =>
+                i.item_name === item.item_name ||
+                `${i.item_sub_category} ${i.item_name}` === item.item_name ||
+                `${i.item_sub_category} ${i.item_name} ${
+                  i.size || ""
+                }`.trim() === item.item_name ||
                 `${i.item_name} ${i.size || ""}`.trim() === item.item_name
             );
-            
+
             return {
               item_id: invItem ? invItem.item_id : 0,
               quantity: Number(item.quantity),
@@ -200,7 +202,7 @@ function EditIssueNote() {
             if (ink.ink) {
               const itemLabel = ink.ink.trim();
               materials.push({
-                value: ink.id,
+                value: ink.item_id,
                 label: itemLabel,
                 quantity: Number(ink.quantity || 0),
               });
@@ -274,7 +276,7 @@ function EditIssueNote() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       <PageTitleWithBreadcrumb
-        title="Edit Issue Material"
+        title="Edit Material Issue Note"
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
           { title: "Issue Material", href: "/issue-notes" },
@@ -411,12 +413,22 @@ function EditIssueNote() {
                             label: m.label,
                           }));
                           // If current item is not in jobMaterials, find it in inventoryItems and add it to the list
-                          if (field.value && !currentItems.find(m => m.value === field.value.toString())) {
-                            const invItem = inventoryItems.find((i: GET_ALL_INVENTORY) => i.item_id === field.value);
+                          if (
+                            field.value &&
+                            !currentItems.find(
+                              (m) => m.value === field.value.toString()
+                            )
+                          ) {
+                            const invItem = inventoryItems.find(
+                              (i: GET_ALL_INVENTORY) =>
+                                i.item_id === field.value
+                            );
                             if (invItem) {
                               currentItems.push({
                                 value: invItem.item_id.toString(),
-                                label: invItem.size ? `${invItem.item_name} (${invItem.size})` : invItem.item_name
+                                label: invItem.size
+                                  ? `${invItem.item_name} (${invItem.size})`
+                                  : invItem.item_name,
                               });
                             }
                           }
@@ -425,17 +437,22 @@ function EditIssueNote() {
                               <FormLabel>Item Name</FormLabel>
                               <Combobox
                                 items={currentItems}
-                                value={field.value ? field.value.toString() : ""}
+                                value={
+                                  field.value ? field.value.toString() : ""
+                                }
                                 onValueChange={(val) => {
                                   field.onChange(val ? Number(val) : 0);
-                                  handleItemChange(index, val ? Number(val) : 0);
+                                  handleItemChange(
+                                    index,
+                                    val ? Number(val) : 0
+                                  );
                                 }}
                                 placeholder={
                                   isFetchingJob ? "Loading..." : "Select Item"
                                 }
-                              searchPlaceholder="Search item..."
-                              disabled={isFetchingJob}
-                            />
+                                searchPlaceholder="Search item..."
+                                disabled={isFetchingJob}
+                              />
                               <FormMessage />
                             </FormItem>
                           );
@@ -499,7 +516,7 @@ function EditIssueNote() {
                   Updating...
                 </>
               ) : (
-                "Update"
+                "Update Material Issue Note"
               )}
             </Button>
           </div>

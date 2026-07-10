@@ -259,7 +259,7 @@ function CreateIssueNote() {
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       {(isLoading || isSubmitting) && <FullPageLoader />}
       <PageTitleWithBreadcrumb
-        title="Create Issue Material"
+        title="Material Issue Note"
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
           { title: "Issue Material", href: "/issue-notes" },
@@ -489,7 +489,7 @@ function CreateIssueNote() {
                   Creating...
                 </>
               ) : (
-                "Create"
+                "Create Material Issue Note"
               )}
             </Button>
           </div>
