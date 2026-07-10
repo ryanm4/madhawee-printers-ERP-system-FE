@@ -160,7 +160,7 @@ function CreateIssueNote() {
             if (ink.ink) {
               const itemLabel = ink.ink.trim();
               materials.push({
-                value: ink.id,
+                value: ink.item_id,
                 label: itemLabel,
                 quantity: Number(ink.quantity || 0),
               });
@@ -411,7 +411,10 @@ function CreateIssueNote() {
                           <FormItem className="flex flex-col">
                             <FormLabel>Item Name</FormLabel>
                             <Combobox
-                              items={jobMaterials.map(m => ({ value: m.value.toString(), label: m.label }))}
+                              items={jobMaterials.map((m) => ({
+                                value: m.value.toString(),
+                                label: m.label,
+                              }))}
                               value={field.value ? field.value.toString() : ""}
                               onValueChange={(val) => {
                                 field.onChange(val ? Number(val) : 0);
