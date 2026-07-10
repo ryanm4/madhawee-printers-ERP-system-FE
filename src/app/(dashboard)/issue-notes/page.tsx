@@ -27,11 +27,13 @@ function IssueNotesManagement() {
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState("");
 
-  const [jobs, setJobs] = useState<{
-    id: number;
-    name: string;
-    job_number: number | string;
-  }[]>([]);
+  const [jobs, setJobs] = useState<
+    {
+      id: number;
+      name: string;
+      job_number: number | string;
+    }[]
+  >([]);
   const [inventory, setInventory] = useState<any[]>([]);
 
   useEffect(() => {
@@ -61,14 +63,12 @@ function IssueNotesManagement() {
             name: job.job_name,
             job_number: job.job_number ?? "-", // or 0 depending on your UI
           }))
-        )
+        );
       }
     } catch (error) {
       console.error("Failed to fetch jobs", error);
     }
   };
-
-  console.log(jobs)
   const fetchData = async () => {
     try {
       setIsLoading(true);
@@ -89,22 +89,25 @@ function IssueNotesManagement() {
   const [selectedId, setSelectedId] = useState<string | number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handlers = useMemo(() => ({
-    onView: (id: number | string) => {
-      router.push(`/issue-notes/${id}`);
-    },
-    onEdit: (id: number | string) => {
-      router.push(`/issue-notes/${id}/edit`);
-    },
-    onDelete: (id: number | string) => {
-      setSelectedId(id);
-      setIsDeleteDialogOpen(true);
-    },
-    onDownload: (material: IssueNote) => {
-      generateIssueNotePdf(material);
-      toast.success("Downloading Issue Material PDF...");
-    },
-  }), [router]);
+  const handlers = useMemo(
+    () => ({
+      onView: (id: number | string) => {
+        router.push(`/issue-notes/${id}`);
+      },
+      onEdit: (id: number | string) => {
+        router.push(`/issue-notes/${id}/edit`);
+      },
+      onDelete: (id: number | string) => {
+        setSelectedId(id);
+        setIsDeleteDialogOpen(true);
+      },
+      onDownload: (material: IssueNote) => {
+        generateIssueNotePdf(material);
+        toast.success("Downloading Issue Material PDF...");
+      },
+    }),
+    [router]
+  );
 
   const columns = useMemo(() => issueNotesColumns(handlers), [handlers]);
 
@@ -131,9 +134,7 @@ function IssueNotesManagement() {
       <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
         <PageTitleWithBreadcrumb
           title="Issue Material"
-          breadcrumbs={[
-            { title: "Dashboard", href: "/dashboard" },
-          ]}
+          breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
         />
         <div className="flex flex-row justify-end gap-[24px]">
           <div className="relative w-[320px]">
@@ -164,27 +165,32 @@ function IssueNotesManagement() {
         ) : (
           <DataTable
             columns={columns}
-            data={data.map(item => {
-              const job = jobs.find(j => String(j.id) === String(item.job_id))
-              
+            data={data.map((item) => {
+              const job = jobs.find(
+                (j) => String(j.id) === String(item.job_id)
+              );
+
               // Enrich items with sizes and units
-              const enrichedItems = item.items.map(it => {
-                const invItem = inventory.find(inv => inv.item_id === it.item_id);
+              const enrichedItems = item.items.map((it) => {
+                const invItem = inventory.find(
+                  (inv) => inv.item_id === it.item_id
+                );
                 return {
                   ...it,
-                  item_name: invItem?.size 
-                    ? `${invItem.item_name} (${invItem.size})` 
+                  item_name: invItem?.size
+                    ? `${invItem.item_name} (${invItem.size})`
                     : invItem?.item_name || "",
-                  unit_of_measure: invItem?.unit_of_measure || "-"
+                  unit_of_measure: invItem?.unit_of_measure || "-",
                 };
               });
 
               return {
                 ...item,
                 items: enrichedItems,
-                job_name: job?.name || (item.job_id ? `Job #${item.job_id}` : "-"),
-                job_number: job?.job_number || "-"
-              }
+                job_name:
+                  job?.name || (item.job_id ? `Job #${item.job_id}` : "-"),
+                job_number: job?.job_number || "-",
+              };
             })}
             searchValue={search}
           />
