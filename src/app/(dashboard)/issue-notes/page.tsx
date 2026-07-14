@@ -101,12 +101,48 @@ function IssueNotesManagement() {
         setSelectedId(id);
         setIsDeleteDialogOpen(true);
       },
-      onDownload: (material: IssueNote) => {
-        generateIssueNotePdf(material);
-        toast.success("Downloading Issue Material PDF...");
+      onDownload: async (material: IssueNote) => {
+        try {
+          // Fetch full issue note details including items
+          const response = await issueNotesApi.getById(material.id);
+          if (response.status === 200) {
+            const fullMaterial = response.data;
+            const job = jobs.find(
+              (j) => String(j.id) === String(fullMaterial.job_id)
+            );
+
+            // Enrich items with unit_of_measure from inventory
+            const enrichedItems = fullMaterial.items.map((it: any) => {
+              const invItem = inventory.find(
+                (inv) => inv.item_name === it.item_name ||
+                         `${inv.item_name} (${inv.size})` === it.item_name ||
+                         inv.item_name === (it.item_name as string)?.split(' (')[0]
+              );
+              return {
+                ...it,
+                item_name: it.item_name,
+                unit_of_measure: invItem?.unit_of_measure || "-",
+              };
+            });
+
+            const enrichedMaterial = {
+              ...fullMaterial,
+              items: enrichedItems,
+              job_name:
+                job?.name || (fullMaterial.job_id ? `Job #${fullMaterial.job_id}` : "-"),
+              job_number: job?.job_number || "-",
+            };
+
+            generateIssueNotePdf(enrichedMaterial);
+            toast.success("Downloading Issue Material PDF...");
+          }
+        } catch (error) {
+          toast.error("Failed to download PDF");
+          console.error("Download error:", error);
+        }
       },
     }),
-    [router]
+    [router, jobs, inventory]
   );
 
   const columns = useMemo(() => issueNotesColumns(handlers), [handlers]);

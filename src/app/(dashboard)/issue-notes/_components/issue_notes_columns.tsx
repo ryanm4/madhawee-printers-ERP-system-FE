@@ -75,6 +75,7 @@ export const issueNotesColumns = (
     enableHiding: false,
     cell: ({ row }) => {
       const note = row.original;
+      console.log("Row data:", note); // Debugging line to check the row data
 
       return (
         <DropdownMenu>

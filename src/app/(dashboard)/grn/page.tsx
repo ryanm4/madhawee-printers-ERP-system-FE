@@ -35,7 +35,13 @@ function GRNManagement() {
       const response = await grnApi.getAll();
 
       if (response.status === 200) {
-        setData(response.data);
+        const sortedData = response.data.sort(
+          (a, b) =>
+            new Date(b.created_on || 0).getTime() -
+            new Date(a.created_on || 0).getTime()
+        );
+
+        setData(sortedData);
       }
     } catch (error) {
       console.error("Failed to fetch GRN data", error);
@@ -46,25 +52,30 @@ function GRNManagement() {
   };
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedGrnId, setSelectedGrnId] = useState<string | number | null>(null);
+  const [selectedGrnId, setSelectedGrnId] = useState<string | number | null>(
+    null
+  );
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handlers = useMemo(() => ({
-    onView: (id: number | string) => {
-      router.push(`/grn/${id}`);
-    },
-    onEdit: (id: number | string) => {
-      router.push(`/grn/${id}/edit`);
-    },
-    onDelete: (id: number | string) => {
-      setSelectedGrnId(id);
-      setIsDeleteDialogOpen(true);
-    },
-    onPrint: (grn: GRN) => {
-      handleGRNPrint(grn);
-      toast.success("Opening GRN Print View...");
-    },
-  }), [router]);
+  const handlers = useMemo(
+    () => ({
+      onView: (id: number | string) => {
+        router.push(`/grn/${id}`);
+      },
+      onEdit: (id: number | string) => {
+        router.push(`/grn/${id}/edit`);
+      },
+      onDelete: (id: number | string) => {
+        setSelectedGrnId(id);
+        setIsDeleteDialogOpen(true);
+      },
+      onPrint: (grn: GRN) => {
+        handleGRNPrint(grn);
+        toast.success("Opening GRN Print View...");
+      },
+    }),
+    [router]
+  );
 
   const columns = useMemo(() => grnColumns(handlers), [handlers]);
 
@@ -91,10 +102,7 @@ function GRNManagement() {
       <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
         <PageTitleWithBreadcrumb
           title="Goods Received Notes (GRN)"
-          breadcrumbs={[
-            { title: "Dashboard", href: "/dashboard" },
-
-          ]}
+          breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
         />
         <div className="flex flex-row justify-end gap-[24px]">
           <div className="relative w-[320px]">
@@ -123,11 +131,7 @@ function GRNManagement() {
             createPath="/grn/create"
           />
         ) : (
-          <DataTable
-            columns={columns}
-            data={data}
-            searchValue={search}
-          />
+          <DataTable columns={columns} data={data} searchValue={search} />
         )}
       </div>
 

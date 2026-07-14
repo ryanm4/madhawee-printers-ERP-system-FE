@@ -34,7 +34,7 @@ import {
 import { CalendarIcon, Loader2, PlusIcon, Trash2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { grnApi } from "@/modules/grn/api";
 import { appToast } from "@/lib/toast-utils";
 import { getUser } from "@/lib/auth";
@@ -131,9 +131,12 @@ function CreateGRN() {
     name: "items",
   });
 
-  const { isSubmitting } = form.formState;
-
+  const isSubmittingRef = useRef(false);
+  const { isSubmitting } = form.formState; 
   async function onSubmit(values: GRNFormValues) {
+    if (isSubmittingRef.current) return; // blocks the second click immediately
+    isSubmittingRef.current = true;
+
     try {
       const payload = {
         ...values,
@@ -156,6 +159,8 @@ function CreateGRN() {
     } catch (error) {
       console.error("Failed to create GRN:", error);
       appToast.error(getErrorMessage(error, "Failed to create GRN"));
+    } finally {
+      isSubmittingRef.current = false;
     }
   }
 
