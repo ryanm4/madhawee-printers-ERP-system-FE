@@ -73,6 +73,7 @@ function EditGRN() {
   const [inventoryItems, setInventoryItems] = useState<
     { value: string; label: string }[]
   >([]);
+  const [inventoryData, setInventoryData] = useState<GET_ALL_INVENTORY[]>([]);
 
   const form = useForm<GRNFormValues>({
     resolver: zodResolver(grnSchema) as any,
@@ -117,15 +118,14 @@ function EditGRN() {
             ).values()
           );
 
+          setInventoryData(response.data);
           setInventoryItems(
             uniqueItems.map((item: GET_ALL_INVENTORY) => {
               const label = item.size
-                ? ` ${item.item_sub_category} ${item.item_name} (${item.size})`
+                ? `${item.item_sub_category} ${item.item_name} (${item.size})`
                 : item.item_name;
               return {
-                value: item.size
-                  ? `${item.item_sub_category}|||${item.item_name}|||${item.size}`
-                  : item.item_name,
+                value: item.item_id.toString(),
                 label: label,
               };
             })
@@ -167,11 +167,8 @@ function EditGRN() {
             const invItem = inventory.find(
               (inv) => inv.item_name === item.item_name
             );
-            const enrichedName = invItem?.size
-              ? `${item.item_name}|||${invItem.size}`
-              : item.item_name;
             return {
-              item_name: enrichedName,
+              item_name: invItem?.item_id.toString() || item.item_name,
               quantity: Number(item.quantity),
               rate: Number(item.rate),
               amount: Number(item.amount),
@@ -195,12 +192,18 @@ function EditGRN() {
         ...values,
         received_date: format(values.received_date, "yyyy-MM-dd HH:mm:ss"),
         updated_by: user?.name || "User",
-        items: values.items.map((item) => ({
-          ...item,
-          item_name: item.item_name.includes("|||")
-            ? item.item_name.split("|||")[0]
-            : item.item_name,
-        })),
+        items: values.items.map((item) => {
+          // Find the inventory item by item_id to get the item_name
+          const invItem = inventoryData.find(
+            (inv: GET_ALL_INVENTORY) => inv.item_id.toString() === item.item_name
+          );
+          return {
+            quantity: item.quantity,
+            rate: item.rate,
+            amount: item.amount,
+            item_name: invItem?.item_name || item.item_name,
+          };
+        }),
       };
 
       const response = await grnApi.update(id as string, payload);

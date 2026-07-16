@@ -111,7 +111,7 @@ function IssueNotesManagement() {
               (j) => String(j.id) === String(fullMaterial.job_id)
             );
 
-            // Enrich items with unit_of_measure from inventory
+            // Enrich items with unit_of_measure and size from inventory
             const enrichedItems = fullMaterial.items.map((it: any) => {
               const invItem = inventory.find(
                 (inv) => inv.item_name === it.item_name ||
@@ -121,6 +121,7 @@ function IssueNotesManagement() {
               return {
                 ...it,
                 item_name: it.item_name,
+                item_size: invItem?.size || "-",
                 unit_of_measure: invItem?.unit_of_measure || "-",
               };
             });

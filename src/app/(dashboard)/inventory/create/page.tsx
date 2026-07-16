@@ -272,7 +272,12 @@ function CreateInventoryManagement() {
                       Re-order Level <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter Re-order Level" {...field} />
+                      <Input
+                        type="number"
+                        placeholder="Enter Re-order Level"
+                        value={field.value}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -8,7 +8,7 @@ export const inventoryManagementScheme = z.object({
   height: z.string().optional(),
   quantity: z.number().min(0, "Item Quantity Required"),
   unit_of_measure: z.string().min(1, "Item UOM Required"),
-  reorder_level: z.number().min(1, "Item Recoder Level Required"),
+  reorder_level: z.number().min(0, "Item Reorder Level must be 0 or greater"),
   status: z.string().min(1, "Item Status Required"),
   remarks: z.string().optional(),
   created_by: z.string().optional(),

@@ -69,6 +69,7 @@ function CreateGRN() {
   const [inventoryItems, setInventoryItems] = useState<
     { value: string; label: string }[]
   >([]);
+  const [inventoryData, setInventoryData] = useState<GET_ALL_INVENTORY[]>([]);
 
   useEffect(() => {
     const userData = getUser();
@@ -89,12 +90,15 @@ function CreateGRN() {
             ).values()
           );
 
+          setInventoryData(response.data);
           setInventoryItems(
             uniqueItems.map((item: GET_ALL_INVENTORY) => {
-              const label = `${item.item_sub_category} ${item.item_name} (${item.size})`;
+              const label = item.size
+                ? `${item.item_sub_category} ${item.item_name} (${item.size})`
+                : item.item_name;
 
               return {
-                value: `${item.item_sub_category}|||${item.item_name}|||${item.size}`,
+                value: item.item_id.toString(),
                 label: label,
               };
             })
@@ -132,7 +136,7 @@ function CreateGRN() {
   });
 
   const isSubmittingRef = useRef(false);
-  const { isSubmitting } = form.formState; 
+  const { isSubmitting } = form.formState;
   async function onSubmit(values: GRNFormValues) {
     if (isSubmittingRef.current) return; // blocks the second click immediately
     isSubmittingRef.current = true;
@@ -142,12 +146,19 @@ function CreateGRN() {
         ...values,
         received_date: format(values.received_date, "yyyy-MM-dd HH:mm:ss"),
         created_by: user?.name || "User",
-        items: values.items.map((item) => ({
-          ...item,
-          item_name: item.item_name.includes("|||")
-            ? item.item_name.split("|||")[0]
-            : item.item_name,
-        })),
+        items: values.items.map((item) => {
+          // Find the inventory item by item_id to get the item_name
+          const invItem = inventoryData.find(
+            (inv: GET_ALL_INVENTORY) =>
+              inv.item_id.toString() === item.item_name
+          );
+          return {
+            quantity: item.quantity,
+            rate: item.rate,
+            amount: item.amount,
+            item_name: invItem?.item_name || item.item_name,
+          };
+        }),
       };
 
       const response = await grnApi.create(payload);

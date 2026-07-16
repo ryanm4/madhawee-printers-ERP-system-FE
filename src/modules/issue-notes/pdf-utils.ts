@@ -143,13 +143,14 @@ export const generateIssueNotePdf = async (issueNote: IssueNote) => {
   const tableData = issueNote.items.map((item, index) => [
     index + 1,
     item.item_name,
+    (item as any).item_size || "-",
     (item as any).unit_of_measure || "-",
     Number(item.quantity).toLocaleString(),
   ]);
 
   autoTable(doc, {
     startY: currY + lineHeight * 5,
-    head: [["NO", "Item", "Unit", "Quantity"]],
+    head: [["NO", "Item", "Size", "Unit", "Quantity"]],
     body: tableData,
     theme: "striped",
     headStyles: {
@@ -159,9 +160,10 @@ export const generateIssueNotePdf = async (issueNote: IssueNote) => {
     },
     columnStyles: {
       0: { cellWidth: 10, halign: "center" },
-      1: { cellWidth: 160, halign: "left" },
-      2: { cellWidth: 30, halign: "left" },
-      3: { halign: "left" },
+      1: { cellWidth: 120, halign: "left" },
+      2: { cellWidth: 40, halign: "left" },
+      3: { cellWidth: 30, halign: "left" },
+      4: { halign: "left" },
     },
     margin: { left: 14, right: 14 },
   });
