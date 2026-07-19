@@ -85,7 +85,10 @@ const ROLE_PERMISSIONS: Record<USER_ROLES, RegExp[]> = {
     ROUTE_PATTERNS.purchaseOrders,
     ROUTE_PATTERNS.jobTickets,
     ROUTE_PATTERNS.dispatch,
+    ROUTE_PATTERNS.grn,
     ROUTE_PATTERNS.inventory,
+    ROUTE_PATTERNS.issueNotes,
+    ROUTE_PATTERNS.suppliers,
     ROUTE_PATTERNS.reports,
     ROUTE_PATTERNS.users,
   ],
@@ -175,56 +178,56 @@ export function getClientPermissions(): ClientPermissions {
       permissions.canViewAll = true;
       break;
     case USER_ROLES.DIRECTOR_GM:
-      permissions.canModify = true;
+      permissions.canModify = false; // No edit — only Super Admin can edit
       permissions.canDelete = false;
       permissions.canExportList = true;
       permissions.canApprove = true;
       permissions.canViewAll = true;
       break;
     case USER_ROLES.MARKETING_EXECUTIVE_MANAGER:
-      permissions.canModify = true;
+      permissions.canModify = false;
       permissions.canDelete = false;
       permissions.canExportList = true;
       permissions.canApprove = false;
       permissions.canViewAll = false;
       break;
     case USER_ROLES.ADMIN_OFFICER:
-      permissions.canModify = true;
+      permissions.canModify = false;
       permissions.canDelete = false;
       permissions.canExportList = true;
       permissions.canApprove = false;
       permissions.canViewAll = false;
       break;
     case USER_ROLES.PRODUCTION_MANAGER:
-      permissions.canModify = true;
+      permissions.canModify = false;
       permissions.canDelete = false;
       permissions.canExportList = true;
       permissions.canApprove = false;
       permissions.canViewAll = true;
       break;
     case USER_ROLES.PRODUCTION_EXECUTIVE:
-      permissions.canModify = true;
+      permissions.canModify = false;
       permissions.canDelete = false;
       permissions.canExportList = false;
       permissions.canApprove = false;
       permissions.canViewAll = false;
       break;
     case USER_ROLES.PROCUREMENT_MANAGER:
-      permissions.canModify = true;
+      permissions.canModify = false;
       permissions.canDelete = false;
       permissions.canExportList = true;
       permissions.canApprove = false;
       permissions.canViewAll = false;
       break;
     case USER_ROLES.STORE_KEEPER:
-      permissions.canModify = true;
+      permissions.canModify = false;
       permissions.canDelete = false;
       permissions.canExportList = true;
       permissions.canApprove = false;
       permissions.canViewAll = false;
       break;
     case USER_ROLES.DISPATCH_DELIVERY_OFFICER:
-      permissions.canModify = true;
+      permissions.canModify = false;
       permissions.canDelete = false;
       permissions.canExportList = false;
       permissions.canApprove = false;
