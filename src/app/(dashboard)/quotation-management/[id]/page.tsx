@@ -21,6 +21,7 @@ import { generateQuotationPDF } from "@/components/pdf-generator";
 import { Loader2, Printer, CheckCircle, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getUser } from "@/lib/auth";
+import { getClientPermissions } from "@/lib/permissions";
 
 // ── Read-only field wrapper ──────────────────────────────────────────────────
 function ReadOnlyField({
@@ -84,6 +85,8 @@ function ViewQuotation() {
     const [loading, setLoading] = useState(false);
     const [isAccepting, setIsAccepting] = useState(false);
     const [isPrinting, setIsPrinting] = useState(false);
+
+    const { canApprove } = getClientPermissions();
 
     // ── Fetch quotation ───────────────────────────────────────────────────────
     useEffect(() => {
@@ -457,8 +460,8 @@ function ViewQuotation() {
                         </Button>
                     )}
 
-                    {/* Accept button — only shown when not already accepted */}
-                    {!isAccepted && (
+                    {/* Accept button — only shown when not already accepted AND user has canApprove permission */}
+                    {!isAccepted && canApprove && (
                         <Button
                             className="bg-green-600 hover:bg-green-700 text-white"
                             onClick={handleAccept}
