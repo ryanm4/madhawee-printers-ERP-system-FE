@@ -35,7 +35,30 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ data, filename }) =>
         document.body.removeChild(link);
     };
 
-    const exportToPDF = () => {
+    const getLogoDataUrl = (): Promise<string> => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = "/images/madhawee_logo.svg";
+            img.crossOrigin = "anonymous";
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext("2d");
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL("image/png"));
+                } else {
+                    resolve("");
+                }
+            };
+            img.onerror = () => {
+                resolve("");
+            };
+        });
+    };
+
+    const exportToPDF = async () => {
         if (!data || data.length === 0) return;
 
         try {
@@ -48,20 +71,30 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ data, filename }) =>
             // Map data to rows
             const rows = data.map(item => keys.map(key => String(item[key] ?? "")));
 
+            // Add logo if available
+            try {
+                const logoDataUrl = await getLogoDataUrl();
+                if (logoDataUrl) {
+                    doc.addImage(logoDataUrl, "PNG", 14, 10, 36, 12);
+                }
+            } catch (err) {
+                console.error("Failed to load logo in PDF", err);
+            }
+
             // Add title
-            doc.setFontSize(18);
-            doc.text(filename.replace(/-/g, ' ').toUpperCase(), 14, 22);
-            doc.setFontSize(11);
+            doc.setFontSize(14);
+            doc.text(filename.replace(/-/g, ' ').toUpperCase(), 14, 28);
+            doc.setFontSize(10);
             doc.setTextColor(100);
 
             autoTable(doc, {
                 head: [headers],
                 body: rows,
-                startY: 30,
+                startY: 34,
                 styles: { fontSize: 8, cellPadding: 2, overflow: "linebreak" },
                 headStyles: { fillColor: [34, 63, 122], textColor: [255, 255, 255], minCellWidth: 15 },
                 alternateRowStyles: { fillColor: [234, 236, 242] },
-                margin: { top: 30, left: 10, right: 10 },
+                margin: { top: 34, left: 10, right: 10 },
                 horizontalPageBreak: true,
                 horizontalPageBreakRepeat: 0,
             });

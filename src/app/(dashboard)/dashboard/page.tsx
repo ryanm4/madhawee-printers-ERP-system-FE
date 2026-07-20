@@ -35,7 +35,7 @@ import { Card } from "@/components/ui/card";
 
 import { ChartRadialShape } from "@/components/chart-radial-shape";
 import { AdditionalKPIs } from "@/components/additional-kpis";
-import { InsightsCard } from "@/components/insights-card";
+import { RevenueTrendChart } from "@/components/revenue-trend-chart";
 
 function DashboardPage({
   user: initialUser,
@@ -59,6 +59,7 @@ function DashboardPage({
   const [kpiData, setKpiData] = useState<KPIItem[]>([]);
   const [insights, setInsights] = useState<string[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [chartCurrency, setChartCurrency] = useState<"LKR" | "USD">("LKR");
 
   useEffect(() => {
     const userData = getUser();
@@ -437,26 +438,43 @@ function DashboardPage({
                 analytics?.jobStats?.production_efficiency || 0,
               )}
             />
-            <div className="lg:col-span-1 flex flex-col h-full">
-              {insights && insights.length > 0 ? (
-                <InsightsCard
-                  insights={insights}
-                  className="h-full border-none shadow-sm rounded-[2rem] p-8"
-                />
-              ) : (
-                <Card className="h-full border-none shadow-sm rounded-[2rem] p-8 bg-white flex flex-col justify-center items-center text-center">
-                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                    <CheckCircle2 className="w-8 h-8 text-green-500" />
-                  </div>
-                  <h4 className="font-bold text-gray-900 leading-tight">
-                    System Healthy
-                  </h4>
-                  <p className="text-sm text-gray-400">
-                    All modules are operating normally.
-                  </p>
-                </Card>
-              )}
-            </div>
+            <Card className="lg:col-span-1 border-none shadow-sm rounded-[2rem] p-8 bg-white flex flex-col h-full justify-between">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Revenue Trend</h3>
+                  <p className="text-xs text-gray-400">Monthly revenue breakdown</p>
+                </div>
+                <div className="flex gap-1 bg-gray-100 p-0.5 rounded-xl text-xs">
+                  <button
+                    onClick={() => setChartCurrency("LKR")}
+                    className={cn(
+                      "px-2.5 py-1 rounded-lg font-semibold transition-all",
+                      chartCurrency === "LKR" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                    )}
+                  >
+                    LKR
+                  </button>
+                  <button
+                    onClick={() => setChartCurrency("USD")}
+                    className={cn(
+                      "px-2.5 py-1 rounded-lg font-semibold transition-all",
+                      chartCurrency === "USD" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                    )}
+                  >
+                    USD
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 min-h-[200px] flex items-center justify-center">
+                {analytics?.revenueTrend && analytics.revenueTrend.length > 0 ? (
+                  <RevenueTrendChart
+                    data={analytics.revenueTrend.filter((item: any) => item.currency === chartCurrency)}
+                  />
+                ) : (
+                  <div className="text-sm text-gray-400">No revenue data available</div>
+                )}
+              </div>
+            </Card>
           </div>
 
           {/* Bottom Row: Alerts and Stock Summary */}
