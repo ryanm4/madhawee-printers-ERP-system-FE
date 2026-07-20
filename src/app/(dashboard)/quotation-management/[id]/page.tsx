@@ -6,8 +6,6 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useParams, useRouter } from "next/navigation";
 import { getCurrencySymbol, Currency } from "@/lib/currencyUtils";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
 import { CustomerApi } from "@/modules/customer/api";
@@ -19,11 +17,9 @@ import { QuotationTaxType, QuotationStatus } from "@/config/enum";
 import { FullPageLoader } from "@/components/shared/loader";
 import { generateQuotationPDF } from "@/components/pdf-generator";
 import { Loader2, Printer, CheckCircle, ArrowLeft } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { getUser } from "@/lib/auth";
 import { getClientPermissions } from "@/lib/permissions";
 
-// ── Read-only field wrapper ──────────────────────────────────────────────────
 function ReadOnlyField({
     label,
     value,

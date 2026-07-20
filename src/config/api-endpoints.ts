@@ -90,6 +90,8 @@ export const API_ENDPOINTS = {
   REPORTS: {
     ADVANCED: `${API_BASE_URL}/reports`,
     SUMMARY: `${API_BASE_URL}/reports/summary`,
+    CUSTOM_INVENTORY: `${API_BASE_URL}/reports/custom/inventory`,
+    CUSTOM_SALES: `${API_BASE_URL}/reports/custom/sales`,
   },
 
   RELATIVE: {
@@ -187,6 +189,8 @@ export const API_ENDPOINTS = {
       },
       ADVANCED: `${NEXTJS_API_BASE}/reports`,
       SUMMARY: `${NEXTJS_API_BASE}/reports/summary`,
+      CUSTOM_INVENTORY: `${NEXTJS_API_BASE}/reports/custom/inventory`,
+      CUSTOM_SALES: `${NEXTJS_API_BASE}/reports/custom/sales`,
     },
 
 }

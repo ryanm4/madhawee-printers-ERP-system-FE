@@ -1,6 +1,6 @@
 "use client"
 
-import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 
 import {
     ChartConfig,
@@ -22,13 +22,17 @@ export function RevenueTrendChart({ data }: RevenueTrendChartProps) {
     const chartConfig = {
         revenue: {
             label: "Revenue",
-            color: "#2563eb",
+            color: "#223F7A",
         },
     } satisfies ChartConfig
 
     return (
         <ChartContainer config={chartConfig} className="h-full w-full">
-            <BarChart accessibilityLayer data={chartData}>
+            <BarChart
+                accessibilityLayer
+                data={chartData}
+                margin={{ left: 10, right: 10, top: 10, bottom: 10 }}
+            >
                 <CartesianGrid vertical={false} strokeOpacity={0.1} />
                 <XAxis
                     dataKey="month"
@@ -37,15 +41,20 @@ export function RevenueTrendChart({ data }: RevenueTrendChartProps) {
                     axisLine={false}
                     className="text-gray-400 text-xs font-bold"
                 />
+                <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    className="text-gray-400 text-xs font-bold"
+                />
                 <ChartTooltip
-                    cursor={{ fill: 'rgba(0,0,0,0.03)', radius: 12 }}
+                    cursor={{ fill: 'rgba(0,0,0,0.03)', radius: 8 }}
                     content={<ChartTooltipContent hideLabel />}
                 />
                 <Bar
                     dataKey="revenue"
-                    fill="#2563eb"
-                    radius={12}
-                    className="transition-all hover:opacity-80"
+                    fill="#223F7A"
+                    radius={[8, 8, 0, 0]}
+                    className="transition-all hover:opacity-85"
                 />
             </BarChart>
         </ChartContainer>
