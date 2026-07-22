@@ -28,7 +28,6 @@ export const quotationColumns = (
 ): ColumnDef<QUOTATIONS>[] => {
     const canModify = options?.canModify ?? true;
     const canApprove = options?.canApprove ?? false;
-    const showActions = canModify || canApprove;
 
     return [
         {
@@ -143,56 +142,54 @@ export const quotationColumns = (
 
                 return (
                     <div className="flex flex-row gap-2 items-center">
-                        {showActions && (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" className="h-8 w-8 p-0">
-                                        <MoreHorizontal />
-                                    </Button>
-                                </DropdownMenuTrigger>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <MoreHorizontal />
+                                </Button>
+                            </DropdownMenuTrigger>
 
-                                <DropdownMenuContent align="end">
-                                    {(() => {
-                                        const nextStatus = getNextQuotationStatus(quotation.status);
-                                        if (nextStatus && canApprove) {
-                                            return (
-                                                <DropdownMenuItem
-                                                    onClick={() => actions.onStatusChange(quotation.quote_id, nextStatus)}
-                                                >
-                                                    <ArrowRightIcon className="mr-2 h-4 w-4" />
-                                                    Update Status to {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1).toLowerCase()}
-                                                </DropdownMenuItem>
-                                            );
-                                        }
-                                        return null;
-                                    })()}
-                                    {canModify && (
-                                        <DropdownMenuItem
-                                            onClick={() => actions.onEdit(quotation.quote_id)}
-                                        >
-                                            <PencilIcon className="mr-2 h-4 w-4" />
-                                            Edit Quotation
-                                        </DropdownMenuItem>
-                                    )}
+                            <DropdownMenuContent align="end">
+                                {(() => {
+                                    const nextStatus = getNextQuotationStatus(quotation.status);
+                                    if (nextStatus && canApprove) {
+                                        return (
+                                            <DropdownMenuItem
+                                                onClick={() => actions.onStatusChange(quotation.quote_id, nextStatus)}
+                                            >
+                                                <ArrowRightIcon className="mr-2 h-4 w-4" />
+                                                Update Status to {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1).toLowerCase()}
+                                            </DropdownMenuItem>
+                                        );
+                                    }
+                                    return null;
+                                })()}
+                                {canModify && (
                                     <DropdownMenuItem
-                                        onClick={() => actions.onView(quotation.quote_id)}
+                                        onClick={() => actions.onEdit(quotation.quote_id)}
                                     >
-                                        <EyeIcon className="mr-2 h-4 w-4" />
-                                        View Quotation
+                                        <PencilIcon className="mr-2 h-4 w-4" />
+                                        Edit Quotation
                                     </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem
+                                    onClick={() => actions.onView(quotation.quote_id)}
+                                >
+                                    <EyeIcon className="mr-2 h-4 w-4" />
+                                    View Quotation
+                                </DropdownMenuItem>
 
-                                    {canModify && (
-                                        <DropdownMenuItem
-                                            variant="destructive"
-                                            onClick={() => actions.onDelete(quotation.quote_id)}
-                                        >
-                                            <TrashIcon className="mr-2 h-4 w-4" />
-                                            Delete Quotation
-                                        </DropdownMenuItem>
-                                    )}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        )}
+                                {canModify && (
+                                    <DropdownMenuItem
+                                        variant="destructive"
+                                        onClick={() => actions.onDelete(quotation.quote_id)}
+                                    >
+                                        <TrashIcon className="mr-2 h-4 w-4" />
+                                        Delete Quotation
+                                    </DropdownMenuItem>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
 
                         {quotation.status === QuotationStatus.ACCEPTED && (
                             <Button onClick={() => actions.onDownload(quotation.quote_id)} variant="outline" size="icon" aria-label="Download quotation PDF">
