@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { getUser } from "@/lib/auth";
-import { isAdminRole } from "@/lib/permissions";
+import { isAdminRole, isRouteAllowedForUser, getDefaultRoute } from "@/lib/permissions";
 import {
   IconHelp,
   IconInnerShadowTop,
@@ -150,19 +150,13 @@ const data = {
   ],
 };
 
-const USER_ROLE_NAV_URLS = new Set([
-  "/quotation-management",
-  "/customers",
-  "/purchase-order",
-]);
-
-function getNavGroupsForRole(isAdmin: boolean) {
+function getNavGroupsForRole(isAdmin: boolean, userRole?: string) {
   if (isAdmin) return data.navGroups;
 
   return data.navGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => USER_ROLE_NAV_URLS.has(item.url)),
+      items: group.items.filter((item) => isRouteAllowedForUser(item.url, userRole)),
     }))
     .filter((group) => group.items.length > 0);
 }
@@ -170,8 +164,8 @@ function getNavGroupsForRole(isAdmin: boolean) {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const user = getUser();
   const isAdmin = isAdminRole(user?.user_role);
-  const navGroups = getNavGroupsForRole(isAdmin);
-  const homeHref = isAdmin ? "/dashboard" : "/quotation-management";
+  const navGroups = getNavGroupsForRole(isAdmin, user?.user_role);
+  const homeHref = getDefaultRoute(user?.user_role);
 
   return (
     <Sidebar {...props}>
