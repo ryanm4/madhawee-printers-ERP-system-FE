@@ -19,8 +19,12 @@ interface JobTicketTableActions {
 }
 
 export const jobTicketColumns = (
-    actions: JobTicketTableActions
-): ColumnDef<ALL_TICKETS>[] => [
+    actions: JobTicketTableActions,
+    options?: { canModify?: boolean }
+): ColumnDef<ALL_TICKETS>[] => {
+    const canModify = options?.canModify ?? true;
+
+    return [
         {
             accessorKey: "job_number",
             header: ({ column }) => {
@@ -97,50 +101,55 @@ export const jobTicketColumns = (
                                     <MoreHorizontal />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                {(() => {
-                                    const nextStatus = getNextJobTicketStatus(job_ticket.status);
-                                    if (nextStatus) {
-                                        return (
-                                            <DropdownMenuItem
-                                                onClick={() => actions.onStatusChange(job_ticket.job_id, nextStatus)}
-                                            >
-                                                <ArrowRightIcon className="mr-2 h-4 w-4" />
-                                                Update Status to {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1).toLowerCase()}
-                                            </DropdownMenuItem>
-                                        );
-                                    }
-                                    return null;
-                                })()}
-                                <DropdownMenuItem
-                                    onClick={() => actions.onView(job_ticket.job_id)}
-                                >
-                                    <EyeIcon className="mr-2 h-4 w-4" />
-                                    View Job Ticket
-                                </DropdownMenuItem>
+                        <DropdownMenuContent align="end">
+                            {canModify && (() => {
+                                const nextStatus = getNextJobTicketStatus(job_ticket.status);
+                                if (nextStatus) {
+                                    return (
+                                        <DropdownMenuItem
+                                            onClick={() => actions.onStatusChange(job_ticket.job_id, nextStatus)}
+                                        >
+                                            <ArrowRightIcon className="mr-2 h-4 w-4" />
+                                            Update Status to {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1).toLowerCase()}
+                                        </DropdownMenuItem>
+                                    );
+                                }
+                                return null;
+                            })()}
+                            <DropdownMenuItem
+                                onClick={() => actions.onView(job_ticket.job_id)}
+                            >
+                                <EyeIcon className="mr-2 h-4 w-4" />
+                                View Job Ticket
+                            </DropdownMenuItem>
 
-                                <DropdownMenuItem
-                                    onClick={() => actions.onEdit(job_ticket.job_id)}
-                                >
-                                    <PencilIcon className="mr-2 h-4 w-4" />
-                                    Edit Job Ticket
-                                </DropdownMenuItem>
+                            {canModify && (
+                                <>
+                                    <DropdownMenuItem
+                                        onClick={() => actions.onEdit(job_ticket.job_id)}
+                                    >
+                                        <PencilIcon className="mr-2 h-4 w-4" />
+                                        Edit Job Ticket
+                                    </DropdownMenuItem>
 
-                                <DropdownMenuItem
-                                    variant="destructive"
-                                    onClick={() => actions.onDelete(job_ticket.job_id)}
-                                >
-                                    <TrashIcon className="mr-2 h-4 w-4" />
-                                    Delete Job Ticket
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                                    <DropdownMenuItem
+                                        variant="destructive"
+                                        onClick={() => actions.onDelete(job_ticket.job_id)}
+                                    >
+                                        <TrashIcon className="mr-2 h-4 w-4" />
+                                        Delete Job Ticket
+                                    </DropdownMenuItem>
+                                </>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
 
-                        <Button onClick={() => actions.onDownload(job_ticket.job_id, job_ticket)} variant="outline" size="icon" aria-label="Print">
-                            <Printer className="h-4 w-4" />
-                        </Button>
-                    </div>
+                    <Button onClick={() => actions.onDownload(job_ticket.job_id, job_ticket)} variant="outline" size="icon" aria-label="Print">
+                        <Printer className="h-4 w-4" />
+                    </Button>
+                </div>
                 )
             },
         },
-    ]
+    ];
+};

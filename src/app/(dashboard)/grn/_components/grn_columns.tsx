@@ -24,7 +24,13 @@ interface GRNTableActions {
   onPrint: (grn: GRN) => void;
 }
 
-export const grnColumns = (actions: GRNTableActions): ColumnDef<GRN>[] => [
+export const grnColumns = (
+  actions: GRNTableActions,
+  options?: { canModify?: boolean }
+): ColumnDef<GRN>[] => {
+  const canModify = options?.canModify ?? true;
+
+  return [
   {
     accessorKey: "id",
     header: ({ column }) => {
@@ -117,21 +123,25 @@ export const grnColumns = (actions: GRNTableActions): ColumnDef<GRN>[] => [
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => actions.onEdit(grn.id)}>
-                <PencilIcon className="mr-2 h-4 w-4" />
-                Edit GRN
-              </DropdownMenuItem>
+              {canModify && (
+                <DropdownMenuItem onClick={() => actions.onEdit(grn.id)}>
+                  <PencilIcon className="mr-2 h-4 w-4" />
+                  Edit GRN
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={() => actions.onPrint(grn)}>
                 <Printer className="mr-2 h-4 w-4" />
                 Print GRN
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-destructive"
-                onClick={() => actions.onDelete(grn.id)}
-              >
-                <TrashIcon className="mr-2 h-4 w-4" />
-                Delete GRN
-              </DropdownMenuItem>
+              {canModify && (
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={() => actions.onDelete(grn.id)}
+                >
+                  <TrashIcon className="mr-2 h-4 w-4" />
+                  Delete GRN
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -139,3 +149,4 @@ export const grnColumns = (actions: GRNTableActions): ColumnDef<GRN>[] => [
     },
   },
 ];
+};

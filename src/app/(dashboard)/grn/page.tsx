@@ -19,8 +19,11 @@ import { useMemo } from "react";
 
 import { handleGRNPrint } from "./_components/grn-print-dialog";
 
+import { usePermissions } from "@/hooks/use-permissions";
+
 function GRNManagement() {
   const router = useRouter();
+  const { canModify, canExportList } = usePermissions();
   const [data, setData] = useState<GRN[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -77,7 +80,7 @@ function GRNManagement() {
     [router]
   );
 
-  const columns = useMemo(() => grnColumns(handlers), [handlers]);
+  const columns = useMemo(() => grnColumns(handlers, { canModify }), [handlers, canModify]);
 
   const handleDelete = async () => {
     if (!selectedGrnId) return;
@@ -116,10 +119,12 @@ function GRNManagement() {
             />
           </div>
 
-          <ExportButton data={data} filename="grn-list" />
-          <Button onClick={() => router.push("/grn/create")}>
-            <PlusIcon /> Create New GRN
-          </Button>
+          {canExportList && <ExportButton data={data} filename="grn-list" />}
+          {canModify && (
+            <Button onClick={() => router.push("/grn/create")}>
+              <PlusIcon /> Create New GRN
+            </Button>
+          )}
         </div>
         {isLoading ? (
           <PageLoader />

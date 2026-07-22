@@ -19,8 +19,11 @@ import { CustomerType } from "@/config/enum";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 import { DataTable } from "../customers/_components/customer-table";
 
+import { usePermissions } from "@/hooks/use-permissions";
+
 export default function SuppliersPage() {
     const router = useRouter();
+    const { canModify, canExportList } = usePermissions();
     const [data, setData] = useState<SUPPLIER[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -72,7 +75,7 @@ export default function SuppliersPage() {
         },
     };
 
-    const columns = supplierColumns(handlers);
+    const columns = supplierColumns(handlers, { canModify });
 
     const handleDelete = async () => {
         if (deleteId === null) return;
@@ -116,10 +119,12 @@ export default function SuppliersPage() {
                         />
                     </div>
 
-                    <ExportButton data={data} filename="suppliers-list" />
-                    <Button onClick={() => router.push("/suppliers/create")}>
-                        <PlusIcon /> Create New Supplier
-                    </Button>
+                    {canExportList && <ExportButton data={data} filename="suppliers-list" />}
+                    {canModify && (
+                        <Button onClick={() => router.push("/suppliers/create")}>
+                            <PlusIcon /> Create New Supplier
+                        </Button>
+                    )}
                 </div>
                 {isLoading ? (
                     <PageLoader />

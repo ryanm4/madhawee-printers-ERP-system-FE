@@ -26,11 +26,13 @@ import { JobTicketCard } from "@/components/job-ticket-card";
 import { CUSTOMER } from "@/modules/customer/types";
 import { JobTicketStatus } from "@/config/enum";
 import { toMySQLDateTime } from "@/hooks/sql-date-time";
+import { usePermissions } from "@/hooks/use-permissions";
 
 type JobTicketWithCustomer = ALL_TICKETS & { customer_name?: string };
 
 function JobTicketComponent() {
   const router = useRouter();
+  const { canModify, canExportList } = usePermissions();
   const [data, setData] = useState<JobTicketWithCustomer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -249,7 +251,7 @@ function JobTicketComponent() {
     },
   };
 
-  const columns = jobTicketColumns(handlers);
+  const columns = jobTicketColumns(handlers, { canModify });
 
   const handleDelete = async () => {
     if (deleteId === null) return;
@@ -327,10 +329,12 @@ function JobTicketComponent() {
               </TabsTrigger>
             </TabsList>
 
-            <ExportButton data={filteredData} filename="job-tickets" />
-            <Button onClick={() => router.push("/job-ticket/create")}>
-              <PlusIcon /> Create New
-            </Button>
+            {canExportList && <ExportButton data={filteredData} filename="job-tickets" />}
+            {canModify && (
+              <Button onClick={() => router.push("/job-ticket/create")}>
+                <PlusIcon /> Create New
+              </Button>
+            )}
           </div>
 
           {isLoading ? (
@@ -355,6 +359,7 @@ function JobTicketComponent() {
                       onView={handlers.onView}
                       onDownload={handlers.onDownload}
                       onStatusChange={handlers.onStatusChange}
+                      permissions={{ canModify }}
                     />
                   ))}
                 </div>

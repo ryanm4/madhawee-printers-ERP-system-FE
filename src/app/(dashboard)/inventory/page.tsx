@@ -31,9 +31,11 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { usePermissions } from "@/hooks/use-permissions";
 
 function InventoryManagement() {
   const router = useRouter();
+  const { canModify, canExportList } = usePermissions();
   const [data, setData] = useState<GET_ALL_INVENTORY[]>([]);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -74,9 +76,12 @@ function InventoryManagement() {
     onDelete: (id: number) => {
       setDeleteId(id);
     },
+    onView: (id: number) => {
+      router.push(`/inventory/${id}`);
+    },
   }), [router]);
 
-  const columns = useMemo(() => inventoryColumns(handlers), [handlers]);
+  const columns = useMemo(() => inventoryColumns(handlers, { canModify }), [handlers, canModify]);
 
   const handleDelete = async () => {
     if (deleteId === null) return;
@@ -183,10 +188,12 @@ function InventoryManagement() {
             </PopoverContent>
           </Popover>
 
-          <ExportButton data={data} filename="inventory-list" />
-          <Button onClick={() => router.push("/inventory/create")}>
-            <PlusIcon /> Add Item
-          </Button>
+          {canExportList && <ExportButton data={data} filename="inventory-list" />}
+          {canModify && (
+            <Button onClick={() => router.push("/inventory/create")}>
+              <PlusIcon /> Add Item
+            </Button>
+          )}
         </div>
         {isLoading ? (
           <PageLoader />

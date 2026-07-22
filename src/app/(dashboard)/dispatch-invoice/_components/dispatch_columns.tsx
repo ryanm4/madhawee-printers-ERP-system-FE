@@ -18,8 +18,12 @@ interface DispatchTableActions {
 }
 
 export const DispatchColumns = (
-    actions: DispatchTableActions
-): ColumnDef<ALL_DISPATCH>[] => [
+    actions: DispatchTableActions,
+    options?: { canModify?: boolean }
+): ColumnDef<ALL_DISPATCH>[] => {
+    const canModify = options?.canModify ?? true;
+
+    return [
         {
             accessorKey: "dispatch_id",
             header: ({ column }) => {
@@ -118,24 +122,29 @@ export const DispatchColumns = (
                                     View Dispatch
                                 </DropdownMenuItem>
 
-                                <DropdownMenuItem
-                                    onClick={() => actions.onEdit(dispatch.dispatch_id)}
-                                >
-                                    <PencilIcon className="mr-2 h-4 w-4" />
-                                    Edit Dispatch
-                                </DropdownMenuItem>
+                                {canModify && (
+                                    <>
+                                        <DropdownMenuItem
+                                            onClick={() => actions.onEdit(dispatch.dispatch_id)}
+                                        >
+                                            <PencilIcon className="mr-2 h-4 w-4" />
+                                            Edit Dispatch
+                                        </DropdownMenuItem>
 
-                                <DropdownMenuItem
-                                    variant="destructive"
-                                    onClick={() => actions.onDelete(dispatch.dispatch_id)}
-                                >
-                                    <TrashIcon className="mr-2 h-4 w-4" />
-                                    Delete Dispatch
-                                </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            variant="destructive"
+                                            onClick={() => actions.onDelete(dispatch.dispatch_id)}
+                                        >
+                                            <TrashIcon className="mr-2 h-4 w-4" />
+                                            Delete Dispatch
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
                 )
             },
         },
-    ]
+    ];
+};

@@ -21,8 +21,11 @@ import { jobTicketsApi } from "@/modules/job-tickets/api";
 import { ALL_TICKETS } from "@/modules/job-tickets/types";
 import { inventoryApi } from "@/modules/inventory/api";
 
+import { usePermissions } from "@/hooks/use-permissions";
+
 function IssueNotesManagement() {
   const router = useRouter();
+  const { canModify, canExportList } = usePermissions();
   const [data, setData] = useState<IssueNote[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -146,7 +149,7 @@ function IssueNotesManagement() {
     [router, jobs, inventory]
   );
 
-  const columns = useMemo(() => issueNotesColumns(handlers), [handlers]);
+  const columns = useMemo(() => issueNotesColumns(handlers, { canModify }), [handlers, canModify]);
 
   const handleDelete = async () => {
     if (!selectedId) return;
@@ -185,10 +188,12 @@ function IssueNotesManagement() {
             />
           </div>
 
-          <ExportButton data={data} filename="issue-notes-list" />
-          <Button onClick={() => router.push("/issue-notes/create")}>
-            <PlusIcon /> Create New Issue Material
-          </Button>
+          {canExportList && <ExportButton data={data} filename="issue-notes-list" />}
+          {canModify && (
+            <Button onClick={() => router.push("/issue-notes/create")}>
+              <PlusIcon /> Create New Issue Material
+            </Button>
+          )}
         </div>
         {isLoading ? (
           <PageLoader />
