@@ -729,6 +729,39 @@ export function CreateJobTicketDialog({
                   </FormItem>
                 ))}
 
+                {renderFormField("deliveryDate", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Delivery Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value
+                              ? format(field.value, "PPP")
+                              : format(new Date(), "PPP")}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          captionLayout="dropdown"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+
                 {renderFormField("wastage", ({ field }) => (
                   <FormItem>
                     <FormLabel>Wastage %</FormLabel>
