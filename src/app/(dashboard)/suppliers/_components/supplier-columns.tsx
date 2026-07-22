@@ -13,8 +13,12 @@ interface SupplierTableActions {
 }
 
 export const supplierColumns = (
-    actions: SupplierTableActions
-): ColumnDef<SUPPLIER>[] => [
+    actions: SupplierTableActions,
+    options?: { canModify?: boolean }
+): ColumnDef<SUPPLIER>[] => {
+    const canModify = options?.canModify ?? true;
+
+    return [
         {
             accessorKey: "company_name",
             header: ({ column }) => {
@@ -68,23 +72,28 @@ export const supplierColumns = (
                                 View Profile
                             </DropdownMenuItem>
 
-                            <DropdownMenuItem
-                                onClick={() => actions.onEdit(supplier.customer_id)}
-                            >
-                                <PencilIcon className="mr-2 h-4 w-4" />
-                                Edit Details
-                            </DropdownMenuItem>
+                            {canModify && (
+                                <>
+                                    <DropdownMenuItem
+                                        onClick={() => actions.onEdit(supplier.customer_id)}
+                                    >
+                                        <PencilIcon className="mr-2 h-4 w-4" />
+                                        Edit Details
+                                    </DropdownMenuItem>
 
-                            <DropdownMenuItem
-                                variant="destructive"
-                                onClick={() => actions.onDelete(supplier.customer_id)}
-                            >
-                                <TrashIcon className="mr-2 h-4 w-4" />
-                                Delete Record
-                            </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        variant="destructive"
+                                        onClick={() => actions.onDelete(supplier.customer_id)}
+                                    >
+                                        <TrashIcon className="mr-2 h-4 w-4" />
+                                        Delete Record
+                                    </DropdownMenuItem>
+                                </>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 )
             },
         },
-    ]
+    ];
+};

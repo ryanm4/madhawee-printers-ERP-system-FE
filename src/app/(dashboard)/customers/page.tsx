@@ -106,9 +106,11 @@ export default function CRMPage() {
           </div>
 
           {canExportList && <ExportButton data={data} filename="customers-list" />}
-          <Button onClick={() => router.push("/customers/create")}>
-            <PlusIcon /> Create New
-          </Button>
+          {canModify && (
+            <Button onClick={() => router.push("/customers/create")}>
+              <PlusIcon /> Create New
+            </Button>
+          )}
         </div>
         {isLoading ? (
           <PageLoader />

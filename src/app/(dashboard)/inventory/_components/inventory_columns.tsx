@@ -6,18 +6,23 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal, PencilIcon, TrashIcon } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal, PencilIcon, TrashIcon, EyeIcon } from "lucide-react"
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types"
 import { StatusBadge } from "@/components/shared/status-badge"
 
 interface InventoryTableActions {
     onEdit: (id: number) => void
     onDelete: (id: number) => void
+    onView: (id: number) => void
 }
 
 export const inventoryColumns = (
-    actions: InventoryTableActions
-): ColumnDef<GET_ALL_INVENTORY>[] => [
+    actions: InventoryTableActions,
+    options?: { canModify?: boolean }
+): ColumnDef<GET_ALL_INVENTORY>[] => {
+    const canModify = options?.canModify ?? true;
+
+    return [
         {
             accessorKey: "item_id",
             header: ({ column }) => {
@@ -88,22 +93,34 @@ export const inventoryColumns = (
 
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                                onClick={() => actions.onEdit(inventory.item_id)}
+                                onClick={() => actions.onView(inventory.item_id)}
                             >
-                                <PencilIcon className="mr-2 h-4 w-4" />
-                                Edit Inventory
+                                <EyeIcon className="mr-2 h-4 w-4" />
+                                View Details
                             </DropdownMenuItem>
 
-                            <DropdownMenuItem
-                                variant="destructive"
-                                onClick={() => actions.onDelete(inventory.item_id)}
-                            >
-                                <TrashIcon className="mr-2 h-4 w-4" />
-                                Delete Inventory
-                            </DropdownMenuItem>
+                            {canModify && (
+                                <>
+                                    <DropdownMenuItem
+                                        onClick={() => actions.onEdit(inventory.item_id)}
+                                    >
+                                        <PencilIcon className="mr-2 h-4 w-4" />
+                                        Edit Inventory
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuItem
+                                        variant="destructive"
+                                        onClick={() => actions.onDelete(inventory.item_id)}
+                                    >
+                                        <TrashIcon className="mr-2 h-4 w-4" />
+                                        Delete Inventory
+                                    </DropdownMenuItem>
+                                </>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 )
             },
         },
-    ]
+    ];
+};

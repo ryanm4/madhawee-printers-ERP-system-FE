@@ -17,8 +17,11 @@ import { ExportButton } from "@/components/shared/export-button";
 import { PageLoader } from "@/components/shared/loader";
 import { handleDispatchPrint, DispatchPrintData } from "./_components/dispatch-print-dialog";
 
+import { usePermissions } from "@/hooks/use-permissions";
+
 function DispatchInvoiceManagement() {
   const router = useRouter();
+  const { canModify, canExportList } = usePermissions();
   const [data, setData] = useState<ALL_DISPATCH[]>([]);
   const [deleteId, setDeleteId] = useState<string | number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -83,7 +86,7 @@ function DispatchInvoiceManagement() {
     }
   };
 
-  const columns = DispatchColumns(handlers);
+  const columns = DispatchColumns(handlers, { canModify });
 
   const handleDelete = async () => {
     if (deleteId === null) return;
@@ -120,10 +123,12 @@ function DispatchInvoiceManagement() {
             />
           </div>
 
-          <ExportButton data={data} filename="dispatch-list" />
-          <Button onClick={() => router.push("/dispatch-invoice/create")}>
-            <PlusIcon /> Create New
-          </Button>
+          {canExportList && <ExportButton data={data} filename="dispatch-list" />}
+          {canModify && (
+            <Button onClick={() => router.push("/dispatch-invoice/create")}>
+              <PlusIcon /> Create New
+            </Button>
+          )}
         </div>
         {isLoading ? (
           <PageLoader />

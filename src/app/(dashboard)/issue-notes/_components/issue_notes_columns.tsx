@@ -25,8 +25,12 @@ interface IssueNoteTableActions {
 }
 
 export const issueNotesColumns = (
-  actions: IssueNoteTableActions
-): ColumnDef<IssueNote>[] => [
+  actions: IssueNoteTableActions,
+  options?: { canModify?: boolean }
+): ColumnDef<IssueNote>[] => {
+  const canModify = options?.canModify ?? true;
+
+  return [
   {
     accessorKey: "id",
     header: ({ column }) => {
@@ -85,29 +89,34 @@ export const issueNotesColumns = (
             </Button>
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => actions.onView(note.id)}>
-              <Eye className="mr-2 h-4 w-4" />
-              View Details
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => actions.onEdit(note.id)}>
-              <PencilIcon className="mr-2 h-4 w-4" />
-              Edit Note
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => actions.onDownload(note)}>
-              <Download className="mr-2 h-4 w-4" />
-              Download PDF
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-destructive"
-              onClick={() => actions.onDelete(note.id)}
-            >
-              <TrashIcon className="mr-2 h-4 w-4" />
-              Delete Note
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => actions.onView(note.id)}>
+                <Eye className="mr-2 h-4 w-4" />
+                View Details
+              </DropdownMenuItem>
+              {canModify && (
+                <DropdownMenuItem onClick={() => actions.onEdit(note.id)}>
+                  <PencilIcon className="mr-2 h-4 w-4" />
+                  Edit Note
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => actions.onDownload(note)}>
+                <Download className="mr-2 h-4 w-4" />
+                Download PDF
+              </DropdownMenuItem>
+              {canModify && (
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={() => actions.onDelete(note.id)}
+                >
+                  <TrashIcon className="mr-2 h-4 w-4" />
+                  Delete Note
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
     },
   },
 ];
+};

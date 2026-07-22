@@ -221,12 +221,14 @@ function PurchaseOrderPage() {
             </TabsTrigger>
           </TabsList>
           {canExportList && <ExportButton data={data} filename="purchase-orders" />}
-          <Button
-            onClick={() => router.push("/purchase-order/create")}
-            disabled={loading}
-          >
-            <PlusIcon /> Create New
-          </Button>
+          {canModify && (
+            <Button
+              onClick={() => router.push("/purchase-order/create")}
+              disabled={loading}
+            >
+              <PlusIcon /> Create New
+            </Button>
+          )}
         </div>
 
         {loading ? (

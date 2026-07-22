@@ -195,9 +195,11 @@ function QuotationsManagement() {
         </div>
 
         {canExportList && <ExportButton data={data} filename="quotations-list" />}
-        <Button onClick={() => router.push("/quotation-management/create")}>
-          <PlusIcon /> Create New
-        </Button>
+        {canModify && (
+          <Button onClick={() => router.push("/quotation-management/create")}>
+            <PlusIcon /> Create New
+          </Button>
+        )}
       </div>
       {loading ? (
         <PageLoader />

@@ -31,6 +31,10 @@ import { format } from "date-fns";
 import { ALL_TICKETS } from "@/modules/job-tickets/types";
 import { JobTicketStatus } from "@/config/enum";
 
+export interface JobTicketCardOptions {
+    canModify?: boolean;
+}
+
 export interface JobTicketCardProps {
     ticket: ALL_TICKETS;
     onEdit: (id: number) => void;
@@ -39,6 +43,7 @@ export interface JobTicketCardProps {
     onDownload: (id: number) => void;
     onStatusChange: (id: number, status: string) => void;
     className?: string;
+    permissions?: JobTicketCardOptions;
 }
 
 export function JobTicketCard({
@@ -49,7 +54,9 @@ export function JobTicketCard({
     onDownload,
     onStatusChange,
     className,
+    permissions,
 }: JobTicketCardProps) {
+    const canModify = permissions?.canModify ?? true;
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
     return (
@@ -77,22 +84,28 @@ export function JobTicketCard({
                             <EyeIcon className="mr-2 h-4 w-4" />
                             View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => onEdit(ticket.job_id)}>
-                            <PencilIcon className="mr-2 h-4 w-4" />
-                            Edit Ticket
-                        </DropdownMenuItem>
+                        {canModify && (
+                            <DropdownMenuItem onSelect={() => onEdit(ticket.job_id)}>
+                                <PencilIcon className="mr-2 h-4 w-4" />
+                                Edit Ticket
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onSelect={() => onDownload(ticket.job_id)}>
                             <Printer className="mr-2 h-4 w-4" />
                             Print Ticket
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                            onSelect={() => onDelete(ticket.job_id)}
-                            className="text-destructive focus:text-destructive"
-                        >
-                            <TrashIcon className="mr-2 h-4 w-4" />
-                            Delete Ticket
-                        </DropdownMenuItem>
+                        {canModify && (
+                            <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                    onSelect={() => onDelete(ticket.job_id)}
+                                    className="text-destructive focus:text-destructive"
+                                >
+                                    <TrashIcon className="mr-2 h-4 w-4" />
+                                    Delete Ticket
+                                </DropdownMenuItem>
+                            </>
+                        )}
                     </DropdownMenuContent>
                 </DropdownMenu>
             </CardHeader>
