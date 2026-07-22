@@ -23,7 +23,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 
 function QuotationsManagement() {
   const router = useRouter();
-  const { canModify, canExportList } = usePermissions();
+  const { canModify, canExportList, canApprove } = usePermissions();
   const [data, setData] = useState<QUOTATIONS[]>([]);
   const [loading, setLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -133,7 +133,7 @@ function QuotationsManagement() {
     },
   };
 
-  const columns = quotationColumns(handlers, { canModify });
+  const columns = quotationColumns(handlers, { canModify, canApprove });
 
   useEffect(() => {
     fetchData();

@@ -24,9 +24,11 @@ interface QuotationTableActions {
 
 export const quotationColumns = (
     actions: QuotationTableActions,
-    options?: { canModify?: boolean }
+    options?: { canModify?: boolean; canApprove?: boolean }
 ): ColumnDef<QUOTATIONS>[] => {
     const canModify = options?.canModify ?? true;
+    const canApprove = options?.canApprove ?? false;
+    const showActions = canModify || canApprove;
 
     return [
         {
@@ -141,7 +143,7 @@ export const quotationColumns = (
 
                 return (
                     <div className="flex flex-row gap-2 items-center">
-                        {canModify && (
+                        {showActions && (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" className="h-8 w-8 p-0">
@@ -152,7 +154,7 @@ export const quotationColumns = (
                                 <DropdownMenuContent align="end">
                                     {(() => {
                                         const nextStatus = getNextQuotationStatus(quotation.status);
-                                        if (nextStatus) {
+                                        if (nextStatus && canApprove) {
                                             return (
                                                 <DropdownMenuItem
                                                     onClick={() => actions.onStatusChange(quotation.quote_id, nextStatus)}
@@ -164,12 +166,14 @@ export const quotationColumns = (
                                         }
                                         return null;
                                     })()}
-                                    <DropdownMenuItem
-                                        onClick={() => actions.onEdit(quotation.quote_id)}
-                                    >
-                                        <PencilIcon className="mr-2 h-4 w-4" />
-                                        Edit Quotation
-                                    </DropdownMenuItem>
+                                    {canModify && (
+                                        <DropdownMenuItem
+                                            onClick={() => actions.onEdit(quotation.quote_id)}
+                                        >
+                                            <PencilIcon className="mr-2 h-4 w-4" />
+                                            Edit Quotation
+                                        </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuItem
                                         onClick={() => actions.onView(quotation.quote_id)}
                                     >
@@ -177,13 +181,15 @@ export const quotationColumns = (
                                         View Quotation
                                     </DropdownMenuItem>
 
-                                    <DropdownMenuItem
-                                        variant="destructive"
-                                        onClick={() => actions.onDelete(quotation.quote_id)}
-                                    >
-                                        <TrashIcon className="mr-2 h-4 w-4" />
-                                        Delete Quotation
-                                    </DropdownMenuItem>
+                                    {canModify && (
+                                        <DropdownMenuItem
+                                            variant="destructive"
+                                            onClick={() => actions.onDelete(quotation.quote_id)}
+                                        >
+                                            <TrashIcon className="mr-2 h-4 w-4" />
+                                            Delete Quotation
+                                        </DropdownMenuItem>
+                                    )}
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         )}
