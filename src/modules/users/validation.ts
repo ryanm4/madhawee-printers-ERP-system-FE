@@ -9,6 +9,7 @@ export const userSchema = z.object({
       /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
       "Invalid email address format"
     )
+    .or(z.literal(""))
     .optional(),
   password: z.string().min(1, "Password is required"),
 });
