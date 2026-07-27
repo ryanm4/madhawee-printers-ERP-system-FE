@@ -23,6 +23,7 @@ export interface ALL_DISPATCH {
     contact_person_email: string;
     job_id: number;
     po_id: number;
+    customer_po?: string;
     job_name: string;
     job_open_date: Date;
     product_type: string;

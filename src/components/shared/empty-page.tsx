@@ -43,13 +43,13 @@ export function EmptyState({
                 )}
             </EmptyHeader>
 
-            <EmptyContent className="flex-row justify-center gap-2">
-                <Button onClick={handleCreate}>
-                    {createLabel}
-                </Button>
-
-
-            </EmptyContent>
+            {createLabel && (
+                <EmptyContent className="flex-row justify-center gap-2">
+                    <Button onClick={handleCreate}>
+                        {createLabel}
+                    </Button>
+                </EmptyContent>
+            )}
         </Empty>
     )
 }

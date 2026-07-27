@@ -85,6 +85,8 @@ function ViewGRN() {
     name: "items",
   });
 
+  const selectedCurrency = form.watch("currency") || "LKR";
+
 
   const fetchGRN = useCallback(async () => {
     try {
@@ -252,7 +254,7 @@ function ViewGRN() {
                         <FormLabel>Payment Method</FormLabel>
                         <Select value={field.value} disabled>
                           <FormControl>
-                            <SelectTrigger className={readonlyClass}>
+                            <SelectTrigger className={cn("w-full", readonlyClass)}>
                               <SelectValue />
                             </SelectTrigger>
                           </FormControl>
@@ -270,9 +272,17 @@ function ViewGRN() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Currency</FormLabel>
-                        <FormControl>
-                          <Input {...field} disabled className={readonlyClass} />
-                        </FormControl>
+                        <Select value={field.value} disabled>
+                          <FormControl>
+                            <SelectTrigger className={cn("w-full", readonlyClass)}>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="LKR">LKR</SelectItem>
+                            <SelectItem value="USD">USD</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </FormItem>
                     )}
                   />
@@ -341,7 +351,7 @@ function ViewGRN() {
                         name={`items.${index}.rate`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Rate</FormLabel>
+                            <FormLabel>Rate ({selectedCurrency})</FormLabel>
                             <FormControl>
                               <Input type="number" {...field} disabled className={readonlyClass} />
                             </FormControl>
@@ -353,7 +363,7 @@ function ViewGRN() {
                         name={`items.${index}.amount`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Amount</FormLabel>
+                            <FormLabel>Amount ({selectedCurrency})</FormLabel>
                             <FormControl><Input type="number" {...field} disabled className={readonlyClass} /></FormControl>
                           </FormItem>
                         )}

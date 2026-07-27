@@ -96,6 +96,8 @@ function EditGRN() {
     name: "items",
   });
 
+  const selectedCurrency = form.watch("currency") || "LKR";
+
   useEffect(() => {
     const userData = getUser();
     if (userData) {
@@ -364,7 +366,7 @@ function EditGRN() {
                           value={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="w-full">
                               <SelectValue />
                             </SelectTrigger>
                           </FormControl>
@@ -385,9 +387,20 @@ function EditGRN() {
                         <FormLabel>
                           Currency <span className="text-red-500">*</span>
                         </FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select currency" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="LKR">LKR</SelectItem>
+                            <SelectItem value="USD">USD</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -497,7 +510,7 @@ function EditGRN() {
                         name={`items.${index}.rate`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Rate</FormLabel>
+                            <FormLabel>Rate ({selectedCurrency})</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
@@ -524,7 +537,7 @@ function EditGRN() {
                         name={`items.${index}.amount`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Amount</FormLabel>
+                            <FormLabel>Amount ({selectedCurrency})</FormLabel>
                             <FormControl>
                               <Input type="number" {...field} readOnly />
                             </FormControl>

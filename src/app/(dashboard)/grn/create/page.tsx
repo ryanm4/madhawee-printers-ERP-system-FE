@@ -135,6 +135,8 @@ function CreateGRN() {
     name: "items",
   });
 
+  const selectedCurrency = form.watch("currency") || "LKR";
+
   const isSubmittingRef = useRef(false);
   const { isSubmitting } = form.formState;
   async function onSubmit(values: GRNFormValues) {
@@ -349,9 +351,20 @@ function CreateGRN() {
                         <FormLabel>
                           Currency <span className="text-red-500">*</span>
                         </FormLabel>
-                        <FormControl>
-                          <Input placeholder="LKR" {...field} />
-                        </FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select currency" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="LKR">LKR</SelectItem>
+                            <SelectItem value="USD">USD</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -473,7 +486,7 @@ function CreateGRN() {
                         name={`items.${index}.rate`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Rate</FormLabel>
+                            <FormLabel>Rate ({selectedCurrency})</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
@@ -501,7 +514,7 @@ function CreateGRN() {
                         name={`items.${index}.amount`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Amount</FormLabel>
+                            <FormLabel>Amount ({selectedCurrency})</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"

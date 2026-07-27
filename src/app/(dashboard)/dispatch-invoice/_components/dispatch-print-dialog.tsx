@@ -25,6 +25,7 @@ export interface DispatchPrintData {
   job_name: string;
   job_number: string;
   po_id?: string | number;
+  customer_po?: string;
   contact_person?: string;
   remarks?: string;
   created_by?: string;
@@ -309,9 +310,9 @@ export function buildDispatchPrintHTML(data: DispatchPrintData): string {
       </div>
       <div>
         <table class="dn-info-table">
-          <tr><td class="label-cell">Issued From</td><td>: Madhawee Printers</td></tr>
-          <tr><td class="label-cell">Ordered By</td><td>: ${safe(data.contact_person)}</td></tr>
-          <tr><td class="label-cell">Ref No.</td><td>: ${safe(data.po_id)}</td></tr>
+          <tr><td class="label-cell">Issued From</td><td>: Madhawee Printers (PVT.) LTD</td></tr>
+          <tr><td class="label-cell">Ordered By</td><td>: ${safe(data.customer_name)}</td></tr>
+          <tr><td class="label-cell">Ref No.</td><td>: ${safe(data.customer_po)}</td></tr>
           <tr><td class="label-cell">Job No.</td><td>: ${safe(data.job_number)}</td></tr>
         </table>
       </div>
