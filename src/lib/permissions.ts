@@ -96,6 +96,7 @@ const ROLE_PERMISSIONS: Record<USER_ROLES, RegExp[]> = {
     ROUTE_PATTERNS.quotations,
     ROUTE_PATTERNS.purchaseOrders,
     ROUTE_PATTERNS.jobTickets,
+    ROUTE_PATTERNS.dispatch,
     ROUTE_PATTERNS.reports,
   ],
   [USER_ROLES.ADMIN_OFFICER]: [
@@ -103,6 +104,7 @@ const ROLE_PERMISSIONS: Record<USER_ROLES, RegExp[]> = {
     ROUTE_PATTERNS.quotations,
     ROUTE_PATTERNS.purchaseOrders,
     ROUTE_PATTERNS.jobTickets,
+    ROUTE_PATTERNS.dispatch,
     ROUTE_PATTERNS.reports,
   ],
   [USER_ROLES.PRODUCTION_MANAGER]: [
@@ -153,6 +155,7 @@ export interface ClientPermissions {
   canExportList: boolean;
   canApprove: boolean;
   canViewAll: boolean;
+  canCreateDispatch: boolean;
 }
 
 export function getClientPermissions(): ClientPermissions {
@@ -167,6 +170,7 @@ export function getClientPermissions(): ClientPermissions {
     canExportList: false,
     canApprove: false,
     canViewAll: false,
+    canCreateDispatch: false,
   };
 
   switch (normalized) {
@@ -176,6 +180,7 @@ export function getClientPermissions(): ClientPermissions {
       permissions.canExportList = true;
       permissions.canApprove = true;
       permissions.canViewAll = true;
+      permissions.canCreateDispatch = true;
       break;
     case USER_ROLES.DIRECTOR_GM:
       permissions.canModify = false; // No edit — only Super Admin can edit
@@ -197,6 +202,7 @@ export function getClientPermissions(): ClientPermissions {
       permissions.canExportList = true;
       permissions.canApprove = false;
       permissions.canViewAll = false;
+      permissions.canCreateDispatch = true;
       break;
     case USER_ROLES.PRODUCTION_MANAGER:
       permissions.canModify = false;

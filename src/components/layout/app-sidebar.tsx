@@ -44,6 +44,8 @@ import { NavSecondary } from "./nav-secondary";
 import Image from "next/image";
 import company_logo from "@/assets/Images/company_logo.jpeg";
 
+import Link from "next/link";
+
 const data = {
   user: {
     name: "Admin User",
@@ -177,7 +179,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href={homeHref}>
+              <Link href={homeHref}>
                 <div className="flex aspect-square size-8 items-center justify-center ">
                   <Image
                     src={company_logo}
@@ -195,7 +197,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <span className="truncate text-xs">v1.0.9</span>
                 </div>
                 <IconInnerShadowTop className="ml-auto size-4 opacity-50" />
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

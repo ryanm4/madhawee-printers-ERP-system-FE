@@ -21,7 +21,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 
 function DispatchInvoiceManagement() {
   const router = useRouter();
-  const { canModify, canExportList } = usePermissions();
+  const { canModify, canExportList, canCreateDispatch } = usePermissions();
   const [data, setData] = useState<ALL_DISPATCH[]>([]);
   const [deleteId, setDeleteId] = useState<string | number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -78,6 +78,7 @@ function DispatchInvoiceManagement() {
         job_number: (dispatch as ALL_DISPATCH & { job_number?: string }).job_number || "",
         job_name: dispatch.job_name,
         po_id: dispatch.po_id,
+        customer_po: dispatch.customer_po || "",
         contact_person: dispatch.contact_person,
         remarks: dispatch.dispatch_note,
         created_by: dispatch.created_by || dispatch.create_by,
@@ -124,7 +125,7 @@ function DispatchInvoiceManagement() {
           </div>
 
           {canExportList && <ExportButton data={data} filename="dispatch-list" />}
-          {canModify && (
+          {canCreateDispatch && (
             <Button onClick={() => router.push("/dispatch-invoice/create")}>
               <PlusIcon /> Create New
             </Button>
@@ -135,9 +136,12 @@ function DispatchInvoiceManagement() {
         ) : data.length === 0 ? (
           <EmptyState
             title="No Dispatch Records"
-            description="You haven't recorded any dispatches yet. Start processing your orders by creating your first record."
-            createLabel="Create New Dispatch"
-            createPath="/dispatch-invoice/create"
+            description={canCreateDispatch 
+              ? "You haven't recorded any dispatches yet. Start processing your orders by creating your first record."
+              : "No dispatch records have been created yet."
+            }
+            createLabel={canCreateDispatch ? "Create New Dispatch" : ""}
+            createPath={canCreateDispatch ? "/dispatch-invoice/create" : ""}
           />
         ) : (
           <DataTable

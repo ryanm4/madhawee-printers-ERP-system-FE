@@ -26,11 +26,13 @@ import { jobTicketsApi } from "@/modules/job-tickets/api";
 import { ALL_TICKETS } from "@/modules/job-tickets/types";
 import { CustomerApi } from "@/modules/customer/api";
 import { FullPageLoader } from "@/components/shared/loader";
+import { usePermissions } from "@/hooks/use-permissions";
 
 type DispatchFormValues = z.infer<typeof dispatchInvoiceScheme>;
 
 function ViewDispatchAndInvoice() {
   const router = useRouter();
+  const { canModify } = usePermissions();
   const [isLoading, setIsLoading] = useState(false);
   const [JobData, setJobData] = useState<ALL_TICKETS[]>([]);
   const params = useParams();
@@ -135,7 +137,7 @@ function ViewDispatchAndInvoice() {
     name: TName,
     render: Parameters<
       typeof FormField<DispatchFormValues, TName>
-    >["0"]["render"]
+    >[0]["render"]
   ) => <FormField control={form.control} name={name} render={render} />;
 
   return (
@@ -163,13 +165,15 @@ function ViewDispatchAndInvoice() {
             >
               Back to List
             </Button>
-            <Button 
+            {canModify && (
+              <Button 
                 size="lg" 
                 className="bg-primary text-white"
                 onClick={() => router.push(`/dispatch-invoice/${id}/edit`)}
-            >
-              <Edit2 className="mr-2 h-4 w-4" /> Edit Dispatch
-            </Button>
+              >
+                <Edit2 className="mr-2 h-4 w-4" /> Edit Dispatch
+              </Button>
+            )}
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">

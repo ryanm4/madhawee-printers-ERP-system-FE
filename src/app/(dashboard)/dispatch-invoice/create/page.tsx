@@ -188,6 +188,7 @@ function CreateDispatchandInvoice() {
         job_id: data.job_id,
         job_number: selectedJob?.job_number || "",
         job_name: selectedJob?.job_name || "",
+        customer_po: selectedJob?.customer_po || "",
         remarks: data.dispatch_note || "",
         created_by: user?.name || "User",
       };
