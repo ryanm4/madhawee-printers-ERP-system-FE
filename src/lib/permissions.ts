@@ -156,6 +156,8 @@ export interface ClientPermissions {
   canApprove: boolean;
   canViewAll: boolean;
   canCreateDispatch: boolean;
+  canCreateQuotation: boolean;
+  canModifyQuotation: boolean;
 }
 
 export function getClientPermissions(): ClientPermissions {
@@ -171,6 +173,8 @@ export function getClientPermissions(): ClientPermissions {
     canApprove: false,
     canViewAll: false,
     canCreateDispatch: false,
+    canCreateQuotation: false,
+    canModifyQuotation: false,
   };
 
   switch (normalized) {
@@ -181,6 +185,8 @@ export function getClientPermissions(): ClientPermissions {
       permissions.canApprove = true;
       permissions.canViewAll = true;
       permissions.canCreateDispatch = true;
+      permissions.canCreateQuotation = true;
+      permissions.canModifyQuotation = true;
       break;
     case USER_ROLES.DIRECTOR_GM:
       permissions.canModify = false; // No edit — only Super Admin can edit
@@ -188,6 +194,8 @@ export function getClientPermissions(): ClientPermissions {
       permissions.canExportList = true;
       permissions.canApprove = true;
       permissions.canViewAll = true;
+      permissions.canCreateQuotation = true;
+      permissions.canModifyQuotation = true;
       break;
     case USER_ROLES.MARKETING_EXECUTIVE_MANAGER:
       permissions.canModify = false;
@@ -203,6 +211,8 @@ export function getClientPermissions(): ClientPermissions {
       permissions.canApprove = false;
       permissions.canViewAll = false;
       permissions.canCreateDispatch = true;
+      permissions.canCreateQuotation = true;
+      permissions.canModifyQuotation = false;
       break;
     case USER_ROLES.PRODUCTION_MANAGER:
       permissions.canModify = false;

@@ -23,7 +23,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 
 function QuotationsManagement() {
   const router = useRouter();
-  const { canModify, canExportList, canApprove } = usePermissions();
+  const { canModifyQuotation, canCreateQuotation, canExportList, canApprove } = usePermissions();
   const [data, setData] = useState<QUOTATIONS[]>([]);
   const [loading, setLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -133,7 +133,7 @@ function QuotationsManagement() {
     },
   };
 
-  const columns = quotationColumns(handlers, { canModify, canApprove });
+  const columns = quotationColumns(handlers, { canModify: canModifyQuotation, canApprove });
 
   useEffect(() => {
     fetchData();
@@ -195,7 +195,7 @@ function QuotationsManagement() {
         </div>
 
         {canExportList && <ExportButton data={data} filename="quotations-list" />}
-        {canModify && (
+        {canCreateQuotation && (
           <Button onClick={() => router.push("/quotation-management/create")}>
             <PlusIcon /> Create New
           </Button>
