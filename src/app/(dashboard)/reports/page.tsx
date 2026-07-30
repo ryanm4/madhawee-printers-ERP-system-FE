@@ -25,6 +25,7 @@ import { CUSTOMER } from "@/modules/customer/types";
 import { ReportsApi } from "@/modules/reports/api";
 import { userApi } from "@/modules/users/api";
 import { GET_ALL_USER } from "@/modules/users/types";
+import { quotationApi } from "@/modules/quotations/api";
 import { ReportsTable } from "./_components/reports-table";
 import { PageLoader } from "@/components/shared/loader";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -96,6 +97,7 @@ const QUOTATION_REPORT_TYPES = [
 function ReportsPage() {
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
   const [userList, setUserList] = useState<GET_ALL_USER[]>([]);
+  const [marketingPersons, setMarketingPersons] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("general");
@@ -107,6 +109,7 @@ function ReportsPage() {
   useEffect(() => {
     getCustomerList();
     getUserList();
+    getMarketingPersons();
   }, []);
 
   const getCustomerList = async () => {
@@ -124,6 +127,19 @@ function ReportsPage() {
       setUserList(response.data.users || []);
     } catch (error) {
       console.error("Failed to fetch users", error);
+    }
+  };
+
+  const getMarketingPersons = async () => {
+    try {
+      const response = await quotationApi.getAll();
+      const names = response.data
+        .map((q) => q.marketing_person)
+        .filter((name): name is string => typeof name === "string" && name.trim() !== "");
+      const uniqueNames = Array.from(new Set(names)).sort();
+      setMarketingPersons(uniqueNames);
+    } catch (error) {
+      console.error("Failed to fetch marketing persons from quotations", error);
     }
   };
 
@@ -656,9 +672,9 @@ function ReportsPage() {
                   <Combobox
                     items={[
                       { value: "", label: "All Salespersons" },
-                      ...userList.map((u) => ({
-                        value: u.name,
-                        label: u.name,
+                      ...marketingPersons.map((name) => ({
+                        value: name,
+                        label: name,
                       })),
                     ]}
                     value={selectedSalespersonName}

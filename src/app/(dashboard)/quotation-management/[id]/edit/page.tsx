@@ -70,7 +70,7 @@ function EditQuotation({
     avatar: string;
   };
 }) {
-  const { isAdmin } = usePermissions();
+  const { canModifyQuotation } = usePermissions();
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -373,7 +373,7 @@ function EditQuotation({
     }
   }, [id, form]);
 
-  if (!isAdmin) {
+  if (!canModifyQuotation) {
     return <RestrictedRouteGuard />;
   }
 
