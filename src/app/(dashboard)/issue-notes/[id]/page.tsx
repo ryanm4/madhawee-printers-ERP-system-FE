@@ -37,12 +37,14 @@ import { Combobox } from "@/components/shared/combobox";
 import { ALL_TICKETS } from "@/modules/job-tickets/types";
 import { useCallback } from "react";
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
+import { usePermissions } from "@/hooks/use-permissions";
 
 type IssueNoteFormValues = z.infer<typeof issueNoteSchema>;
 
 function ViewIssueNote() {
   const router = useRouter();
   const { id } = useParams();
+  const { canModifyIssueNote } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState<{ value: string; label: string }[]>([]);
   const [inventoryItems, setInventoryItems] = useState<GET_ALL_INVENTORY[]>([]);
@@ -225,13 +227,15 @@ function ViewIssueNote() {
             >
               Back to List
             </Button>
-            <Button
-              type="button"
-              onClick={() => router.push(`/issue-notes/${id}/edit`)}
-              className="bg-primary hover:bg-primary/90"
-            >
-              <Edit className="mr-2 h-4 w-4" /> Edit Note
-            </Button>
+            {canModifyIssueNote && (
+              <Button
+                type="button"
+                onClick={() => router.push(`/issue-notes/${id}/edit`)}
+                className="bg-primary hover:bg-primary/90"
+              >
+                <Edit className="mr-2 h-4 w-4" /> Edit Note
+              </Button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

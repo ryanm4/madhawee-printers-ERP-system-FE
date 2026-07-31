@@ -47,7 +47,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 type CustomerFormValues = z.infer<typeof customerSchema>;
 
 function EditCustomerRelationship() {
-  const { isAdmin } = usePermissions();
+  const { canModifyCustomer } = usePermissions();
   const router = useRouter();
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -260,7 +260,7 @@ function EditCustomerRelationship() {
     }
   }, [supplierType, form]);
 
-  if (!isAdmin) {
+  if (!canModifyCustomer) {
     return <RestrictedRouteGuard />;
   }
 

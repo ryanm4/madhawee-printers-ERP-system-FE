@@ -40,11 +40,14 @@ import { toMySQLDateTime } from "@/hooks/sql-date-time";
 import { Combobox } from "@/components/shared/combobox";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
+import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
+import { usePermissions } from "@/hooks/use-permissions";
 
 type DispatchFormValues = z.infer<typeof dispatchInvoiceScheme>;
 
 function EditDispatchandInvoice() {
   const router = useRouter();
+  const { canModify } = usePermissions();
   const [isLoading, setIsLoading] = useState(false);
   const [JobData, setJobData] = useState<ALL_TICKETS[]>([]);
   const [originalDispatchQty, setOriginalDispatchQty] = useState(0);
@@ -272,6 +275,10 @@ function EditDispatchandInvoice() {
 
     fetchDispatch();
   }, [id, form]);
+
+  if (!canModify) {
+    return <RestrictedRouteGuard />;
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">

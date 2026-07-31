@@ -33,6 +33,7 @@ import { JobTicketStatus } from "@/config/enum";
 
 export interface JobTicketCardOptions {
     canModify?: boolean;
+    canUpdateStatus?: boolean;
 }
 
 export interface JobTicketCardProps {
@@ -57,6 +58,7 @@ export function JobTicketCard({
     permissions,
 }: JobTicketCardProps) {
     const canModify = permissions?.canModify ?? true;
+    const canUpdateStatus = permissions?.canUpdateStatus ?? true;
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
     return (
@@ -152,36 +154,38 @@ export function JobTicketCard({
                     </div>
                 </div>
 
-                <div className="mt-6">
-                    <Button
-                        className="w-full h-[40px] bg-primary hover:bg-primary/90 text-white font-semibold shadow-sm transition-all"
-                        onClick={async () => {
-                            setIsUpdatingStatus(true);
-                            try {
-                                await onStatusChange(ticket.job_id, JobTicketStatus.IN_PRODUCTION);
-                            } finally {
-                                setIsUpdatingStatus(false);
+                {canUpdateStatus && (
+                    <div className="mt-6">
+                        <Button
+                            className="w-full h-[40px] bg-primary hover:bg-primary/90 text-white font-semibold shadow-sm transition-all"
+                            onClick={async () => {
+                                setIsUpdatingStatus(true);
+                                try {
+                                    await onStatusChange(ticket.job_id, JobTicketStatus.IN_PRODUCTION);
+                                } finally {
+                                    setIsUpdatingStatus(false);
+                                }
+                            }}
+                            disabled={
+                                ticket.status === JobTicketStatus.IN_PRODUCTION ||
+                                ticket.status === JobTicketStatus.PARTIALLY_DISPATCHED ||
+                                ticket.status === JobTicketStatus.COMPLETED ||
+                                isUpdatingStatus
                             }
-                        }}
-                        disabled={
-                            ticket.status === JobTicketStatus.IN_PRODUCTION ||
-                            ticket.status === JobTicketStatus.PARTIALLY_DISPATCHED ||
-                            ticket.status === JobTicketStatus.COMPLETED ||
-                            isUpdatingStatus
-                        }
-                    >
-                        {isUpdatingStatus ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                            <LayoutPanelTop className="mr-2 h-4 w-4" />
-                        )}
-                        {ticket.status === JobTicketStatus.IN_PRODUCTION ||
-                            ticket.status === JobTicketStatus.PARTIALLY_DISPATCHED ||
-                            ticket.status === JobTicketStatus.COMPLETED
-                            ? "In Production"
-                            : "Start Production"}
-                    </Button>
-                </div>
+                        >
+                            {isUpdatingStatus ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <LayoutPanelTop className="mr-2 h-4 w-4" />
+                            )}
+                            {ticket.status === JobTicketStatus.IN_PRODUCTION ||
+                                ticket.status === JobTicketStatus.PARTIALLY_DISPATCHED ||
+                                ticket.status === JobTicketStatus.COMPLETED
+                                ? "In Production"
+                                : "Start Production"}
+                        </Button>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );

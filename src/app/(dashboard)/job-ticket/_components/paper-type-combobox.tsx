@@ -43,14 +43,17 @@ export const PaperTypeCombobox = ({
             (item.item_category.toUpperCase() === "PAPER" ||
               item.item_category.toUpperCase() === "BOARD")
         )
-        .map((item) => [
-          `${item.item_sub_category} ${item.item_name}`,
-          {
-            label: `${item.item_sub_category} ${item.item_name}`,
-            value: `${item.item_sub_category} ${item.item_name}`,
-            id: item.item_id,
-          },
-        ])
+        .map((item) => {
+          const key = `${item.item_sub_category || ""} ${item.item_name}`.trim();
+          return [
+            key,
+            {
+              label: key,
+              value: key,
+              id: item.item_id,
+            },
+          ];
+        })
     ).values()
   );
 

@@ -17,11 +17,13 @@ import { Edit } from 'lucide-react'
 import { CustomerType } from '@/config/enum'
 import { SupplierApi } from '@/modules/supplier/api'
 import { FullPageLoader } from "@/components/shared/loader";
+import { usePermissions } from "@/hooks/use-permissions";
 
 type SupplierFormValues = z.infer<typeof supplierSchema>
 
 function ViewSupplierProfile() {
     const router = useRouter()
+    const { canModifySupplier } = usePermissions()
     const [isLoading, setIsLoading] = useState(false);
     const params = useParams();
     const id = params.id as string;
@@ -125,13 +127,15 @@ function ViewSupplierProfile() {
                         >
                             Back to List
                         </Button>
-                        <Button
-                            type="button"
-                            onClick={() => router.push(`/suppliers/${id}/edit`)}
-                            className="bg-primary hover:bg-primary/90"
-                        >
-                            <Edit className="mr-2 h-4 w-4" /> Edit Supplier
-                        </Button>
+                        {canModifySupplier && (
+                            <Button
+                                type="button"
+                                onClick={() => router.push(`/suppliers/${id}/edit`)}
+                                className="bg-primary hover:bg-primary/90"
+                            >
+                                <Edit className="mr-2 h-4 w-4" /> Edit Supplier
+                            </Button>
+                        )}
                     </div>
 
                     <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>

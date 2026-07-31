@@ -35,7 +35,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 
 function InventoryManagement() {
   const router = useRouter();
-  const { canModify, canExportList } = usePermissions();
+  const { canModifyInventoryItem, canCreateInventoryItem, canExportList } = usePermissions();
   const [data, setData] = useState<GET_ALL_INVENTORY[]>([]);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -81,7 +81,7 @@ function InventoryManagement() {
     },
   }), [router]);
 
-  const columns = useMemo(() => inventoryColumns(handlers, { canModify }), [handlers, canModify]);
+  const columns = useMemo(() => inventoryColumns(handlers, { canModify: canModifyInventoryItem }), [handlers, canModifyInventoryItem]);
 
   const handleDelete = async () => {
     if (deleteId === null) return;
@@ -189,7 +189,7 @@ function InventoryManagement() {
           </Popover>
 
           {canExportList && <ExportButton data={data} filename="inventory-list" />}
-          {canModify && (
+          {canCreateInventoryItem && (
             <Button onClick={() => router.push("/inventory/create")}>
               <PlusIcon /> Add Item
             </Button>
@@ -201,8 +201,8 @@ function InventoryManagement() {
           <EmptyState
             title="Stock List Empty"
             description="There are no items in your stock list. Add your stocks and materials to start tracking them."
-            createLabel="Create New Stock"
-            createPath="/inventory/create"
+            createLabel={canCreateInventoryItem ? "Create New Stock" : ""}
+            createPath={canCreateInventoryItem ? "/inventory/create" : ""}
           />
         ) : (
           <DataTable

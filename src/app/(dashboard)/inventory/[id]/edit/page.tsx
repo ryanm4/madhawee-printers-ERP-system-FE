@@ -37,10 +37,13 @@ import { FieldPath, useForm, ControllerProps } from "react-hook-form";
 import { appToast } from "@/lib/toast-utils";
 import { z } from "zod";
 import { FullPageLoader } from "@/components/shared/loader";
+import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
+import { usePermissions } from "@/hooks/use-permissions";
 
 type InventoryManagementFormValues = z.infer<typeof inventoryManagementScheme>;
 
 function EditInventoryManagement() {
+  const { canModifyInventoryItem } = usePermissions();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<{
@@ -91,12 +94,15 @@ function EditInventoryManagement() {
         // Parse size into width and height
         let width = "";
         let height = "";
-        if (data.size && data.size.includes("x")) {
-          const parts = data.size.split("x").map((p) => p.trim());
-          width = parts[0] || "";
-          height = parts[1] || "";
-        } else if (data.size) {
-          width = data.size;
+        const cleanSize = data.size ? data.size.trim() : "";
+        if (cleanSize && cleanSize !== "x" && cleanSize !== "-") {
+          if (cleanSize.includes("x")) {
+            const parts = cleanSize.split("x").map((p) => p.trim());
+            width = parts[0] || "";
+            height = parts[1] || "";
+          } else {
+            width = cleanSize;
+          }
         }
 
         // ✅ Populate form with fetched data
@@ -104,9 +110,9 @@ function EditInventoryManagement() {
           item_category: data.item_category,
           item_sub_category: data.item_sub_category,
           item_name: data.item_name,
-          width: data?.width as string | undefined,
-          height: data?.height as string | undefined,
-          size: `${data.width} x ${data.height}`,
+          width: width,
+          height: height,
+          size: (width && height) ? `${width} x ${height}` : "",
           quantity: Number(data.quantity),
           unit_of_measure: data.unit_of_measure,
           reorder_level: data.reorder_level,
@@ -134,10 +140,7 @@ function EditInventoryManagement() {
         item_category: data.item_category,
         item_sub_category: data.item_sub_category,
         item_name: data.item_name,
-        size:
-          data.width && data.height
-            ? `${data.width} x ${data.height}`
-            : data.size || "-",
+        size: (data.width && data.height) ? `${data.width} x ${data.height}` : "",
         width: data.width ?? "",
         height: data.height ?? "",
         quantity: String(data.quantity),
@@ -182,6 +185,10 @@ function EditInventoryManagement() {
       render={render}
     />
   );
+
+  if (!canModifyInventoryItem) {
+    return <RestrictedRouteGuard />;
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
@@ -291,9 +298,7 @@ function EditInventoryManagement() {
                 <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
                   {renderFormField("width", ({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        Width (cm) <span className="text-red-500">*</span>
-                      </FormLabel>
+                      <FormLabel>Width (cm)</FormLabel>
                       <FormControl>
                         <Input placeholder="W" {...field} />
                       </FormControl>
@@ -305,9 +310,7 @@ function EditInventoryManagement() {
                   </div>
                   {renderFormField("height", ({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        Height (cm) <span className="text-red-500">*</span>
-                      </FormLabel>
+                      <FormLabel>Height (cm)</FormLabel>
                       <FormControl>
                         <Input placeholder="H" {...field} />
                       </FormControl>

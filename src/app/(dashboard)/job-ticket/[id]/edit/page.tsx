@@ -82,6 +82,8 @@ import { toast } from "sonner";
 import { parseLocalDate, toMySQLDateTime } from "@/hooks/sql-date-time";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
+import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
+import { usePermissions } from "@/hooks/use-permissions";
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
 import { inventoryApi } from "@/modules/inventory/api";
 import { useDispatch } from "react-redux";
@@ -136,17 +138,26 @@ function mapPaperTypesFromTicket(
       let paperValue = String(pt.paper ?? pt.paper_type ?? "");
       const materials = pt.materials ?? pt.raw_materials;
       
-      if (Array.isArray(materials) && materials.length > 0) {
+      if (!paperValue && Array.isArray(materials) && materials.length > 0) {
         const mat = materials[0] as Record<string, unknown>;
         if (mat.material_type && mat.material_name) {
           paperValue = `${mat.material_type} ${mat.material_name}`;
         }
       }
 
+      // Filter raw materials to only match this specific paper set's paper type
+      const allMaterials = Array.isArray(materials) ? materials : [];
+      const filteredMaterials = allMaterials.filter((m: Record<string, unknown>) => {
+        if (!paperValue) return true;
+        const mKey = `${m.material_type || ""} ${m.material_name || ""}`.trim().toLowerCase();
+        const pKey = paperValue.trim().toLowerCase();
+        return mKey === pKey;
+      });
+
       return {
         paper: paperValue,
         coating: String(pt.coating ?? ""),
-        rawMaterials: mapRawMaterials(materials),
+        rawMaterials: mapRawMaterials(filteredMaterials),
       };
     });
   }
@@ -195,6 +206,7 @@ function getFirstValidationMessage(
 }
 
 function EditJobTicket() {
+  const { canModifyJobTicket } = usePermissions();
   const router = useRouter();
   const { id } = useParams() as { id: string };
   const [isPageLoading, setIsPageLoading] = useState(false);
@@ -394,10 +406,14 @@ function EditJobTicket() {
             remarks: rm.remarks,
           })),
         })),
-        inks: data.inks?.map((ink) => ({
-          ...ink,
-          ink: ink.ink,
-        })),
+        inks: data.inks
+          ?.filter((ink) => ink.ink && ink.ink.trim() !== "")
+          ?.map((ink) => ({
+            ink: ink.ink,
+            quantity: ink.quantity && ink.quantity.trim() !== "" ? ink.quantity : null,
+            status: ink.status || null,
+            remarks: ink.remarks || null,
+          })),
         updated_by: user?.name || "User",
         updated_on: toMySQLDateTime(new Date()),
         status: ticketStatus,
@@ -439,7 +455,14 @@ function EditJobTicket() {
           remarks: data.remarks,
           oldPlatesQuantity: data.oldPlatesQuantity,
           newPlatesQuantity: data.newPlatesQuantity,
-          inks: (data.inks || []).map((i) => ({ ...i, ink: i.ink || "" })),
+          inks: (data.inks || [])
+            .filter((i) => i.ink && i.ink.trim() !== "")
+            .map((i) => ({
+              ink: i.ink || "",
+              quantity: i.quantity && i.quantity.trim() !== "" ? i.quantity : undefined,
+              status: i.status || undefined,
+              remarks: i.remarks || undefined,
+            })),
           rawMaterials: allRawMaterials,
         };
         setPrintData(pd);
@@ -631,6 +654,10 @@ function EditJobTicket() {
 
     fetchPoDetails();
   }, [selectedPoId, form]);
+
+  if (!canModifyJobTicket) {
+    return <RestrictedRouteGuard />;
+  }
 
   const renderFormField = <TName extends FieldPath<JobTicketFormValues>>(
     name: TName,
@@ -1078,7 +1105,7 @@ function EditJobTicket() {
                           key={rmIndex}
                           className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-2"
                         >
-                          {renderFormField(
+                           {renderFormField(
                             `paperTypes.${index}.rawMaterials.${rmIndex}.size`,
                             ({ field }) => {
                               const selectedPaperName = form.watch(
@@ -1086,8 +1113,8 @@ function EditJobTicket() {
                               );
                               const filteredInventory = inventoryList.filter(
                                 (item) =>
-                                  `${item.item_sub_category} ${item.item_name}` ===
-                                  selectedPaperName
+                                  `${item.item_sub_category || ""} ${item.item_name}`.trim() ===
+                                  (selectedPaperName || "").trim()
                               );
 
                               return (
@@ -1102,7 +1129,7 @@ function EditJobTicket() {
                                       field.onChange(val);
                                       const selectedMaterial =
                                         filteredInventory.find(
-                                          (item) => item.size === val
+                                          (item) => (item.size || "") === val
                                         );
                                       if (selectedMaterial) {
                                         form.setValue(
@@ -1130,9 +1157,9 @@ function EditJobTicket() {
                                       {filteredInventory.map((item) => (
                                         <SelectItem
                                           key={item.item_id}
-                                          value={item.size}
+                                          value={item.size || ""}
                                         >
-                                          {item.size}
+                                          {item.size || "No Size"}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>

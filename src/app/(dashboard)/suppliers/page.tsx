@@ -23,7 +23,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 
 export default function SuppliersPage() {
     const router = useRouter();
-    const { canModify, canExportList } = usePermissions();
+    const { canModifySupplier, canCreateSupplier, canExportList } = usePermissions();
     const [data, setData] = useState<SUPPLIER[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -75,7 +75,7 @@ export default function SuppliersPage() {
         },
     };
 
-    const columns = supplierColumns(handlers, { canModify });
+    const columns = supplierColumns(handlers, { canModify: canModifySupplier });
 
     const handleDelete = async () => {
         if (deleteId === null) return;
@@ -111,16 +111,16 @@ export default function SuppliersPage() {
                     <div className="relative w-[320px]">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
-                            type="search"
-                            placeholder="Supplier Name"
-                            className="w-full pl-8"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                          type="search"
+                          placeholder="Supplier Name"
+                          className="w-full pl-8"
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
 
                     {canExportList && <ExportButton data={data} filename="suppliers-list" />}
-                    {canModify && (
+                    {canCreateSupplier && (
                         <Button onClick={() => router.push("/suppliers/create")}>
                             <PlusIcon /> Create New Supplier
                         </Button>
@@ -132,8 +132,8 @@ export default function SuppliersPage() {
                     <EmptyState
                         title="No Suppliers Found"
                         description="You haven't added any suppliers yet. Start by creating a new supplier profile."
-                        createLabel="Add New Supplier"
-                        createPath="/suppliers/create"
+                        createLabel={canCreateSupplier ? "Add New Supplier" : ""}
+                        createPath={canCreateSupplier ? "/suppliers/create" : ""}
                     />
                 ) : (
                     <DataTable

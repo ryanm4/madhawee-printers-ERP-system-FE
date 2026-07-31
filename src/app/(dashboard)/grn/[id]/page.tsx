@@ -39,14 +39,17 @@ import { toast } from "sonner";
 import { FullPageLoader } from "@/components/shared/loader";
 import { GRNItem } from "@/modules/grn/types";
 import { useCallback } from "react";
+import { usePermissions } from "@/hooks/use-permissions";
+import { inventoryApi } from "@/modules/inventory/api";
+import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
 
 type GRNFormValues = {
-  releated_po: string;
+  related_po: string;
   received_date: Date;
   supplier_name: string;
   stock_location: string;
   payee_name?: string;
-  payment_method: "CASH" | "CARD";
+  payment_method: "CASH" | "CREDIT";
   currency: string;
   supplier_invoice_no: string;
   remarks?: string;
@@ -62,12 +65,14 @@ function ViewGRN() {
   const router = useRouter();
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
+  const { canModifyGRN } = usePermissions();
+  const [inventoryData, setInventoryData] = useState<GET_ALL_INVENTORY[]>([]);
 
   const form = useForm<GRNFormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(grnSchema) as any,
     defaultValues: {
-      releated_po: "",
+      related_po: "",
       received_date: new Date(),
       supplier_name: "",
       stock_location: "Main Warehouse",
@@ -91,25 +96,45 @@ function ViewGRN() {
   const fetchGRN = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await grnApi.getById(id as string);
-      if (response.status === 200) {
-        const data = response.data;
+      const [grnResponse, inventoryResponse] = await Promise.all([
+        grnApi.getById(id as string),
+        inventoryApi.getAll(),
+      ]);
+      if (grnResponse.status === 200 && inventoryResponse.status === 200) {
+        setInventoryData(inventoryResponse.data);
+        const data = grnResponse.data;
         form.reset({
-          releated_po: data.releated_po,
+          related_po: data.related_po || "",
           received_date: parseISO(data.received_date),
-          supplier_name: data.supplier_name,
-          stock_location: data.stock_location,
-          payee_name: data.payee_name,
-          payment_method: (data.payment_method === "CARD" || data.payment_method === "CASH") ? data.payment_method : "CASH",
-          currency: data.currency,
-          supplier_invoice_no: data.supplier_invoice_no,
+          supplier_name: data.supplier_name || "",
+          stock_location: data.stock_location || "",
+          payee_name: data.payee_name || "",
+          payment_method: (data.payment_method === "CREDIT" || data.payment_method === "CASH") ? data.payment_method : "CASH",
+          currency: data.currency || "",
+          supplier_invoice_no: data.supplier_invoice_no || "",
           remarks: data.remarks || "",
-          items: data.items.map((item: GRNItem) => ({
-            item_name: item.item_name,
-            quantity: Number(item.quantity),
-            rate: Number(item.rate),
-            amount: Number(item.amount)
-          }))
+          items: data.items.map((item: GRNItem) => {
+            const invItem = inventoryResponse.data.find(
+              (inv: GET_ALL_INVENTORY) =>
+                inv.item_name === item.item_name ||
+                `${inv.item_sub_category} ${inv.item_name}` === item.item_name ||
+                `${inv.item_sub_category} ${inv.item_name} (${inv.size || ""})` === item.item_name ||
+                `${inv.item_sub_category} ${inv.item_name} ${inv.size || ""}`.trim() === item.item_name ||
+                `${inv.item_name} ${inv.size || ""}`.trim() === item.item_name ||
+                `${inv.item_name} (${inv.size || ""})` === item.item_name
+            );
+            const displayName = invItem
+              ? invItem.size
+                ? `${invItem.item_sub_category} ${invItem.item_name} (${invItem.size})`
+                : `${invItem.item_sub_category} ${invItem.item_name}`
+              : item.item_name;
+            return {
+              item_name: displayName,
+              quantity: Number(item.quantity),
+              rate: Number(item.rate),
+              amount: Number(item.amount)
+            };
+          })
         });
       }
     } catch (error) {
@@ -148,13 +173,15 @@ function ViewGRN() {
             >
               Back to List
             </Button>
-            <Button
-              type="button"
-              onClick={() => router.push(`/grn/${id}/edit`)}
-              className="bg-primary hover:bg-primary/90"
-            >
-              <Edit className="mr-2 h-4 w-4" /> Edit GRN
-            </Button>
+            {canModifyGRN && (
+              <Button
+                type="button"
+                onClick={() => router.push(`/grn/${id}/edit`)}
+                className="bg-primary hover:bg-primary/90"
+              >
+                <Edit className="mr-2 h-4 w-4" /> Edit GRN
+              </Button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -165,7 +192,7 @@ function ViewGRN() {
               <CardContent className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="releated_po"
+                  name="related_po"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Related PO</FormLabel>
@@ -260,7 +287,7 @@ function ViewGRN() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="CASH">CASH</SelectItem>
-                            <SelectItem value="CARD">CARD</SelectItem>
+                            <SelectItem value="CREDIT">CREDIT</SelectItem>
                           </SelectContent>
                         </Select>
                       </FormItem>
@@ -323,7 +350,7 @@ function ViewGRN() {
               <div className="space-y-4">
                 {fields.map((item, index) => (
                   <div key={item.id} className="flex gap-4 items-start p-4 border rounded-lg bg-muted/10 relative">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1">
                       <FormField
                         control={form.control}
                         name={`items.${index}.item_name`}
@@ -334,6 +361,26 @@ function ViewGRN() {
                           </FormItem>
                         )}
                       />
+                      {(() => {
+                        const itemVal = item.item_name;
+                        const matchedInvItem = inventoryData.find(
+                          (inv) =>
+                            inv.item_name === itemVal ||
+                            `${inv.item_sub_category} ${inv.item_name}` === itemVal ||
+                            `${inv.item_sub_category} ${inv.item_name} (${inv.size || ""})` === itemVal ||
+                            `${inv.item_sub_category} ${inv.item_name} ${inv.size || ""}`.trim() === itemVal ||
+                            `${inv.item_name} ${inv.size || ""}`.trim() === itemVal ||
+                            `${inv.item_name} (${inv.size || ""})` === itemVal
+                        );
+                        return (
+                          <FormItem>
+                            <FormLabel>Unit</FormLabel>
+                            <FormControl>
+                              <Input value={matchedInvItem?.unit_of_measure || "-"} disabled className={readonlyClass} />
+                            </FormControl>
+                          </FormItem>
+                        );
+                      })()}
                       <FormField
                         control={form.control}
                         name={`items.${index}.quantity`}

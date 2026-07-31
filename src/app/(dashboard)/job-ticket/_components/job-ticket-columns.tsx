@@ -20,9 +20,10 @@ interface JobTicketTableActions {
 
 export const jobTicketColumns = (
     actions: JobTicketTableActions,
-    options?: { canModify?: boolean }
+    options?: { canModify?: boolean; canUpdateStatus?: boolean }
 ): ColumnDef<ALL_TICKETS>[] => {
     const canModify = options?.canModify ?? true;
+    const canUpdateStatus = options?.canUpdateStatus ?? true;
 
     return [
         {
@@ -102,7 +103,7 @@ export const jobTicketColumns = (
                                 </Button>
                             </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            {canModify && (() => {
+                            {canUpdateStatus && (() => {
                                 const nextStatus = getNextJobTicketStatus(job_ticket.status);
                                 if (nextStatus) {
                                     return (

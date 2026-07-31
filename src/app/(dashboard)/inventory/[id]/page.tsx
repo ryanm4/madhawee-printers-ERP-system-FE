@@ -26,6 +26,7 @@ import { appToast } from "@/lib/toast-utils";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { FullPageLoader } from "@/components/shared/loader";
+import { usePermissions } from "@/hooks/use-permissions";
 
 type InventoryFormValues = z.infer<typeof inventoryManagementScheme>;
 
@@ -33,6 +34,7 @@ function ViewInventoryItem() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const params = useParams();
+  const { canModifyInventoryItem } = usePermissions();
   const id = params.id as string;
 
   const form = useForm<InventoryFormValues>({
@@ -64,7 +66,7 @@ function ViewInventoryItem() {
           item_category: data.item_category,
           item_sub_category: data.item_sub_category,
           item_name: data.item_name,
-          size: data.size,
+          size: (!data.size || data.size.trim() === "" || data.size.trim() === "x" || data.size.trim() === "-") ? "" : data.size,
           // Parse quantity as number because schema expects number, but API might return string
           quantity: Number(data.quantity) || 0,
           unit_of_measure: data.unit_of_measure,
@@ -122,12 +124,14 @@ function ViewInventoryItem() {
             >
               Back to List
             </Button>
-            <Button
-              type="button"
-              onClick={() => router.push(`/inventory/${id}/edit`)}
-            >
-              Edit Item
-            </Button>
+            {canModifyInventoryItem && (
+              <Button
+                type="button"
+                onClick={() => router.push(`/inventory/${id}/edit`)}
+              >
+                Edit Item
+              </Button>
+            )}
           </div>
 
           <Card

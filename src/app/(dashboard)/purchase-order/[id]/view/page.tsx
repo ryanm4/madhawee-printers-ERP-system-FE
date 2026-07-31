@@ -51,7 +51,7 @@ type PurchaseOrderFormValues = z.infer<typeof purchaseOrderScheme>;
 
 function ViewPurchaseOrder() {
   const router = useRouter();
-  const { canModify } = usePermissions();
+  const { canModifyPO } = usePermissions();
   const params = useParams();
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
   const [quotationList, setQuotationList] = useState<QUOTATIONS[]>([]);
@@ -199,7 +199,7 @@ function ViewPurchaseOrder() {
             >
               Back to List
             </Button>
-            {canModify && (
+            {canModifyPO && (
               <Button
                 size="lg"
                 type="button"

@@ -27,7 +27,7 @@ import { purchaseOrderColumns } from "./_components/purchase-order-columns";
 import { usePermissions } from "@/hooks/use-permissions";
 
 function PurchaseOrderPage() {
-  const { canModify, canExportList } = usePermissions();
+  const { canModifyPO, canCreatePO, canExportList } = usePermissions();
   const [data, setData] = useState<PURCHASE_ORDER[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -132,24 +132,23 @@ function PurchaseOrderPage() {
     onDelete: (id) => handleDelete(id),
     onView: (id) => router.push(`/purchase-order/${id}/view`),
     onStatusChange: handleStatusChange,
-  }, { canModify });
+  }, { canModify: canModifyPO });
 
   const filteredData = data.filter((item) => {
     const matchesSearch = !search || (() => {
       const s = search.toLowerCase();
       return (
-        item.customer_po.toString().toLowerCase().includes(s) ||
-        item.customer?.name?.toLowerCase().includes(s) ||
-        item.status?.toLowerCase().includes(s)
+        String(item.po_id).toLowerCase().includes(s) ||
+        (item.customer?.name || "").toLowerCase().includes(s) ||
+        (item.customer_po || "").toLowerCase().includes(s)
       );
     })();
 
-    const matchesDate = !date?.from || !date?.to || (() => {
-      const poDate = new Date(item.po_date);
-      return isWithinInterval(poDate, {
-        start: startOfDay(date.from),
-        end: endOfDay(date.to),
-      });
+    const matchesDate = !date || !date.from || (() => {
+      const itemDate = new Date(item.po_date || item.created_on || 0);
+      const start = startOfDay(date.from!);
+      const end = date.to ? endOfDay(date.to) : endOfDay(date.from!);
+      return isWithinInterval(itemDate, { start, end });
     })();
 
     return matchesSearch && matchesDate;
@@ -158,7 +157,7 @@ function PurchaseOrderPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       <PageTitleWithBreadcrumb
-        title="Purchase Order Management"
+        title="Purchase Orders"
         breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
       />
       <Tabs
@@ -170,7 +169,7 @@ function PurchaseOrderPage() {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="PO Number"
+              placeholder="Search PO / Customer..."
               className="w-full pl-8"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -183,7 +182,7 @@ function PurchaseOrderPage() {
                 id="date"
                 variant={"outline"}
                 className={cn(
-                  "w-[280px] justify-start text-left font-normal border-gray-200 shadow-none",
+                  "w-[300px] justify-start text-left font-normal",
                   !date && "text-muted-foreground"
                 )}
               >
@@ -191,18 +190,20 @@ function PurchaseOrderPage() {
                 {date?.from ? (
                   date.to ? (
                     <>
-                      {format(date.from, "LLL dd, y")} - {format(date.to, "LLL dd, y")}
+                      {format(date.from, "LLL dd, y")} -{" "}
+                      {format(date.to, "LLL dd, y")}
                     </>
                   ) : (
                     format(date.from, "LLL dd, y")
                   )
                 ) : (
-                  <span>Pick a date</span>
+                  <span>Pick a date range</span>
                 )}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
               <Calendar
+                initialFocus
                 mode="range"
                 defaultMonth={date?.from}
                 selected={date}
@@ -221,7 +222,7 @@ function PurchaseOrderPage() {
             </TabsTrigger>
           </TabsList>
           {canExportList && <ExportButton data={data} filename="purchase-orders" />}
-          {canModify && (
+          {canCreatePO && (
             <Button
               onClick={() => router.push("/purchase-order/create")}
               disabled={loading}
@@ -237,8 +238,8 @@ function PurchaseOrderPage() {
           <EmptyState
             title="No Purchase Orders"
             description="You haven't received or created any purchase orders yet. Start by creating a NEW PO."
-            createLabel="Create New PO"
-            createPath="/purchase-order/create"
+            createLabel={canCreatePO ? "Create New PO" : ""}
+            createPath={canCreatePO ? "/purchase-order/create" : ""}
           />
         ) : (
           <>
@@ -261,7 +262,7 @@ function PurchaseOrderPage() {
                     onDelete={handleDelete}
                     onRefresh={fetchData}
                     onStatusChange={handleStatusChange}
-                    permissions={{ canModify }}
+                    permissions={{ canModify: canModifyPO }}
                   />
                 ))}
               </div>

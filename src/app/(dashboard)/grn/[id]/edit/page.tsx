@@ -39,6 +39,8 @@ import { grnApi } from "@/modules/grn/api";
 import { appToast } from "@/lib/toast-utils";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
+import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
+import { usePermissions } from "@/hooks/use-permissions";
 import { SupplierCombobox } from "../../_components/supplier-combobox";
 import { inventoryApi } from "@/modules/inventory/api";
 import { Combobox } from "@/components/shared/combobox";
@@ -47,12 +49,12 @@ import { GRNItem } from "@/modules/grn/types";
 import { useCallback } from "react";
 
 type GRNFormValues = {
-  releated_po: string;
+  related_po: string;
   received_date: Date;
   supplier_name: string;
   stock_location: string;
   payee_name?: string;
-  payment_method: "CASH" | "CARD";
+  payment_method: "CASH" | "CREDIT";
   currency: string;
   supplier_invoice_no: string;
   remarks?: string;
@@ -68,6 +70,7 @@ function EditGRN() {
   const router = useRouter();
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
+  const { canModifyGRN } = usePermissions();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [user, setUser] = useState<{ name: string } | null>(null);
   const [inventoryItems, setInventoryItems] = useState<
@@ -78,7 +81,7 @@ function EditGRN() {
   const form = useForm<GRNFormValues>({
     resolver: zodResolver(grnSchema) as any,
     defaultValues: {
-      releated_po: "",
+      related_po: "",
       received_date: new Date(),
       supplier_name: "",
       stock_location: "Main Warehouse",
@@ -153,21 +156,27 @@ function EditGRN() {
         const inventory = inventoryResponse.data;
 
         form.reset({
-          releated_po: data.releated_po,
+          related_po: data.related_po || "",
           received_date: parseISO(data.received_date),
-          supplier_name: data.supplier_name,
-          stock_location: data.stock_location,
-          payee_name: data.payee_name,
+          supplier_name: data.supplier_name || "",
+          stock_location: data.stock_location || "",
+          payee_name: data.payee_name || "",
           payment_method:
-            data.payment_method === "CARD" || data.payment_method === "CASH"
+            data.payment_method === "CREDIT" || data.payment_method === "CASH"
               ? data.payment_method
               : "CASH",
-          currency: data.currency,
-          supplier_invoice_no: data.supplier_invoice_no,
+          currency: data.currency || "",
+          supplier_invoice_no: data.supplier_invoice_no || "",
           remarks: data.remarks || "",
           items: data.items.map((item: GRNItem) => {
             const invItem = inventory.find(
-              (inv) => inv.item_name === item.item_name
+              (inv) =>
+                inv.item_name === item.item_name ||
+                `${inv.item_sub_category} ${inv.item_name}` === item.item_name ||
+                `${inv.item_sub_category} ${inv.item_name} (${inv.size || ""})` === item.item_name ||
+                `${inv.item_sub_category} ${inv.item_name} ${inv.size || ""}`.trim() === item.item_name ||
+                `${inv.item_name} ${inv.size || ""}`.trim() === item.item_name ||
+                `${inv.item_name} (${inv.size || ""})` === item.item_name
             );
             return {
               item_name: invItem?.item_id.toString() || item.item_name,
@@ -223,6 +232,10 @@ function EditGRN() {
 
   if (loading) return <FullPageLoader />;
 
+  if (!canModifyGRN) {
+    return <RestrictedRouteGuard />;
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       <PageTitleWithBreadcrumb
@@ -243,7 +256,7 @@ function EditGRN() {
               <CardContent className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="releated_po"
+                  name="related_po"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
@@ -372,7 +385,7 @@ function EditGRN() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="CASH">CASH</SelectItem>
-                            <SelectItem value="CARD">CARD</SelectItem>
+                            <SelectItem value="CREDIT">CREDIT</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -460,7 +473,7 @@ function EditGRN() {
                     key={item.id}
                     className="flex gap-4 items-start p-4 border rounded-lg bg-muted/20 relative"
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1">
                       <FormField
                         control={form.control}
                         name={`items.${index}.item_name`}
@@ -478,6 +491,27 @@ function EditGRN() {
                           </FormItem>
                         )}
                       />
+                      {(() => {
+                        const selectedItemId = form.watch(`items.${index}.item_name`);
+                        const matchedInvItem = inventoryData.find(
+                          (inv) =>
+                            inv.item_id.toString() === selectedItemId ||
+                            inv.item_name === selectedItemId ||
+                            `${inv.item_sub_category} ${inv.item_name}` === selectedItemId ||
+                            `${inv.item_sub_category} ${inv.item_name} (${inv.size || ""})` === selectedItemId ||
+                            `${inv.item_sub_category} ${inv.item_name} ${inv.size || ""}`.trim() === selectedItemId ||
+                            `${inv.item_name} ${inv.size || ""}`.trim() === selectedItemId ||
+                            `${inv.item_name} (${inv.size || ""})` === selectedItemId
+                        );
+                        return (
+                          <FormItem>
+                            <FormLabel>Unit</FormLabel>
+                            <FormControl>
+                              <Input value={matchedInvItem?.unit_of_measure || "-"} disabled className="bg-muted/50" />
+                            </FormControl>
+                          </FormItem>
+                        );
+                      })()}
                       <FormField
                         control={form.control}
                         name={`items.${index}.quantity`}

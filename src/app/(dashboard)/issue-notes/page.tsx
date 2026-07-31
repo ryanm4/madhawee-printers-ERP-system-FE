@@ -25,7 +25,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 
 function IssueNotesManagement() {
   const router = useRouter();
-  const { canModify, canExportList } = usePermissions();
+  const { canModifyIssueNote, canCreateIssueNote, canExportList } = usePermissions();
   const [data, setData] = useState<IssueNote[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -149,7 +149,7 @@ function IssueNotesManagement() {
     [router, jobs, inventory]
   );
 
-  const columns = useMemo(() => issueNotesColumns(handlers, { canModify }), [handlers, canModify]);
+  const columns = useMemo(() => issueNotesColumns(handlers, { canModify: canModifyIssueNote }), [handlers, canModifyIssueNote]);
 
   const handleDelete = async () => {
     if (!selectedId) return;
@@ -189,7 +189,7 @@ function IssueNotesManagement() {
           </div>
 
           {canExportList && <ExportButton data={data} filename="issue-notes-list" />}
-          {canModify && (
+          {canCreateIssueNote && (
             <Button onClick={() => router.push("/issue-notes/create")}>
               <PlusIcon /> Create New Issue Material
             </Button>
@@ -201,8 +201,8 @@ function IssueNotesManagement() {
           <EmptyState
             title="No Issue Materials Found"
             description="You haven't recorded any Issue Materials yet."
-            createLabel="Create New Issue Material"
-            createPath="/issue-notes/create"
+            createLabel={canCreateIssueNote ? "Create New Issue Material" : ""}
+            createPath={canCreateIssueNote ? "/issue-notes/create" : ""}
           />
         ) : (
           <DataTable
