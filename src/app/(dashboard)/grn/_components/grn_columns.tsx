@@ -46,7 +46,7 @@ export const grnColumns = (
     },
   },
   {
-    accessorKey: "releated_po",
+    accessorKey: "related_po",
     header: "Related PO",
   },
   {

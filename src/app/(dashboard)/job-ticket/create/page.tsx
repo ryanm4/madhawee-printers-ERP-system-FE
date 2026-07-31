@@ -263,7 +263,14 @@ function CreateJobTicket() {
         new_plate_status: data.newPlatesStatus,
         new_plate_remarks: data.newPlatesRemarks,
 
-        inks: data.inks,
+        inks: data.inks
+          ?.filter((ink) => ink.ink && ink.ink.trim() !== "")
+          ?.map((ink) => ({
+            ink: ink.ink,
+            quantity: ink.quantity && ink.quantity.trim() !== "" ? ink.quantity : null,
+            status: ink.status || null,
+            remarks: ink.remarks || null,
+          })),
         paperCoating: data.paperTypes?.map((p) => ({
           paper: p.paper,
           coating: p.coating,
@@ -315,7 +322,14 @@ function CreateJobTicket() {
         remarks: data.remarks,
         oldPlatesQuantity: data.oldPlatesQuantity,
         newPlatesQuantity: data.newPlatesQuantity,
-        inks: (data.inks || []).map((i) => ({ ...i, ink: i.ink || "" })),
+        inks: (data.inks || [])
+          .filter((i) => i.ink && i.ink.trim() !== "")
+          .map((i) => ({
+            ink: i.ink || "",
+            quantity: i.quantity && i.quantity.trim() !== "" ? i.quantity : undefined,
+            status: i.status || undefined,
+            remarks: i.remarks || undefined,
+          })),
         rawMaterials: allRawMaterials,
       };
       setPrintData(pd);
@@ -919,8 +933,8 @@ function CreateJobTicket() {
                                 );
                                 const filteredInventory = inventoryList.filter(
                                   (item) =>
-                                    `${item.item_sub_category} ${item.item_name}` ===
-                                    selectedPaperName
+                                    `${item.item_sub_category || ""} ${item.item_name}`.trim() ===
+                                    (selectedPaperName || "").trim()
                                 );
 
                                 return (
@@ -935,7 +949,7 @@ function CreateJobTicket() {
                                         field.onChange(val);
                                         const selectedMaterial =
                                           filteredInventory.find(
-                                            (item) => item.size === val
+                                            (item) => (item.size || "") === val
                                           );
                                         if (selectedMaterial) {
                                           form.setValue(
@@ -963,9 +977,9 @@ function CreateJobTicket() {
                                         {filteredInventory.map((item) => (
                                           <SelectItem
                                             key={item.item_id}
-                                            value={item.size}
+                                            value={item.size || ""}
                                           >
-                                            {item.size}
+                                            {item.size || "No Size"}
                                           </SelectItem>
                                         ))}
                                       </SelectContent>

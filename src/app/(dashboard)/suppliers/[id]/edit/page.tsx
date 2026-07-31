@@ -39,6 +39,8 @@ import { SupplierApi } from "@/modules/supplier/api";
 import { toast } from "sonner";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
+import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
+import { usePermissions } from "@/hooks/use-permissions";
 import { UPDATE_SUPPLIER } from "@/modules/supplier/types";
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
@@ -51,6 +53,7 @@ interface SUPPLIER_CONTACT {
 }
 
 function EditSupplierRelationship() {
+  const { canModifySupplier } = usePermissions();
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -203,6 +206,10 @@ function EditSupplierRelationship() {
       typeof FormField<SupplierFormValues, TName>
     >["0"]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
+
+  if (!canModifySupplier) {
+    return <RestrictedRouteGuard />;
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">

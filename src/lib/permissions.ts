@@ -155,9 +155,26 @@ export interface ClientPermissions {
   canExportList: boolean;
   canApprove: boolean;
   canViewAll: boolean;
+  
   canCreateDispatch: boolean;
   canCreateQuotation: boolean;
   canModifyQuotation: boolean;
+  
+  canCreateCustomer: boolean;
+  canModifyCustomer: boolean;
+  canCreatePO: boolean;
+  canModifyPO: boolean;
+  canCreateJobTicket: boolean;
+  canModifyJobTicket: boolean;
+  canUpdateJobTicketStatus: boolean;
+  canCreateSupplier: boolean;
+  canModifySupplier: boolean;
+  canCreateInventoryItem: boolean;
+  canModifyInventoryItem: boolean;
+  canCreateGRN: boolean;
+  canModifyGRN: boolean;
+  canCreateIssueNote: boolean;
+  canModifyIssueNote: boolean;
 }
 
 export function getClientPermissions(): ClientPermissions {
@@ -172,9 +189,25 @@ export function getClientPermissions(): ClientPermissions {
     canExportList: false,
     canApprove: false,
     canViewAll: false,
+    
     canCreateDispatch: false,
     canCreateQuotation: false,
     canModifyQuotation: false,
+    canCreateCustomer: false,
+    canModifyCustomer: false,
+    canCreatePO: false,
+    canModifyPO: false,
+    canCreateJobTicket: false,
+    canModifyJobTicket: false,
+    canUpdateJobTicketStatus: false,
+    canCreateSupplier: false,
+    canModifySupplier: false,
+    canCreateInventoryItem: false,
+    canModifyInventoryItem: false,
+    canCreateGRN: false,
+    canModifyGRN: false,
+    canCreateIssueNote: false,
+    canModifyIssueNote: false,
   };
 
   switch (normalized) {
@@ -187,6 +220,21 @@ export function getClientPermissions(): ClientPermissions {
       permissions.canCreateDispatch = true;
       permissions.canCreateQuotation = true;
       permissions.canModifyQuotation = true;
+      permissions.canCreateCustomer = true;
+      permissions.canModifyCustomer = true;
+      permissions.canCreatePO = true;
+      permissions.canModifyPO = true;
+      permissions.canCreateJobTicket = true;
+      permissions.canModifyJobTicket = true;
+      permissions.canUpdateJobTicketStatus = true;
+      permissions.canCreateSupplier = true;
+      permissions.canModifySupplier = true;
+      permissions.canCreateInventoryItem = true;
+      permissions.canModifyInventoryItem = true;
+      permissions.canCreateGRN = true;
+      permissions.canModifyGRN = true;
+      permissions.canCreateIssueNote = true;
+      permissions.canModifyIssueNote = true;
       break;
     case USER_ROLES.DIRECTOR_GM:
       permissions.canModify = false; // No edit — only Super Admin can edit
@@ -194,8 +242,6 @@ export function getClientPermissions(): ClientPermissions {
       permissions.canExportList = true;
       permissions.canApprove = true;
       permissions.canViewAll = true;
-      permissions.canCreateQuotation = true;
-      permissions.canModifyQuotation = true;
       break;
     case USER_ROLES.MARKETING_EXECUTIVE_MANAGER:
       permissions.canModify = false;
@@ -213,6 +259,12 @@ export function getClientPermissions(): ClientPermissions {
       permissions.canCreateDispatch = true;
       permissions.canCreateQuotation = true;
       permissions.canModifyQuotation = false;
+      permissions.canCreateCustomer = true;
+      permissions.canModifyCustomer = false;
+      permissions.canCreatePO = true;
+      permissions.canModifyPO = false;
+      permissions.canCreateJobTicket = true;
+      permissions.canModifyJobTicket = false;
       break;
     case USER_ROLES.PRODUCTION_MANAGER:
       permissions.canModify = false;
@@ -220,6 +272,8 @@ export function getClientPermissions(): ClientPermissions {
       permissions.canExportList = true;
       permissions.canApprove = false;
       permissions.canViewAll = true;
+      permissions.canCreateDispatch = true;
+      permissions.canUpdateJobTicketStatus = true;
       break;
     case USER_ROLES.PRODUCTION_EXECUTIVE:
       permissions.canModify = false;
@@ -234,6 +288,14 @@ export function getClientPermissions(): ClientPermissions {
       permissions.canExportList = true;
       permissions.canApprove = false;
       permissions.canViewAll = false;
+      permissions.canCreateSupplier = true;
+      permissions.canModifySupplier = false;
+      permissions.canCreateInventoryItem = true;
+      permissions.canModifyInventoryItem = false;
+      permissions.canCreateGRN = true;
+      permissions.canModifyGRN = false;
+      permissions.canCreatePO = true;
+      permissions.canModifyPO = false;
       break;
     case USER_ROLES.STORE_KEEPER:
       permissions.canModify = false;
@@ -241,6 +303,8 @@ export function getClientPermissions(): ClientPermissions {
       permissions.canExportList = true;
       permissions.canApprove = false;
       permissions.canViewAll = false;
+      permissions.canCreateIssueNote = true;
+      permissions.canModifyIssueNote = false;
       break;
     case USER_ROLES.DISPATCH_DELIVERY_OFFICER:
       permissions.canModify = false;
@@ -248,6 +312,7 @@ export function getClientPermissions(): ClientPermissions {
       permissions.canExportList = false;
       permissions.canApprove = false;
       permissions.canViewAll = false;
+      permissions.canCreateDispatch = true;
       break;
     case USER_ROLES.FINANCE_MANAGER_ACCOUNTANT:
       permissions.canModify = false;

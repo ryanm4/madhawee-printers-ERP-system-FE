@@ -38,7 +38,7 @@ type CustomerFormValues = z.infer<typeof customerSchema>;
 
 function ViewCustomerRelationship() {
   const router = useRouter();
-  const { canModify } = usePermissions();
+  const { canModifyCustomer } = usePermissions();
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -199,7 +199,7 @@ function ViewCustomerRelationship() {
             >
               Back to List
             </Button>
-            {canModify && (
+            {canModifyCustomer && (
               <Button
                 type="button"
                 onClick={() => router.push(`/customers/${id}/edit`)}

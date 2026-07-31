@@ -57,7 +57,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 type PurchaseOrderFormValues = z.infer<typeof purchaseOrderScheme>;
 
 function EditPurchaseOrder() {
-  const { isAdmin } = usePermissions();
+  const { canModifyPO } = usePermissions();
   const router = useRouter();
   const params = useParams();
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
@@ -249,7 +249,7 @@ function EditPurchaseOrder() {
     }
   }, [id, form]);
 
-  if (!isAdmin) {
+  if (!canModifyPO) {
     return <RestrictedRouteGuard />;
   }
 

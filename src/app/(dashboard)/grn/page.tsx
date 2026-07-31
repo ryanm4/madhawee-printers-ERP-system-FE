@@ -18,13 +18,15 @@ import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmatio
 import { useMemo } from "react";
 
 import { handleGRNPrint } from "./_components/grn-print-dialog";
-
 import { usePermissions } from "@/hooks/use-permissions";
+import { inventoryApi } from "@/modules/inventory/api";
+import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
 
 function GRNManagement() {
   const router = useRouter();
-  const { canModify, canExportList } = usePermissions();
+  const { canModifyGRN, canCreateGRN, canExportList } = usePermissions();
   const [data, setData] = useState<GRN[]>([]);
+  const [inventoryData, setInventoryData] = useState<GET_ALL_INVENTORY[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -35,16 +37,23 @@ function GRNManagement() {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const response = await grnApi.getAll();
+      const [grnResponse, inventoryResponse] = await Promise.all([
+        grnApi.getAll(),
+        inventoryApi.getAll(),
+      ]);
 
-      if (response.status === 200) {
-        const sortedData = response.data.sort(
+      if (grnResponse.status === 200) {
+        const sortedData = grnResponse.data.sort(
           (a, b) =>
             new Date(b.created_on || 0).getTime() -
             new Date(a.created_on || 0).getTime()
         );
 
         setData(sortedData);
+      }
+
+      if (inventoryResponse.status === 200) {
+        setInventoryData(inventoryResponse.data);
       }
     } catch (error) {
       console.error("Failed to fetch GRN data", error);
@@ -73,14 +82,14 @@ function GRNManagement() {
         setIsDeleteDialogOpen(true);
       },
       onPrint: (grn: GRN) => {
-        handleGRNPrint(grn);
+        handleGRNPrint(grn, inventoryData);
         toast.success("Opening GRN Print View...");
       },
     }),
-    [router]
+    [router, inventoryData]
   );
 
-  const columns = useMemo(() => grnColumns(handlers, { canModify }), [handlers, canModify]);
+  const columns = useMemo(() => grnColumns(handlers, { canModify: canModifyGRN }), [handlers, canModifyGRN]);
 
   const handleDelete = async () => {
     if (!selectedGrnId) return;
@@ -120,7 +129,7 @@ function GRNManagement() {
           </div>
 
           {canExportList && <ExportButton data={data} filename="grn-list" />}
-          {canModify && (
+          {canCreateGRN && (
             <Button onClick={() => router.push("/grn/create")}>
               <PlusIcon /> Create New GRN
             </Button>
@@ -132,8 +141,8 @@ function GRNManagement() {
           <EmptyState
             title="No GRN Found"
             description="You haven't recorded any Goods Received Notes yet."
-            createLabel="Create New GRN"
-            createPath="/grn/create"
+            createLabel={canCreateGRN ? "Create New GRN" : ""}
+            createPath={canCreateGRN ? "/grn/create" : ""}
           />
         ) : (
           <DataTable columns={columns} data={data} searchValue={search} />

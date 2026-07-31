@@ -83,7 +83,7 @@ export const generateGRNPdf = (grn: GRN) => {
 
     addField("PRINTED ON", format(new Date(), "dd/MM/yyyy h:mm:ss a"), leftX, currY);
     addField("GRN NO", grn.id.toString(), leftX, currY + lineHeight);
-    addField("RELATED PO #", grn.releated_po, leftX, currY + lineHeight * 2);
+    addField("RELATED PO #", grn.related_po, leftX, currY + lineHeight * 2);
     addField("RECEIVED DATE", grn.received_date ? format(new Date(grn.received_date), "dd/MM/yyyy") : "-", leftX, currY + lineHeight * 3);
     addField("SUPPLIERS", grn.supplier_name, leftX, currY + lineHeight * 4);
     addField("STOCK LOCATION", grn.stock_location, leftX, currY + lineHeight * 5);

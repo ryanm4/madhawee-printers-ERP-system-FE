@@ -41,6 +41,7 @@ import { purchaseOrderApi } from "@/modules/purchase-order/api"
 import { jobTicketsApi } from "@/modules/job-tickets/api"
 
 import { FullPageLoader } from "@/components/shared/loader"
+import { usePermissions } from "@/hooks/use-permissions"
 
 type JobTicketFormValues = z.infer<typeof jobTicketSchema>
 
@@ -48,6 +49,7 @@ function JobViewTicket() {
     const router = useRouter();
     const params = useParams();
     const id = params.id as string;
+    const { canModifyJobTicket } = usePermissions();
 
     const [isLoading, setIsLoading] = useState(false);
     const [customerData, setCustomerData] = useState<CUSTOMER[]>([])
@@ -181,16 +183,24 @@ function JobViewTicket() {
                         paperTypes: (((data as Record<string, unknown>).paperCoatingData || data.paperCoating || []) as Array<Record<string, unknown>>).map((p) => {
                             let paperValue = String(p.paper || "");
                             const materials = Array.isArray(p.materials) ? p.materials : [];
-                            if (materials.length > 0) {
+                            if (!paperValue && materials.length > 0) {
                                 const mat = materials[0] as Record<string, unknown>;
                                 if (mat.material_type && mat.material_name) {
                                     paperValue = `${mat.material_type} ${mat.material_name}`;
                                 }
                             }
+                            // Filter raw materials to match the paper value
+                            const filteredMaterials = materials.filter((m: Record<string, unknown>) => {
+                                if (!paperValue) return true;
+                                const mKey = `${m.material_type || ""} ${m.material_name || ""}`.trim().toLowerCase();
+                                const pKey = paperValue.trim().toLowerCase();
+                                return mKey === pKey;
+                            });
+
                             return {
                                 paper: paperValue,
                                 coating: String(p.coating || ""),
-                                rawMaterials: materials.map((rm: Record<string, unknown>) => ({
+                                rawMaterials: filteredMaterials.map((rm: Record<string, unknown>) => ({
                                     item_id: rm.item_id ? Number(rm.item_id) : undefined,
                                     material_name: String(rm.material_name || ""),
                                     material_type: String(rm.material_type || ""),
@@ -306,9 +316,11 @@ function JobViewTicket() {
                 <form className="space-y-6 pb-0">
                     <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
                         <Button size="lg" variant="outline" type="button" onClick={() => router.push("/job-ticket")}>Back</Button>
-                        <Button size="lg" type="button" className="bg-primary hover:bg-primary/90" onClick={() => router.push(`/job-ticket/${id}/edit`)}>
-                            <Edit2 className="mr-2 h-4 w-4" /> Edit Job Ticket
-                        </Button>
+                        {canModifyJobTicket && (
+                            <Button size="lg" type="button" className="bg-primary hover:bg-primary/90" onClick={() => router.push(`/job-ticket/${id}/edit`)}>
+                                <Edit2 className="mr-2 h-4 w-4" /> Edit Job Ticket
+                            </Button>
+                        )}
                     </div>
                     <Card className={cn("w-full shdow-sm hover:shadow-md transition-shadow flex flex-col")}>
                         <CardHeader className="flex flex-col gap-[0.5px]">

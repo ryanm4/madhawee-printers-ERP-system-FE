@@ -34,6 +34,8 @@ import { inventoryApi } from "@/modules/inventory/api";
 import { toast } from "sonner";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
+import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
+import { usePermissions } from "@/hooks/use-permissions";
 import { Combobox } from "@/components/shared/combobox";
 import { ALL_TICKETS } from "@/modules/job-tickets/types";
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
@@ -45,6 +47,7 @@ function EditIssueNote() {
   const router = useRouter();
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
+  const { canModifyIssueNote } = usePermissions();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [user, setUser] = useState<{ name: string } | null>(null);
   const [jobs, setJobs] = useState<{ value: string; label: string }[]>([]);
@@ -272,6 +275,10 @@ function EditIssueNote() {
   }
 
   if (loading) return <FullPageLoader />;
+
+  if (!canModifyIssueNote) {
+    return <RestrictedRouteGuard />;
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">

@@ -8,7 +8,7 @@ export interface GRNItem {
 
 export interface GRN {
     id: number;
-    releated_po: string;
+    related_po: string;
     received_date: string;
     supplier_name: string;
     stock_location: string;

@@ -88,7 +88,7 @@ function CreateInventoryManagement() {
         item_sub_category: data.item_sub_category,
         item_name: data.item_name,
 
-        size: `${data.width} x ${data.height}`,
+        size: (data.width && data.height) ? `${data.width} x ${data.height}` : "",
         width: data.width ?? "",
         height: data.height ?? "",
         quantity: String(data.quantity),

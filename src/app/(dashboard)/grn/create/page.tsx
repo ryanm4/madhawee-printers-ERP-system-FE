@@ -45,12 +45,12 @@ import { Combobox } from "@/components/shared/combobox";
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
 
 type GRNFormValues = {
-  releated_po: string;
+  related_po: string;
   received_date: Date;
   supplier_name: string;
   stock_location: string;
   payee_name?: string;
-  payment_method: "CASH" | "CARD";
+  payment_method: "CASH" | "CREDIT";
   currency: string;
   supplier_invoice_no: string;
   remarks?: string;
@@ -112,7 +112,7 @@ function CreateGRN() {
   }, []);
 
   const defaultValues: GRNFormValues = {
-    releated_po: "",
+    related_po: "",
     received_date: new Date(),
     supplier_name: "",
     stock_location: "Main Warehouse",
@@ -198,7 +198,7 @@ function CreateGRN() {
               <CardContent className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="releated_po"
+                  name="related_po"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
@@ -335,7 +335,7 @@ function CreateGRN() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="CASH">CASH</SelectItem>
-                            <SelectItem value="CARD">CARD</SelectItem>
+                            <SelectItem value="CREDIT">CREDIT</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -435,7 +435,7 @@ function CreateGRN() {
                     key={item.id}
                     className="flex gap-4 items-start p-4 border rounded-lg bg-muted/20 relative"
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1">
                       <FormField
                         control={form.control}
                         name={`items.${index}.item_name`}
@@ -453,6 +453,20 @@ function CreateGRN() {
                           </FormItem>
                         )}
                       />
+                      {(() => {
+                        const selectedItemId = form.watch(`items.${index}.item_name`);
+                        const matchedInvItem = inventoryData.find(
+                          (inv) => inv.item_id.toString() === selectedItemId
+                        );
+                        return (
+                          <FormItem>
+                            <FormLabel>Unit</FormLabel>
+                            <FormControl>
+                              <Input value={matchedInvItem?.unit_of_measure || "-"} disabled className="bg-muted/50" />
+                            </FormControl>
+                          </FormItem>
+                        );
+                      })()}
                       <FormField
                         control={form.control}
                         name={`items.${index}.quantity`}

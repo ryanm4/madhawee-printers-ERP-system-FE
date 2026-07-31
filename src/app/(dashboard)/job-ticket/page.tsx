@@ -32,7 +32,7 @@ type JobTicketWithCustomer = ALL_TICKETS & { customer_name?: string };
 
 function JobTicketComponent() {
   const router = useRouter();
-  const { canModify, canExportList } = usePermissions();
+  const { canModifyJobTicket, canCreateJobTicket, canUpdateJobTicketStatus, canExportList } = usePermissions();
   const [data, setData] = useState<JobTicketWithCustomer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -153,12 +153,14 @@ function JobTicketComponent() {
             oldPlatesQuantity: ticket.old_plate_quantity !== undefined && ticket.old_plate_quantity !== null ? String(ticket.old_plate_quantity) : undefined,
             newPlatesQuantity: ticket.new_plate_quantity !== undefined && ticket.new_plate_quantity !== null ? String(ticket.new_plate_quantity) : undefined,
             rawMaterials: allRawMaterials,
-            inks: ticket.inks?.map((ink: any) => ({
-              ink: ink.ink,
-              quantity: ink.quantity ?? undefined,
-              status: ink.status ?? undefined,
-              remarks: ink.remarks ?? undefined,
-            })),
+            inks: ticket.inks
+              ?.filter((ink: any) => ink.ink && ink.ink.trim() !== "")
+              ?.map((ink: any) => ({
+                ink: ink.ink,
+                quantity: ink.quantity !== null && ink.quantity !== undefined ? String(ink.quantity) : undefined,
+                status: ink.status ?? undefined,
+                remarks: ink.remarks ?? undefined,
+              })),
           };
           console.log(pd);
           handleJobTicketPrint(pd);
@@ -251,7 +253,7 @@ function JobTicketComponent() {
     },
   };
 
-  const columns = jobTicketColumns(handlers, { canModify });
+  const columns = jobTicketColumns(handlers, { canModify: canModifyJobTicket, canUpdateStatus: canUpdateJobTicketStatus });
 
   const handleDelete = async () => {
     if (deleteId === null) return;
@@ -330,7 +332,7 @@ function JobTicketComponent() {
             </TabsList>
 
             {canExportList && <ExportButton data={filteredData} filename="job-tickets" />}
-            {canModify && (
+            {canCreateJobTicket && (
               <Button onClick={() => router.push("/job-ticket/create")}>
                 <PlusIcon /> Create New
               </Button>
@@ -343,8 +345,8 @@ function JobTicketComponent() {
             <EmptyState
               title="No Job Tickets"
               description="You haven't initiated any job tickets yet. Create a job ticket to start the production process."
-              createLabel="Create New Job Ticket"
-              createPath="/job-ticket/create"
+              createLabel={canCreateJobTicket ? "Create New Job Ticket" : ""}
+              createPath={canCreateJobTicket ? "/job-ticket/create" : ""}
             />
           ) : (
             <>
@@ -359,7 +361,7 @@ function JobTicketComponent() {
                       onView={handlers.onView}
                       onDownload={handlers.onDownload}
                       onStatusChange={handlers.onStatusChange}
-                      permissions={{ canModify }}
+                      permissions={{ canModify: canModifyJobTicket, canUpdateStatus: canUpdateJobTicketStatus }}
                     />
                   ))}
                 </div>

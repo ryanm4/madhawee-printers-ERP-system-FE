@@ -19,7 +19,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 
 export default function CRMPage() {
   const router = useRouter();
-  const { canModify, canExportList } = usePermissions();
+  const { canModifyCustomer, canCreateCustomer, canExportList } = usePermissions();
   const [data, setData] = useState<CUSTOMER[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -68,7 +68,7 @@ export default function CRMPage() {
     },
   };
 
-  const columns = customerColumns(handlers, { canModify });
+  const columns = customerColumns(handlers, { canModify: canModifyCustomer });
 
   const handleDelete = async () => {
     if (deleteId === null) return;
@@ -106,7 +106,7 @@ export default function CRMPage() {
           </div>
 
           {canExportList && <ExportButton data={data} filename="customers-list" />}
-          {canModify && (
+          {canCreateCustomer && (
             <Button onClick={() => router.push("/customers/create")}>
               <PlusIcon /> Create New
             </Button>
@@ -118,8 +118,8 @@ export default function CRMPage() {
           <EmptyState
             title="No Customers Found"
             description="You haven't added any customers yet. Start building your customer base by creating your first entry."
-            createLabel="Create New Customer"
-            createPath="/customers/create"
+            createLabel={canCreateCustomer ? "Create New Customer" : ""}
+            createPath={canCreateCustomer ? "/customers/create" : ""}
           />
         ) : (
           <DataTable

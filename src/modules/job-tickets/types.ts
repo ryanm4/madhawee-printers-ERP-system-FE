@@ -159,9 +159,9 @@ export interface CREATE_TICKETS {
   }[];
   inks?: {
     ink?: string;
-    quantity?: string;
-    status?: string;
-    remarks?: string;
+    quantity?: string | null;
+    status?: string | null;
+    remarks?: string | null;
   }[];
 
   status?: string;

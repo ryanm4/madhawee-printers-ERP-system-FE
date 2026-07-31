@@ -11,16 +11,18 @@ import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { GRN } from "@/modules/grn/types";
+import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
 
 interface GRNPrintDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   data: GRN;
+  inventoryData?: GET_ALL_INVENTORY[];
   onDecline?: () => void;
 }
 
-export function handleGRNPrint(data: GRN) {
-  const printContent = buildGRNPrintHTML(data);
+export function handleGRNPrint(data: GRN, inventoryData?: GET_ALL_INVENTORY[]) {
+  const printContent = buildGRNPrintHTML(data, inventoryData);
   const printWindow = window.open("", "_blank", "width=1100,height=800");
   if (!printWindow) return;
 
@@ -38,10 +40,11 @@ export function GRNPrintDialog({
   open,
   onOpenChange,
   data,
+  inventoryData,
   onDecline,
 }: GRNPrintDialogProps) {
   const handlePrint = () => {
-    handleGRNPrint(data);
+    handleGRNPrint(data, inventoryData);
     onOpenChange(false);
   };
 
@@ -76,7 +79,7 @@ export function GRNPrintDialog({
   );
 }
 
-export function buildGRNPrintHTML(data: GRN): string {
+export function buildGRNPrintHTML(data: GRN, inventoryData?: GET_ALL_INVENTORY[]): string {
   const safe = (val: string | number | null | undefined) => (val !== undefined && val !== null && String(val).trim() !== "" ? String(val) : "");
 
   let formattedDate = "";
@@ -299,7 +302,7 @@ export function buildGRNPrintHTML(data: GRN): string {
       </div>
       <div class="meta-item">
         <div class="meta-label">PO. No. :</div>
-        <div class="meta-value">${safe(data.releated_po)}</div>
+        <div class="meta-value">${safe(data.related_po)}</div>
       </div>
       <div class="meta-item">
         <div class="meta-label">Advice No :</div>
@@ -322,11 +325,23 @@ export function buildGRNPrintHTML(data: GRN): string {
         ${(data.items || []).map((item, idx) => {
     const itemRs = Math.floor(Number(item.amount || 0));
     const itemCts = Math.round((Number(item.amount || 0) - itemRs) * 100);
+    const invItem = inventoryData?.find(
+      (inv) =>
+        inv.item_name === item.item_name ||
+        `${inv.item_sub_category} ${inv.item_name}` === item.item_name ||
+        `${inv.item_sub_category} ${inv.item_name} (${inv.size || ""})` === item.item_name ||
+        `${inv.item_sub_category} ${inv.item_name} ${inv.size || ""}`.trim() === item.item_name ||
+        `${inv.item_name} ${inv.size || ""}`.trim() === item.item_name ||
+        `${inv.item_name} (${inv.size || ""})` === item.item_name
+    );
+    const size = invItem?.size || "";
+    const unit = invItem?.unit_of_measure || "Nos.";
+    const displayDescription = size ? `${safe(item.item_name)} (${safe(size)})` : safe(item.item_name);
     return `
           <tr>
             <td>${idx + 1}</td>
-            <td>Nos.</td>
-            <td class="text-left">${safe(item.item_name)}</td>
+            <td>${safe(unit)}</td>
+            <td class="text-left">${safe(displayDescription)}</td>
             <td>${safe(item.quantity)}</td>
             <td class="text-right">${Number(item.rate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
             <td style="border-right: none; width: 10%;" class="text-right">${itemRs.toLocaleString()}</td>
