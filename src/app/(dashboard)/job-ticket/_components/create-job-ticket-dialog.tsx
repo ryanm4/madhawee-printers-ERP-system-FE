@@ -440,7 +440,6 @@ export function CreateJobTicketDialog({
 
   const selectedPoId = form.watch("customer_po");
   const selectedPoItems = selectedPoDetails?.po_items ?? [];
-  console.log("PSD", selectedPoItems);
 
   useEffect(() => {
     const fetchPoDetails = async () => {

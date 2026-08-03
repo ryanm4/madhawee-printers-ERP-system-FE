@@ -132,24 +132,34 @@ function CreateIssueNote() {
       if (response.status === 200 && response.data) {
         const jobData = response.data;
 
-        const materials: {
+        const materialsMap = new Map<number, {
           value: number;
           label: string;
           quantity: number;
-        }[] = [];
+        }>();
 
         if (jobData.paperCoating && Array.isArray(jobData.paperCoating)) {
           jobData.paperCoating.forEach((pc: any) => {
             if (pc.materials && Array.isArray(pc.materials)) {
               pc.materials.forEach((material: any) => {
-                const itemLabel =
-                  `${material.material_type} ${material.material_name} ${material.size}`.trim();
+                if (material.item_id) {
+                  const itemLabel =
+                    `${material.material_type} ${material.material_name} ${material.size}`.trim();
 
-                materials.push({
-                  value: material.item_id,
-                  label: itemLabel,
-                  quantity: Number(material.quantity || 0),
-                });
+                  if (materialsMap.has(material.item_id)) {
+                    const existing = materialsMap.get(material.item_id)!;
+                    materialsMap.set(material.item_id, {
+                      ...existing,
+                      quantity: existing.quantity + Number(material.quantity || 0),
+                    });
+                  } else {
+                    materialsMap.set(material.item_id, {
+                      value: material.item_id,
+                      label: itemLabel,
+                      quantity: Number(material.quantity || 0),
+                    });
+                  }
+                }
               });
             }
           });
@@ -157,18 +167,26 @@ function CreateIssueNote() {
 
         if (jobData.inks && Array.isArray(jobData.inks)) {
           jobData.inks.forEach((ink: any) => {
-            if (ink.ink) {
+            if (ink.ink && ink.item_id) {
               const itemLabel = ink.ink.trim();
-              materials.push({
-                value: ink.item_id,
-                label: itemLabel,
-                quantity: Number(ink.quantity || 0),
-              });
+              if (materialsMap.has(ink.item_id)) {
+                const existing = materialsMap.get(ink.item_id)!;
+                materialsMap.set(ink.item_id, {
+                  ...existing,
+                  quantity: existing.quantity + Number(ink.quantity || 0),
+                });
+              } else {
+                materialsMap.set(ink.item_id, {
+                  value: ink.item_id,
+                  label: itemLabel,
+                  quantity: Number(ink.quantity || 0),
+                });
+              }
             }
           });
         }
 
-        setJobMaterials(materials);
+        setJobMaterials(Array.from(materialsMap.values()));
       }
     } catch (error) {
       console.error("Failed to fetch job details:", error);

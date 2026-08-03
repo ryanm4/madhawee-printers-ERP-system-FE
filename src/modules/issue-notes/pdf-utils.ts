@@ -33,9 +33,6 @@ export const generateIssueNotePdf = async (issueNote: IssueNote) => {
     unit: "mm",
     format: "a4",
   });
-
-  console.log(issueNote);
-
   const primaryColor = [34, 63, 122]; // #223F7A
   const secondaryColor = [128, 128, 128];
 
