@@ -82,7 +82,6 @@ function ViewDispatchAndInvoice() {
         const response = await dispatchInventoryApi.getById(id);
         if (response.status === 200) {
           const d = response.data;
-          console.log("Dispatch View Data:", d);
           form.setValue("job_id", String(d.job_id || ""));
           form.setValue("customer_id", String(d.customer_id || ""));
           form.setValue("customer_name", d.customer_name || "");

@@ -162,7 +162,6 @@ function JobTicketComponent() {
                 remarks: ink.remarks ?? undefined,
               })),
           };
-          console.log(pd);
           handleJobTicketPrint(pd);
         }
       } catch (error) {

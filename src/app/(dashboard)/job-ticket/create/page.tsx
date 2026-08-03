@@ -439,7 +439,6 @@ function CreateJobTicket() {
     form.setValue("item", "");
   }, [selectedPoId, form]);
   const selectedPoItems = selectedPoDetails?.po_items ?? [];
-  console.log(selectedPoItems);
   const renderFormField = <TName extends FieldPath<JobTicketFormValues>>(
     name: TName,
     render: Parameters<

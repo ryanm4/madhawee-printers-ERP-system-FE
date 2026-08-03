@@ -48,7 +48,6 @@ apiClient.interceptors.response.use(
         // Handle 401 Unauthorized or 403 Forbidden - Clear auth and redirect
         // Skip for login page requests to allow form to handle "Invalid credentials"
         if ((error.response?.status === 401 || error.response?.status === 403) && !error.config?.url?.includes('/api/login')) {
-            console.log('🔒 Session Expired or Unauthorized - Logging out');
             clearAuth();
 
             // Redirect to login if not already there

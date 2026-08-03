@@ -9,7 +9,6 @@ export async function GET(request: NextRequest) {
     try {
 
         const apiUrl = API_ENDPOINTS.PURCHASE_ORDERS.LIST;
-        console.log(apiUrl)
 
         const response = await fetch(apiUrl, {
             method: "GET",
