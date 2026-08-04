@@ -109,7 +109,7 @@ function EditIssueNote() {
             );
 
             return {
-              item_id: invItem ? invItem.item_id : 0,
+              item_id: item.item_id || (invItem ? invItem.item_id : 0),
               quantity: Number(item.quantity),
             };
           }),

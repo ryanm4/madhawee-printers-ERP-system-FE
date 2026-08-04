@@ -8,7 +8,7 @@ export const grnItemSchema = z.object({
 });
 
 export const grnSchema = z.object({
-  related_po: z.string().min(1, "Related PO is required"),
+  related_po: z.string().optional(),
   received_date: z.date().min(new Date(0), "Received date is required"),
   supplier_name: z.string().min(1, "Supplier name is required"),
   stock_location: z.string().min(1, "Stock location is required"),

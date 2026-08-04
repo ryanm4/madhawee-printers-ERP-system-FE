@@ -1,5 +1,6 @@
 export interface GRNItem {
     id?: number;
+    item_id?: number;
     item_name: string;
     quantity: number;
     rate: string | number;
@@ -8,7 +9,7 @@ export interface GRNItem {
 
 export interface GRN {
     id: number;
-    related_po: string;
+    related_po?: string | null;
     received_date: string;
     supplier_name: string;
     stock_location: string;

@@ -155,10 +155,11 @@ function CreateGRN() {
               inv.item_id.toString() === item.item_name
           );
           return {
+            item_id: invItem ? invItem.item_id : Number(item.item_name),
             quantity: item.quantity,
             rate: item.rate,
             amount: item.amount,
-            item_name: invItem?.item_name || item.item_name,
+            item_name: invItem ? `${invItem.item_sub_category || ""} ${invItem.item_name}${invItem.size ? ` ${invItem.size}` : ""}`.trim() : item.item_name,
           };
         }),
       };
@@ -201,9 +202,7 @@ function CreateGRN() {
                   name="related_po"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        Related PO <span className="text-red-500">*</span>
-                      </FormLabel>
+                      <FormLabel>Related PO</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter PO Number" {...field} />
                       </FormControl>
