@@ -19,20 +19,13 @@ interface ExportButtonProps {
 }
 
 export const ExportButton: React.FC<ExportButtonProps> = ({ data, filename }) => {
-    const exportToCSV = () => {
+    const exportToXLSX = () => {
         if (!data || data.length === 0) return;
 
         const worksheet = XLSX.utils.json_to_sheet(data);
-        const csv = XLSX.utils.sheet_to_csv(worksheet);
-        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `${filename}.csv`);
-        link.style.visibility = "hidden";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
+        XLSX.writeFile(workbook, `${filename}.xlsx`);
     };
 
     const getLogoDataUrl = (): Promise<string> => {
@@ -41,13 +34,15 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ data, filename }) =>
             img.src = "/images/madhawee_logo.svg";
             img.crossOrigin = "anonymous";
             img.onload = () => {
+                const scale = 5; // Scale up for higher resolution in PDF
                 const canvas = document.createElement("canvas");
-                canvas.width = img.naturalWidth;
-                canvas.height = img.naturalHeight;
+                canvas.width = img.naturalWidth * scale;
+                canvas.height = img.naturalHeight * scale;
                 const ctx = canvas.getContext("2d");
                 if (ctx) {
+                    ctx.scale(scale, scale);
                     ctx.drawImage(img, 0, 0);
-                    resolve(canvas.toDataURL("image/png"));
+                    resolve(canvas.toDataURL("image/png", 1.0));
                 } else {
                     resolve("");
                 }
@@ -115,8 +110,8 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ data, filename }) =>
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={exportToCSV}>
-                    Download as CSV
+                <DropdownMenuItem onClick={exportToXLSX}>
+                    Download as Excel
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={exportToPDF}>
                     Download as PDF
