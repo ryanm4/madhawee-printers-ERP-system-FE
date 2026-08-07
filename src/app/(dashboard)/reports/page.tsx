@@ -221,8 +221,6 @@ function ReportsPage() {
       from_date: defaultFromDate,
       to_date: defaultToDate,
       item_category: "ALL",
-      to_date: defaultToDate,
-      item_category: "ALL",
       item_sub_category: "ALL",
       job_id: "ALL",
     },
