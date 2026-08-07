@@ -18,7 +18,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Combobox } from "@/components/shared/combobox";
-import { PRODUCT_TYPES, REPORT_TYPES } from "@/config/enum";
+import { PRODUCT_TYPES, REPORT_TYPES, ITEM_CATEGORY, ITEM_SUB_CATEGORY } from "@/config/enum";
 import { cn } from "@/lib/utils";
 import { CustomerApi } from "@/modules/customer/api";
 import { CUSTOMER } from "@/modules/customer/types";
@@ -49,6 +49,8 @@ const InventoryReportSchema = z.object({
   report_type: z.string().min(1, "Report Type is required"),
   from_date: z.string().optional(),
   to_date: z.string().optional(),
+  item_category: z.string().optional(),
+  item_sub_category: z.string().optional(),
 });
 
 const SalesReportSchema = z.object({
@@ -100,6 +102,7 @@ function ReportsPage() {
   const [marketingPersons, setMarketingPersons] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<any[]>([]);
+  const [grandTotal, setGrandTotal] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("general");
 
   // Client-side filtering states for Sales Tab
@@ -161,6 +164,8 @@ function ReportsPage() {
       report_type: "",
       from_date: format(new Date(), "yyyy-MM-dd"),
       to_date: format(new Date(), "yyyy-MM-dd"),
+      item_category: "ALL",
+      item_sub_category: "ALL",
     },
   });
 
@@ -210,7 +215,8 @@ function ReportsPage() {
         ? await ReportsApi.createAdvanced(payload)
         : await ReportsApi.createSummary(payload);
 
-      setReportData(response.data || []);
+      setReportData(response.data?.data || response.data || []);
+      setGrandTotal(response.data?.grand_total || null);
       toast.success("Report Generated Successfully");
     } catch (error) {
       console.error(error);
@@ -224,16 +230,22 @@ function ReportsPage() {
     try {
       setLoading(true);
       const requiresDates = !["STOCK_VALUE", "MATERIAL_CONSUMPTION_SUMMARY"].includes(data.report_type);
+      const isStockValue = data.report_type === "STOCK_VALUE";
       const payload = {
         report_type: data.report_type,
         ...(requiresDates && {
           from_date: data.from_date,
           to_date: data.to_date,
         }),
+        ...(isStockValue && {
+          item_category: data.item_category,
+          item_sub_category: data.item_sub_category,
+        }),
       };
 
       const response = await ReportsApi.createCustomInventory(payload);
-      setReportData(response.data || []);
+      setReportData(response.data?.data || response.data || []);
+      setGrandTotal(response.data?.grand_total || null);
       toast.success("Inventory Report Generated Successfully");
     } catch (error) {
       console.error(error);
@@ -253,7 +265,8 @@ function ReportsPage() {
       };
 
       const response = await ReportsApi.createCustomSales(payload);
-      setReportData(response.data || []);
+      setReportData(response.data?.data || response.data || []);
+      setGrandTotal(response.data?.grand_total || null);
       toast.success("Sales Report Generated Successfully");
     } catch (error) {
       console.error(error);
@@ -275,7 +288,8 @@ function ReportsPage() {
       };
 
       const response = await ReportsApi.createAdvanced(payload);
-      setReportData(response.data || []);
+      setReportData(response.data?.data || response.data || []);
+      setGrandTotal(response.data?.grand_total || null);
       toast.success("Quotation Report Generated Successfully");
     } catch (error) {
       console.error(error);
@@ -328,10 +342,18 @@ function ReportsPage() {
 
       <Tabs value={activeTab} onValueChange={clearResultsAndReset} className="w-full mt-4">
         <TabsList className="grid w-full max-w-[650px] grid-cols-4 bg-muted">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="inventory">Inventory</TabsTrigger>
-          <TabsTrigger value="sales">Sales</TabsTrigger>
-          <TabsTrigger value="quotation">Quotations</TabsTrigger>
+          <TabsTrigger value="general" onClick={() => { setReportData([]); setGrandTotal(null); }}>
+            General Reports
+          </TabsTrigger>
+          <TabsTrigger value="inventory" onClick={() => { setReportData([]); setGrandTotal(null); }}>
+            Inventory Reports
+          </TabsTrigger>
+          <TabsTrigger value="sales" onClick={() => { setReportData([]); setGrandTotal(null); }}>
+            Sales Reports
+          </TabsTrigger>
+          <TabsTrigger value="quotation" onClick={() => { setReportData([]); setGrandTotal(null); }}>
+            Quotations
+          </TabsTrigger>
         </TabsList>
 
         {/* General Reports Tab */}
@@ -555,6 +577,47 @@ function ReportsPage() {
                             />
                           </PopoverContent>
                         </Popover>
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
+
+              {inventoryForm.watch("report_type") === "STOCK_VALUE" && (
+                <>
+                  <FormField
+                    control={inventoryForm.control}
+                    name="item_category"
+                    render={({ field }) => (
+                      <FormItem className="w-[200px]">
+                        <FormLabel>Item Category</FormLabel>
+                        <Combobox
+                          items={[
+                            { value: "ALL", label: "All Categories" },
+                            ...Object.values(ITEM_CATEGORY).map((v) => ({ value: v, label: v }))
+                          ]}
+                          value={field.value ?? "ALL"}
+                          onValueChange={field.onChange}
+                          placeholder="Select Category"
+                        />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={inventoryForm.control}
+                    name="item_sub_category"
+                    render={({ field }) => (
+                      <FormItem className="w-[200px]">
+                        <FormLabel>Item Sub Category</FormLabel>
+                        <Combobox
+                          items={[
+                            { value: "ALL", label: "All Sub Categories" },
+                            ...Object.values(ITEM_SUB_CATEGORY).map((v) => ({ value: v, label: v }))
+                          ]}
+                          value={field.value ?? "ALL"}
+                          onValueChange={field.onChange}
+                          placeholder="Select Sub Category"
+                        />
                       </FormItem>
                     )}
                   />
@@ -786,6 +849,11 @@ function ReportsPage() {
       ) : (
         filteredReportData.length > 0 && (
           <div className="mt-8">
+            {grandTotal !== null && (
+              <div className="mb-4 text-xl font-bold text-primary flex justify-end">
+                Total Stock Value: {new Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR' }).format(grandTotal)}
+              </div>
+            )}
             <ReportsTable data={filteredReportData} />
           </div>
         )

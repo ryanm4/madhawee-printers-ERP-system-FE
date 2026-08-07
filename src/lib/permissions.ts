@@ -22,7 +22,7 @@ export function isRestrictedUser(role?: string): boolean {
 /** Default landing page after login for each role */
 export function getDefaultRoute(role?: string): string {
   const normalized = normalizeUserRole(role);
-  
+
   switch (normalized) {
     case USER_ROLES.SUPER_ADMIN:
     case USER_ROLES.DIRECTOR_GM:
@@ -60,6 +60,7 @@ const ROUTE_PATTERNS = {
   suppliers: /^\/suppliers(\/.*)?$/,
   reports: /^\/reports(\/.*)?$/,
   users: /^\/users(\/.*)?$/,
+  settings: /^\/settings(\/.*)?$/,
 };
 
 // Role-based route permissions
@@ -77,6 +78,7 @@ const ROLE_PERMISSIONS: Record<USER_ROLES, RegExp[]> = {
     ROUTE_PATTERNS.suppliers,
     ROUTE_PATTERNS.reports,
     ROUTE_PATTERNS.users,
+    ROUTE_PATTERNS.settings,
   ],
   [USER_ROLES.DIRECTOR_GM]: [
     ROUTE_PATTERNS.dashboard,
@@ -91,6 +93,7 @@ const ROLE_PERMISSIONS: Record<USER_ROLES, RegExp[]> = {
     ROUTE_PATTERNS.suppliers,
     ROUTE_PATTERNS.reports,
     ROUTE_PATTERNS.users,
+    ROUTE_PATTERNS.settings,
   ],
   [USER_ROLES.MARKETING_EXECUTIVE_MANAGER]: [
     ROUTE_PATTERNS.quotations,
@@ -106,6 +109,7 @@ const ROLE_PERMISSIONS: Record<USER_ROLES, RegExp[]> = {
     ROUTE_PATTERNS.jobTickets,
     ROUTE_PATTERNS.dispatch,
     ROUTE_PATTERNS.reports,
+    ROUTE_PATTERNS.settings,
   ],
   [USER_ROLES.PRODUCTION_MANAGER]: [
     ROUTE_PATTERNS.jobTickets,
@@ -142,9 +146,9 @@ const ROLE_PERMISSIONS: Record<USER_ROLES, RegExp[]> = {
 export function isRouteAllowedForUser(pathname: string, role?: string): boolean {
   const normalized = normalizeUserRole(role);
   const allowedPatterns = ROLE_PERMISSIONS[normalized];
-  
+
   if (!allowedPatterns) return false;
-  
+
   return allowedPatterns.some((pattern) => pattern.test(pathname));
 }
 
@@ -155,11 +159,11 @@ export interface ClientPermissions {
   canExportList: boolean;
   canApprove: boolean;
   canViewAll: boolean;
-  
+
   canCreateDispatch: boolean;
   canCreateQuotation: boolean;
   canModifyQuotation: boolean;
-  
+
   canCreateCustomer: boolean;
   canModifyCustomer: boolean;
   canCreatePO: boolean;
@@ -189,7 +193,7 @@ export function getClientPermissions(): ClientPermissions {
     canExportList: false,
     canApprove: false,
     canViewAll: false,
-    
+
     canCreateDispatch: false,
     canCreateQuotation: false,
     canModifyQuotation: false,

@@ -225,7 +225,7 @@ function EditPurchaseOrder() {
             purchaseOrderType: poData.po_type_id as PurchaseOrderType,
             batchRef: poData.batch_ref,
             salesRef: poData.sales_ref || "",
-            poDate: poData.po_date,
+            poDate: poData.po_date ? new Date(poData.po_date) : new Date(),
             currency: poData.currency || "LKR",
             itemDetails: poData.po_items.map((item) => ({
               item_code: item.itemCode ? String(item.itemCode) : "",
