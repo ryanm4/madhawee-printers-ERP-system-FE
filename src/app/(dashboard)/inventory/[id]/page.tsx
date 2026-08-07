@@ -70,6 +70,7 @@ function ViewInventoryItem() {
           // Parse quantity as number because schema expects number, but API might return string
           quantity: Number(data.quantity) || 0,
           unit_of_measure: data.unit_of_measure,
+          unit_price: Number(data.unit_price) || 0,
           reorder_level: data.reorder_level,
           status: data.status,
           remarks: data.remarks,
@@ -217,7 +218,7 @@ function ViewInventoryItem() {
                 ))}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {renderFormField("quantity", ({ field }) => (
                   <FormItem>
                     <FormLabel>Quantity</FormLabel>
@@ -242,6 +243,20 @@ function ViewInventoryItem() {
                         className={readonlyClass}
                         placeholder="UOM"
                         {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("unit_price", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Unit Price</FormLabel>
+                    <FormControl>
+                      <Input
+                        disabled
+                        className={readonlyClass}
+                        placeholder="Unit Price"
+                        value={field.value}
                       />
                     </FormControl>
                     <FormMessage />
