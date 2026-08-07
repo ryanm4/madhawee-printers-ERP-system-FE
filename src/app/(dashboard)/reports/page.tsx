@@ -22,10 +22,13 @@ import { PRODUCT_TYPES, REPORT_TYPES, ITEM_CATEGORY, ITEM_SUB_CATEGORY } from "@
 import { cn } from "@/lib/utils";
 import { CustomerApi } from "@/modules/customer/api";
 import { CUSTOMER } from "@/modules/customer/types";
+import { inventoryApi } from "@/modules/inventory/api";
+import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
 import { ReportsApi } from "@/modules/reports/api";
 import { userApi } from "@/modules/users/api";
 import { GET_ALL_USER } from "@/modules/users/types";
 import { quotationApi } from "@/modules/quotations/api";
+import { jobTicketsApi } from "@/modules/job-tickets/api";
 import { ReportsTable } from "./_components/reports-table";
 import { PageLoader } from "@/components/shared/loader";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -51,6 +54,9 @@ const InventoryReportSchema = z.object({
   to_date: z.string().optional(),
   item_category: z.string().optional(),
   item_sub_category: z.string().optional(),
+  supplier_name: z.string().optional(),
+  item_id: z.string().optional(),
+  job_id: z.string().optional(),
 });
 
 const SalesReportSchema = z.object({
@@ -72,8 +78,6 @@ const INVENTORY_REPORT_TYPES = [
   { value: "STOCK_AGING", label: "Stock Aging Report" },
   { value: "LOW_STOCK", label: "Low Stock Report" },
   { value: "GRN_REPORT", label: "GRN Report" },
-  { value: "GRN_VALUE_WEEKLY", label: "GRN Value Report per Week" },
-  { value: "GRN_VALUE_MONTHLY", label: "GRN Value Report per Month" },
   { value: "MATERIAL_CONSUMPTION_SUMMARY", label: "Material Consumption Summary" },
   { value: "MATERIAL_CONSUMPTION_BY_JOB", label: "Material Consumption by Job" },
 ];
@@ -98,6 +102,7 @@ const QUOTATION_REPORT_TYPES = [
 
 function ReportsPage() {
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<{ value: string; label: string }[]>([]);
   const [userList, setUserList] = useState<GET_ALL_USER[]>([]);
   const [marketingPersons, setMarketingPersons] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -108,21 +113,69 @@ function ReportsPage() {
   // Client-side filtering states for Sales Tab
   const [selectedSalesCustomerId, setSelectedSalesCustomerId] = useState<string>("");
   const [selectedSalespersonName, setSelectedSalespersonName] = useState<string>("");
+  const [jobList, setJobList] = useState<{ value: string; label: string }[]>([]);
 
   useEffect(() => {
-    getCustomerList();
+    const fetchCustomer = async () => {
+      try {
+        const response = await CustomerApi.getAll();
+        setCustomer(response.data);
+      } catch (error) {
+        console.error("Failed to fetch customers", error);
+      }
+    };
+    
+    const fetchInventory = async () => {
+      try {
+        const response = await inventoryApi.getAll();
+        if (response.status === 200) {
+          const uniqueItems = Array.from(
+            new Map(
+              response.data.map((item: GET_ALL_INVENTORY) => [
+                `${item.item_sub_category}${item.item_name}-${item.size || ""}`,
+                item,
+              ])
+            ).values()
+          );
+
+          setInventoryItems(
+            (uniqueItems as GET_ALL_INVENTORY[]).map((item) => {
+              const label = item.size
+                ? `${item.item_sub_category} ${item.item_name} (${item.size})`
+                : `${item.item_sub_category} ${item.item_name}`;
+
+              return {
+                value: item.item_id.toString(),
+                label: label,
+              };
+            })
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch inventory", error);
+      }
+    };
+
+    const fetchJobs = async () => {
+      try {
+        const response = await jobTicketsApi.getAll();
+        setJobList(
+          response.data.map((job: any) => ({
+            value: job.job_id.toString(),
+            label: `[#${job.job_number}] ${job.job_name}`,
+          }))
+        );
+      } catch (error) {
+        console.error("Failed to fetch jobs", error);
+      }
+    };
+
+    fetchCustomer();
+    fetchInventory();
+    fetchJobs();
     getUserList();
     getMarketingPersons();
   }, []);
-
-  const getCustomerList = async () => {
-    try {
-      const response = await CustomerApi.getAll();
-      setCustomer(response.data);
-    } catch (error) {
-      console.error("Failed to fetch customers", error);
-    }
-  };
 
   const getUserList = async () => {
     try {
@@ -146,13 +199,16 @@ function ReportsPage() {
     }
   };
 
-  // Forms
+  // Forms Setup
+  const defaultFromDate = format(new Date(new Date().getFullYear(), 0, 1), "yyyy-MM-dd");
+  const defaultToDate = format(new Date(), "yyyy-MM-dd");
+
   const generalForm = useForm<z.infer<typeof GeneralReportSchema>>({
     resolver: zodResolver(GeneralReportSchema),
     defaultValues: {
       reportType: "",
-      fromDate: format(new Date(), "yyyy-MM-dd"),
-      toDate: format(new Date(), "yyyy-MM-dd"),
+      fromDate: defaultFromDate,
+      toDate: defaultToDate,
       customer_id: undefined,
       product_type: "",
     },
@@ -162,10 +218,11 @@ function ReportsPage() {
     resolver: zodResolver(InventoryReportSchema),
     defaultValues: {
       report_type: "",
-      from_date: format(new Date(), "yyyy-MM-dd"),
-      to_date: format(new Date(), "yyyy-MM-dd"),
+      from_date: defaultFromDate,
+      to_date: defaultToDate,
       item_category: "ALL",
       item_sub_category: "ALL",
+      job_id: "ALL",
     },
   });
 
@@ -173,8 +230,8 @@ function ReportsPage() {
     resolver: zodResolver(SalesReportSchema),
     defaultValues: {
       report_type: "",
-      from_date: format(new Date(), "yyyy-MM-dd"),
-      to_date: format(new Date(), "yyyy-MM-dd"),
+      from_date: defaultFromDate,
+      to_date: defaultToDate,
     },
   });
 
@@ -182,8 +239,8 @@ function ReportsPage() {
     resolver: zodResolver(QuotationReportSchema),
     defaultValues: {
       reportType: "",
-      fromDate: format(new Date(), "yyyy-MM-dd"),
-      toDate: format(new Date(), "yyyy-MM-dd"),
+      fromDate: defaultFromDate,
+      toDate: defaultToDate,
     },
   });
 
@@ -229,17 +286,26 @@ function ReportsPage() {
   const handleInventorySubmit = async (data: z.infer<typeof InventoryReportSchema>) => {
     try {
       setLoading(true);
-      const requiresDates = !["STOCK_VALUE", "MATERIAL_CONSUMPTION_SUMMARY"].includes(data.report_type);
-      const isStockValue = data.report_type === "STOCK_VALUE";
+      const requiresDates = !["STOCK_VALUE", "STOCK_AGING", "LOW_STOCK"].includes(data.report_type);
+      
       const payload = {
         report_type: data.report_type,
         ...(requiresDates && {
           from_date: data.from_date,
           to_date: data.to_date,
         }),
-        ...(isStockValue && {
+        ...(data.report_type === "STOCK_VALUE" && {
           item_category: data.item_category,
           item_sub_category: data.item_sub_category,
+        }),
+        ...(data.report_type === "MATERIAL_CONSUMPTION_SUMMARY" && {
+          item_id: data.item_id,
+        }),
+        ...(data.report_type === "MATERIAL_CONSUMPTION_BY_JOB" && {
+          job_id: data.job_id,
+        }),
+        ...(data.report_type === "GRN_REPORT" && {
+          supplier_name: data.supplier_name,
         }),
       };
 
@@ -315,7 +381,10 @@ function ReportsPage() {
   const isGeneralAdvanced = Object.keys(REPORT_TYPES).includes(watchedGeneralType);
 
   const watchedInventoryType = inventoryForm.watch("report_type");
-  const inventoryRequiresDates = watchedInventoryType && !["STOCK_VALUE", "MATERIAL_CONSUMPTION_SUMMARY"].includes(watchedInventoryType);
+  const isInventoryAdvanced = ["CURRENT_STOCK", "STOCK_VALUE", "STOCK_AGING", "LOW_STOCK", "GRN_REPORT", "MATERIAL_CONSUMPTION_SUMMARY", "MATERIAL_CONSUMPTION_BY_JOB"].includes(watchedInventoryType);
+  const inventoryRequiresDates = watchedInventoryType && !["STOCK_VALUE", "STOCK_AGING", "LOW_STOCK"].includes(watchedInventoryType);
+
+  const suppliers = customer.filter((c) => c.customer_type?.toLowerCase() === "supplier" || c.customer_type?.toLowerCase() === "both");
 
   // Compute filtered data for rendering
   const filteredReportData = React.useMemo(() => {
@@ -622,6 +691,69 @@ function ReportsPage() {
                     )}
                   />
                 </>
+              )}
+              
+              {inventoryForm.watch("report_type") === "GRN_REPORT" && (
+                <FormField
+                  control={inventoryForm.control}
+                  name="supplier_name"
+                  render={({ field }) => (
+                    <FormItem className="w-[200px]">
+                      <FormLabel>Supplier</FormLabel>
+                      <Combobox
+                        items={[
+                          { value: "ALL", label: "All Suppliers" },
+                          ...suppliers.map((s) => ({ value: s.company_name, label: s.company_name }))
+                        ]}
+                        value={field.value ?? "ALL"}
+                        onValueChange={field.onChange}
+                        placeholder="Select Supplier"
+                      />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {inventoryForm.watch("report_type") === "MATERIAL_CONSUMPTION_SUMMARY" && (
+                <FormField
+                  control={inventoryForm.control}
+                  name="item_id"
+                  render={({ field }) => (
+                    <FormItem className="w-[300px]">
+                      <FormLabel>Item Name</FormLabel>
+                      <Combobox
+                        items={[
+                          { value: "ALL", label: "All Items" },
+                          ...inventoryItems
+                        ]}
+                        value={field.value ?? "ALL"}
+                        onValueChange={field.onChange}
+                        placeholder="Select Item"
+                      />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {inventoryForm.watch("report_type") === "MATERIAL_CONSUMPTION_BY_JOB" && (
+                <FormField
+                  control={inventoryForm.control}
+                  name="job_id"
+                  render={({ field }) => (
+                    <FormItem className="w-[300px]">
+                      <FormLabel>Job Name</FormLabel>
+                      <Combobox
+                        items={[
+                          { value: "ALL", label: "All Jobs" },
+                          ...jobList
+                        ]}
+                        value={field.value ?? "ALL"}
+                        onValueChange={field.onChange}
+                        placeholder="Select Job"
+                      />
+                    </FormItem>
+                  )}
+                />
               )}
 
               <Button variant="outline" type="button" className="h-10" onClick={() => inventoryForm.reset()}>

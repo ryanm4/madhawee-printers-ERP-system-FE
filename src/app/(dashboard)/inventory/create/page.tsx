@@ -59,6 +59,7 @@ function CreateInventoryManagement() {
     size: "",
     quantity: 0,
     unit_of_measure: "",
+    unit_price: 0,
     reorder_level: 0,
     status: "",
     remarks: "",
@@ -93,6 +94,7 @@ function CreateInventoryManagement() {
         height: data.height ?? "",
         quantity: String(data.quantity),
         unit_of_measure: data.unit_of_measure,
+        unit_price: Number(data.unit_price),
         reorder_level: data.reorder_level,
         status: data.status,
         remarks: data.remarks ?? "",
@@ -237,8 +239,8 @@ function CreateInventoryManagement() {
                 ))}
               </div>
 
-              {/* Row 4: UOM, Reorder Level, Status */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Row 4: UOM, Unit Price, Reorder Level, Status */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {renderFormField("unit_of_measure", ({ field }) => (
                   <FormItem>
                     <FormLabel>
@@ -262,6 +264,22 @@ function CreateInventoryManagement() {
                           ))}
                         </SelectContent>
                       </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("unit_price", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Unit Price <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="Enter Unit Price"
+                        value={field.value}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -306,8 +324,8 @@ function CreateInventoryManagement() {
                 ))}
               </div>
 
-              {/* Row 3: Width, Height and Quantity */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Row 3: Width and Height */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
                   {renderFormField("width", ({ field }) => (
                     <FormItem>
@@ -331,22 +349,6 @@ function CreateInventoryManagement() {
                     </FormItem>
                   ))}
                 </div>
-                {renderFormField("quantity", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Item Quantitiy <span className="text-red-500">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Enter Item Quantity"
-                        value={field.value}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                ))}
               </div>
 
               {/* Row 5: Remarks */}

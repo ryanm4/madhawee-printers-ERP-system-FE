@@ -63,6 +63,7 @@ function EditInventoryManagement() {
     size: "",
     quantity: 0,
     unit_of_measure: "",
+    unit_price: 0,
     reorder_level: 0,
     status: "",
     remarks: "",
@@ -115,6 +116,7 @@ function EditInventoryManagement() {
           size: (width && height) ? `${width} x ${height}` : "",
           quantity: Number(data.quantity),
           unit_of_measure: data.unit_of_measure,
+          unit_price: Number(data.unit_price) || 0,
           reorder_level: data.reorder_level,
           status: data.status,
           remarks: data.remarks || "",
@@ -145,6 +147,7 @@ function EditInventoryManagement() {
         height: data.height ?? "",
         quantity: String(data.quantity),
         unit_of_measure: data.unit_of_measure,
+        unit_price: Number(data.unit_price),
         reorder_level: data.reorder_level,
         status: data.status,
         remarks: data.remarks ?? "",
@@ -336,8 +339,8 @@ function EditInventoryManagement() {
                 ))}
               </div>
 
-              {/* Row 4: UOM, Reorder Level, Status */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Row 4: UOM, Unit Price, Reorder Level, Status */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {renderFormField("unit_of_measure", ({ field }) => (
                   <FormItem>
                     <FormLabel>
@@ -361,6 +364,22 @@ function EditInventoryManagement() {
                           ))}
                         </SelectContent>
                       </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("unit_price", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Unit Price <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="Enter Unit Price"
+                        value={field.value}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

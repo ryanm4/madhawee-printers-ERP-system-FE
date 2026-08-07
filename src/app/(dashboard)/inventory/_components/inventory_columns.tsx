@@ -68,6 +68,10 @@ export const inventoryColumns = (
             header: "Unit of Measure",
         },
         {
+            accessorKey: "unit_price",
+            header: "Unit Price",
+        },
+        {
             accessorKey: "reorder_level",
             header: "Reorder Point",
         },
