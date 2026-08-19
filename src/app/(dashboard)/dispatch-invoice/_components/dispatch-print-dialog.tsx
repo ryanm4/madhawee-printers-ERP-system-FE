@@ -47,10 +47,7 @@ export function handleDispatchPrint(data: DispatchPrintData) {
   printWindow.document.close();
   printWindow.focus();
 
-  setTimeout(() => {
-    printWindow.print();
-    printWindow.close();
-  }, 500);
+  // Print will be triggered by image onload
 }
 
 export function DispatchPrintDialog({
@@ -263,7 +260,7 @@ export function buildDispatchPrintHTML(data: DispatchPrintData): string {
   <div class="container">
     <div class="header">
       <div class="company-section">
-        <img src="/images/madhawee_logo.svg?v=1" class="company-logo-img" />
+        <img src="/images/madhawee_logo.svg?v=1" onload="window.print(); window.close();" onerror="window.print(); window.close();" class="company-logo-img" />
         <div class="company-details">
           No. 624, Bulugaha Junction, Kandy Rd, Kelaniya. Tele: 011 2905264, 2905229, 2907967<br/>
           Fax: 2905574 E-mail: madhaweeprinters@gmail.com

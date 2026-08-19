@@ -75,6 +75,7 @@ function formatNumber(value?: string | number): string {
   if (value === undefined || value === null || value === "") return "";
   const num = Number(value);
   if (isNaN(num)) return String(value);
+  if (num === 0) return "";
   return num.toLocaleString();
 }
 
@@ -88,11 +89,7 @@ export function handleJobTicketPrint(data: JobTicketPrintData) {
   printWindow.document.close();
   printWindow.focus();
 
-  // Give fonts/images time to load then print
-  setTimeout(() => {
-    printWindow.print();
-    printWindow.close();
-  }, 400);
+  // Print will be triggered by image onload
 }
 
 export function JobTicketPrintDialog({
@@ -221,7 +218,7 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
     <!-- Company Header -->
     <tr>
       <td colspan="12" style="border: 2px solid #333; text-align: center; padding: 10px;">
-        <img src="/images/madhawee_logo.svg" style="height: 50px; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto;" />
+        <img src="/images/madhawee_logo.svg" onload="window.print(); window.close();" onerror="window.print(); window.close();" style="height: 50px; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto;" />
       </td>
     </tr>
 
@@ -274,9 +271,9 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
     <!-- Packing & Expiry -->
     <tr>
       <td colspan="2" class="label">Packing Date</td>
-      <td colspan="4" class="value">${safe(formatMonthYear(data.packingDate))}</td>
+      <td colspan="4" class="value">${safe(formatDate(data.packingDate))}</td>
       <td colspan="2" class="label">Expiry Date</td>
-      <td colspan="4" class="value">${safe(formatMonthYear(data.expiryDate))}</td>
+      <td colspan="4" class="value">${safe(formatDate(data.expiryDate))}</td>
     </tr>
 
     <!-- Spacer -->
@@ -316,12 +313,12 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
     <tr>
       <td rowspan="2" colspan="2" class="group-label">CTP Plates</td>
       <td colspan="4" style="padding-left: 24px;">Old Plates</td>
-      <td colspan="2" class="center">${safe(formatNumber(data.oldPlatesQuantity || 0))}</td>
+      <td colspan="2" class="center">${safe(formatNumber(data.oldPlatesQuantity))}</td>
       <td colspan="4">&nbsp;</td>
     </tr>
     <tr>
       <td colspan="4" style="padding-left: 24px;">New Plates</td>
-      <td colspan="2" class="center">${safe(formatNumber(data.newPlatesQuantity || 0))}</td>
+      <td colspan="2" class="center">${safe(formatNumber(data.newPlatesQuantity))}</td>
       <td colspan="4">&nbsp;</td>
     </tr>
 

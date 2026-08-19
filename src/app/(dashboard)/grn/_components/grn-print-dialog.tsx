@@ -9,7 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
+import { parseLocalDate } from "@/hooks/sql-date-time";
 import { GRN } from "@/modules/grn/types";
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
 
@@ -30,10 +31,7 @@ export function handleGRNPrint(data: GRN, inventoryData?: GET_ALL_INVENTORY[]) {
   printWindow.document.close();
   printWindow.focus();
 
-  setTimeout(() => {
-    printWindow.print();
-    printWindow.close();
-  }, 500);
+  // Print will be triggered by image onload
 }
 
 export function GRNPrintDialog({
@@ -84,7 +82,7 @@ export function buildGRNPrintHTML(data: GRN, inventoryData?: GET_ALL_INVENTORY[]
 
   let formattedDate = "";
   try {
-    formattedDate = data.received_date ? format(parseISO(data.received_date), "dd/MM/yyyy") : "";
+    formattedDate = data.received_date ? format(parseLocalDate(data.received_date), "dd/MM/yyyy") : "";
   } catch (_e) {
     formattedDate = safe(data.received_date);
   }
@@ -264,7 +262,7 @@ export function buildGRNPrintHTML(data: GRN, inventoryData?: GET_ALL_INVENTORY[]
     <table class="header-table">
       <tr>
         <td class="company-info">
-          <img src="/images/madhawee_logo.svg" class="company-logo" style="height: 80px; margin-bottom: 10px;" />
+          <img src="/images/madhawee_logo.svg" onload="window.print(); window.close();" onerror="window.print(); window.close();" class="company-logo" style="height: 80px; margin-bottom: 10px;" />
           <div class="address-details">
             <b>Office & Factory :</b><br/>
             No. 624, Kandy Rd, Bulugaha Junction, Kelaniya. Tel : 2905229<br/>
