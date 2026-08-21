@@ -37,7 +37,7 @@ import { CalendarIcon, Edit2, Loader2, PlusIcon, Trash2 } from "lucide-react";
 import { FullPageLoader } from "@/components/shared/loader";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { PurchaseOrderStatus, PurchaseOrderType } from "@/config/enum";
+import { PRODUCT_TYPES, PurchaseOrderStatus, PurchaseOrderType } from "@/config/enum";
 import { useEffect, useState } from "react";
 import { CustomerApi } from "@/modules/customer/api";
 import { CUSTOMER } from "@/modules/customer/types";
@@ -689,7 +689,7 @@ function EditPurchaseOrder() {
                         type="button"
                         variant="outline"
                         size="icon"
-                        onClick={() => {}}
+                        onClick={() => { }}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
