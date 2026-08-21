@@ -37,7 +37,7 @@ import { CalendarIcon, Edit2, Loader2, PlusIcon, Trash2 } from "lucide-react";
 import { FullPageLoader } from "@/components/shared/loader";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { PurchaseOrderStatus, PurchaseOrderType } from "@/config/enum";
+import { PRODUCT_TYPES, PurchaseOrderStatus, PurchaseOrderType } from "@/config/enum";
 import { useEffect, useState } from "react";
 import { CustomerApi } from "@/modules/customer/api";
 import { CUSTOMER } from "@/modules/customer/types";
@@ -574,15 +574,28 @@ function EditPurchaseOrder() {
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1">
                       {renderFormField(
                         `itemDetails.${index}.itemCode`,
-                        ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Item Code</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter Item Code" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        ),
+                        ({ field }) => {
+                          const groupedItems = Object.values(PRODUCT_TYPES).map(
+                            (type) => ({
+                              value: type,
+                              label: type,
+                            }),
+                          );
+
+                          return (
+                            <FormItem>
+                              <FormLabel>Item Type</FormLabel>
+                              <Combobox
+                                items={groupedItems}
+                                value={field.value || ""}
+                                onValueChange={(value) => field.onChange(value)}
+                                placeholder="Select Item"
+                                searchPlaceholder="Search item..."
+                              />
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }
                       )}
                       {renderFormField(
                         `itemDetails.${index}.description`,
@@ -676,7 +689,7 @@ function EditPurchaseOrder() {
                         type="button"
                         variant="outline"
                         size="icon"
-                        onClick={() => {}}
+                        onClick={() => { }}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>

@@ -521,10 +521,10 @@ function ViewPurchaseOrder() {
                         `itemDetails.${index}.itemCode`,
                         ({ field }) => (
                           <FormItem>
-                            <FormLabel>Item Code</FormLabel>
+                            <FormLabel>Item Type</FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="Enter Item Code"
+                                placeholder="Enter Item Type"
                                 {...field}
                                 disabled={true}
                                 className="disabled:opacity-100 disabled:text-black disabled:cursor-default"
