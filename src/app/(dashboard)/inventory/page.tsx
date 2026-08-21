@@ -40,8 +40,10 @@ function InventoryManagement() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [sizeFilter, setSizeFilter] = useState("all");
+  const [subCategoryFilter, setSubCategoryFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [sizeOpen, setSizeOpen] = useState(false);
+  const [subCategoryOpen, setSubCategoryOpen] = useState(false);
   useEffect(() => {
     fetchData();
   }, []);
@@ -53,9 +55,13 @@ function InventoryManagement() {
 
       if (response.status === 200) {
         const sortedData = response.data.sort((a: GET_ALL_INVENTORY, b: GET_ALL_INVENTORY) => {
-          const dateA = new Date(a.created_on || 0).getTime();
-          const dateB = new Date(b.created_on || 0).getTime();
-          return dateB - dateA;
+          const subCategoryA = (a.item_sub_category || "").toLowerCase();
+          const subCategoryB = (b.item_sub_category || "").toLowerCase();
+          const subCategoryCompare = subCategoryA.localeCompare(subCategoryB);
+          
+          if (subCategoryCompare !== 0) return subCategoryCompare;
+          
+          return (a.item_name || "").localeCompare(b.item_name || "", undefined, { numeric: true, sensitivity: 'base' });
         });
         setData(sortedData);
       }
@@ -103,6 +109,9 @@ function InventoryManagement() {
   const sizeOptions = Array.from(
     new Set(data.map((item) => item.size).filter(Boolean))
   ).sort();
+  const subCategoryOptions = Array.from(
+    new Set(data.map((item) => item.item_sub_category).filter(Boolean))
+  ).sort();
   return (
     <>
       <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
@@ -121,6 +130,71 @@ function InventoryManagement() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+
+          <Popover open={subCategoryOpen} onOpenChange={setSubCategoryOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={subCategoryOpen}
+                className="w-[200px] justify-between"
+              >
+                {subCategoryFilter !== "all" ? subCategoryFilter : "All Sub Categories"}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[200px] p-0">
+              <Command>
+                <CommandInput placeholder="Search sub category..." />
+                <CommandList>
+                  <CommandEmpty>No sub category found.</CommandEmpty>
+                  <CommandGroup>
+                    <div
+                      style={{ maxHeight: "240px", overflowY: "auto" }}
+                      onWheel={(e) => e.stopPropagation()}
+                    >
+                      <CommandItem
+                        value="all"
+                        onSelect={() => {
+                          setSubCategoryFilter("all");
+                          setSubCategoryOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            subCategoryFilter === "all" ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        All Sub Categories
+                      </CommandItem>
+
+                      {subCategoryOptions.map((subCategory) => (
+                        <CommandItem
+                          key={subCategory}
+                          value={subCategory}
+                          onSelect={() => {
+                            setSubCategoryFilter(
+                              subCategory === subCategoryFilter ? "all" : subCategory
+                            );
+                            setSubCategoryOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              subCategoryFilter === subCategory ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {subCategory}
+                        </CommandItem>
+                      ))}
+                    </div>
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
 
           <Popover open={sizeOpen} onOpenChange={setSizeOpen}>
             <PopoverTrigger asChild>
@@ -210,7 +284,10 @@ function InventoryManagement() {
             data={data}
             searchValue={search}
             searchColumn="item_name"
-            filters={[{ id: "size", value: sizeFilter }]}
+            filters={[
+              { id: "size", value: sizeFilter },
+              { id: "item_sub_category", value: subCategoryFilter }
+            ]}
           />
         )}
       </div>

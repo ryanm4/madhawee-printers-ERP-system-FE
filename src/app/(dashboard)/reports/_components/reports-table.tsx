@@ -57,9 +57,25 @@ export function ReportsTable({ data }: ReportsTableProps) {
                 const value = row.getValue(key);
                 if (value === null || value === undefined) return "-";
                 if (typeof value === "boolean") return value ? "Yes" : "No";
+                
+                // Allow rendering React elements (like bold tags) directly
+                if (typeof value === "object" && "$$typeof" in (value as any)) {
+                    return (
+                        <div className="max-w-[300px] break-words whitespace-pre-wrap text-sm">
+                            {value as React.ReactNode}
+                        </div>
+                    );
+                }
+
+                // Globally format ISO date strings to only show the date (yyyy-MM-dd)
+                let displayValue = String(value);
+                if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
+                    displayValue = value.split("T")[0];
+                }
+
                 return (
                     <div className="max-w-[300px] break-words whitespace-pre-wrap text-sm">
-                        {String(value)}
+                        {displayValue}
                     </div>
                 );
             },

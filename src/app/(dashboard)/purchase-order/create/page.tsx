@@ -179,12 +179,16 @@ function CreatePurchaseOrder() {
         status: PurchaseOrderStatus.CREATED,
         customer_po: data.customer_po,
         currency: data.currency,
-        po_items: data.itemDetails.map((item) => ({
-          description: item.description,
-          quantity: String(item.quantity),
-          uom: item.unit,
-          price: String(item.price),
-        })),
+        po_items: data.itemDetails.map((item) => {
+          const itemCodeStr = Object.values(PRODUCT_TYPES)[Number(item.unit) - 1] || "";
+          return {
+            item_code: itemCodeStr,
+            description: item.description,
+            quantity: String(item.quantity),
+            uom: "Nos",
+            price: String(item.price),
+          };
+        }),
       };
 
       const response = await purchaseOrderApi.create(payload);

@@ -574,15 +574,28 @@ function EditPurchaseOrder() {
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1">
                       {renderFormField(
                         `itemDetails.${index}.itemCode`,
-                        ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Item Code</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter Item Code" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        ),
+                        ({ field }) => {
+                          const groupedItems = Object.values(PRODUCT_TYPES).map(
+                            (type) => ({
+                              value: type,
+                              label: type,
+                            }),
+                          );
+
+                          return (
+                            <FormItem>
+                              <FormLabel>Item Type</FormLabel>
+                              <Combobox
+                                items={groupedItems}
+                                value={field.value || ""}
+                                onValueChange={(value) => field.onChange(value)}
+                                placeholder="Select Item"
+                                searchPlaceholder="Search item..."
+                              />
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }
                       )}
                       {renderFormField(
                         `itemDetails.${index}.description`,

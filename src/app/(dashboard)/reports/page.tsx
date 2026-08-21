@@ -113,7 +113,9 @@ function ReportsPage() {
   // Client-side filtering states for Sales Tab
   const [selectedSalesCustomerId, setSelectedSalesCustomerId] = useState<string>("");
   const [selectedSalespersonName, setSelectedSalespersonName] = useState<string>("");
-  const [jobList, setJobList] = useState<{ value: string; label: string }[]>([]);
+  const [jobList, setJobList] = useState<{ value: string; label: string; fullJob?: any }[]>([]);
+  const [quotationList, setQuotationList] = useState<any[]>([]);
+  const [selectedDispatchStatus, setSelectedDispatchStatus] = useState<string>("all");
 
   useEffect(() => {
     const fetchCustomer = async () => {
@@ -163,6 +165,7 @@ function ReportsPage() {
           response.data.map((job: any) => ({
             value: job.job_id.toString(),
             label: `[#${job.job_number}] ${job.job_name}`,
+            fullJob: job,
           }))
         );
       } catch (error) {
@@ -190,10 +193,11 @@ function ReportsPage() {
     try {
       const response = await quotationApi.getAll();
       const names = response.data
-        .map((q) => q.marketing_person)
-        .filter((name): name is string => typeof name === "string" && name.trim() !== "");
+        .map((q: any) => q.marketing_person)
+        .filter((name: any): name is string => typeof name === "string" && name.trim() !== "");
       const uniqueNames = Array.from(new Set(names)).sort();
       setMarketingPersons(uniqueNames);
+      setQuotationList(response.data);
     } catch (error) {
       console.error("Failed to fetch marketing persons from quotations", error);
     }
@@ -397,10 +401,152 @@ function ReportsPage() {
       } else if (watchedSalesType === "SALES_BY_SALESPERSON" && selectedSalespersonName) {
         data = data.filter((row: any) => String(row.salesperson).toLowerCase() === selectedSalespersonName.toLowerCase());
       }
+    } else if (activeTab === "general" && watchedGeneralType === "jobs") {
+      data = data.map((row: any, index: number) => {
+        // Try to find the full job ticket info if missing
+        const jobInfo = jobList.find(j => String(j.value) === String(row.job_id))?.fullJob || {};
+        
+        // Try to find the associated quotation to get unit price
+        const poId = row.po_id || jobInfo.po_id;
+        const quotation = quotationList.find(q => String(q.quote_id) === String(poId));
+        
+        // Match item within quotation if possible, or fallback to first item
+        const quoteItem = quotation?.items?.find((i: any) => i.item_category === row.product_type || i.item_description === row.job_name) || quotation?.items?.[0];
+        
+        const unitPrice = parseFloat(row.unit_price || row.item_unit_price || row.price || quoteItem?.item_unit_price) || 0;
+        const quantity = parseFloat(row.quantity || jobInfo.quantity) || 0;
+        
+        const customerObj = customer.find((c) => String(c.customer_id) === String(row.customer_id));
+        const customerName = customerObj?.company_name || row.customer_name || row.company_name || row.customer_id || "-";
+        
+        const poNumber = row.po_number || row.customer_po || row.po_no || jobInfo.customer_po || poId || "-";
+        
+        return {
+          "#": index + 1,
+          "Job ID (Job Number)": row.job_number || row.job_id || jobInfo.job_number || "-",
+          "Customer Name": customerName,
+          "Job Name": row.job_name || jobInfo.job_name || "-",
+          "Product Type": row.product_type || jobInfo.product_type || "-",
+          "Quantity": quantity,
+          "Job Open Date": row.job_open_date || jobInfo.job_open_date ? format(new Date(row.job_open_date || jobInfo.job_open_date), "yyyy-MM-dd") : "-",
+          "PO Number": poNumber,
+          "Unit Price": unitPrice,
+          "Revenue": unitPrice * quantity,
+          "Created On": row.created_on ? format(new Date(row.created_on), "yyyy-MM-dd") : "-",
+          "Created By": row.created_by || "-",
+          "Update On": row.updated_on ? format(new Date(row.updated_on), "yyyy-MM-dd") : "-",
+          "Updated By": row.updated_by || "-",
+        };
+      });
+    } else if (activeTab === "general" && watchedGeneralType === "main_inventory") {
+      data = data.map((row: any, index: number) => {
+        const qty = parseFloat(row.quantity || 0);
+        return {
+          "#": index + 1,
+          "Item ID": row.item_id || row.id || "-",
+          "Item Category": row.item_category || "-",
+          "Item Sub Category": row.item_sub_category || "-",
+          "Item Name": row.item_name || "-",
+          "Unit Price": row.unit_price || row.item_unit_price || row.price || "-",
+          "Size": (!row.size || String(row.size).trim().toLowerCase() === "x") ? "-" : row.size,
+          "Quantity": qty.toFixed(2),
+          "UOM": row.uom || "-",
+          "Width": row.width || "-",
+          "Height": row.height || "-",
+          "Rate": row.rate || "-",
+          "Status": row.status || "-",
+          "Created By": row.created_by || "-",
+          "Created On": row.created_on ? format(new Date(row.created_on), "yyyy-MM-dd") : "-",
+          "Updated By": row.updated_by || "-",
+          "Updated On": row.updated_on ? format(new Date(row.updated_on), "yyyy-MM-dd") : "-",
+        };
+      });
+    } else if (activeTab === "general" && watchedGeneralType === "DISPATCH_INSIGHTS") {
+      if (selectedDispatchStatus && selectedDispatchStatus !== "all") {
+        data = data.filter((row: any) => row.status === selectedDispatchStatus);
+      }
+      data = data.map((row: any, index: number) => {
+        const orderQty = parseFloat(row.order_qty || row.quantity) || 0;
+        const dispatchQty = parseFloat(row.dispatch_qty) || 0;
+        const balanceQty = orderQty - dispatchQty;
+        
+        let daysPending = "-";
+        const rowStatus = row.status?.toUpperCase() || "";
+        if (rowStatus === "PARTIALLY DISPATCH" || rowStatus === "PARTIALLY DISPATCHED" || rowStatus === "PARTIALLY DISPATHCED") {
+          const openDate = new Date(row.job_open_date);
+          const currentDate = new Date();
+          const diffTime = currentDate.getTime() - openDate.getTime();
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); 
+          daysPending = diffDays >= 0 ? `${diffDays} Days` : "0 Days";
+        }
+
+        return {
+          "#": index + 1,
+          "Dispatch ID": row.dispatch_id || "-",
+          "Customer Name": row.customer_name || row.company_name || "-",
+          "Job ID": row.job_number ? <><span className="font-bold">{row.job_number}</span> {row.job_name || ""}</> : row.job_id || "-",
+          "Dispatch note": row.dispatch_note || "-",
+          "Dispatch Date": row.dispatch_date ? format(new Date(row.dispatch_date), "yyyy-MM-dd") : "-",
+          "Order Qty": orderQty,
+          "Dispatch Qty": dispatchQty,
+          "Balance Qty": balanceQty,
+          "Status": row.status || "-",
+          "Days Aging": daysPending,
+          "Created On": row.created_on ? format(new Date(row.created_on), "yyyy-MM-dd") : "-",
+          "Created By": row.created_by || "-",
+          "Update On": row.updated_on ? format(new Date(row.updated_on), "yyyy-MM-dd") : "-",
+          "Updated By": row.updated_by || "-",
+        };
+      });
+    } else if (activeTab === "general" && watchedGeneralType === "purchase_orders") {
+      const groupedPOs = data.reduce((acc: any, row: any) => {
+        const poId = row.po_id;
+        if (!acc[poId]) {
+          acc[poId] = { ...row, items: [] };
+        }
+        if (row.item_type || row.item_code || row.item_name || row.description) {
+          acc[poId].items.push({
+            type: row.item_type || row.item_code || "-",
+            name: row.item_name || row.description || "-",
+            qty: parseFloat(row.item_qty || row.quantity) || 0,
+            price: parseFloat(row.item_price || row.price) || 0,
+          });
+        }
+        return acc;
+      }, {});
+
+      data = Object.values(groupedPOs).map((po: any, index: number) => {
+        const poTypeName = po.po_type_id === 1 ? "TIEP" : po.po_type_id === 2 ? "NON-TIEP" : po.po_type_id === 3 ? "MP" : String(po.po_type_id || "-");
+
+        const itemTypes = po.items.length > 0 ? po.items.map((i: any) => i.type).join("\n") : "-";
+        const itemNames = po.items.length > 0 ? po.items.map((i: any) => i.name).join("\n") : "-";
+        const itemQtys = po.items.length > 0 ? po.items.map((i: any) => i.qty).join("\n") : "-";
+        const itemPrices = po.items.length > 0 ? po.items.map((i: any) => i.price).join("\n") : "-";
+        const itemTotals = po.items.length > 0 ? po.items.map((i: any) => (i.qty * i.price)).join("\n") : "-";
+        const grandTotal = po.items.reduce((sum: number, i: any) => sum + (i.qty * i.price), 0);
+
+        return {
+          "#": index + 1,
+          "PO Type": poTypeName,
+          "Quotation ID": po.quote_id || "-",
+          "PO NO": po.customer_po || po.po_no || "-",
+          "Customer Name": po.customer_name || po.company_name || "-",
+          "Item Types": itemTypes,
+          "Item Names": itemNames,
+          "Item Qtys": itemQtys,
+          "Item Prices": itemPrices,
+          "Item Totals": itemTotals,
+          "PO Grand Total": grandTotal,
+          "Created On": po.created_on ? format(new Date(po.created_on), "yyyy-MM-dd") : "-",
+          "Created By": po.created_by || "-",
+          "Update On": po.updated_on ? format(new Date(po.updated_on), "yyyy-MM-dd") : "-",
+          "Updated By": po.updated_by || "-",
+        };
+      });
     }
 
     return data;
-  }, [reportData, activeTab, watchedSalesType, selectedSalesCustomerId, selectedSalespersonName]);
+  }, [reportData, activeTab, watchedSalesType, selectedSalesCustomerId, selectedSalespersonName, watchedGeneralType, jobList, quotationList, customer, selectedDispatchStatus]);
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3 w-full min-w-0 overflow-hidden">
@@ -501,8 +647,7 @@ function ReportsPage() {
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
+                        <Calendar mode="single" disabled={(date) => date > new Date()}
                           selected={field.value ? new Date(field.value) : undefined}
                           onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
                           captionLayout="dropdown"
@@ -529,8 +674,7 @@ function ReportsPage() {
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
+                        <Calendar mode="single" disabled={(date) => date > new Date()}
                           selected={field.value ? new Date(field.value) : undefined}
                           onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
                           captionLayout="dropdown"
@@ -560,6 +704,23 @@ function ReportsPage() {
                     </FormItem>
                   )}
                 />
+              )}
+
+              {watchedGeneralType === "DISPATCH_INSIGHTS" && (
+                <div className="w-[200px]">
+                  <label className="mb-2 block text-sm font-medium">Status</label>
+                  <Combobox
+                    items={[
+                      { value: "all", label: "All" },
+                      { value: "Pending", label: "Pending" },
+                      { value: "Partially Dispatch", label: "Partially Dispatch" },
+                      { value: "Completed", label: "Completed" },
+                    ]}
+                    value={selectedDispatchStatus}
+                    onValueChange={setSelectedDispatchStatus}
+                    placeholder="Select Status"
+                  />
+                </div>
               )}
 
               <Button variant="outline" type="button" className="h-10" onClick={() => generalForm.reset()}>
@@ -610,8 +771,7 @@ function ReportsPage() {
                             </FormControl>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
+                            <Calendar mode="single" disabled={(date) => date > new Date()}
                               selected={field.value ? new Date(field.value) : undefined}
                               onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
                               captionLayout="dropdown"
@@ -638,8 +798,7 @@ function ReportsPage() {
                             </FormControl>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
+                            <Calendar mode="single" disabled={(date) => date > new Date()}
                               selected={field.value ? new Date(field.value) : undefined}
                               onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
                               captionLayout="dropdown"
@@ -802,8 +961,7 @@ function ReportsPage() {
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
+                        <Calendar mode="single" disabled={(date) => date > new Date()}
                           selected={field.value ? new Date(field.value) : undefined}
                           onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
                           captionLayout="dropdown"
@@ -830,8 +988,7 @@ function ReportsPage() {
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
+                        <Calendar mode="single" disabled={(date) => date > new Date()}
                           selected={field.value ? new Date(field.value) : undefined}
                           onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
                           captionLayout="dropdown"
@@ -925,8 +1082,7 @@ function ReportsPage() {
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
+                        <Calendar mode="single" disabled={(date) => date > new Date()}
                           selected={field.value ? new Date(field.value) : undefined}
                           onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
                           captionLayout="dropdown"
@@ -953,8 +1109,7 @@ function ReportsPage() {
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
+                        <Calendar mode="single" disabled={(date) => date > new Date()}
                           selected={field.value ? new Date(field.value) : undefined}
                           onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
                           captionLayout="dropdown"
