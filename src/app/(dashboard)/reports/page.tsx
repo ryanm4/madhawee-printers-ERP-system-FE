@@ -44,7 +44,7 @@ const GeneralReportSchema = z.object({
   reportType: z.string().min(1, "Report Type is required"),
   fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "From date must be YYYY-MM-DD"),
   toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "To date must be YYYY-MM-DD"),
-  customer_id: z.number().optional(),
+  customer_id: z.union([z.number(), z.string()]).optional(),
   product_type: z.string().optional(),
 });
 
@@ -85,6 +85,8 @@ const QuotationReportSchema = z.object({
   reportType: z.string().min(1, "Report Type is required"),
   fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "From date must be YYYY-MM-DD"),
   toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "To date must be YYYY-MM-DD"),
+  customer_id: z.union([z.string(), z.number()]).optional(),
+  salesperson: z.string().optional(),
 });
 
 // Report Type Dropdown Items
@@ -265,6 +267,7 @@ function ReportsPage() {
   });
 
   // Reset filters when Sales Report Type changes
+  const watchedQuotationType = quotationForm.watch("reportType");
   const watchedSalesType = salesForm.watch("report_type");
   useEffect(() => {
     setSelectedSalesCustomerId("");
@@ -282,14 +285,14 @@ function ReportsPage() {
     try {
       setLoading(true);
       const isAdvanced = Object.keys(REPORT_TYPES).includes(data.reportType);
-      const payload = {
+      const payload: any = {
         reportType: data.reportType,
         filters: {
           fromDate: new Date(data.fromDate),
           toDate: new Date(data.toDate),
           ...(isAdvanced && {
-            customer_id: data.customer_id,
-            product_type: data.product_type,
+            customer_id: (data.customer_id && data.customer_id !== "ALL" ? Number(data.customer_id) : undefined) as number | undefined,
+            product_type: data.product_type && data.product_type !== "ALL" ? data.product_type : undefined,
           }),
         },
       };
@@ -376,6 +379,8 @@ function ReportsPage() {
         filters: {
           fromDate: new Date(data.fromDate),
           toDate: new Date(data.toDate),
+          customer_id: (data.customer_id && data.customer_id !== "ALL" ? Number(data.customer_id) : undefined) as number | undefined,
+          salesperson: data.salesperson && data.salesperson !== "ALL" ? data.salesperson : undefined,
         },
       };
 
@@ -613,7 +618,7 @@ function ReportsPage() {
         }
         if (row.item_type || row.item_code || row.item_name || row.description) {
           acc[poId].items.push({
-            type: row.item_type || row.item_code || "-",
+            type: (row.item_type && row.item_type !== "undefined" && row.item_type !== "null" && row.item_type !== "") ? row.item_type : (row.item_uom && !isNaN(Number(row.item_uom))) ? (Object.values(PRODUCT_TYPES)[Number(row.item_uom) - 1] || "-") : "-",
             name: row.item_name || row.description || "-",
             qty: parseFloat(row.item_qty || row.quantity) || 0,
             price: parseFloat(row.item_price || row.price) || 0,
@@ -651,6 +656,37 @@ function ReportsPage() {
           "Updated By": po.updated_by || "-",
         };
       });
+    } else if (activeTab === "general" && watchedGeneralType === "quotations") {
+      data = data.map((row: any, index: number) => {
+        const quotationType = row.type_id === 1 ? "NORMAL" : row.type_id === 2 ? "OPTIONAL" : String(row.type_id || "-");
+        const taxType = row.tax_type_id === 0 ? "VAT" : row.tax_type_id === 1 ? "TIEP" : "NONE";
+        
+        const matchedCustomer = customer.find((c) => String(c.customer_id) === String(row.customer_id));
+        const customerName = matchedCustomer ? matchedCustomer.company_name : row.customer_id || "-";
+
+        return {
+          "#": index + 1,
+          "Quote Id": row.quote_id || "-",
+          "Customer Name": customerName,
+          "Quotation Type": quotationType,
+          "Delivery Days": row.delivery_days || "-",
+          "Tax Type": taxType,
+          "Currency": row.currency || "-",
+          "Sub Total": row.sub_total !== null ? formatNum(row.sub_total) : "-",
+          "No Of Items": row.no_of_items || "-",
+          "Total Without Tax": row.total_without_tax !== null ? formatNum(row.total_without_tax) : "-",
+          "Net Total": row.net_total !== null ? formatNum(row.net_total) : "-",
+          "Contact Person": row.contact_person || "-",
+          "Marketing Person": row.marketing_person || "-",
+          "Notes": row.notes || "-",
+          "Status": row.status || "-",
+          "Validity Period": row.validity_period || "-",
+          "Created On": row.created_on ? format(new Date(row.created_on), "yyyy-MM-dd") : "-",
+          "Created By": row.created_by || "-",
+          "Updated On": row.updated_on ? format(new Date(row.updated_on), "yyyy-MM-dd") : "-",
+          "Updated By": row.updated_by || "-",
+        };
+      });
     } else if (activeTab === "inventory") {
       if (watchedInventoryType === "GRN_REPORT") {
         data = data.map((row: any, index: number) => {
@@ -681,6 +717,20 @@ function ReportsPage() {
             "Amount": formatNum(row.amount),
           };
         });
+      } else if (watchedInventoryType === "STOCK_VALUE") {
+        data = data.map((row: any, index: number) => {
+          if (row.stock_value === "TOTAL" || row.item_category === "TOTAL") return row;
+          return {
+            "#": index + 1,
+            "Item Category": row.item_category || "-",
+            "Item Sub Category": row.item_sub_category || "-",
+            "Item Name": row.item_name || "-",
+            "Size": row.size || "-",
+            "Quantity": formatNum(row.quantity),
+            "Unit Rate": formatNum(row.unit_rate),
+            "Stock Value": row.stock_value
+          };
+        });
       } else if (watchedInventoryType === "CURRENT_STOCK") {
         data = data.map((row: any, index: number) => ({
           "#": index + 1,
@@ -702,10 +752,33 @@ function ReportsPage() {
       // Check if this is a totals row
       const isTotalRow = Object.values(row).some(v => String(v).toUpperCase() === "TOTAL");
       
-      return {
-        "#": isTotalRow ? "" : index + 1,
-        ...row
-      };
+      const formattedRow: any = { "#": isTotalRow ? "" : index + 1, ...row };
+      const keysToFormat = ["quantity", "qty", "amount", "price", "rate", "total", "revenue", "value", "consumed", "stock_value", "level"];
+      const excludeKeys = ["id", "date", "name", "category", "status", "type", "person", "notes", "period", "currency", "no_of"];
+
+      Object.keys(formattedRow).forEach(k => {
+        const lowerKey = k.toLowerCase();
+        if (
+          keysToFormat.some(nKey => lowerKey.includes(nKey)) && 
+          !excludeKeys.some(eKey => lowerKey.includes(eKey)) && 
+          formattedRow[k] !== null && 
+          formattedRow[k] !== undefined && 
+          formattedRow[k] !== "" && 
+          !isNaN(Number(formattedRow[k]))
+        ) {
+          let val = formatNum(formattedRow[k]);
+          if (activeTab === "quotation" && (lowerKey.includes("value") || lowerKey.includes("amount") || lowerKey.includes("total_sales"))) {
+             // Keep it two decimal places for currency if it's not already
+             if (!String(val).includes(".")) {
+                 val = formatNum(Number(formattedRow[k]).toFixed(2));
+             }
+             val = `LKR ${val}`;
+          }
+          formattedRow[k] = val;
+        }
+      });
+
+      return formattedRow;
     });
   }, [reportData, activeTab, watchedSalesType, selectedSalesCustomerId, selectedSalespersonName, watchedGeneralType, jobList, quotationList, customer, selectedDispatchStatus]);
 
@@ -771,7 +844,7 @@ function ReportsPage() {
                 )}
               />
 
-              {isGeneralAdvanced && (
+              {isGeneralAdvanced && watchedGeneralType !== "INVENTORY_HEALTH" && (
                 <FormField
                   control={generalForm.control}
                   name="customer_id"
@@ -779,12 +852,15 @@ function ReportsPage() {
                     <FormItem className="w-[200px]">
                       <FormLabel>Customer</FormLabel>
                       <Combobox
-                        items={customer.map((c) => ({
-                          value: String(c.customer_id),
-                          label: c.company_name,
-                        }))}
+                        items={[
+                          { value: "ALL", label: "ALL" },
+                          ...customer.map((c) => ({
+                            value: String(c.customer_id),
+                            label: c.company_name,
+                          }))
+                        ]}
                         value={field.value ? String(field.value) : ""}
-                        onValueChange={(val) => field.onChange(val ? Number(val) : undefined)}
+                        onValueChange={(val) => field.onChange(val === "ALL" ? "ALL" : val ? Number(val) : undefined)}
                         placeholder="Select Customer"
                       />
                     </FormItem>
@@ -854,10 +930,13 @@ function ReportsPage() {
                     <FormItem className="w-[200px]">
                       <FormLabel>Product Type</FormLabel>
                       <Combobox
-                        items={Object.entries(PRODUCT_TYPES).map(([key, val]) => ({
-                          value: key,
-                          label: val as string,
-                        }))}
+                        items={[
+                          { value: "ALL", label: "ALL" },
+                          ...Object.entries(PRODUCT_TYPES).map(([key, val]) => ({
+                            value: key,
+                            label: val as string,
+                          }))
+                        ]}
                         value={field.value ?? ""}
                         onValueChange={field.onChange}
                         placeholder="Select Product Type"
@@ -1185,9 +1264,12 @@ function ReportsPage() {
                   <Combobox
                     items={[
                       { value: "", label: "All Salespersons" },
-                      ...marketingPersons.map((name) => ({
-                        value: name,
-                        label: name,
+                      ...Array.from(new Set([
+                        ...marketingPersons,
+                        ...userList.map((u: any) => u.name || u.username)
+                      ])).filter(Boolean).sort().map((name) => ({
+                        value: String(name),
+                        label: String(name),
                       })),
                     ]}
                     value={selectedSalespersonName}
@@ -1227,6 +1309,55 @@ function ReportsPage() {
                 )}
               />
 
+              {["QUOTATION_BY_CUSTOMER"].includes(watchedQuotationType || "") && (
+                <FormField
+                  control={quotationForm.control}
+                  name="customer_id"
+                  render={({ field }) => (
+                    <FormItem className="w-[200px]">
+                      <FormLabel>Customer</FormLabel>
+                      <Combobox
+                        items={[
+                          { value: "ALL", label: "ALL" },
+                          ...customer.map((c) => ({
+                            value: String(c.customer_id),
+                            label: c.company_name,
+                          }))
+                        ]}
+                        value={field.value ? String(field.value) : ""}
+                        onValueChange={(val) => field.onChange(val)}
+                        placeholder="Select Customer"
+                      />
+                    </FormItem>
+                  )}
+                />
+              )}
+              {["QUOTATION_BY_SALESPERSON"].includes(watchedQuotationType || "") && (
+                <FormField
+                  control={quotationForm.control}
+                  name="salesperson"
+                  render={({ field }) => (
+                    <FormItem className="w-[200px]">
+                      <FormLabel>Salesperson</FormLabel>
+                      <Combobox
+                        items={[
+                          { value: "ALL", label: "ALL" },
+                          ...Array.from(new Set([
+                            ...marketingPersons,
+                            ...userList.map((u: any) => u.name || u.username)
+                          ])).filter(Boolean).sort().map(person => ({
+                            value: String(person),
+                            label: String(person)
+                          }))
+                        ]}
+                        value={field.value ?? ""}
+                        onValueChange={field.onChange}
+                        placeholder="Select Salesperson"
+                      />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={quotationForm.control}
                 name="fromDate"
