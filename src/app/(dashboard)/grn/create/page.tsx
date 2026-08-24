@@ -473,8 +473,7 @@ function CreateGRN() {
                           <FormItem>
                             <FormLabel>Quantity</FormLabel>
                             <FormControl>
-                              <Input
-                                type="number"
+                              <Input min={0} type="number"
                                 placeholder="0"
                                 {...field}
                                 onChange={(e) => {
@@ -501,8 +500,7 @@ function CreateGRN() {
                           <FormItem>
                             <FormLabel>Rate ({selectedCurrency})</FormLabel>
                             <FormControl>
-                              <Input
-                                type="number"
+                              <Input min={0} type="number"
                                 placeholder="0.00"
                                 {...field}
                                 onChange={(e) => {
@@ -529,8 +527,7 @@ function CreateGRN() {
                           <FormItem>
                             <FormLabel>Amount ({selectedCurrency})</FormLabel>
                             <FormControl>
-                              <Input
-                                type="number"
+                              <Input min={0} type="number"
                                 placeholder="0.00"
                                 {...field}
                                 readOnly

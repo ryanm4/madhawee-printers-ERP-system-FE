@@ -145,7 +145,7 @@ function CreateQuotation({
   };
 
   const form = useForm<QuotationFormValues>({
-    resolver: zodResolver(createQuotationSchema),
+    resolver: zodResolver(createQuotationSchema) as any,
     defaultValues: baseDefaultValues as QuotationFormValues,
   });
 
@@ -572,7 +572,7 @@ function CreateQuotation({
                         Delivery Days <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="1" {...field} />
+                        <Input min={0} type="number" placeholder="1" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -585,7 +585,7 @@ function CreateQuotation({
                         Validity Period (Days) <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="30" {...field} />
+                        <Input min={0} type="number" placeholder="30" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -850,8 +850,7 @@ function CreateQuotation({
                               ({ field }) => (
                                 <FormItem>
                                   <FormControl>
-                                    <Input
-                                      type="number"
+                                    <Input min={0} type="number"
                                       step="any"
                                       placeholder="0"
                                       className="w-[80px]"
@@ -875,8 +874,7 @@ function CreateQuotation({
                               `items.${index}.item_unit_price`,
                               ({ field }) => (
                                 <FormItem>
-                                  <Input
-                                    type="number"
+                                  <Input min={0} type="number"
                                     step="any"
                                     placeholder="0"
                                     className="w-[100px]"

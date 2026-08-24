@@ -66,7 +66,7 @@ function CreateInventoryManagement() {
   };
 
   const form = useForm<InventoryManagementFormValues>({
-    resolver: zodResolver(inventoryManagementScheme),
+    resolver: zodResolver(inventoryManagementScheme) as any,
     defaultValues: baseDefaultValues,
   });
 
@@ -276,6 +276,7 @@ function CreateInventoryManagement() {
                     <FormControl>
                       <Input
                         type="number"
+                        min={0}
                         placeholder="Enter Unit Price"
                         value={field.value}
                         onChange={(e) => field.onChange(Number(e.target.value))}
@@ -292,6 +293,7 @@ function CreateInventoryManagement() {
                     <FormControl>
                       <Input
                         type="number"
+                        min={0}
                         placeholder="Enter Re-order Level"
                         value={field.value}
                         onChange={(e) => field.onChange(Number(e.target.value))}

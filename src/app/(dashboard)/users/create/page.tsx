@@ -43,7 +43,7 @@ function CreateUser() {
     password: "",
   };
   const form = useForm<UserFormValues>({
-    resolver: zodResolver(userSchema),
+    resolver: zodResolver(userSchema) as any,
     defaultValues: baseDefaultValues,
   });
 

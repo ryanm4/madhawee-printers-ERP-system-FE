@@ -70,7 +70,7 @@ function EditInventoryManagement() {
   };
 
   const form = useForm<InventoryManagementFormValues>({
-    resolver: zodResolver(inventoryManagementScheme),
+    resolver: zodResolver(inventoryManagementScheme) as any,
     defaultValues: baseDefaultValues,
   });
 
@@ -327,8 +327,7 @@ function EditInventoryManagement() {
                       Item Quantitiy <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
+                      <Input min={0} type="number"
                         placeholder="Enter Item Quantity"
                         value={field.value}
                         onChange={(e) => field.onChange(Number(e.target.value))}
@@ -376,6 +375,7 @@ function EditInventoryManagement() {
                     <FormControl>
                       <Input
                         type="number"
+                        min={0}
                         placeholder="Enter Unit Price"
                         value={field.value}
                         onChange={(e) => field.onChange(Number(e.target.value))}
@@ -390,7 +390,13 @@ function EditInventoryManagement() {
                       Re-order Level <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter Re-order Level" {...field} />
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder="Enter Re-order Level"
+                        value={field.value}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

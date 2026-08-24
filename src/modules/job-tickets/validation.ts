@@ -1,7 +1,7 @@
 import * as z from "zod"
 export const jobTicketSchema = z.object({
     customer_po: z.string().optional(),
-    po_id: z.number().optional(),
+    po_id: z.coerce.number().optional(),
     item: z.string().optional(),
     orderReceivedDate: z.date().optional(),
     jobNumber: z.string().optional(),
@@ -42,12 +42,12 @@ export const jobTicketSchema = z.object({
         paper: z.string().min(1, "Paper Type is required"),
         coating: z.string().min(1, "Coating is required"),
         rawMaterials: z.array(z.object({
-            item_id: z.number().optional(),
+            item_id: z.coerce.number().optional(),
             material_name: z.string().optional(),
             material_type: z.string().optional(),
             size: z.string().optional(),
             material_description: z.string().optional(),
-            quantity: z.number().optional(),
+            quantity: z.coerce.number().optional(),
             status: z.string().optional(),
             remarks: z.string().optional(),
         })).optional(),

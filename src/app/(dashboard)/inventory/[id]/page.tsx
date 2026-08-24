@@ -38,7 +38,7 @@ function ViewInventoryItem() {
   const id = params.id as string;
 
   const form = useForm<InventoryFormValues>({
-    resolver: zodResolver(inventoryManagementScheme),
+    resolver: zodResolver(inventoryManagementScheme) as any,
     defaultValues: {
       item_category: "",
       item_sub_category: "",
@@ -223,8 +223,7 @@ function ViewInventoryItem() {
                   <FormItem>
                     <FormLabel>Quantity</FormLabel>
                     <FormControl>
-                      <Input
-                        disabled
+                      <Input min={0} disabled
                         className={readonlyClass}
                         type="number"
                         placeholder="Quantity"

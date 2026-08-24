@@ -67,7 +67,7 @@ function ViewCustomerRelationship() {
   };
 
   const form = useForm<CustomerFormValues>({
-    resolver: zodResolver(customerSchema),
+    resolver: zodResolver(customerSchema) as any,
     defaultValues: baseDefaultValues,
   });
 

@@ -77,8 +77,7 @@ export default function SettingsPage() {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <span className="text-slate-500 font-medium">Rs.</span>
                   </div>
-                  <Input
-                    id="usd-rate"
+                  <Input min={0} id="usd-rate"
                     type="number"
                     className="pl-10 border-slate-300 focus-visible:ring-primary h-11"
                     placeholder="e.g. 350.00"

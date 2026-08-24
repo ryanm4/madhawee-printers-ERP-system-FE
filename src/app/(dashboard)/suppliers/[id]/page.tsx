@@ -50,7 +50,7 @@ function ViewSupplierProfile() {
     }
 
     const form = useForm<SupplierFormValues>({
-        resolver: zodResolver(supplierSchema),
+        resolver: zodResolver(supplierSchema) as any,
         defaultValues: baseDefaultValues,
     })
 
