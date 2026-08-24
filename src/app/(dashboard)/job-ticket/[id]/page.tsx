@@ -442,7 +442,7 @@ function JobViewTicket() {
                                 {renderFormField("quantity", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Quantity</FormLabel>
-                                        <FormControl><Input min={0} type="number" placeholder="Enter Quantity" {...field} readOnly /></FormControl>
+                                        <FormControl><Input min={0} type="number" step="any" placeholder="Enter Quantity" {...field} readOnly /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 ))}
@@ -462,7 +462,7 @@ function JobViewTicket() {
                                 {renderFormField("wastage", ({ field }) => (
                                     <FormItem>
                                         <FormLabel>Wastage %</FormLabel>
-                                        <FormControl><Input min={0} type="number" placeholder="Enter Wastage" {...field} readOnly /></FormControl>
+                                        <FormControl><Input min={0} type="number" step="any" placeholder="Enter Wastage" {...field} readOnly /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 ))}
@@ -517,7 +517,7 @@ function JobViewTicket() {
                                                     {renderFormField(`paperTypes.${index}.rawMaterials.${rmIndex}.quantity`, ({ field }) => (
                                                         <FormItem>
                                                             <FormLabel className={rmIndex !== 0 ? "sr-only" : ""}>Quantity</FormLabel>
-                                                            <FormControl><Input min={0} type="number" placeholder="Quantity" {...field} value={field.value as number || 0} readOnly /></FormControl>
+                                                            <FormControl><Input min={0} type="number" step="any" placeholder="Quantity" {...field} value={field.value as number || 0} readOnly /></FormControl>
                                                             <FormMessage />
                                                         </FormItem>
                                                     ))}
@@ -596,7 +596,7 @@ function JobViewTicket() {
                                     {renderFormField("oldPlatesQuantity", ({ field }) => (
                                         <FormItem>
                                             <FormLabel>Old Plates Quantity</FormLabel>
-                                            <FormControl><Input min={0} type="number" placeholder="Quantity" {...field} readOnly /></FormControl>
+                                            <FormControl><Input min={0} type="number" step="any" placeholder="Quantity" {...field} readOnly /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     ))}
@@ -628,7 +628,7 @@ function JobViewTicket() {
                                     {renderFormField("newPlatesQuantity", ({ field }) => (
                                         <FormItem>
                                             <FormLabel>New Plates Quantity</FormLabel>
-                                            <FormControl><Input min={0} type="number" placeholder="Quantity" {...field} readOnly /></FormControl>
+                                            <FormControl><Input min={0} type="number" step="any" placeholder="Quantity" {...field} readOnly /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     ))}
@@ -674,7 +674,7 @@ function JobViewTicket() {
                                             {renderFormField(`inks.${index}.quantity`, ({ field }) => (
                                                 <FormItem>
                                                     <FormLabel className={index !== 0 ? "sr-only" : ""}>Quantity</FormLabel>
-                                                    <FormControl><Input min={0} type="number" placeholder="Enter Quantity" {...field} readOnly /></FormControl>
+                                                    <FormControl><Input min={0} type="number" step="any" placeholder="Enter Quantity" {...field} readOnly /></FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             ))}

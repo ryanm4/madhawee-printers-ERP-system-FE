@@ -225,7 +225,7 @@ function ViewInventoryItem() {
                     <FormControl>
                       <Input min={0} disabled
                         className={readonlyClass}
-                        type="number"
+                        type="number" step="any"
                         placeholder="Quantity"
                         {...field}
                       />

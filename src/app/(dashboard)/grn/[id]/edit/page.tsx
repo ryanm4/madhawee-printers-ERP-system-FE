@@ -518,7 +518,7 @@ function EditGRN() {
                           <FormItem>
                             <FormLabel>Quantity</FormLabel>
                             <FormControl>
-                              <Input min={0} type="number"
+                              <Input min={0} type="number" step="any"
                                 {...field}
                                 onChange={(e) => {
                                   const val = Number(e.target.value);
@@ -544,7 +544,7 @@ function EditGRN() {
                           <FormItem>
                             <FormLabel>Rate ({selectedCurrency})</FormLabel>
                             <FormControl>
-                              <Input min={0} type="number"
+                              <Input min={0} type="number" step="any"
                                 {...field}
                                 onChange={(e) => {
                                   const val = Number(e.target.value);
@@ -570,7 +570,7 @@ function EditGRN() {
                           <FormItem>
                             <FormLabel>Amount ({selectedCurrency})</FormLabel>
                             <FormControl>
-                              <Input min={0} type="number" {...field} readOnly />
+                              <Input min={0} type="number" step="any" {...field} readOnly />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

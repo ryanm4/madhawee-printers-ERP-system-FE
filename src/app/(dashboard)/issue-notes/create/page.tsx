@@ -455,7 +455,7 @@ function CreateIssueNote() {
                           <FormItem>
                             <FormLabel>Quantity</FormLabel>
                             <FormControl>
-                              <Input min={0} type="number"
+                              <Input min={0} type="number" step="any"
                                 placeholder="0"
                                 {...field}
                                 onChange={(e) =>

@@ -388,7 +388,7 @@ function ViewGRN() {
                           <FormItem>
                             <FormLabel>Quantity</FormLabel>
                             <FormControl>
-                              <Input min={0} type="number" {...field} disabled className={readonlyClass} />
+                              <Input min={0} type="number" step="any" {...field} disabled className={readonlyClass} />
                             </FormControl>
                           </FormItem>
                         )}
@@ -400,7 +400,7 @@ function ViewGRN() {
                           <FormItem>
                             <FormLabel>Rate ({selectedCurrency})</FormLabel>
                             <FormControl>
-                              <Input min={0} type="number" {...field} disabled className={readonlyClass} />
+                              <Input min={0} type="number" step="any" {...field} disabled className={readonlyClass} />
                             </FormControl>
                           </FormItem>
                         )}
@@ -411,7 +411,7 @@ function ViewGRN() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Amount ({selectedCurrency})</FormLabel>
-                            <FormControl><Input min={0} type="number" {...field} disabled className={readonlyClass} /></FormControl>
+                            <FormControl><Input min={0} type="number" step="any" {...field} disabled className={readonlyClass} /></FormControl>
                           </FormItem>
                         )}
                       />

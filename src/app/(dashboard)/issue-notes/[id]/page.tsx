@@ -398,7 +398,7 @@ function ViewIssueNote() {
                           <FormItem>
                             <FormLabel>Quantity</FormLabel>
                             <FormControl>
-                              <Input min={0} type="number"
+                              <Input min={0} type="number" step="any"
                                 {...field}
                                 disabled
                                 className={readonlyClass}

@@ -926,7 +926,7 @@ function EditJobTicket() {
                       Quantity <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Input min={0} type="number"
+                      <Input min={0} type="number" step="any"
                         placeholder="Enter Quantity"
                         {...field}
                       />
@@ -971,7 +971,7 @@ function EditJobTicket() {
                   <FormItem>
                     <FormLabel>Wastage %</FormLabel>
                     <FormControl>
-                      <Input min={0} type="number"
+                      <Input min={0} type="number" step="any"
                         placeholder="Enter Wastage"
                         {...field}
                       />
@@ -1177,7 +1177,7 @@ function EditJobTicket() {
                                   Quantity
                                 </FormLabel>
                                 <FormControl>
-                                  <Input min={0} type="number"
+                                  <Input min={0} type="number" step="any"
                                     placeholder="Enter Quantity"
                                     {...field}
                                     onChange={(e) =>
@@ -1407,7 +1407,7 @@ function EditJobTicket() {
                     <FormItem>
                       <FormLabel>Old Plates Quantity</FormLabel>
                       <FormControl>
-                        <Input min={0} type="number"
+                        <Input min={0} type="number" step="any"
                           placeholder="Quantity"
                           {...field}
                         />
@@ -1453,7 +1453,7 @@ function EditJobTicket() {
                     <FormItem>
                       <FormLabel>New Plates Quantity</FormLabel>
                       <FormControl>
-                        <Input min={0} type="number"
+                        <Input min={0} type="number" step="any"
                           placeholder="Quantity"
                           {...field}
                         />
@@ -1530,7 +1530,7 @@ function EditJobTicket() {
                               Quantity
                             </FormLabel>
                             <FormControl>
-                              <Input min={0} type="number"
+                              <Input min={0} type="number" step="any"
                                 placeholder="Enter Quantity"
                                 {...field}
                               />

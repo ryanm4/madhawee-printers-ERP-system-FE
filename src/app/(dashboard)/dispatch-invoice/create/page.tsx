@@ -468,7 +468,7 @@ function CreateDispatchandInvoice() {
                     <FormItem className="w-full">
                       <FormLabel>Dispatch Quantity</FormLabel>
                       <FormControl>
-                        <Input min={0} type="number"
+                        <Input min={0} type="number" step="any"
                           placeholder="Enter dispatch quantity"
                           {...field}
                           value={field.value ?? ""}
@@ -481,7 +481,7 @@ function CreateDispatchandInvoice() {
                     <FormItem className="w-full">
                       <FormLabel>No.of Bundles</FormLabel>
                       <FormControl>
-                        <Input min={0} type="number"
+                        <Input min={0} type="number" step="any"
                           placeholder="Enter no.of bundles"
                           {...field}
                           value={field.value ?? ""}

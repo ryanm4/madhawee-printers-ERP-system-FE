@@ -493,7 +493,7 @@ function EditIssueNote() {
                           <FormItem>
                             <FormLabel>Quantity</FormLabel>
                             <FormControl>
-                              <Input min={0} type="number"
+                              <Input min={0} type="number" step="any"
                                 {...field}
                                 onChange={(e) =>
                                   field.onChange(Number(e.target.value))

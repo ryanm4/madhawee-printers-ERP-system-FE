@@ -732,7 +732,7 @@ export function CreateJobTicketDialog({
                       Quantity <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Input min={0} type="number"
+                      <Input min={0} type="number" step="any"
                         placeholder="Enter Quantity"
                         {...field}
                       />
@@ -778,7 +778,7 @@ export function CreateJobTicketDialog({
                   <FormItem>
                     <FormLabel>Wastage %</FormLabel>
                     <FormControl>
-                      <Input min={0} type="number"
+                      <Input min={0} type="number" step="any"
                         placeholder="Enter Wastage"
                         {...field}
                       />
@@ -1043,7 +1043,7 @@ export function CreateJobTicketDialog({
                                   Quantity
                                 </FormLabel>
                                 <FormControl>
-                                  <Input min={0} type="number"
+                                  <Input min={0} type="number" step="any"
                                     placeholder="Enter Quantity"
                                     {...field}
                                     onChange={(e) =>
@@ -1202,7 +1202,7 @@ export function CreateJobTicketDialog({
                     <FormItem>
                       <FormLabel>Old Plates Quantity</FormLabel>
                       <FormControl>
-                        <Input min={0} type="number"
+                        <Input min={0} type="number" step="any"
                           placeholder="Quantity"
                           {...field}
                         />
@@ -1244,7 +1244,7 @@ export function CreateJobTicketDialog({
                     <FormItem>
                       <FormLabel>New Plates Quantity</FormLabel>
                       <FormControl>
-                        <Input min={0} type="number"
+                        <Input min={0} type="number" step="any"
                           placeholder="Quantity"
                           {...field}
                         />
@@ -1317,7 +1317,7 @@ export function CreateJobTicketDialog({
                             Quantity
                           </FormLabel>
                           <FormControl>
-                            <Input min={0} type="number"
+                            <Input min={0} type="number" step="any"
                               placeholder="Enter Quantity"
                               {...field}
                             />

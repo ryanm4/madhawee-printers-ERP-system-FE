@@ -275,7 +275,7 @@ function CreateInventoryManagement() {
                     </FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="number" step="any"
                         min={0}
                         placeholder="Enter Unit Price"
                         value={field.value}
@@ -292,7 +292,7 @@ function CreateInventoryManagement() {
                     </FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="number" step="any"
                         min={0}
                         placeholder="Enter Re-order Level"
                         value={field.value}

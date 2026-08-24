@@ -327,7 +327,7 @@ function EditInventoryManagement() {
                       Item Quantitiy <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Input min={0} type="number"
+                      <Input min={0} type="number" step="any"
                         placeholder="Enter Item Quantity"
                         value={field.value}
                         onChange={(e) => field.onChange(Number(e.target.value))}
@@ -374,7 +374,7 @@ function EditInventoryManagement() {
                     </FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="number" step="any"
                         min={0}
                         placeholder="Enter Unit Price"
                         value={field.value}
@@ -391,7 +391,7 @@ function EditInventoryManagement() {
                     </FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="number" step="any"
                         min={0}
                         placeholder="Enter Re-order Level"
                         value={field.value}
