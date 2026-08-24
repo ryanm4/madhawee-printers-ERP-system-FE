@@ -563,7 +563,7 @@ function ViewPurchaseOrder() {
                             </FormLabel>
                             <FormControl>
                               <Input
-                                type="number"
+                                type="number" step="any"
                                 min={0}
                                 placeholder="Enter Quantity"
                                 value={field.value}
@@ -607,7 +607,7 @@ function ViewPurchaseOrder() {
                             </FormLabel>
                             <FormControl>
                               <Input
-                                type="number"
+                                type="number" step="any"
                                 min={0}
                                 placeholder="Enter Price"
                                 value={field.value}

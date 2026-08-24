@@ -414,7 +414,7 @@ function ReportsPage() {
 
   const suppliers = customer.filter((c) => c.customer_type?.toLowerCase() === "supplier" || c.customer_type?.toLowerCase() === "both");
 
-  const formatNum = (num: any) => { const n = parseFloat(num); return isNaN(n) ? num : new Intl.NumberFormat("en-US").format(n); };
+  const formatNum = (num: any) => { const n = parseFloat(num); return isNaN(n) ? num : new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 }).format(n); };
 
   // Compute filtered data for rendering
   const filteredReportData = React.useMemo(() => {
@@ -469,7 +469,7 @@ function ReportsPage() {
                 "#": index + 1,
                 "Item Code": row.item_code || "-",
                 "Description": row.description || "-",
-                "Total Quantity": row.total_qty,
+                "Total Quantity": formatNum(row.total_qty),
                 "Total Sales": formatNum(row.total_sales)
             };
         }
@@ -509,7 +509,7 @@ function ReportsPage() {
           "Customer Name": customerName,
           "Job Name": row.job_name || jobInfo.job_name || "-",
           "Product Type": row.product_type || jobInfo.product_type || "-",
-          "Quantity": quantity,
+          "Quantity": formatNum(quantity),
           "Job Open Date": row.job_open_date || jobInfo.job_open_date ? format(new Date(row.job_open_date || jobInfo.job_open_date), "yyyy-MM-dd") : "-",
           "PO Number": poNumber,
           "Currency": row.currency || jobInfo.currency || "-",
@@ -532,12 +532,36 @@ function ReportsPage() {
           "Item Name": row.item_name || "-",
           "Unit Price": formatNum(row.unit_price || row.item_unit_price || row.price || 0),
           "Size": (!row.size || String(row.size).trim().toLowerCase() === "x") ? "-" : row.size,
-          "Quantity": qty.toFixed(2),
+          "Quantity": formatNum(qty),
           "UOM": row.uom || "-",
           "Width": row.width || "-",
           "Height": row.height || "-",
           "Rate": formatNum(row.rate || 0),
           "Status": row.status || "-",
+          "Created By": row.created_by || "-",
+          "Created On": row.created_on ? format(new Date(row.created_on), "yyyy-MM-dd") : "-",
+          "Updated By": row.updated_by || "-",
+          "Updated On": row.updated_on ? format(new Date(row.updated_on), "yyyy-MM-dd") : "-",
+        };
+      });
+    } else if (activeTab === "general" && watchedGeneralType === "dispatch") {
+      data = data.map((row: any, index: number) => {
+        const jobInfo = jobList.find(j => String(j.value) === String(row.job_id))?.fullJob || {};
+        const customerObj = customer.find((c) => String(c.customer_id) === String(row.customer_id));
+        const customerName = customerObj?.company_name || row.customer_name || row.company_name || row.customer_id || "-";
+        
+        const dispatchQty = parseFloat(row.dispatch_qty || row.quantity) || 0;
+
+        return {
+          "#": index + 1,
+          "Dispatch ID": row.dispatch_id || row.id || "-",
+          "Customer Name": customerName,
+          "Delivery Address": row.delivery_address || customerObj?.address || "-",
+          "Job ID": row.job_number ? <><span className="font-bold">{row.job_number}</span> {row.job_name || ""}</> : (jobInfo.job_number ? <><span className="font-bold">{jobInfo.job_number}</span> {jobInfo.job_name || ""}</> : row.job_id || "-"),
+          "Dispatch Note": row.dispatch_note || "-",
+          "Dispatch Date": row.dispatch_date ? format(new Date(row.dispatch_date), "yyyy-MM-dd") : "-",
+          "Dispatch Qty": formatNum(dispatchQty),
+          "Note": row.note || "-",
           "Created By": row.created_by || "-",
           "Created On": row.created_on ? format(new Date(row.created_on), "yyyy-MM-dd") : "-",
           "Updated By": row.updated_by || "-",
@@ -570,9 +594,9 @@ function ReportsPage() {
           "Job ID": row.job_number ? <><span className="font-bold">{row.job_number}</span> {row.job_name || ""}</> : row.job_id || "-",
           "Dispatch note": row.dispatch_note || "-",
           "Dispatch Date": row.dispatch_date ? format(new Date(row.dispatch_date), "yyyy-MM-dd") : "-",
-          "Order Qty": orderQty,
-          "Dispatch Qty": dispatchQty,
-          "Balance Qty": balanceQty,
+          "Order Qty": formatNum(orderQty),
+          "Dispatch Qty": formatNum(dispatchQty),
+          "Balance Qty": formatNum(balanceQty),
           "Status": row.status || "-",
           "Days Aging": daysPending,
           "Created On": row.created_on ? format(new Date(row.created_on), "yyyy-MM-dd") : "-",
@@ -603,7 +627,7 @@ function ReportsPage() {
 
         const itemTypes = po.items.length > 0 ? po.items.map((i: any) => i.type).join("\n") : "-";
         const itemNames = po.items.length > 0 ? po.items.map((i: any) => i.name).join("\n") : "-";
-        const itemQtys = po.items.length > 0 ? po.items.map((i: any) => i.qty).join("\n") : "-";
+        const itemQtys = po.items.length > 0 ? po.items.map((i: any) => formatNum(i.qty)).join("\n") : "-";
         const itemPrices = po.items.length > 0 ? po.items.map((i: any) => formatNum(i.price)).join("\n") : "-";
         const itemTotals = po.items.length > 0 ? po.items.map((i: any) => formatNum(i.qty * i.price)).join("\n") : "-";
         const grandTotal = po.items.reduce((sum: number, i: any) => sum + (i.qty * i.price), 0);
@@ -657,10 +681,32 @@ function ReportsPage() {
             "Amount": formatNum(row.amount),
           };
         });
+      } else if (watchedInventoryType === "CURRENT_STOCK") {
+        data = data.map((row: any, index: number) => ({
+          "#": index + 1,
+          "Item Category": row.item_category || "-",
+          "Item Sub Category": row.item_sub_category || "-",
+          "Item Name": row.item_name || "-",
+          "Size": row.size || "-",
+          "Item ID": row.item_id || "-",
+          "UOM": row.unit_of_measure || "-",
+          "Available Qty": formatNum(row.available_qty)
+        }));
       }
     }
 
-    return data;
+    return data.map((row: any, index: number) => {
+      // If row already has a '#' property, it was mapped manually above
+      if ("#" in row) return row;
+      
+      // Check if this is a totals row
+      const isTotalRow = Object.values(row).some(v => String(v).toUpperCase() === "TOTAL");
+      
+      return {
+        "#": isTotalRow ? "" : index + 1,
+        ...row
+      };
+    });
   }, [reportData, activeTab, watchedSalesType, selectedSalesCustomerId, selectedSalespersonName, watchedGeneralType, jobList, quotationList, customer, selectedDispatchStatus]);
 
   return (

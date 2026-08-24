@@ -624,7 +624,7 @@ function EditPurchaseOrder() {
                             </FormLabel>
                             <FormControl>
                               <Input
-                                type="number"
+                                type="number" step="any"
                                 min={0}
                                 placeholder="Enter Quantity"
                                 value={field.value}
@@ -647,7 +647,7 @@ function EditPurchaseOrder() {
                             </FormLabel>
                             <FormControl>
                               <Input
-                                type="number"
+                                type="number" step="any"
                                 min={0}
                                 placeholder="Enter Unit"
                                 value={field.value || ""}
@@ -672,7 +672,7 @@ function EditPurchaseOrder() {
                             </FormLabel>
                             <FormControl>
                               <Input
-                                type="number"
+                                type="number" step="any"
                                 min={0}
                                 placeholder="Enter Price"
                                 value={field.value}

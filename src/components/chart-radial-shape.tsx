@@ -85,7 +85,7 @@ export function ChartRadialShape({
                         barSize={15}
                     >
                         <PolarAngleAxis
-                            type="number"
+                            type="number" step="any"
                             domain={[0, 100]}
                             angleAxisId={0}
                             tick={false}
@@ -97,7 +97,7 @@ export function ChartRadialShape({
                             fill={color}
                         />
                         <PolarRadiusAxis 
-                           type="number" 
+                           type="number" step="any" 
                            domain={[0, 100]} 
                            tick={false} 
                            tickLine={false} 

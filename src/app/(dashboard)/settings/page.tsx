@@ -78,7 +78,7 @@ export default function SettingsPage() {
                     <span className="text-slate-500 font-medium">Rs.</span>
                   </div>
                   <Input min={0} id="usd-rate"
-                    type="number"
+                    type="number" step="any"
                     className="pl-10 border-slate-300 focus-visible:ring-primary h-11"
                     placeholder="e.g. 350.00"
                     value={rate}
