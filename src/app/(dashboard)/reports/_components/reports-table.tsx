@@ -108,7 +108,20 @@ export function ReportsTable({ data }: ReportsTableProps) {
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Report Results</h3>
                 <div className="ml-auto flex items-center gap-2">
-                    <ExportButton data={data} filename="report-results" />
+                    
+                    <ExportButton 
+                      data={table.getSortedRowModel().rows.map((row) => {
+                        const visibleRow: Record<string, any> = {};
+                        table.getVisibleFlatColumns().forEach((col) => {
+                            // Extract from row.original using the column's id (which maps to the data key)
+                            if (col.id !== 'actions') {
+                                visibleRow[col.id] = row.original[col.id];
+                            }
+                        });
+                        return visibleRow;
+                      })} 
+                      filename="report-results" 
+                    />
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline">

@@ -28,7 +28,8 @@ export async function POST(request: NextRequest) {
         }
 
         const data = await response.json();
-        return NextResponse.json(data.data, { status: 201 });
+        const responseData = Array.isArray(data) ? data : data.data;
+        return NextResponse.json(responseData || [], { status: 201 });
     } catch (error) {
         return NextResponse.json(
             { message: "Internal server error" },

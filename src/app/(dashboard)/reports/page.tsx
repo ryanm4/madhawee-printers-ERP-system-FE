@@ -142,7 +142,7 @@ function ReportsPage() {
         console.error("Failed to fetch customers", error);
       }
     };
-    
+
     const fetchInventory = async () => {
       try {
         const response = await inventoryApi.getAll();
@@ -269,7 +269,13 @@ function ReportsPage() {
   useEffect(() => {
     setSelectedSalesCustomerId("");
     setSelectedSalespersonName("");
-  }, [watchedSalesType]);
+    
+    if (watchedSalesType === "SALES_DAILY") {
+      const today = format(new Date(), "yyyy-MM-dd");
+      salesForm.setValue("from_date", today);
+      salesForm.setValue("to_date", today);
+    }
+  }, [watchedSalesType, salesForm]);
 
   // Submit Handlers
   const handleGeneralSubmit = async (data: z.infer<typeof GeneralReportSchema>) => {
@@ -307,7 +313,7 @@ function ReportsPage() {
     try {
       setLoading(true);
       const requiresDates = !["STOCK_VALUE", "STOCK_AGING", "LOW_STOCK"].includes(data.report_type);
-      
+
       const payload = {
         report_type: data.report_type,
         ...(requiresDates && {
@@ -400,11 +406,15 @@ function ReportsPage() {
   const watchedGeneralType = generalForm.watch("reportType");
   const isGeneralAdvanced = Object.keys(REPORT_TYPES).includes(watchedGeneralType);
 
+  const salesRequiresDates = watchedSalesType && !["SALES_BY_CUSTOMER", "SALES_BY_PRODUCT", "SALES_BY_SALESPERSON"].includes(watchedSalesType);
+
   const watchedInventoryType = inventoryForm.watch("report_type");
   const isInventoryAdvanced = ["CURRENT_STOCK", "STOCK_VALUE", "STOCK_AGING", "LOW_STOCK", "GRN_REPORT", "MATERIAL_CONSUMPTION_SUMMARY", "MATERIAL_CONSUMPTION_BY_JOB"].includes(watchedInventoryType);
   const inventoryRequiresDates = watchedInventoryType && !["STOCK_VALUE", "STOCK_AGING", "LOW_STOCK"].includes(watchedInventoryType);
 
   const suppliers = customer.filter((c) => c.customer_type?.toLowerCase() === "supplier" || c.customer_type?.toLowerCase() === "both");
+
+  const formatNum = (num: any) => { const n = parseFloat(num); return isNaN(n) ? num : new Intl.NumberFormat("en-US").format(n); };
 
   // Compute filtered data for rendering
   const filteredReportData = React.useMemo(() => {
@@ -417,26 +427,82 @@ function ReportsPage() {
       } else if (watchedSalesType === "SALES_BY_SALESPERSON" && selectedSalespersonName) {
         data = data.filter((row: any) => String(row.salesperson).toLowerCase() === selectedSalespersonName.toLowerCase());
       }
+      
+      data = data.map((row: any, index: number) => {
+        if (watchedSalesType === "SALES_DAILY") {
+            return {
+                "#": index + 1,
+                "Sales Date": row.sales_date ? format(new Date(row.sales_date), "yyyy-MM-dd") : "-",
+                "Total Orders": row.total_orders,
+                "Total Sales": formatNum(row.total_sales)
+            };
+        }
+        if (watchedSalesType === "SALES_MONTHLY") {
+            return {
+                "#": index + 1,
+                "Sales Month": row.sales_month || "-",
+                "Total Orders": row.total_orders,
+                "Total Sales": formatNum(row.total_sales)
+            };
+        }
+        if (watchedSalesType === "SALES_WEEKLY") {
+            return {
+                "#": index + 1,
+                "Sales Week": row.sales_week || "-",
+                "Week Start Date": row.week_start_date ? format(new Date(row.week_start_date), "yyyy-MM-dd") : "-",
+                "Week End Date": row.week_end_date ? format(new Date(row.week_end_date), "yyyy-MM-dd") : "-",
+                "Total Orders": row.total_orders,
+                "Total Sales": formatNum(row.total_sales)
+            };
+        }
+        if (watchedSalesType === "SALES_BY_CUSTOMER") {
+            return {
+                "#": index + 1,
+                "Customer ID": row.customer_id || "-",
+                "Company Name": row.company_name || "-",
+                "Total Orders": row.total_orders,
+                "Total Sales": formatNum(row.total_sales)
+            };
+        }
+        if (watchedSalesType === "SALES_BY_PRODUCT") {
+            return {
+                "#": index + 1,
+                "Item Code": row.item_code || "-",
+                "Description": row.description || "-",
+                "Total Quantity": row.total_qty,
+                "Total Sales": formatNum(row.total_sales)
+            };
+        }
+        if (watchedSalesType === "SALES_BY_SALESPERSON") {
+            return {
+                "#": index + 1,
+                "Salesperson": row.salesperson || "-",
+                "Total Orders": row.total_orders,
+                "Total Sales": formatNum(row.total_sales)
+            };
+        }
+        return row;
+      });
     } else if (activeTab === "general" && watchedGeneralType === "jobs") {
       data = data.map((row: any, index: number) => {
         // Try to find the full job ticket info if missing
         const jobInfo = jobList.find(j => String(j.value) === String(row.job_id))?.fullJob || {};
-        
+
         // Try to find the associated quotation to get unit price
         const poId = row.po_id || jobInfo.po_id;
         const quotation = quotationList.find(q => String(q.quote_id) === String(poId));
-        
+
         // Match item within quotation if possible, or fallback to first item
         const quoteItem = quotation?.items?.find((i: any) => i.item_category === row.product_type || i.item_description === row.job_name) || quotation?.items?.[0];
-        
+
         const unitPrice = parseFloat(row.unit_price || row.item_unit_price || row.price || quoteItem?.item_unit_price) || 0;
         const quantity = parseFloat(row.quantity || jobInfo.quantity) || 0;
-        
+
         const customerObj = customer.find((c) => String(c.customer_id) === String(row.customer_id));
         const customerName = customerObj?.company_name || row.customer_name || row.company_name || row.customer_id || "-";
-        
+
         const poNumber = row.po_number || row.customer_po || row.po_no || jobInfo.customer_po || poId || "-";
-        
+
         return {
           "#": index + 1,
           "Job ID (Job Number)": row.job_number || row.job_id || jobInfo.job_number || "-",
@@ -446,8 +512,9 @@ function ReportsPage() {
           "Quantity": quantity,
           "Job Open Date": row.job_open_date || jobInfo.job_open_date ? format(new Date(row.job_open_date || jobInfo.job_open_date), "yyyy-MM-dd") : "-",
           "PO Number": poNumber,
-          "Unit Price": unitPrice,
-          "Revenue": unitPrice * quantity,
+          "Currency": row.currency || jobInfo.currency || "-",
+          "Unit Price": formatNum(unitPrice),
+          "Revenue": formatNum(unitPrice * quantity),
           "Created On": row.created_on ? format(new Date(row.created_on), "yyyy-MM-dd") : "-",
           "Created By": row.created_by || "-",
           "Update On": row.updated_on ? format(new Date(row.updated_on), "yyyy-MM-dd") : "-",
@@ -463,13 +530,13 @@ function ReportsPage() {
           "Item Category": row.item_category || "-",
           "Item Sub Category": row.item_sub_category || "-",
           "Item Name": row.item_name || "-",
-          "Unit Price": row.unit_price || row.item_unit_price || row.price || "-",
+          "Unit Price": formatNum(row.unit_price || row.item_unit_price || row.price || 0),
           "Size": (!row.size || String(row.size).trim().toLowerCase() === "x") ? "-" : row.size,
           "Quantity": qty.toFixed(2),
           "UOM": row.uom || "-",
           "Width": row.width || "-",
           "Height": row.height || "-",
-          "Rate": row.rate || "-",
+          "Rate": formatNum(row.rate || 0),
           "Status": row.status || "-",
           "Created By": row.created_by || "-",
           "Created On": row.created_on ? format(new Date(row.created_on), "yyyy-MM-dd") : "-",
@@ -485,14 +552,14 @@ function ReportsPage() {
         const orderQty = parseFloat(row.order_qty || row.quantity) || 0;
         const dispatchQty = parseFloat(row.dispatch_qty) || 0;
         const balanceQty = orderQty - dispatchQty;
-        
+
         let daysPending = "-";
         const rowStatus = row.status?.toUpperCase() || "";
         if (rowStatus === "PARTIALLY DISPATCH" || rowStatus === "PARTIALLY DISPATCHED" || rowStatus === "PARTIALLY DISPATHCED") {
           const openDate = new Date(row.job_open_date);
           const currentDate = new Date();
           const diffTime = currentDate.getTime() - openDate.getTime();
-          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); 
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
           daysPending = diffDays >= 0 ? `${diffDays} Days` : "0 Days";
         }
 
@@ -537,8 +604,8 @@ function ReportsPage() {
         const itemTypes = po.items.length > 0 ? po.items.map((i: any) => i.type).join("\n") : "-";
         const itemNames = po.items.length > 0 ? po.items.map((i: any) => i.name).join("\n") : "-";
         const itemQtys = po.items.length > 0 ? po.items.map((i: any) => i.qty).join("\n") : "-";
-        const itemPrices = po.items.length > 0 ? po.items.map((i: any) => i.price).join("\n") : "-";
-        const itemTotals = po.items.length > 0 ? po.items.map((i: any) => (i.qty * i.price)).join("\n") : "-";
+        const itemPrices = po.items.length > 0 ? po.items.map((i: any) => formatNum(i.price)).join("\n") : "-";
+        const itemTotals = po.items.length > 0 ? po.items.map((i: any) => formatNum(i.qty * i.price)).join("\n") : "-";
         const grandTotal = po.items.reduce((sum: number, i: any) => sum + (i.qty * i.price), 0);
 
         return {
@@ -550,15 +617,47 @@ function ReportsPage() {
           "Item Types": itemTypes,
           "Item Names": itemNames,
           "Item Qtys": itemQtys,
+          "Currency": po.currency || "-",
           "Item Prices": itemPrices,
           "Item Totals": itemTotals,
-          "PO Grand Total": grandTotal,
+          "PO Grand Total": formatNum(grandTotal),
           "Created On": po.created_on ? format(new Date(po.created_on), "yyyy-MM-dd") : "-",
           "Created By": po.created_by || "-",
           "Update On": po.updated_on ? format(new Date(po.updated_on), "yyyy-MM-dd") : "-",
           "Updated By": po.updated_by || "-",
         };
       });
+    } else if (activeTab === "inventory") {
+      if (watchedInventoryType === "GRN_REPORT") {
+        data = data.map((row: any, index: number) => {
+          if (row.grn_id === "TOTAL") {
+            return {
+              "Grn Id": "TOTAL",
+              "Supplier Name": "",
+              "Received Date": "",
+              "Item Category": "",
+              "Item Sub Category": "",
+              "Item Name": "",
+              "Size": "",
+              "Quantity": "",
+              "Rate": "",
+              "Amount": formatNum(row.amount),
+            };
+          }
+          return {
+            "Grn Id": row.grn_id || "-",
+            "Supplier Name": row.supplier_name || "-",
+            "Received Date": row.received_date ? format(new Date(row.received_date), "yyyy-MM-dd") : "-",
+            "Item Category": row.item_category || "-",
+            "Item Sub Category": row.item_sub_category || "-",
+            "Item Name": row.item_name || "-",
+            "Size": row.size || "-",
+            "Quantity": formatNum(row.quantity),
+            "Rate": formatNum(row.rate),
+            "Amount": formatNum(row.amount),
+          };
+        });
+      }
     }
 
     return data;
@@ -739,7 +838,7 @@ function ReportsPage() {
                 </div>
               )}
 
-              <Button variant="outline" type="button" className="h-10" onClick={() => generalForm.reset()}>
+              <Button variant="outline" type="button" className="h-10" onClick={() => clearResultsAndReset('general')}>
                 Reset
               </Button>
               <Button type="submit" className="bg-primary text-white h-10">
@@ -867,7 +966,7 @@ function ReportsPage() {
                   />
                 </>
               )}
-              
+
               {inventoryForm.watch("report_type") === "GRN_REPORT" && (
                 <FormField
                   control={inventoryForm.control}
@@ -931,7 +1030,7 @@ function ReportsPage() {
                 />
               )}
 
-              <Button variant="outline" type="button" className="h-10" onClick={() => inventoryForm.reset()}>
+              <Button variant="outline" type="button" className="h-10" onClick={() => clearResultsAndReset('inventory')}>
                 Reset
               </Button>
               <Button type="submit" className="bg-primary text-white h-10">
@@ -1052,7 +1151,7 @@ function ReportsPage() {
                 </div>
               )}
 
-              <Button variant="outline" type="button" className="h-10" onClick={() => salesForm.reset()}>
+              <Button variant="outline" type="button" className="h-10" onClick={() => clearResultsAndReset('sales')}>
                 Reset
               </Button>
               <Button type="submit" className="bg-primary text-white h-10">
@@ -1136,7 +1235,7 @@ function ReportsPage() {
                 )}
               />
 
-              <Button variant="outline" type="button" className="h-10" onClick={() => quotationForm.reset()}>
+              <Button variant="outline" type="button" className="h-10" onClick={() => clearResultsAndReset('quotation')}>
                 Reset
               </Button>
               <Button type="submit" className="bg-primary text-white h-10">
