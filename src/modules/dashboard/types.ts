@@ -19,6 +19,15 @@ export interface AnalyticsData {
         completed_dispatches: number | string;
     };
     revenueTrend: Array<{ month: string; revenue: string | number }>;
+    stockReminders?: Array<{
+        item_name: string;
+        item_sub_category: string;
+        size: string;
+        quantity?: number;
+        available_qty?: number;
+        reorder_level: number;
+        stock_status: 'BELOW' | 'NEAR';
+    }>;
 }
 
 export interface KPIResponse {

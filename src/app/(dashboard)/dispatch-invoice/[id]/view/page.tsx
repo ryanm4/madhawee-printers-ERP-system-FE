@@ -53,7 +53,7 @@ function ViewDispatchAndInvoice() {
   };
 
   const form = useForm<DispatchFormValues>({
-    resolver: zodResolver(dispatchInvoiceScheme),
+    resolver: zodResolver(dispatchInvoiceScheme) as any,
     defaultValues: baseDefaultValues,
   });
 

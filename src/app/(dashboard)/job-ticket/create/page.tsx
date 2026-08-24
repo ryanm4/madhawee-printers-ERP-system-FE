@@ -154,7 +154,7 @@ function CreateJobTicket() {
   };
 
   const form = useForm<JobTicketFormValues>({
-    resolver: zodResolver(jobTicketSchema),
+    resolver: zodResolver(jobTicketSchema) as any,
     defaultValues: baseDefaultValues,
   });
 
@@ -689,8 +689,7 @@ function CreateJobTicket() {
                         Quantity <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
+                        <Input min={0} type="number"
                           placeholder="Enter Quantity"
                           {...field}
                         />
@@ -734,8 +733,7 @@ function CreateJobTicket() {
                     <FormItem>
                       <FormLabel>Wastage %</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
+                        <Input min={0} type="number"
                           placeholder="Enter Wastage"
                           {...field}
                         />
@@ -998,8 +996,7 @@ function CreateJobTicket() {
                                     Quantity
                                   </FormLabel>
                                   <FormControl>
-                                    <Input
-                                      type="number"
+                                    <Input min={0} type="number"
                                       placeholder="Enter Quantity"
                                       {...field}
                                       onChange={(e) =>
@@ -1164,8 +1161,7 @@ function CreateJobTicket() {
                       <FormItem>
                         <FormLabel>Old Plates Quantity</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
+                          <Input min={0} type="number"
                             placeholder="Quantity"
                             {...field}
                           />
@@ -1213,8 +1209,7 @@ function CreateJobTicket() {
                       <FormItem>
                         <FormLabel>New Plates Quantity</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
+                          <Input min={0} type="number"
                             placeholder="Quantity"
                             {...field}
                           />
@@ -1294,8 +1289,7 @@ function CreateJobTicket() {
                                 Quantity
                               </FormLabel>
                               <FormControl>
-                                <Input
-                                  type="number"
+                                <Input min={0} type="number"
                                   placeholder="Enter Quantity"
                                   {...field}
                                 />

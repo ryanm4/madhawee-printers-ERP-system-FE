@@ -18,6 +18,8 @@ import {
   ClipboardList,
   CheckCircle2,
   AlertCircle,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   FileText,
   Banknote,
@@ -60,6 +62,7 @@ function DashboardPage({
   const [insights, setInsights] = useState<string[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [chartCurrency, setChartCurrency] = useState<"LKR" | "USD">("LKR");
+  const [stockReminderPage, setStockReminderPage] = useState(0);
 
   useEffect(() => {
     const userData = getUser();
@@ -481,9 +484,33 @@ function DashboardPage({
           <div className="md:col-span-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-2 border-none shadow-sm rounded-[2rem] bg-white p-8">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900">
-                  Operational Log
-                </h3>
+                <div className="flex items-center gap-4">
+                  <h3 className="text-xl font-bold text-gray-900">
+                    Stock Reminders
+                  </h3>
+                  {analytics?.stockReminders && analytics.stockReminders.length > 4 && (
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 rounded-full border-gray-200"
+                        onClick={() => setStockReminderPage(Math.max(0, stockReminderPage - 1))}
+                        disabled={stockReminderPage === 0}
+                      >
+                        <ChevronLeft className="h-4 w-4 text-gray-500" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 rounded-full border-gray-200"
+                        onClick={() => setStockReminderPage(stockReminderPage + 1)}
+                        disabled={(stockReminderPage + 1) * 4 >= analytics.stockReminders.length}
+                      >
+                        <ChevronRight className="h-4 w-4 text-gray-500" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
@@ -493,58 +520,42 @@ function DashboardPage({
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  {
-                    title: "Low Stock: Gloss Finish",
-                    value: "8 items",
-                    icon: AlertCircle,
-                    color: "text-red-600",
-                    bg: "bg-red-50",
-                    desc: "Inventory requires attention",
-                  },
-                  {
-                    title: "Pending Approval",
-                    value: "12 Quotes",
-                    icon: Clock,
-                    color: "text-blue-600",
-                    bg: "bg-blue-50",
-                    desc: "Waiting for customer feedback",
-                  },
-                  {
-                    title: "In Printing",
-                    value: "240 Units",
-                    icon: CheckCircle2,
-                    color: "text-indigo-600",
-                    bg: "bg-indigo-50",
-                    desc: "Currently on production floor",
-                  },
-                  {
-                    title: "Scheduled Dispatch",
-                    value: "4 Today",
-                    icon: Truck,
-                    color: "text-green-600",
-                    bg: "bg-green-50",
-                    desc: "Logistics ready for pickup",
-                  },
-                ].map((row, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-4 p-5 rounded-3xl border border-gray-50 hover:border-gray-100 hover:bg-gray-50/50 transition-all cursor-pointer"
-                  >
-                    <div className={cn("p-3 rounded-2xl", row.bg, row.color)}>
-                      <row.icon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                        {row.title}
-                      </p>
-                      <p className="text-lg font-black text-gray-900">
-                        {row.value}
-                      </p>
-                      <p className="text-[10px] text-gray-400">{row.desc}</p>
-                    </div>
+                {analytics?.stockReminders && analytics.stockReminders.length > 0 ? (
+                  analytics.stockReminders.slice(stockReminderPage * 4, (stockReminderPage + 1) * 4).map((reminder, idx) => {
+                    const isBelow = reminder.stock_status === 'BELOW';
+                    const title = reminder.size
+                      ? `${reminder.item_sub_category || ''} ${reminder.item_name} (${reminder.size})`
+                      : `${reminder.item_sub_category || ''} ${reminder.item_name}`;
+                    const bg = isBelow ? "bg-red-50" : "bg-orange-50";
+                    const color = isBelow ? "text-red-600" : "text-orange-600";
+                    const desc = isBelow ? "Below Reorder Level" : "Nearing Reorder Level";
+
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-4 p-5 rounded-3xl border border-gray-50 hover:border-gray-100 hover:bg-gray-50/50 transition-all cursor-pointer"
+                      >
+                        <div className={cn("p-3 rounded-2xl", bg, color)}>
+                          <AlertCircle className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider truncate">
+                            {title}
+                          </p>
+                          <p className="text-lg font-black text-gray-900">
+                            {Number(reminder.available_qty || reminder.quantity || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          </p>
+                          <p className={cn("text-[10px] font-semibold", color)}>{desc}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="col-span-1 md:col-span-2 flex flex-col items-center justify-center p-10 text-gray-400">
+                    <CheckCircle2 className="w-10 h-10 mb-2 text-green-500 opacity-50" />
+                    <p>Inventory levels are optimal.</p>
                   </div>
-                ))}
+                )}
               </div>
             </Card>
 

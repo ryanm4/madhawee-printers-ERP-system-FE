@@ -72,7 +72,7 @@ function CreateDispatchandInvoice() {
   };
 
   const form = useForm<DispatchFormValues>({
-    resolver: zodResolver(dispatchInvoiceScheme),
+    resolver: zodResolver(dispatchInvoiceScheme) as any,
     defaultValues: baseDefaultValues,
   });
 
@@ -468,8 +468,7 @@ function CreateDispatchandInvoice() {
                     <FormItem className="w-full">
                       <FormLabel>Dispatch Quantity</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
+                        <Input min={0} type="number"
                           placeholder="Enter dispatch quantity"
                           {...field}
                           value={field.value ?? ""}
@@ -482,8 +481,7 @@ function CreateDispatchandInvoice() {
                     <FormItem className="w-full">
                       <FormLabel>No.of Bundles</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
+                        <Input min={0} type="number"
                           placeholder="Enter no.of bundles"
                           {...field}
                           value={field.value ?? ""}

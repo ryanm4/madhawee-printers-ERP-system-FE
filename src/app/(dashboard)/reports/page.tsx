@@ -57,6 +57,22 @@ const InventoryReportSchema = z.object({
   supplier_name: z.string().optional(),
   item_id: z.string().optional(),
   job_id: z.string().optional(),
+}).superRefine((data, ctx) => {
+  const requiresDates = !["STOCK_VALUE", "STOCK_AGING", "LOW_STOCK"].includes(data.report_type);
+  if (requiresDates && !data.from_date) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "From date is required",
+      path: ["from_date"]
+    });
+  }
+  if (requiresDates && !data.to_date) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "To date is required",
+      path: ["to_date"]
+    });
+  }
 });
 
 const SalesReportSchema = z.object({
@@ -208,7 +224,7 @@ function ReportsPage() {
   const defaultToDate = format(new Date(), "yyyy-MM-dd");
 
   const generalForm = useForm<z.infer<typeof GeneralReportSchema>>({
-    resolver: zodResolver(GeneralReportSchema),
+    resolver: zodResolver(GeneralReportSchema) as any,
     defaultValues: {
       reportType: "",
       fromDate: defaultFromDate,
@@ -219,7 +235,7 @@ function ReportsPage() {
   });
 
   const inventoryForm = useForm<z.infer<typeof InventoryReportSchema>>({
-    resolver: zodResolver(InventoryReportSchema),
+    resolver: zodResolver(InventoryReportSchema) as any,
     defaultValues: {
       report_type: "",
       from_date: defaultFromDate,
@@ -231,7 +247,7 @@ function ReportsPage() {
   });
 
   const salesForm = useForm<z.infer<typeof SalesReportSchema>>({
-    resolver: zodResolver(SalesReportSchema),
+    resolver: zodResolver(SalesReportSchema) as any,
     defaultValues: {
       report_type: "",
       from_date: defaultFromDate,
@@ -240,7 +256,7 @@ function ReportsPage() {
   });
 
   const quotationForm = useForm<z.infer<typeof QuotationReportSchema>>({
-    resolver: zodResolver(QuotationReportSchema),
+    resolver: zodResolver(QuotationReportSchema) as any,
     defaultValues: {
       reportType: "",
       fromDate: defaultFromDate,

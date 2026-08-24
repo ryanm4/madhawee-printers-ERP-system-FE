@@ -106,7 +106,7 @@ function ViewPurchaseOrder() {
   };
 
   const form = useForm<PurchaseOrderFormValues>({
-    resolver: zodResolver(purchaseOrderScheme),
+    resolver: zodResolver(purchaseOrderScheme) as any,
     defaultValues: baseDefaultValues,
   });
 
@@ -564,6 +564,7 @@ function ViewPurchaseOrder() {
                             <FormControl>
                               <Input
                                 type="number"
+                                min={0}
                                 placeholder="Enter Quantity"
                                 value={field.value}
                                 onChange={(e) => field.onChange(e.target.value)}
@@ -607,6 +608,7 @@ function ViewPurchaseOrder() {
                             <FormControl>
                               <Input
                                 type="number"
+                                min={0}
                                 placeholder="Enter Price"
                                 value={field.value}
                                 onChange={(e) => field.onChange(e.target.value)}

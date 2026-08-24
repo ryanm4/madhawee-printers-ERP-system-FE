@@ -47,7 +47,7 @@ function EditUser() {
   };
 
   const form = useForm<UserFormValues>({
-    resolver: zodResolver(editUserSchema),
+    resolver: zodResolver(editUserSchema) as any,
     defaultValues: baseDefaultValues,
   });
 
