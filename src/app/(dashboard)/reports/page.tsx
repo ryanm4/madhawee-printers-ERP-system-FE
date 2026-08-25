@@ -130,6 +130,7 @@ function ReportsPage() {
 
   // Client-side filtering states for Sales Tab
   const [selectedSalesCustomerId, setSelectedSalesCustomerId] = useState<string>("");
+  const [selectedSalesCurrency, setSelectedSalesCurrency] = useState<string>("");
   const [selectedSalespersonName, setSelectedSalespersonName] = useState<string>("");
   const [jobList, setJobList] = useState<{ value: string; label: string; fullJob?: any }[]>([]);
   const [quotationList, setQuotationList] = useState<any[]>([]);
@@ -271,6 +272,8 @@ function ReportsPage() {
   const watchedSalesType = salesForm.watch("report_type");
   useEffect(() => {
     setSelectedSalesCustomerId("");
+    setSelectedSalesCurrency("");
+    setSelectedSalesCurrency("");
     setSelectedSalespersonName("");
     
     if (watchedSalesType === "SALES_DAILY") {
@@ -400,6 +403,7 @@ function ReportsPage() {
     setActiveTab(tab);
     setReportData([]);
     setSelectedSalesCustomerId("");
+    setSelectedSalesCurrency("");
     setSelectedSalespersonName("");
     generalForm.reset();
     inventoryForm.reset();
@@ -427,10 +431,15 @@ function ReportsPage() {
     let data = [...reportData];
 
     if (activeTab === "sales") {
-      if (watchedSalesType === "SALES_BY_CUSTOMER" && selectedSalesCustomerId) {
-        data = data.filter((row: any) => String(row.customer_id) === String(selectedSalesCustomerId));
-      } else if (watchedSalesType === "SALES_BY_SALESPERSON" && selectedSalespersonName) {
-        data = data.filter((row: any) => String(row.salesperson).toLowerCase() === selectedSalespersonName.toLowerCase());
+      if (watchedSalesType === "SALES_BY_CUSTOMER") {
+        if (selectedSalesCustomerId && selectedSalesCustomerId !== "ALL") {
+          data = data.filter((row: any) => String(row.customer_id) === String(selectedSalesCustomerId));
+        }
+        if (selectedSalesCurrency && selectedSalesCurrency !== "ALL") {
+          data = data.filter((row: any) => String(row.currency || "").toLowerCase() === selectedSalesCurrency.toLowerCase());
+        }
+      } else if (watchedSalesType === "SALES_BY_SALESPERSON" && selectedSalespersonName && selectedSalespersonName !== "ALL") {
+        data = data.filter((row: any) => String(row.salesperson || "").trim().toLowerCase() === String(selectedSalespersonName).trim().toLowerCase());
       }
       
       data = data.map((row: any, index: number) => {
@@ -465,6 +474,7 @@ function ReportsPage() {
                 "#": index + 1,
                 "Customer ID": row.customer_id || "-",
                 "Company Name": row.company_name || "-",
+                "Currency": row.currency || "-",
                 "Total Orders": row.total_orders,
                 "Total Sales": formatNum(row.total_sales)
             };
@@ -482,6 +492,7 @@ function ReportsPage() {
             return {
                 "#": index + 1,
                 "Salesperson": row.salesperson || "-",
+                "Currency": row.currency || "-",
                 "Total Orders": row.total_orders,
                 "Total Sales": formatNum(row.total_sales)
             };
@@ -780,7 +791,7 @@ function ReportsPage() {
 
       return formattedRow;
     });
-  }, [reportData, activeTab, watchedSalesType, selectedSalesCustomerId, selectedSalespersonName, watchedGeneralType, jobList, quotationList, customer, selectedDispatchStatus]);
+  }, [reportData, activeTab, watchedSalesType, selectedSalesCustomerId, selectedSalesCurrency, selectedSalespersonName, watchedGeneralType, jobList, quotationList, customer, selectedDispatchStatus]);
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3 w-full min-w-0 overflow-hidden">
@@ -1241,21 +1252,36 @@ function ReportsPage() {
 
               {/* Dynamic Filtering Dropdowns inside Sales Tab */}
               {watchedSalesType === "SALES_BY_CUSTOMER" && (
-                <div className="flex flex-col gap-1 w-[200px]">
-                  <FormLabel>Filter by Customer</FormLabel>
-                  <Combobox
-                    items={[
-                      { value: "", label: "All Customers" },
-                      ...customer.map((c) => ({
-                        value: String(c.customer_id),
-                        label: c.company_name,
-                      })),
-                    ]}
-                    value={selectedSalesCustomerId}
-                    onValueChange={setSelectedSalesCustomerId}
-                    placeholder="All Customers"
-                  />
-                </div>
+                <>
+                  <div className="flex flex-col gap-1 w-[200px]">
+                    <FormLabel>Filter by Customer</FormLabel>
+                    <Combobox
+                      items={[
+                        { value: "", label: "All Customers" },
+                        ...customer.map((c) => ({
+                          value: String(c.customer_id),
+                          label: c.company_name,
+                        })),
+                      ]}
+                      value={selectedSalesCustomerId}
+                      onValueChange={setSelectedSalesCustomerId}
+                      placeholder="All Customers"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1 w-[150px]">
+                    <FormLabel>Filter by Currency</FormLabel>
+                    <Combobox
+                      items={[
+                        { value: "", label: "All Currencies" },
+                        { value: "LKR", label: "LKR" },
+                        { value: "USD", label: "USD" }
+                      ]}
+                      value={selectedSalesCurrency}
+                      onValueChange={setSelectedSalesCurrency}
+                      placeholder="All Currencies"
+                    />
+                  </div>
+                </>
               )}
 
               {watchedSalesType === "SALES_BY_SALESPERSON" && (
@@ -1433,7 +1459,7 @@ function ReportsPage() {
                 Total Stock Value: {new Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR' }).format(grandTotal)}
               </div>
             )}
-            <ReportsTable data={filteredReportData} />
+            <ReportsTable data={filteredReportData} isLoading={loading} />
           </div>
         )
       )}
