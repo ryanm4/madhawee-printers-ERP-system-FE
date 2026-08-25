@@ -271,9 +271,9 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
     <!-- Packing & Expiry -->
     <tr>
       <td colspan="2" class="label">Packing Date</td>
-      <td colspan="4" class="value">${safe(formatDate(data.packingDate))}</td>
+      <td colspan="4" class="value">${safe(data.packingDate)}</td>
       <td colspan="2" class="label">Expiry Date</td>
-      <td colspan="4" class="value">${safe(formatDate(data.expiryDate))}</td>
+      <td colspan="4" class="value">${safe(data.expiryDate)}</td>
     </tr>
 
     <!-- Spacer -->
