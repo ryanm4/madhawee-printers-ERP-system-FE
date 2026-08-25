@@ -33,11 +33,13 @@ import {
 import { DataTablePagination } from "@/components/shared/data-table-pagination"
 import { ExportButton } from "@/components/shared/export-button"
 
+import { Loader2 } from "lucide-react"
 interface ReportsTableProps {
     data: Record<string, unknown>[]
+    isLoading?: boolean
 }
 
-export function ReportsTable({ data }: ReportsTableProps) {
+export function ReportsTable({ data, isLoading = false }: ReportsTableProps) {
     const [sorting, setSorting] = useState<SortingState>([])
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
@@ -101,7 +103,7 @@ export function ReportsTable({ data }: ReportsTableProps) {
         },
     })
 
-    if (!data || data.length === 0) return null;
+    if ((!data || data.length === 0) && !isLoading) return null;
 
     return (
         <div className="space-y-4 max-w-full overflow-hidden">
@@ -171,7 +173,16 @@ export function ReportsTable({ data }: ReportsTableProps) {
                         </TableHeader>
 
                         <TableBody>
-                            {table.getRowModel().rows.length ? (
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={columns.length || 1} className="h-24 text-center">
+                                        <div className="flex items-center justify-center h-full">
+                                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                            <span className="ml-2 text-sm text-muted-foreground">Loading report data...</span>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ) : table.getRowModel().rows.length ? (
                                 table.getRowModel().rows.map((row) => (
                                     <TableRow key={row.id}>
                                         {row.getVisibleCells().map((cell) => (
@@ -186,7 +197,7 @@ export function ReportsTable({ data }: ReportsTableProps) {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                                    <TableCell colSpan={columns.length || 1} className="h-24 text-center">
                                         No results.
                                     </TableCell>
                                 </TableRow>

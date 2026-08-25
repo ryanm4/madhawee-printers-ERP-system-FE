@@ -1,5 +1,7 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { GET_ALL_USER } from "@/modules/users/types";
+import { userApi } from "@/modules/users/api";
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -62,6 +64,7 @@ function EditPurchaseOrder() {
   const params = useParams();
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
   const [quotationList, setQuotationList] = useState<QUOTATIONS[]>([]);
+  const [userList, setUserList] = useState<GET_ALL_USER[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [user, setUser] = useState<{
@@ -73,6 +76,7 @@ function EditPurchaseOrder() {
   useEffect(() => {
     getCustomerList();
     getQuotationList();
+    getUserList();
     const userData = getUser();
     if (userData) {
       setUser({
@@ -92,6 +96,18 @@ function EditPurchaseOrder() {
       console.error("Failed to fetch customers");
     } finally {
       setLoading(false);
+    }
+  };
+
+
+  const getUserList = async () => {
+    try {
+      const response = await userApi.getAll();
+      if (response.status === 200) {
+        setUserList(response?.data?.users);
+      }
+    } catch (error) {
+      console.error("Failed to fetch users");
     }
   };
 
@@ -465,9 +481,23 @@ function EditPurchaseOrder() {
                   {renderFormField("salesRef", ({ field }) => (
                     <FormItem>
                       <FormLabel>Marketing Person</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter Sales Ref" {...field} />
-                      </FormControl>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select contact person" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {userList.map((cp, idx) => (
+                            <SelectItem key={idx} value={cp.name}>
+                              {cp.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   ))}

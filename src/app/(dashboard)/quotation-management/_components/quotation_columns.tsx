@@ -90,6 +90,10 @@ export const quotationColumns = (
             header: "Contact Person",
         },
         {
+            accessorKey: "marketing_person",
+            header: "Marketing Person"
+        },
+        {
             accessorKey: "currency",
             header: "Currency",
         },
