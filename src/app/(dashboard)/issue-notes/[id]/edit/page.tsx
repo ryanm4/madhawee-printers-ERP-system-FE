@@ -3,6 +3,7 @@ import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcr
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { issueNoteSchema } from "@/modules/issue-notes/validation";
 import { cn } from "@/lib/utils";
 import { useRouter, useParams } from "next/navigation";
@@ -97,8 +98,11 @@ function EditIssueNote() {
           remarks: data.remarks || "",
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           items: data.items.map((item: any) => {
-            // Find the item_id by matching the item_name with inventory
+            // Find the item_id by matching the item_id first, then fallback to item_name with inventory
             const invItem = inventory.find(
+              (i: GET_ALL_INVENTORY) => i.item_id === item.item_id
+            );
+            const matchedItem = invItem || inventory.find(
               (i: GET_ALL_INVENTORY) =>
                 i.item_name === item.item_name ||
                 `${i.item_sub_category} ${i.item_name}` === item.item_name ||
@@ -109,7 +113,7 @@ function EditIssueNote() {
             );
 
             return {
-              item_id: item.item_id || (invItem ? invItem.item_id : 0),
+              item_id: matchedItem ? matchedItem.item_id : (item.item_id || 0),
               quantity: Number(item.quantity),
             };
           }),
@@ -295,7 +299,27 @@ function EditIssueNote() {
     }
   }
 
-  if (loading) return <FullPageLoader />;
+  if (loading) {
+    return (
+      <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+        <PageTitleWithBreadcrumb
+          title="Edit Issue Material"
+          breadcrumbs={[
+            { title: "Dashboard", href: "/dashboard" },
+            { title: "Edit", href: "#" },
+          ]}
+        />
+        <div className="flex items-center justify-end gap-3 w-full mt-6">
+          <Skeleton className="h-10 w-28" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Skeleton className="h-[400px] w-full rounded-xl" />
+          <Skeleton className="h-[400px] w-full rounded-xl" />
+        </div>
+      </div>
+    );
+  }
 
   if (!canModifyIssueNote) {
     return <RestrictedRouteGuard />;
@@ -379,7 +403,7 @@ function EditIssueNote() {
                   control={form.control}
                   name="job_id"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col mt-2">
+                    <FormItem className="flex flex-col">
                       <FormLabel>
                         Related Job <span className="text-red-500">*</span>
                       </FormLabel>
@@ -461,7 +485,7 @@ function EditIssueNote() {
                             }
                           }
                           return (
-                            <FormItem className="flex flex-col mt-2">
+                            <FormItem className="flex flex-col">
                               <FormLabel>Item Name</FormLabel>
                               <Combobox
                                 items={currentItems}

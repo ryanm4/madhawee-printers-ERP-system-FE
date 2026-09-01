@@ -3,6 +3,7 @@ import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcr
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { issueNoteSchema } from "@/modules/issue-notes/validation";
 import { cn } from "@/lib/utils";
 import { useRouter, useParams } from "next/navigation";
@@ -89,7 +90,12 @@ function ViewIssueNote() {
           remarks: data.remarks || "",
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           items: data.items.map((item: any) => {
+            // Match by item_id directly since the API provides it
             const invItem = inventoryResponse.data.find(
+              (i: GET_ALL_INVENTORY) => i.item_id === item.item_id
+            );
+            // Fallback: try matching by name if item_id wasn't found
+            const matchedItem = invItem || inventoryResponse.data.find(
               (i: GET_ALL_INVENTORY) =>
                 i.item_name === item.item_name ||
                 `${i.item_sub_category} ${i.item_name}` === item.item_name ||
@@ -100,7 +106,7 @@ function ViewIssueNote() {
             );
 
             return {
-              item_id: invItem ? invItem.item_id : 0,
+              item_id: matchedItem ? matchedItem.item_id : (item.item_id || 0),
               quantity: Number(item.quantity),
             };
           }),
@@ -161,7 +167,7 @@ function ViewIssueNote() {
           jobData.inks.forEach((ink: any) => {
             if (ink.ink) {
               materials.push({
-                value: ink.id,
+                value: ink.item_id || ink.id,
                 label: ink.ink.trim(),
                 quantity: Number(ink.quantity || 0),
               });
@@ -205,7 +211,27 @@ function ViewIssueNote() {
   const readonlyClass =
     "disabled:opacity-100 disabled:text-black disabled:cursor-default bg-muted/50";
 
-  if (loading) return <FullPageLoader />;
+  if (loading) {
+    return (
+      <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+        <PageTitleWithBreadcrumb
+          title="View Issue Material"
+          breadcrumbs={[
+            { title: "Dashboard", href: "/dashboard" },
+            { title: "View", href: "#" },
+          ]}
+        />
+        <div className="flex items-center justify-end gap-3 w-full mt-6">
+          <Skeleton className="h-10 w-28" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Skeleton className="h-[400px] w-full rounded-xl" />
+          <Skeleton className="h-[400px] w-full rounded-xl" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
@@ -298,7 +324,7 @@ function ViewIssueNote() {
                   control={form.control}
                   name="job_id"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col mt-2">
+                    <FormItem className="flex flex-col">
                       <FormLabel>Related Job</FormLabel>
                       <Combobox
                         items={jobs}
@@ -371,7 +397,7 @@ function ViewIssueNote() {
                             }
                           }
                           return (
-                            <FormItem className="flex flex-col mt-2">
+                            <FormItem className="flex flex-col">
                               <FormLabel>Item Name</FormLabel>
                               <Combobox
                                 items={currentItems}
