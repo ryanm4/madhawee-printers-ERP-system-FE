@@ -302,12 +302,8 @@ function CreateCustomerRelationship() {
                       <FormControl>
                         <Input
                           placeholder="Enter Credit Period"
-                          disabled={supplierType === CustomerType.CUSTOMER}
-                          className={
-                            supplierType === CustomerType.CUSTOMER
-                              ? "bg-muted cursor-not-allowed"
-                              : ""
-                          }
+                          disabled={true}
+                          className="bg-muted cursor-not-allowed"
                           {...field}
                         />
                       </FormControl>
