@@ -145,7 +145,7 @@ function EditCustomerRelationship() {
         });
       } catch (error) {
         console.error("Failed to fetch customer:", error);
-        toast(getErrorMessage(error, "Failed to load customer data"));
+        toast.error(getErrorMessage(error, "Failed to load customer data"));
         router.push("/customers");
       } finally {
         setIsLoading(false);
@@ -223,7 +223,7 @@ function EditCustomerRelationship() {
       await CustomerApi.update(id, payload);
 
       const isSupplier = data.customer_type === CustomerType.SUPPLIER;
-      toast(`${isSupplier ? "Supplier" : "Customer"} Updated`, {
+      toast.success(`${isSupplier ? "Supplier" : "Customer"} Updated`, {
         description: `The ${isSupplier ? "supplier" : "customer"} details have been updated successfully.`,
       });
       form.reset(baseDefaultValues);
@@ -234,7 +234,7 @@ function EditCustomerRelationship() {
       const isSupplier =
         form.getValues("customer_type") === CustomerType.SUPPLIER;
       const label = isSupplier ? "Supplier" : "Customer";
-      toast(`Failed to Update ${label}`, {
+      toast.error(`Failed to Update ${label}`, {
         description: getErrorMessage(
           error,
           `An error occurred while updating the ${label.toLowerCase()}. Please try again.`,

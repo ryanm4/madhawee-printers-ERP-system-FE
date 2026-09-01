@@ -59,7 +59,7 @@ function CreateUser() {
       };
       const response = await userApi.create(payload);
 
-      toast("User Created", {
+      toast.success("User Created", {
         description: "The user record has been created successfully.",
       });
       form.reset(baseDefaultValues);
@@ -67,7 +67,7 @@ function CreateUser() {
       router.push("/users");
     } catch (error) {
       console.error("Failed to create user:", error);
-      toast("Failed to Create User", {
+      toast.error("Failed to Create User", {
         description: getErrorMessage(error, "An error occurred while creating the user record. Please try again."),
       });
     } finally {

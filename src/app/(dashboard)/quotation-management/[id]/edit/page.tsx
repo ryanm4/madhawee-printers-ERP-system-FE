@@ -97,7 +97,7 @@ function EditQuotation({
       setCustomer(response.data);
     } catch (error) {
       console.error("Failed to fetch customers", error);
-      toast(getErrorMessage(error, "Failed to load customers"));
+      toast.error(getErrorMessage(error, "Failed to load customers"));
     } finally {
       setLoading(false);
     }
@@ -294,7 +294,7 @@ function EditQuotation({
 
       const response = await quotationApi.update(id, payload);
 
-      toast("Quotation Updated", {
+      toast.success("Quotation Updated", {
         description: `Quotation has been updated successfully.`,
       });
 
@@ -304,7 +304,7 @@ function EditQuotation({
       router.push("/quotation-management");
     } catch (error) {
       console.error("Failed to submit quotation:", error);
-      toast("Failed to Update Quotation", {
+      toast.error("Failed to Update Quotation", {
         description: getErrorMessage(
           error,
           "An error occurred while updating the quotation. Please try again.",
@@ -362,7 +362,7 @@ function EditQuotation({
         }
       } catch (err) {
         console.error("Failed to fetch quotation:", err);
-        toast(getErrorMessage(err, "Failed to load quotation data"));
+        toast.error(getErrorMessage(err, "Failed to load quotation data"));
       } finally {
         setLoading(false);
       }
@@ -392,7 +392,7 @@ function EditQuotation({
         <form
           onSubmit={form.handleSubmit(onSubmit, (errors) => {
             console.error("Form validation errors:", errors);
-            toast("Form Validation Error", {
+            toast.error("Form Validation Error", {
               description: "Please check the form for errors and try again.",
             });
           })}
@@ -967,7 +967,7 @@ function EditQuotation({
                                     totals.totalWithoutTax,
                                   );
                                   form.setValue("net_total", totals.netTotal);
-                                  toast("Totals updated");
+                                  toast.success("Totals updated");
                                 }}
                               >
                                 <Check className="h-4 w-4" />

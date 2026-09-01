@@ -169,7 +169,7 @@ function CreateCustomerRelationship() {
       };
       await CustomerApi.create(payload);
 
-      toast(`Customer Created`, {
+      toast.success(`Customer Created`, {
         description: `The customer has been created successfully.`,
       });
       form.reset(baseDefaultValues);
@@ -177,7 +177,7 @@ function CreateCustomerRelationship() {
       router.push("/customers");
     } catch (error) {
       console.error("Failed to submit entity:", error);
-      toast(`Failed to Create Customer`, {
+      toast.error(`Failed to Create Customer`, {
         description: getErrorMessage(
           error,
           `An error occurred while creating the customer. Please try again.`,

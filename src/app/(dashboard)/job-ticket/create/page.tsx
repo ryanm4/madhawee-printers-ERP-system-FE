@@ -235,6 +235,11 @@ function CreateJobTicket() {
   const _currentYear = now.getFullYear();
 
   async function onSubmit(data: JobTicketFormValues) {
+    if (!jobSeqData || !jobSeqOverride || jobSeqOverride.trim() === "") {
+      toast.error("A valid Job Number is required.");
+      return;
+    }
+
     try {
       setIsLoading(true);
       const payload: CREATE_TICKETS = {
@@ -304,7 +309,7 @@ function CreateJobTicket() {
 
       const _response = await jobTicketsApi.create(payload);
 
-      toast("Job Ticket Created", {
+      toast.success("Job Ticket Created", {
         description: "The job ticket has been created successfully.",
       });
 
@@ -349,7 +354,7 @@ function CreateJobTicket() {
       setShowPrintDialog(true);
       setIsLoading(false);
     } catch (_error) {
-      toast("Failed to Create Job Ticket", {
+      toast.error("Failed to Create Job Ticket", {
         description: getErrorMessage(
           _error,
           "An error occurred while creating the job ticket. Please try again."
@@ -372,7 +377,7 @@ function CreateJobTicket() {
       setCustomerData(customerResponse.data);
     } catch (error) {
       console.error("Failed to fetch data", error);
-      toast(getErrorMessage(error, "Failed to fetch data"));
+      toast.error(getErrorMessage(error, "Failed to fetch data"));
     } finally {
       setIsLoading(false);
     }
@@ -474,6 +479,7 @@ function CreateJobTicket() {
         setJobSeqOverride(String(seqData.nextSequence).padStart(4, "0"));
       } catch (err) {
         console.error("Error fetching next sequence", err);
+        toast.error(getErrorMessage(err, "Failed to fetch job sequence"));
         setJobSeqData(null);
         setJobSeqOverride("");
       } finally {

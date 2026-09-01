@@ -96,7 +96,7 @@ function ViewDispatchAndInvoice() {
         }
       } catch (err) {
         console.error("Failed to fetch dispatch:", err);
-        toast(getErrorMessage(err, "Failed to load dispatch record"));
+        toast.error(getErrorMessage(err, "Failed to load dispatch record"));
       } finally {
         setIsLoading(false);
       }

@@ -247,6 +247,11 @@ export function CreateJobTicketDialog({
   };
 
   async function onSubmit(data: JobTicketFormValues) {
+    if (!jobSeqData || !jobSeqOverride || jobSeqOverride.trim() === "") {
+      toast.error("A valid Job Number is required.");
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -328,7 +333,7 @@ export function CreateJobTicketDialog({
 
       const _response = await jobTicketsApi.create(payload);
 
-      toast("Job Ticket Created Successfully");
+      toast.success("Job Ticket Created Successfully");
 
       // Build print data from submitted form values
       const firstPaperType = data.paperTypes?.[0];
@@ -386,7 +391,7 @@ export function CreateJobTicketDialog({
         setShowPrintDialog(true);
       }
     } catch (error: unknown) {
-      toast("Failed to Create Job Ticket", {
+      toast.error("Failed to Create Job Ticket", {
         description: getErrorMessage(error),
       });
     } finally {
@@ -513,6 +518,7 @@ export function CreateJobTicketDialog({
         setJobSeqOverride(String(seqData.nextSequence).padStart(4, "0"));
       } catch (err) {
         console.error("Error fetching next sequence", err);
+        toast.error(getErrorMessage(err, "Failed to fetch job sequence"));
         setJobSeqData(null);
         setJobSeqOverride("");
       } finally {

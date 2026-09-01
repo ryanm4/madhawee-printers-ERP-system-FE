@@ -40,7 +40,7 @@ function UsersComponent() {
       }
     } catch (error) {
       console.error("Failed to fetch users", error);
-      toast(getErrorMessage(error, "Failed to fetch users"));
+      toast.error(getErrorMessage(error, "Failed to fetch users"));
     } finally {
       setLoading(false);
     }

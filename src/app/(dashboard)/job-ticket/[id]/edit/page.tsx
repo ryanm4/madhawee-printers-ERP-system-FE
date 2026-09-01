@@ -425,7 +425,7 @@ function EditJobTicket() {
       );
 
       if (response.status === 200) {
-        toast("Job Ticket updated successfully");
+        toast.success("Job Ticket updated successfully");
 
         // Build print data and show print dialog
         const firstPaperType = data.paperTypes?.[0];
@@ -470,7 +470,7 @@ function EditJobTicket() {
       }
     } catch (error) {
       console.error("Failed to update Job Ticket:", error);
-      toast(getErrorMessage(error, "Failed to update Job Ticket"));
+      toast.error(getErrorMessage(error, "Failed to update Job Ticket"));
     } finally {
       setIsSubmitting(false);
     }
@@ -588,7 +588,7 @@ function EditJobTicket() {
         }
       } catch (error) {
         console.error("Failed to fetch initial data or job ticket:", error);
-        toast(getErrorMessage(error, "Failed to load job ticket data"));
+        toast.error(getErrorMessage(error, "Failed to load job ticket data"));
       } finally {
         setIsPageLoading(false);
       }

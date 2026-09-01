@@ -118,7 +118,7 @@ function CreatePurchaseOrder() {
       }
     } catch (error) {
       console.error("Failed to fetch users", error);
-      toast(getErrorMessage(error, "Failed to fetch users"));
+      toast.error(getErrorMessage(error, "Failed to fetch users"));
     } finally {
       setLoading(false);
     }
@@ -193,7 +193,7 @@ function CreatePurchaseOrder() {
 
       const response = await purchaseOrderApi.create(payload);
 
-      toast("Purchase Order Created", {
+      toast.success("Purchase Order Created", {
         description: `Purchase Order ${data.customer_po} has been created successfully.`,
       });
 
@@ -204,7 +204,7 @@ function CreatePurchaseOrder() {
       router.push("/purchase-order");
     } catch (error) {
       console.error("Failed to submit PO:", error);
-      toast("Failed to Create Purchase Order", {
+      toast.error("Failed to Create Purchase Order", {
         description: getErrorMessage(
           error,
           "An error occurred while creating the purchase order. Please try again.",
