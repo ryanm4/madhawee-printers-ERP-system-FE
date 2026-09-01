@@ -104,7 +104,7 @@ function CreateDispatchandInvoice() {
       }
     } catch (error) {
       console.error("Failed to fetch jobs", error);
-      toast(getErrorMessage(error, "Failed to fetch jobs"));
+      toast.error(getErrorMessage(error, "Failed to fetch jobs"));
     } finally {
       setIsLoading(false);
     }
@@ -123,7 +123,7 @@ function CreateDispatchandInvoice() {
       const totalDispatched = previouslyCompleted + currentDispatchQty;
 
       if (totalDispatched > totalJobQty) {
-        toast("Invalid Dispatch Quantity", {
+        toast.error("Invalid Dispatch Quantity", {
           description: `Total dispatched quantity (${totalDispatched}) cannot exceed Job quantity (${totalJobQty}).`,
         });
         setIsLoading(false);
@@ -169,7 +169,7 @@ function CreateDispatchandInvoice() {
         }
       }
 
-      toast("Dispatch Created", {
+      toast.success("Dispatch Created", {
         description: "The dispatch record has been created successfully.",
       });
 
@@ -201,7 +201,7 @@ function CreateDispatchandInvoice() {
       router.push("/dispatch-invoice");
     } catch (error) {
       console.error("Failed to create dispatch record:", error);
-      toast("Failed to Create Dispatch", {
+      toast.error("Failed to Create Dispatch", {
         description: getErrorMessage(
           error,
           "An error occurred while creating the dispatch record. Please try again.",
@@ -248,7 +248,7 @@ function CreateDispatchandInvoice() {
         }
       } catch (err) {
         console.error("Failed to fetch customer:", err);
-        toast(getErrorMessage(err, "Failed to fetch customer details"));
+        toast.error(getErrorMessage(err, "Failed to fetch customer details"));
         form.setValue("customer_name", "");
         form.setValue("customer_phone", "");
         form.setValue("customer_address", "");

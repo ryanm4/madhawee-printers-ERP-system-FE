@@ -57,7 +57,7 @@ function GRNManagement() {
       }
     } catch (error) {
       console.error("Failed to fetch GRN data", error);
-      toast(getErrorMessage(error, "Failed to fetch GRN data"));
+      toast.error(getErrorMessage(error, "Failed to fetch GRN data"));
     } finally {
       setIsLoading(false);
     }

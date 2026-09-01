@@ -93,7 +93,7 @@ function CreateQuotation({
       setCustomer(response.data);
     } catch (error) {
       console.error("Failed to fetch customers", error);
-      toast(getErrorMessage(error, "Failed to load customers"));
+      toast.error(getErrorMessage(error, "Failed to load customers"));
     } finally {
       setLoading(false);
     }
@@ -108,7 +108,7 @@ function CreateQuotation({
       }
     } catch (error) {
       console.error("Failed to fetch users", error);
-      toast(getErrorMessage(error, "Failed to fetch users"));
+      toast.error(getErrorMessage(error, "Failed to fetch users"));
     } finally {
       setLoading(false);
     }
@@ -305,7 +305,7 @@ function CreateQuotation({
 
       const response = await quotationApi.create(payload);
 
-      toast("Quotation Created", {
+      toast.success("Quotation Created", {
         description: `Quotation has been created successfully.`,
       });
 
@@ -315,7 +315,7 @@ function CreateQuotation({
       router.push("/quotation-management");
     } catch (error) {
       console.error("Failed to submit quotation:", error);
-      toast("Failed to Create Quotation", {
+      toast.error("Failed to Create Quotation", {
         description: getErrorMessage(
           error,
           "An error occurred while creating the quotation. Please try again.",
@@ -930,7 +930,7 @@ function CreateQuotation({
                                     totals.totalWithoutTax,
                                   );
                                   form.setValue("net_total", totals.netTotal);
-                                  toast("Totals updated");
+                                  toast.success("Totals updated");
                                 }}
                               >
                                 <Check className="h-4 w-4" />

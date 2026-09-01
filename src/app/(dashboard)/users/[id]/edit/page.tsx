@@ -85,7 +85,7 @@ function EditUser() {
         email: data.email,
       });
 
-      toast("User Updated", {
+      toast.success("User Updated", {
         description: "The user record has been updated successfully.",
       });
 
@@ -93,7 +93,7 @@ function EditUser() {
       router.push("/users");
     } catch (error) {
       console.error("Failed to update user:", error);
-      toast("Failed to Update User", {
+      toast.error("Failed to Update User", {
         description: getErrorMessage(error, "An error occurred while updating the user record. Please try again."),
       });
     } finally {

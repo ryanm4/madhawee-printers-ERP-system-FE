@@ -192,7 +192,7 @@ function EditPurchaseOrder() {
 
       const response = await purchaseOrderApi.update(Number(id), payload);
 
-      toast("Purchase Order Updated", {
+      toast.success("Purchase Order Updated", {
         description: `Purchase Order ${data.customer_po} has been updated successfully.`,
       });
 
@@ -203,7 +203,7 @@ function EditPurchaseOrder() {
       router.push("/purchase-order");
     } catch (error) {
       console.error("Failed to submit PO:", error);
-      toast("Failed to Update Purchase Order", {
+      toast.error("Failed to Update Purchase Order", {
         description: getErrorMessage(
           error,
           "An error occurred while updating the purchase order. Please try again.",
@@ -254,7 +254,7 @@ function EditPurchaseOrder() {
         }
       } catch (err) {
         console.error("Failed to fetch purchase order:", err);
-        toast(getErrorMessage(err, "Failed to load purchase order data"));
+        toast.error(getErrorMessage(err, "Failed to load purchase order data"));
       } finally {
         setLoading(false);
       }

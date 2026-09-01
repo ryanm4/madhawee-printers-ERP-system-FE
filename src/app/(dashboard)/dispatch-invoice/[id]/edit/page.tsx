@@ -108,7 +108,7 @@ function EditDispatchandInvoice() {
       }
     } catch (error) {
       console.error("Failed to fetch jobs", error);
-      toast(getErrorMessage(error, "Failed to fetch jobs"));
+      toast.error(getErrorMessage(error, "Failed to fetch jobs"));
     } finally {
       setIsLoading(false);
     }
@@ -130,7 +130,7 @@ function EditDispatchandInvoice() {
       const totalDispatched = previouslyCompleted + delta;
 
       if (totalDispatched > jobQty) {
-        toast("Invalid Dispatch Quantity", {
+        toast.error("Invalid Dispatch Quantity", {
           description: `Total dispatched quantity (${totalDispatched}) cannot exceed Job quantity (${jobQty}).`,
         });
         setIsLoading(false);
@@ -171,12 +171,12 @@ function EditDispatchandInvoice() {
         }
       }
 
-      toast("Dispatch Updated Successfully");
+      toast.success("Dispatch Updated Successfully");
       form.clearErrors();
       router.push("/dispatch-invoice");
     } catch (error) {
       console.error("Failed to update dispatch record:", error);
-      toast("Failed to update dispatch", {
+      toast.error("Failed to update dispatch", {
         description: getErrorMessage(
           error,
           "An error occurred while updating the dispatch record. Please try again.",
@@ -223,7 +223,7 @@ function EditDispatchandInvoice() {
         }
       } catch (err) {
         console.error("Failed to fetch customer:", err);
-        toast(getErrorMessage(err, "Failed to fetch customer details"));
+        toast.error(getErrorMessage(err, "Failed to fetch customer details"));
         form.setValue("customer_name", "");
         form.setValue("customer_phone", "");
         form.setValue("customer_address", "");
@@ -257,7 +257,7 @@ function EditDispatchandInvoice() {
         }
       } catch (err) {
         console.error("Failed to fetch dispatch:", err);
-        toast(getErrorMessage(err, "Failed to load dispatch record"));
+        toast.error(getErrorMessage(err, "Failed to load dispatch record"));
         form.setValue("job_id", "");
         form.setValue("customer_name", "");
         form.setValue("customer_phone", "");

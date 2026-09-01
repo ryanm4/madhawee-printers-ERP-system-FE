@@ -82,7 +82,7 @@ function IssueNotesManagement() {
       }
     } catch (error) {
       console.error("Failed to fetch Issue Materials data", error);
-      toast(getErrorMessage(error, "Failed to fetch Issue Materials data"));
+      toast.error(getErrorMessage(error, "Failed to fetch Issue Materials data"));
     } finally {
       setIsLoading(false);
     }
