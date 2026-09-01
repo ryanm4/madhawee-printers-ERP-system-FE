@@ -296,6 +296,24 @@ function CreateCustomerRelationship() {
                       <FormMessage />
                     </FormItem>
                   ))}
+                  {renderFormField("creditPeriod", ({ field }) => (
+                    <FormItem className="w-full">
+                      <FormLabel>Credit Period (For Suppliers)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter Credit Period"
+                          disabled={supplierType === CustomerType.CUSTOMER}
+                          className={
+                            supplierType === CustomerType.CUSTOMER
+                              ? "bg-muted cursor-not-allowed"
+                              : ""
+                          }
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
                 </div>
                 <div className="flex flex-row gap-4">
                   {renderFormField("vat_type", ({ field }) => (

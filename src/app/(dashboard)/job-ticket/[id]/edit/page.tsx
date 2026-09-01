@@ -792,7 +792,7 @@ function EditJobTicket() {
                   <FormItem>
                     <FormLabel>Job Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="MPL/8450/25/TIEP" {...field} />
+                      <Input readOnly placeholder="MPL/8450/25/TIEP" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -3,6 +3,7 @@ import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcr
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { issueNoteSchema } from "@/modules/issue-notes/validation";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -24,7 +25,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, Loader2, PlusIcon, Trash2 } from "lucide-react";
+import { CalendarIcon, PlusIcon, Trash2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
@@ -273,9 +274,27 @@ function CreateIssueNote() {
 
   const job_id = form.watch("job_id");
 
+  if (isLoading) {
+    return (
+      <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+        <PageTitleWithBreadcrumb
+          title="Create Issue Material"
+          breadcrumbs={[
+            { title: "Dashboard", href: "/dashboard" },
+            { title: "Create", href: "#" },
+          ]}
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Skeleton className="h-[350px] w-full rounded-xl" />
+          <Skeleton className="h-[350px] w-full rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      {(isLoading || isSubmitting) && <FullPageLoader />}
+    <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3 relative">
+      {isSubmitting && <FullPageLoader />}
       <PageTitleWithBreadcrumb
         title="Material Issue Note"
         breadcrumbs={[
@@ -359,7 +378,7 @@ function CreateIssueNote() {
                   control={form.control}
                   name="job_id"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col mt-2">
+                    <FormItem className="flex flex-col">
                       <FormLabel>
                         Related Job <span className="text-red-500">*</span>
                       </FormLabel>

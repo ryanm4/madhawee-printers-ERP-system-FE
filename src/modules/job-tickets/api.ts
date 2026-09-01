@@ -2,6 +2,14 @@ import apiClient from '@/lib/axios-client';
 import { API_ENDPOINTS } from '@/config/api-endpoints';
 import { ALL_TICKETS, CREATE_TICKETS, JOB_TICKET_DETAIL, JOB_TICKET_STATUS_UPDATE } from './types';
 
+export interface NextSequenceResponse {
+    template: string;
+    prefix: string;
+    suffix: string;
+    nextSequence: number;
+    preview: string;
+}
+
 export const jobTicketsApi = {
     getAll: () => apiClient.get<ALL_TICKETS[]>(API_ENDPOINTS.RELATIVE.JOB_TICKETS.LIST),
     create: (data: CREATE_TICKETS) => apiClient.post<CREATE_TICKETS>(API_ENDPOINTS.RELATIVE.JOB_TICKETS.CREATE, data),
@@ -9,4 +17,5 @@ export const jobTicketsApi = {
     update: (id: number | string, data: CREATE_TICKETS) => apiClient.put<CREATE_TICKETS>(API_ENDPOINTS.RELATIVE.JOB_TICKETS.UPDATE(id), data),
     delete: (id: number | string) => apiClient.delete<ALL_TICKETS>(API_ENDPOINTS.RELATIVE.JOB_TICKETS.DELETE(id)),
     patch: (id: number | string, data: JOB_TICKET_STATUS_UPDATE) => apiClient.patch<JOB_TICKET_STATUS_UPDATE>(API_ENDPOINTS.RELATIVE.JOB_TICKETS.PATCH(id), data),
+    getNextSequence: (type: string) => apiClient.get<NextSequenceResponse>(API_ENDPOINTS.RELATIVE.JOB_TICKETS.NEXT_SEQUENCE(type)),
 };

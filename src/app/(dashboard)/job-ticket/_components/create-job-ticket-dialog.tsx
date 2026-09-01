@@ -56,7 +56,6 @@ import {
   INK_STATUS,
   JobTicketStatus,
   PRODUCT_TYPES,
-  PurchaseOrderType,
 } from "@/config/enum";
 import {
   PURCHASE_ORDER,
@@ -66,7 +65,7 @@ import {
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { CustomerApi } from "@/modules/customer/api";
 import { CUSTOMER } from "@/modules/customer/types";
-import { jobTicketsApi } from "@/modules/job-tickets/api";
+import { jobTicketsApi, NextSequenceResponse } from "@/modules/job-tickets/api";
 import {
   ALL_TICKETS,
   CREATE_TICKETS,
@@ -122,6 +121,18 @@ export function CreateJobTicketDialog({
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [printData, setPrintData] = useState<JobTicketPrintData | null>(null);
   const dispatch = useDispatch<AppDispatch>();
+
+  // Job number sequence state
+  const [jobSeqData, setJobSeqData] = useState<NextSequenceResponse | null>(null);
+  const [jobSeqOverride, setJobSeqOverride] = useState<string>("");
+  const [jobSeqLoading, setJobSeqLoading] = useState(false);
+
+  // Map PO type IDs to backend job number type keys
+  const PO_TYPE_TO_JOB_TYPE: Record<number, string> = {
+    1: "TIEP",
+    2: "NON_TIEP",
+    3: "MP",
+  };
 
   const baseDefaultValues = {
     poNumber: "",
@@ -253,9 +264,9 @@ export function CreateJobTicketDialog({
       const payload: CREATE_TICKETS = {
         po_id: data.customer_po ? Number(data.customer_po) : undefined,
         job_item: data.item,
-        job_number: `MPL/####/YY/${
-          PurchaseOrderType[Number(selectedPoDetails?.po_type_id)]
-        }`,
+        job_number: jobSeqData
+          ? `${jobSeqData.prefix}${jobSeqOverride}${jobSeqData.suffix}`
+          : undefined,
         order_received_date: toMySQLDateTime(
           data.orderReceivedDate || new Date(),
         ),
@@ -324,7 +335,9 @@ export function CreateJobTicketDialog({
       const allRawMaterials =
         data.paperTypes?.flatMap((p) => p.rawMaterials || []) || [];
       const pd: JobTicketPrintData = {
-        jobNumber: payload.job_number,
+        jobNumber: jobSeqData
+          ? `${jobSeqData.prefix}${jobSeqOverride}${jobSeqData.suffix}`
+          : payload.job_number,
         productType: data.productType,
         orderReceivedDate: data.orderReceivedDate,
         quantity: data.quantity,
@@ -478,6 +491,39 @@ export function CreateJobTicketDialog({
     form.setValue("item", "");
   }, [selectedPoId, form, purchaseOrderData]);
 
+  // Fetch next job number sequence when PO details change
+  useEffect(() => {
+    const fetchSequence = async () => {
+      if (!selectedPoDetails?.po_type_id) {
+        setJobSeqData(null);
+        setJobSeqOverride("");
+        return;
+      }
+      const jobType = PO_TYPE_TO_JOB_TYPE[Number(selectedPoDetails.po_type_id)];
+      if (!jobType) {
+        setJobSeqData(null);
+        setJobSeqOverride("");
+        return;
+      }
+      try {
+        setJobSeqLoading(true);
+        const response = await jobTicketsApi.getNextSequence(jobType);
+        const seqData = response.data as unknown as NextSequenceResponse;
+        setJobSeqData(seqData);
+        setJobSeqOverride(String(seqData.nextSequence).padStart(4, "0"));
+      } catch (err) {
+        console.error("Error fetching next sequence", err);
+        setJobSeqData(null);
+        setJobSeqOverride("");
+      } finally {
+        setJobSeqLoading(false);
+      }
+    };
+
+    fetchSequence();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPoDetails?.po_type_id]);
+
   useEffect(() => {
     if (open && initialPoId) {
       form.setValue("customer_po", initialPoId);
@@ -583,7 +629,40 @@ export function CreateJobTicketDialog({
                   <FormItem>
                     <FormLabel>Job Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="MPL/8450/25/TIEP" {...field} />
+                      {jobSeqLoading ? (
+                        <Input
+                          readOnly
+                          placeholder="Loading sequence..."
+                          value="Loading..."
+                        />
+                      ) : jobSeqData ? (
+                        <div className="flex items-center gap-0 rounded-md border border-input">
+                          <span className="px-3 py-2 text-sm text-muted-foreground bg-muted rounded-l-md border-r border-input whitespace-nowrap">
+                            {jobSeqData.prefix}
+                          </span>
+                          <Input
+                            className="border-0 rounded-none text-center font-mono w-[80px] focus-visible:ring-0 focus-visible:ring-offset-0"
+                            value={jobSeqOverride}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/[^0-9]/g, "");
+                              setJobSeqOverride(val);
+                              field.onChange(
+                                `${jobSeqData.prefix}${val}${jobSeqData.suffix}`
+                              );
+                            }}
+                            placeholder="0000"
+                          />
+                          <span className="px-3 py-2 text-sm text-muted-foreground bg-muted rounded-r-md border-l border-input whitespace-nowrap">
+                            {jobSeqData.suffix}
+                          </span>
+                        </div>
+                      ) : (
+                        <Input
+                          readOnly
+                          placeholder="Select a PO to generate job number"
+                          {...field}
+                        />
+                      )}
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -692,7 +771,7 @@ export function CreateJobTicketDialog({
                     <FormMessage />
                   </FormItem>
                 ))}
-                {/* {renderFormField("jobName", ({ field }) => (
+                {renderFormField("jobName", ({ field }) => (
                   <FormItem>
                     <FormLabel>Job Name</FormLabel>
                     <FormControl>
@@ -700,7 +779,7 @@ export function CreateJobTicketDialog({
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                ))} */}
+                ))}
               </div>
               {/* Product Details */}
               <div className="grid grid-cols-4 md:grid-cols-4 gap-4">
