@@ -658,16 +658,16 @@ function JobViewTicket() {
                                 </div>
                             </div>
 
-                            {/* Ink Section */}
+                            {/* Ink & Others Section */}
                             <div>
-                                <h3 className="text-sm font-medium">Ink</h3>
+                                <h3 className="text-sm font-medium">Ink & Others</h3>
                                 {inkFields.map((field, index) => (
                                     <div key={field.id} className="flex gap-2 mb-2">
                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
                                             {renderFormField(`inks.${index}.ink`, ({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Ink</FormLabel>
-                                                    <FormControl><Input placeholder="Ink Name" {...field} value={field.value || ""} readOnly /></FormControl>
+                                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Ink & Others</FormLabel>
+                                                    <FormControl><Input placeholder="Item Name" {...field} value={field.value || ""} readOnly /></FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             ))}

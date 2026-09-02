@@ -79,8 +79,8 @@ function DashboardPage({
     setIsLoading(true);
     try {
       const formData = {
-        dateFrom: date?.from ?? new Date(),
-        dateTo: date?.to ?? new Date(),
+        dateFrom: format(date?.from ?? new Date(), "yyyy-MM-dd 00:00:00"),
+        dateTo: format(date?.to ?? new Date(), "yyyy-MM-dd 23:59:59"),
       };
 
       const response = await DashboardApi.create(formData);

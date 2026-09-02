@@ -447,6 +447,7 @@ function ReportsPage() {
             return {
                 "#": index + 1,
                 "Sales Date": row.sales_date ? format(new Date(row.sales_date), "yyyy-MM-dd") : "-",
+                "Currency": row.currency || "-",
                 "Total Orders": row.total_orders,
                 "Total Sales": formatNum(row.total_sales)
             };
@@ -455,6 +456,7 @@ function ReportsPage() {
             return {
                 "#": index + 1,
                 "Sales Month": row.sales_month || "-",
+                "Currency": row.currency || "-",
                 "Total Orders": row.total_orders,
                 "Total Sales": formatNum(row.total_sales)
             };
@@ -465,6 +467,7 @@ function ReportsPage() {
                 "Sales Week": row.sales_week || "-",
                 "Week Start Date": row.week_start_date ? format(new Date(row.week_start_date), "yyyy-MM-dd") : "-",
                 "Week End Date": row.week_end_date ? format(new Date(row.week_end_date), "yyyy-MM-dd") : "-",
+                "Currency": row.currency || "-",
                 "Total Orders": row.total_orders,
                 "Total Sales": formatNum(row.total_sales)
             };
@@ -484,6 +487,7 @@ function ReportsPage() {
                 "#": index + 1,
                 "Item Code": row.item_code || "-",
                 "Description": row.description || "-",
+                "Currency": row.currency || "-",
                 "Total Quantity": formatNum(row.total_qty),
                 "Total Sales": formatNum(row.total_sales)
             };

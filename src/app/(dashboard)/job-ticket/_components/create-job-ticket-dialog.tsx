@@ -408,9 +408,13 @@ export function CreateJobTicketDialog({
         setInventoryList(response.data);
         dispatch(setReduxInventoryList(response.data));
 
-        // Filter ink items from inventory
+        // Filter ink & others items from inventory
         const fetchedInkItems = response.data
-          .filter((item: GET_ALL_INVENTORY) => item.item_category === "INK")
+          .filter(
+            (item: GET_ALL_INVENTORY) =>
+              item.item_category === "INK" ||
+              ["INK", "OTHER", "LAMINATING FILM", "SPIRAL"].includes(item.item_sub_category)
+          )
           .map((item: GET_ALL_INVENTORY) => ({
             value: item.item_name,
             label: item.item_name,
@@ -1370,11 +1374,11 @@ export function CreateJobTicketDialog({
 
               {/* Raw Material Section with updated delete logic */}
 
-              {/* Ink Section with updated delete logic */}
+              {/* Ink & Others Section with updated delete logic */}
               <div>
-                <h3 className="text-sm font-medium">Ink</h3>
+                <h3 className="text-sm font-medium">Ink & Others</h3>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Select the Ink that best fits your needs.
+                  Select the Ink or other material that best fits your needs.
                 </p>
 
                 {inkFields.map((field, index) => (
@@ -1383,14 +1387,14 @@ export function CreateJobTicketDialog({
                       {renderFormField(`inks.${index}.ink`, ({ field }) => (
                         <FormItem>
                           <FormLabel className={index !== 0 ? "sr-only" : ""}>
-                            Ink
+                            Ink & Others
                           </FormLabel>
                           <Combobox
                             items={inkItems}
                             value={field.value || ""}
                             onValueChange={field.onChange}
-                            placeholder="Select or enter Ink"
-                            searchPlaceholder="Search or enter ink..."
+                            placeholder="Select or enter item"
+                            searchPlaceholder="Search ink & others..."
                             allowCreate
                           />
                           <FormMessage />
