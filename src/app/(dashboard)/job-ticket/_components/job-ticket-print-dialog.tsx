@@ -89,7 +89,7 @@ export function handleJobTicketPrint(data: JobTicketPrintData) {
   printWindow.document.close();
   printWindow.focus();
 
-  // Print will be triggered by image onload
+  // Print will be triggered by the window load event
 }
 
 export function JobTicketPrintDialog({
@@ -218,7 +218,7 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
     <!-- Company Header -->
     <tr>
       <td colspan="12" style="border: 2px solid #333; text-align: center; padding: 10px;">
-        <img src="/images/madhawee_logo.svg" onload="window.print(); window.close();" onerror="window.print(); window.close();" style="height: 50px; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto;" />
+        <img src="/images/madhawee_logo.svg" style="height: 50px; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto;" />
       </td>
     </tr>
 
@@ -375,6 +375,15 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
     }
   </table>
 
+  <script>
+    window.addEventListener('load', function () {
+      window.focus();
+      window.print();
+    });
+    window.addEventListener('afterprint', function () {
+      window.close();
+    });
+  </script>
 </body>
 </html>`;
 }
