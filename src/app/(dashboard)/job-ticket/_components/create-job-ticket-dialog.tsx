@@ -409,16 +409,27 @@ export function CreateJobTicketDialog({
         dispatch(setReduxInventoryList(response.data));
 
         // Filter ink & others items from inventory
-        const fetchedInkItems = response.data
-          .filter(
-            (item: GET_ALL_INVENTORY) =>
-              item.item_category === "INK" ||
-              ["INK", "OTHER", "LAMINATING FILM", "SPIRAL"].includes(item.item_sub_category)
+        const filteredInks = response.data.filter(
+          (item: GET_ALL_INVENTORY) =>
+            item.item_category === "INK" ||
+            ["INK", "OTHER", "LAMINATING FILM", "SPIRAL"].includes(item.item_sub_category)
+        );
+
+        const uniqueInks = Array.from(
+          new Set(
+            filteredInks.map((item: GET_ALL_INVENTORY) =>
+              item.size && item.size.trim() !== "" && item.size !== "N/A"
+                ? `${item.item_name} - ${item.size}`
+                : item.item_name
+            )
           )
-          .map((item: GET_ALL_INVENTORY) => ({
-            value: item.item_name,
-            label: item.item_name,
-          }));
+        ) as string[];
+
+        const fetchedInkItems = uniqueInks.map((name: string) => ({
+          value: name,
+          label: name,
+        }));
+        
         setInkItems(fetchedInkItems);
       }
     } catch (_error) {
