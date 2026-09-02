@@ -82,14 +82,49 @@ function formatNumber(value?: string | number): string {
 export function handleJobTicketPrint(data: JobTicketPrintData) {
   // Build the printable HTML that matches the reference layout
   const printContent = buildPrintHTML(data);
-  const printWindow = window.open("", "_blank", "width=900,height=700");
-  if (!printWindow) return;
 
-  printWindow.document.write(printContent);
-  printWindow.document.close();
-  printWindow.focus();
+  // Remove any existing print iframe
+  const existingFrame = document.getElementById('job-ticket-print-frame');
+  if (existingFrame) existingFrame.remove();
 
-  // Print will be triggered by the window load event
+  // Use a hidden iframe instead of window.open to avoid popup blockers
+  // and race conditions across different Chrome builds
+  const iframe = document.createElement('iframe');
+  iframe.id = 'job-ticket-print-frame';
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = 'none';
+  iframe.style.opacity = '0';
+  document.body.appendChild(iframe);
+
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!iframeDoc || !iframe.contentWindow) {
+    iframe.remove();
+    return;
+  }
+
+  iframeDoc.open();
+  iframeDoc.write(printContent);
+  iframeDoc.close();
+
+  // Wait for iframe content (including the logo image) to fully load
+  iframe.onload = () => {
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } catch {
+      // Fallback: if cross-origin issues arise, clean up
+      iframe.remove();
+    }
+  };
+
+  // Clean up the iframe after the user finishes printing
+  iframe.contentWindow.addEventListener('afterprint', () => {
+    setTimeout(() => iframe.remove(), 500);
+  });
 }
 
 export function JobTicketPrintDialog({
@@ -375,15 +410,6 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
     }
   </table>
 
-  <script>
-    window.addEventListener('load', function () {
-      window.focus();
-      window.print();
-    });
-    window.addEventListener('afterprint', function () {
-      window.close();
-    });
-  </script>
 </body>
 </html>`;
 }
