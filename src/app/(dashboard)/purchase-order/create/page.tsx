@@ -554,13 +554,13 @@ function CreatePurchaseOrder() {
                     key={item.id}
                     className="grid grid-cols-[1fr_auto] gap-2 mb-2 items-start"
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
                       {renderFormField(
-                        `itemDetails.${index}.itemCode`,
+                        `itemDetails.${index}.unit`,
                         ({ field }) => {
                           const groupedItems = Object.values(PRODUCT_TYPES).map(
-                            (type) => ({
-                              value: type,
+                            (type, idx) => ({
+                              value: String(idx + 1),
                               label: type,
                             }),
                           );
@@ -570,15 +570,25 @@ function CreatePurchaseOrder() {
                               <FormLabel>Item Type</FormLabel>
                               <Combobox
                                 items={groupedItems}
-                                value={field.value || ""}
-                                onValueChange={(value) => field.onChange(value)}
+                                value={field.value ? String(field.value) : ""}
+                                onValueChange={(value) => {
+                                  const selectedGroupItem = groupedItems.find(
+                                    (i) => i.value === value,
+                                  );
+
+                                  if (selectedGroupItem) {
+                                    field.onChange(
+                                      parseInt(selectedGroupItem.value, 10),
+                                    );
+                                  }
+                                }}
                                 placeholder="Select Item"
                                 searchPlaceholder="Search item..."
                               />
                               <FormMessage />
                             </FormItem>
                           );
-                        }
+                        },
                       )}
 
                       {renderFormField(
@@ -622,31 +632,7 @@ function CreatePurchaseOrder() {
                           </FormItem>
                         ),
                       )}
-                      {renderFormField(
-                        `itemDetails.${index}.unit`,
-                        ({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Unit <span className="text-red-500">*</span>
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number" step="any"
-                                min={0}
-                                placeholder="Enter Unit"
-                                value={field.value || ""}
-                                onChange={(e) =>
-                                  field.onChange(Number(e.target.value))
-                                }
-                                onBlur={field.onBlur}
-                                name={field.name}
-                                ref={field.ref}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        ),
-                      )}
+
 
                       {renderFormField(
                         `itemDetails.${index}.price`,
