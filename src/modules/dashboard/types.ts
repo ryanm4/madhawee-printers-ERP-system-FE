@@ -1,6 +1,6 @@
 export interface GENERATE_KPI {
-    dateFrom: Date;
-    dateTo: Date;
+    dateFrom: string;
+    dateTo: string;
 }
 
 export interface KPIItem {

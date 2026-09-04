@@ -383,10 +383,10 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
     </tr>`
     }
 
-    <!-- Ink -->
+    <!-- Ink & Others -->
     ${(data.inks || []).length > 0
       ? `<tr>
-      <td rowspan="${data.inks!.length}" colspan="2" class="group-label">Ink</td>
+      <td rowspan="${data.inks!.length}" colspan="2" class="group-label">Ink & Others</td>
       <td colspan="4" style="padding-left: 24px;">${safe(data.inks![0].ink)}</td>
       <td colspan="2" class="center">${safe(formatNumber(data.inks![0].quantity))}</td>
       <td colspan="4">${safe(data.inks![0].remarks)}</td>
@@ -402,7 +402,7 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
         )
         .join("")}`
       : `<tr>
-      <td colspan="2" class="group-label">Ink</td>
+      <td colspan="2" class="group-label">Ink & Others</td>
       <td colspan="4">&nbsp;</td>
       <td colspan="2" class="center">&nbsp;</td>
       <td colspan="4">&nbsp;</td>
