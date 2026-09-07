@@ -154,6 +154,7 @@ function JobTicketComponent() {
             newPlatesQuantity: ticket.new_plate_quantity !== undefined && ticket.new_plate_quantity !== null ? String(ticket.new_plate_quantity) : undefined,
             rawMaterials: allRawMaterials,
             inks: ticket.inks
+              ?.filter((v: any, i: number, a: any[]) => a.findIndex((t: any) => (t.ink === v.ink && t.quantity === v.quantity && t.status === v.status && t.remarks === v.remarks)) === i)
               ?.filter((ink: any) => ink.ink && ink.ink.trim() !== "")
               ?.map((ink: any) => ({
                 ink: ink.ink,

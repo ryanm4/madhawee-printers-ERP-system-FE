@@ -587,12 +587,14 @@ function EditJobTicket() {
             newPlatesStatus: jt.new_plate_status || "",
             newPlatesRemarks: jt.new_plate_remarks || "",
             inks: jt.inks?.length
-              ? jt.inks.map((ink) => ({
-                  ink: ink.ink,
-                  quantity: String(ink.quantity || ""),
-                  status: ink.status || "",
-                  remarks: ink.remarks || "",
-                }))
+              ? jt.inks
+                  .filter((v, i, a) => a.findIndex(t => (t.ink === v.ink && t.quantity === v.quantity && t.status === v.status && t.remarks === v.remarks)) === i)
+                  .map((ink) => ({
+                    ink: ink.ink,
+                    quantity: String(ink.quantity || ""),
+                    status: ink.status || "",
+                    remarks: ink.remarks || "",
+                  }))
               : [{ ink: "", quantity: "", status: "", remarks: "" }],
             paperTypes: mapPaperTypesFromTicket(jt),
           });

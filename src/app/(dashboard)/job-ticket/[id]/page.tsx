@@ -169,12 +169,14 @@ function JobViewTicket() {
                         newPlatesRemarks: data.new_plate_remarks || "",
 
 
-                        inks: (Array.isArray(data.inks) && data.inks.length > 0) ? (data.inks as Array<{ ink: string, quantity: string, status: string, remarks: string }>).map(i => ({
-                            ink: i.ink,
-                            quantity: i.quantity || "",
-                            status: i.status || "",
-                            remarks: i.remarks || ""
-                        })) : [
+                        inks: (Array.isArray(data.inks) && data.inks.length > 0) ? (data.inks as Array<{ ink: string, quantity: string, status: string, remarks: string }>)
+                            .filter((v, i, a) => a.findIndex(t => (t.ink === v.ink && t.quantity === v.quantity && t.status === v.status && t.remarks === v.remarks)) === i)
+                            .map(i => ({
+                                ink: i.ink,
+                                quantity: i.quantity !== null && i.quantity !== undefined ? String(i.quantity) : "",
+                                status: i.status || "",
+                                remarks: i.remarks || ""
+                            })) : [
                             { ink: "Black", quantity: "", status: "", remarks: "" },
                             { ink: "Cyan", quantity: "", status: "", remarks: "" },
                             { ink: "Magenta", quantity: "", status: "", remarks: "" },

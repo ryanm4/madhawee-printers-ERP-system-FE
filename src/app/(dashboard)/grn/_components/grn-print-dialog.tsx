@@ -78,7 +78,7 @@ export function GRNPrintDialog({
 }
 
 export function buildGRNPrintHTML(data: GRN, inventoryData?: GET_ALL_INVENTORY[]): string {
-  const safe = (val: string | number | null | undefined) => (val !== undefined && val !== null && String(val).trim() !== "" ? String(val) : "");
+  const safe = (val: string | number | null | undefined) => (val !== undefined && val !== null && String(val).trim() !== "" ? String(val).replace(/\n/g, '<br/>') : "");
 
   let formattedDate = "";
   try {
