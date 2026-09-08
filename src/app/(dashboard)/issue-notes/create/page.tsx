@@ -52,6 +52,7 @@ function CreateIssueNote() {
   const [inventoryItems, setInventoryItems] = useState<
     { value: string; label: string }[]
   >([]);
+  const [rawInventory, setRawInventory] = useState<GET_ALL_INVENTORY[]>([]);
 
   const [jobMaterials, setJobMaterials] = useState<
     { value: number; label: string; quantity: number }[]
@@ -90,6 +91,7 @@ function CreateIssueNote() {
       try {
         const response = await inventoryApi.getAll();
         if (response.status === 200) {
+          setRawInventory(response.data);
           const uniqueItems = Array.from(
             new Map(
               response.data.map((item: GET_ALL_INVENTORY) => [
@@ -168,20 +170,31 @@ function CreateIssueNote() {
 
         if (jobData.inks && Array.isArray(jobData.inks)) {
           jobData.inks.forEach((ink: any) => {
-            if (ink.ink && ink.item_id) {
+            if (ink.ink) {
               const itemLabel = ink.ink.trim();
-              if (materialsMap.has(ink.item_id)) {
-                const existing = materialsMap.get(ink.item_id)!;
-                materialsMap.set(ink.item_id, {
-                  ...existing,
-                  quantity: existing.quantity + Number(ink.quantity || 0),
-                });
-              } else {
-                materialsMap.set(ink.item_id, {
-                  value: ink.item_id,
-                  label: itemLabel,
-                  quantity: Number(ink.quantity || 0),
-                });
+              let itemId = ink.item_id;
+              
+              if (!itemId) {
+                const matchedItem = rawInventory.find((item) => item.item_name === itemLabel);
+                if (matchedItem) {
+                  itemId = matchedItem.item_id;
+                }
+              }
+
+              if (itemId) {
+                if (materialsMap.has(itemId)) {
+                  const existing = materialsMap.get(itemId)!;
+                  materialsMap.set(itemId, {
+                    ...existing,
+                    quantity: existing.quantity + Number(ink.quantity || 0),
+                  });
+                } else {
+                  materialsMap.set(itemId, {
+                    value: itemId,
+                    label: itemLabel,
+                    quantity: Number(ink.quantity || 0),
+                  });
+                }
               }
             }
           });

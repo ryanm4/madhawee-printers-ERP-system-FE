@@ -166,8 +166,15 @@ function ViewIssueNote() {
         if (jobData.inks && Array.isArray(jobData.inks)) {
           jobData.inks.forEach((ink: any) => {
             if (ink.ink) {
+              let itemId = ink.item_id;
+              if (!itemId) {
+                const matchedItem = inventoryItems.find((item) => item.item_name === ink.ink.trim());
+                if (matchedItem) {
+                  itemId = matchedItem.item_id;
+                }
+              }
               materials.push({
-                value: ink.item_id || ink.id,
+                value: itemId || ink.id,
                 label: ink.ink.trim(),
                 quantity: Number(ink.quantity || 0),
               });
