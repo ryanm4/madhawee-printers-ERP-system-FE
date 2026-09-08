@@ -219,20 +219,31 @@ function EditIssueNote() {
         if (jobData.inks && Array.isArray(jobData.inks)) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           jobData.inks.forEach((ink: any) => {
-            if (ink.ink && ink.item_id) {
+            if (ink.ink) {
               const itemLabel = ink.ink.trim();
-              if (materialsMap.has(ink.item_id)) {
-                const existing = materialsMap.get(ink.item_id)!;
-                materialsMap.set(ink.item_id, {
-                  ...existing,
-                  quantity: existing.quantity + Number(ink.quantity || 0),
-                });
-              } else {
-                materialsMap.set(ink.item_id, {
-                  value: ink.item_id,
-                  label: itemLabel,
-                  quantity: Number(ink.quantity || 0),
-                });
+              let itemId = ink.item_id;
+              
+              if (!itemId) {
+                const matchedItem = inventoryItems.find((item) => item.item_name === itemLabel);
+                if (matchedItem) {
+                  itemId = matchedItem.item_id;
+                }
+              }
+
+              if (itemId) {
+                if (materialsMap.has(itemId)) {
+                  const existing = materialsMap.get(itemId)!;
+                  materialsMap.set(itemId, {
+                    ...existing,
+                    quantity: existing.quantity + Number(ink.quantity || 0),
+                  });
+                } else {
+                  materialsMap.set(itemId, {
+                    value: itemId,
+                    label: itemLabel,
+                    quantity: Number(ink.quantity || 0),
+                  });
+                }
               }
             }
           });
