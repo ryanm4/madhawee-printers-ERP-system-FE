@@ -63,10 +63,19 @@ export async function PUT(
     });
 
     if (!response.ok) {
-      return NextResponse.json(
-        { message: "Failed to update Issue Note" },
-        { status: response.status }
-      );
+      const errorText = await response.text();
+      try {
+        const errorData = JSON.parse(errorText);
+        return NextResponse.json(
+          { message: errorData.message || "Failed to update Issue Note" },
+          { status: response.status }
+        );
+      } catch (_) {
+        return NextResponse.json(
+          { message: "Failed to update Issue Note", details: errorText },
+          { status: response.status }
+        );
+      }
     }
 
     const data = await response.json();
@@ -94,10 +103,19 @@ export async function DELETE(
     });
 
     if (!response.ok) {
-      return NextResponse.json(
-        { message: "Failed to delete Issue Note" },
-        { status: response.status }
-      );
+      const errorText = await response.text();
+      try {
+        const errorData = JSON.parse(errorText);
+        return NextResponse.json(
+          { message: errorData.message || "Failed to delete Issue Note" },
+          { status: response.status }
+        );
+      } catch (_) {
+        return NextResponse.json(
+          { message: "Failed to delete Issue Note", details: errorText },
+          { status: response.status }
+        );
+      }
     }
 
     return NextResponse.json({ message: "Issue Note deleted successfully" });

@@ -65,10 +65,19 @@ export async function POST(request: NextRequest) {
         });
 
         if (!response.ok) {
-            return NextResponse.json(
-                { message: "Failed to create issue note" },
-                { status: response.status }
-            );
+            const errorText = await response.text();
+            try {
+                const errorData = JSON.parse(errorText);
+                return NextResponse.json(
+                    { message: errorData.message || "Failed to create issue note" },
+                    { status: response.status }
+                );
+            } catch (_) {
+                return NextResponse.json(
+                    { message: "Failed to create issue note", details: errorText },
+                    { status: response.status }
+                );
+            }
         }
 
         const data = await response.json();
