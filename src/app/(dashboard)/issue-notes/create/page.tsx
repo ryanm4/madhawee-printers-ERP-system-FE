@@ -279,7 +279,12 @@ function CreateIssueNote() {
       }
     } catch (error) {
       console.error("Failed to create Issue Note:", error);
-      toast.error(getErrorMessage(error, "Failed to create Issue Note"));
+      const errorMessage = getErrorMessage(error, "Failed to create Issue Note");
+      if (errorMessage.includes("has only") && errorMessage.includes("in stock")) {
+        toast.warning(errorMessage);
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsSubmitting(false);
     }

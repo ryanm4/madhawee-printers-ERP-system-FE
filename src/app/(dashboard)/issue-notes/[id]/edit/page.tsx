@@ -304,7 +304,12 @@ function EditIssueNote() {
         router.push("/issue-notes");
       }
     } catch (error) {
-      toast.error(getErrorMessage(error, "Failed to update Issue Note"));
+      const errorMessage = getErrorMessage(error, "Failed to update Issue Note");
+      if (errorMessage.includes("has only") && errorMessage.includes("in stock")) {
+        toast.warning(errorMessage);
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsSubmitting(false);
     }
