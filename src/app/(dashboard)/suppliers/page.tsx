@@ -1,6 +1,5 @@
+"use client";
 import { useSessionStorage } from "@/hooks/use-session-storage";
-"use client"
-
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

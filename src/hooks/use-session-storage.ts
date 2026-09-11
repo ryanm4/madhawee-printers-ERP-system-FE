@@ -1,3 +1,4 @@
+"use client"
 import { useState, useEffect } from "react";
 
 export function useSessionStorage<T>(key: string, initialValue: T) {
