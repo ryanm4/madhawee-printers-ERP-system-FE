@@ -1,3 +1,4 @@
+import { useSessionStorage } from "@/hooks/use-session-storage";
 "use client"
 
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
@@ -27,7 +28,7 @@ export default function SuppliersPage() {
     const [data, setData] = useState<SUPPLIER[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [deleteId, setDeleteId] = useState<number | null>(null);
-    const [search, setSearch] = useState("");
+    const [search, setSearch] = useSessionStorage("suppliers-search", "");
 
     useEffect(() => {
         fetchData();

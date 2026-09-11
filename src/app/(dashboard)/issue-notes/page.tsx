@@ -1,4 +1,5 @@
 "use client";
+import { useSessionStorage } from "@/hooks/use-session-storage";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,7 @@ function IssueNotesManagement() {
   const { canModifyIssueNote, canCreateIssueNote, canExportList } = usePermissions();
   const [data, setData] = useState<IssueNote[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useSessionStorage("issue-notes-search", "");
 
   const [jobs, setJobs] = useState<
     {
