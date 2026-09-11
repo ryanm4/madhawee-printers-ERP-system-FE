@@ -1,4 +1,5 @@
 "use client";
+import { useSessionStorage } from "@/hooks/use-session-storage";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { userColumns } from "./_components/user-columns";
@@ -16,7 +17,7 @@ import { PageLoader } from "@/components/shared/loader";
 function UsersComponent() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useSessionStorage("users-search", "");
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [data, setData] = useState<GET_ALL_USER[]>([]);
 

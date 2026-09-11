@@ -1,4 +1,5 @@
 "use client";
+import { useSessionStorage } from "@/hooks/use-session-storage";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,7 @@ function InventoryManagement() {
   const [isLoading, setIsLoading] = useState(false);
   const [sizeFilter, setSizeFilter] = useState("all");
   const [subCategoryFilter, setSubCategoryFilter] = useState("all");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useSessionStorage("inventory-search", "");
   const [sizeOpen, setSizeOpen] = useState(false);
   const [subCategoryOpen, setSubCategoryOpen] = useState(false);
   useEffect(() => {

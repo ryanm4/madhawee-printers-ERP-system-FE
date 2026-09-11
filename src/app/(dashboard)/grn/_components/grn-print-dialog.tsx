@@ -169,7 +169,15 @@ export function buildGRNPrintHTML(data: GRN, inventoryData?: GET_ALL_INVENTORY[]
       );
       const size = invItem?.size || "";
       const unit = invItem?.unit_of_measure || "Nos.";
-      const displayDescription = size ? `${safe(item.item_name)} (${safe(size)})` : safe(item.item_name);
+      let baseName = item.item_name || "";
+      if (size && typeof baseName === 'string') {
+        if (baseName.endsWith(size)) {
+          baseName = baseName.substring(0, baseName.length - size.length).trim();
+        } else if (baseName.endsWith(`(${size})`)) {
+          baseName = baseName.substring(0, baseName.length - size.length - 2).trim();
+        }
+      }
+      const displayDescription = size ? `${safe(baseName)} (${safe(size)})` : safe(baseName);
       return `
               <tr>
                 <td>${idx + 1}</td>

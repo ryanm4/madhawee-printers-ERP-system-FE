@@ -1,3 +1,4 @@
+"use client"
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb'
 import React, { useState, useEffect } from 'react'
 

@@ -1,4 +1,5 @@
 "use client";
+import { useSessionStorage } from "@/hooks/use-session-storage";
 import React, { useEffect, useState } from "react";
 import { getUser } from "@/lib/auth";
 import { useRouter } from "next/navigation";
@@ -27,7 +28,7 @@ function QuotationsManagement() {
   const [data, setData] = useState<QUOTATIONS[]>([]);
   const [loading, setLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useSessionStorage("quotation-management-search", "");
 
   const handlers = {
     onEdit: (id: string | number) => {

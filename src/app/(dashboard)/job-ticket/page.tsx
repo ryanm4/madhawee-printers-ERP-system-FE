@@ -1,4 +1,5 @@
 "use client";
+import { useSessionStorage } from "@/hooks/use-session-storage";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +37,7 @@ function JobTicketComponent() {
   const [data, setData] = useState<JobTicketWithCustomer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useSessionStorage("job-ticket-search", "");
   const [remarksSearch, setRemarksSearch] = useState("");
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [printData, setPrintData] = useState<JobTicketPrintData | null>(null);

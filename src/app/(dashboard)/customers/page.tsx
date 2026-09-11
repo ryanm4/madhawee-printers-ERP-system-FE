@@ -1,4 +1,5 @@
 "use client";
+import { useSessionStorage } from "@/hooks/use-session-storage";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,7 @@ export default function CRMPage() {
   const [data, setData] = useState<CUSTOMER[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useSessionStorage("customers-search", "");
 
   useEffect(() => {
     fetchData();

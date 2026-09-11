@@ -1,4 +1,5 @@
 "use client";
+import { useSessionStorage } from "@/hooks/use-session-storage";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { getErrorMessage } from "@/lib/error-utils";
 import { PurchaseOrderCard } from "@/components/purchase-order-card";
@@ -30,7 +31,7 @@ function PurchaseOrderPage() {
   const { canModifyPO, canCreatePO, canExportList } = usePermissions();
   const [data, setData] = useState<PURCHASE_ORDER[]>([]);
   const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useSessionStorage("purchase-order-search", "");
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), 0, 1),
     to: new Date(),

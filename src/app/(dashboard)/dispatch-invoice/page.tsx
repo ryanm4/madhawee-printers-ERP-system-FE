@@ -1,4 +1,5 @@
 "use client";
+import { useSessionStorage } from "@/hooks/use-session-storage";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,7 @@ function DispatchInvoiceManagement() {
   const [deleteId, setDeleteId] = useState<string | number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useSessionStorage("dispatch-invoice-search", "");
 
   useEffect(() => {
     fetchData();
