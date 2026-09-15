@@ -94,6 +94,16 @@ export const grnColumns = (
     },
   },
   {
+    accessorKey: "created_by",
+    header: "Created By",
+    cell: ({ row }) => row.original.created_by || "-",
+  },
+  {
+    accessorKey: "updated_by",
+    header: "Updated By",
+    cell: ({ row }) => row.original.updated_by || "-",
+  },
+  {
     id: "actions",
     enableHiding: false,
     cell: ({ row }) => {

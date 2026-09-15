@@ -776,6 +776,8 @@ function ReportsPage() {
               "Quantity": "",
               "Rate": "",
               "Amount": formatCurrency(row.amount),
+              "Created By": "",
+              "Updated By": "",
             };
           }
           return {
@@ -790,6 +792,8 @@ function ReportsPage() {
             "Quantity": formatNum(row.quantity),
             "Rate": formatCurrency(row.rate),
             "Amount": formatCurrency(row.amount),
+            "Created By": row.created_by || "-",
+            "Updated By": row.updated_by || "-",
           };
         });
       } else if (watchedInventoryType === "STOCK_VALUE") {
