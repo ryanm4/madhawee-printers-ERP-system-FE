@@ -38,15 +38,17 @@ import { Loader2 } from "lucide-react"
 const RIGHT_ALIGNED_COLUMNS = [
     "Total Sales", "Unit Price", "Revenue", "Rate", "PO Grand Total",
     "Sub Total", "Total Without Tax", "Net Total", "Amount", "Unit Rate",
-    "Total Quantity", "Quantity", "Available Qty", "Dispatch Qty", "Order Qty", "Balance Qty"
+    "Total Quantity", "Quantity", "Available Qty", "Dispatch Qty", "Order Qty", "Balance Qty",
+    "Stock Value", "Consumed Qty", "Reorder Level", "Total Cost", "Total Amount"
 ];
 
 interface ReportsTableProps {
     data: Record<string, unknown>[]
     isLoading?: boolean
+    filename?: string
 }
 
-export function ReportsTable({ data, isLoading = false }: ReportsTableProps) {
+export function ReportsTable({ data, isLoading = false, filename = "report-results" }: ReportsTableProps) {
     const [sorting, setSorting] = useState<SortingState>([])
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
@@ -134,7 +136,7 @@ export function ReportsTable({ data, isLoading = false }: ReportsTableProps) {
                         });
                         return visibleRow;
                       })} 
-                      filename="report-results" 
+                      filename={filename} 
                     />
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>

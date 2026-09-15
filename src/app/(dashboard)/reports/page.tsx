@@ -424,7 +424,46 @@ function ReportsPage() {
   const suppliers = customer.filter((c) => c.customer_type?.toLowerCase() === "supplier" || c.customer_type?.toLowerCase() === "both");
 
   const formatNum = (num: any) => { const n = parseFloat(num); return isNaN(n) ? num : new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 }).format(n); };
-  const formatCurrency = (num: any) => { const n = parseFloat(num); return isNaN(n) ? num : new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n); };
+  const formatCurrency = (num: any) => { const n = parseFloat(num); return isNaN(n) ? (num ?? "0.00") : new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n); };
+
+  const sortInventoryItemsByCategory = (items: any[]) => {
+    if (!Array.isArray(items) || items.length === 0) return items;
+
+    const normalRows: any[] = [];
+    const totalRows: any[] = [];
+
+    items.forEach((item) => {
+      const isTotal =
+        String(item.grn_id).toUpperCase() === "TOTAL" ||
+        String(item.item_category).toUpperCase() === "TOTAL" ||
+        String(item.stock_value).toUpperCase() === "TOTAL" ||
+        Object.values(item).some((v) => String(v).toUpperCase() === "TOTAL");
+
+      if (isTotal) {
+        totalRows.push(item);
+      } else {
+        normalRows.push(item);
+      }
+    });
+
+    normalRows.sort((a, b) => {
+      const catA = String(a.item_category || a.itemCategory || a.category || "").toLowerCase();
+      const catB = String(b.item_category || b.itemCategory || b.category || "").toLowerCase();
+      const catCompare = catA.localeCompare(catB);
+      if (catCompare !== 0) return catCompare;
+
+      const subCatA = String(a.item_sub_category || a.itemSubCategory || a.subCategory || "").toLowerCase();
+      const subCatB = String(b.item_sub_category || b.itemSubCategory || b.subCategory || "").toLowerCase();
+      const subCatCompare = subCatA.localeCompare(subCatB);
+      if (subCatCompare !== 0) return subCatCompare;
+
+      const nameA = String(a.item_name || a.itemName || a.name || "").toLowerCase();
+      const nameB = String(b.item_name || b.itemName || b.name || "").toLowerCase();
+      return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: "base" });
+    });
+
+    return [...normalRows, ...totalRows];
+  };
 
   // Compute filtered data for rendering
   const filteredReportData = React.useMemo(() => {
@@ -441,6 +480,8 @@ function ReportsPage() {
         }
       } else if (watchedSalesType === "SALES_BY_SALESPERSON" && selectedSalespersonName && selectedSalespersonName !== "ALL") {
         data = data.filter((row: any) => String(row.salesperson || "").trim().toLowerCase() === String(selectedSalespersonName).trim().toLowerCase());
+      } else if (watchedSalesType === "SALES_BY_PRODUCT") {
+        data = sortInventoryItemsByCategory(data);
       }
       
       data = data.map((row: any, index: number) => {
@@ -449,7 +490,7 @@ function ReportsPage() {
                 "#": index + 1,
                 "Sales Date": row.sales_date ? format(new Date(row.sales_date), "yyyy-MM-dd") : "-",
                 "Currency": row.currency || "-",
-                "Total Orders": row.total_orders,
+                "Total Orders": formatNum(row.total_orders),
                 "Total Sales": formatCurrency(row.total_sales)
             };
         }
@@ -458,7 +499,7 @@ function ReportsPage() {
                 "#": index + 1,
                 "Sales Month": row.sales_month || "-",
                 "Currency": row.currency || "-",
-                "Total Orders": row.total_orders,
+                "Total Orders": formatNum(row.total_orders),
                 "Total Sales": formatCurrency(row.total_sales)
             };
         }
@@ -469,7 +510,7 @@ function ReportsPage() {
                 "Week Start Date": row.week_start_date ? format(new Date(row.week_start_date), "yyyy-MM-dd") : "-",
                 "Week End Date": row.week_end_date ? format(new Date(row.week_end_date), "yyyy-MM-dd") : "-",
                 "Currency": row.currency || "-",
-                "Total Orders": row.total_orders,
+                "Total Orders": formatNum(row.total_orders),
                 "Total Sales": formatCurrency(row.total_sales)
             };
         }
@@ -479,17 +520,19 @@ function ReportsPage() {
                 "Customer ID": row.customer_id || "-",
                 "Company Name": row.company_name || "-",
                 "Currency": row.currency || "-",
-                "Total Orders": row.total_orders,
+                "Total Orders": formatNum(row.total_orders),
                 "Total Sales": formatCurrency(row.total_sales)
             };
         }
         if (watchedSalesType === "SALES_BY_PRODUCT") {
             return {
                 "#": index + 1,
+                "Item Category": row.item_category || row.category || "-",
+                "Item Sub Category": row.item_sub_category || row.sub_category || "-",
                 "Item Code": row.item_code || "-",
-                "Description": row.description || "-",
+                "Description": row.description || row.item_name || "-",
                 "Currency": row.currency || "-",
-                "Total Quantity": formatNum(row.total_qty),
+                "Total Quantity": formatNum(row.total_qty || row.quantity),
                 "Total Sales": formatCurrency(row.total_sales)
             };
         }
@@ -498,7 +541,7 @@ function ReportsPage() {
                 "#": index + 1,
                 "Salesperson": row.salesperson || "-",
                 "Currency": row.currency || "-",
-                "Total Orders": row.total_orders,
+                "Total Orders": formatNum(row.total_orders),
                 "Total Sales": formatCurrency(row.total_sales)
             };
         }
@@ -543,6 +586,7 @@ function ReportsPage() {
         };
       });
     } else if (activeTab === "general" && watchedGeneralType === "main_inventory") {
+      data = sortInventoryItemsByCategory(data);
       data = data.map((row: any, index: number) => {
         const qty = parseFloat(row.quantity || 0);
         return {
@@ -551,13 +595,13 @@ function ReportsPage() {
           "Item Category": row.item_category || "-",
           "Item Sub Category": row.item_sub_category || "-",
           "Item Name": row.item_name || "-",
-          "Unit Price": formatNum(row.unit_price || row.item_unit_price || row.price || 0),
+          "Unit Price": formatCurrency(row.unit_price || row.item_unit_price || row.price || 0),
           "Size": (!row.size || String(row.size).trim().toLowerCase() === "x") ? "-" : row.size,
           "Quantity": formatNum(qty),
           "UOM": row.uom || "-",
           "Width": row.width || "-",
           "Height": row.height || "-",
-          "Rate": formatNum(row.rate || 0),
+          "Rate": formatCurrency(row.rate || 0),
           "Status": row.status || "-",
           "Created By": row.created_by || "-",
           "Created On": row.created_on ? format(new Date(row.created_on), "yyyy-MM-dd") : "-",
@@ -704,10 +748,24 @@ function ReportsPage() {
         };
       });
     } else if (activeTab === "inventory") {
+      const selectedCat = inventoryForm.watch("item_category");
+      const selectedSubCat = inventoryForm.watch("item_sub_category");
+
+      if (selectedCat && selectedCat !== "ALL") {
+        data = data.filter((row: any) => String(row.item_category || row.category || "").toLowerCase() === selectedCat.toLowerCase());
+      }
+      if (selectedSubCat && selectedSubCat !== "ALL") {
+        data = data.filter((row: any) => String(row.item_sub_category || row.subCategory || "").toLowerCase() === selectedSubCat.toLowerCase());
+      }
+
+      data = sortInventoryItemsByCategory(data);
+
       if (watchedInventoryType === "GRN_REPORT") {
         data = data.map((row: any, index: number) => {
-          if (row.grn_id === "TOTAL") {
+          const isTotal = String(row.grn_id).toUpperCase() === "TOTAL" || String(row.item_category).toUpperCase() === "TOTAL";
+          if (isTotal) {
             return {
+              "#": "",
               "Grn Id": "TOTAL",
               "Supplier Name": "",
               "Received Date": "",
@@ -717,10 +775,11 @@ function ReportsPage() {
               "Size": "",
               "Quantity": "",
               "Rate": "",
-              "Amount": formatNum(row.amount),
+              "Amount": formatCurrency(row.amount),
             };
           }
           return {
+            "#": index + 1,
             "Grn Id": row.grn_id || "-",
             "Supplier Name": row.supplier_name || "-",
             "Received Date": row.received_date ? format(new Date(row.received_date), "yyyy-MM-dd") : "-",
@@ -729,13 +788,25 @@ function ReportsPage() {
             "Item Name": row.item_name || "-",
             "Size": row.size || "-",
             "Quantity": formatNum(row.quantity),
-            "Rate": formatNum(row.rate),
-            "Amount": formatNum(row.amount),
+            "Rate": formatCurrency(row.rate),
+            "Amount": formatCurrency(row.amount),
           };
         });
       } else if (watchedInventoryType === "STOCK_VALUE") {
         data = data.map((row: any, index: number) => {
-          if (row.stock_value === "TOTAL" || row.item_category === "TOTAL") return row;
+          const isTotal = String(row.stock_value).toUpperCase() === "TOTAL" || String(row.item_category).toUpperCase() === "TOTAL";
+          if (isTotal) {
+            return {
+              "#": "",
+              "Item Category": "TOTAL",
+              "Item Sub Category": "",
+              "Item Name": "",
+              "Size": "",
+              "Quantity": formatNum(row.quantity),
+              "Unit Rate": "",
+              "Stock Value": formatCurrency(row.stock_value)
+            };
+          }
           return {
             "#": index + 1,
             "Item Category": row.item_category || "-",
@@ -743,8 +814,8 @@ function ReportsPage() {
             "Item Name": row.item_name || "-",
             "Size": row.size || "-",
             "Quantity": formatNum(row.quantity),
-            "Unit Rate": formatNum(row.unit_rate),
-            "Stock Value": row.stock_value
+            "Unit Rate": formatCurrency(row.unit_rate),
+            "Stock Value": formatCurrency(row.stock_value)
           };
         });
       } else if (watchedInventoryType === "CURRENT_STOCK") {
@@ -755,8 +826,54 @@ function ReportsPage() {
           "Item Name": row.item_name || "-",
           "Size": row.size || "-",
           "Item ID": row.item_id || "-",
-          "UOM": row.unit_of_measure || "-",
-          "Available Qty": formatNum(row.available_qty)
+          "UOM": row.unit_of_measure || row.uom || "-",
+          "Available Qty": formatNum(row.available_qty || row.quantity)
+        }));
+      } else if (watchedInventoryType === "STOCK_AGING") {
+        data = data.map((row: any, index: number) => ({
+          "#": index + 1,
+          "Item Category": row.item_category || "-",
+          "Item Sub Category": row.item_sub_category || "-",
+          "Item Name": row.item_name || "-",
+          "Size": row.size || "-",
+          "Quantity": formatNum(row.quantity || row.qty),
+          "Aging (Days)": row.aging_days ?? row.days ?? "-",
+          "Last Movement": row.last_movement ? format(new Date(row.last_movement), "yyyy-MM-dd") : "-"
+        }));
+      } else if (watchedInventoryType === "LOW_STOCK") {
+        data = data.map((row: any, index: number) => ({
+          "#": index + 1,
+          "Item Category": row.item_category || "-",
+          "Item Sub Category": row.item_sub_category || "-",
+          "Item Name": row.item_name || "-",
+          "Size": row.size || "-",
+          "Available Qty": formatNum(row.available_qty || row.quantity),
+          "Reorder Level": formatNum(row.reorder_level || row.reorder_qty),
+          "Status": row.status || "LOW STOCK"
+        }));
+      } else if (watchedInventoryType === "MATERIAL_CONSUMPTION_SUMMARY") {
+        data = data.map((row: any, index: number) => ({
+          "#": index + 1,
+          "Item Category": row.item_category || "-",
+          "Item Sub Category": row.item_sub_category || "-",
+          "Item Name": row.item_name || "-",
+          "Size": row.size || "-",
+          "UOM": row.uom || row.unit_of_measure || "-",
+          "Consumed Qty": formatNum(row.consumed_qty || row.total_consumed || row.quantity),
+          "Unit Price": formatCurrency(row.unit_price || row.rate || 0),
+          "Total Amount": formatCurrency(row.total_amount || row.amount || (parseFloat(row.consumed_qty || row.quantity || 0) * parseFloat(row.unit_price || row.rate || 0)))
+        }));
+      } else if (watchedInventoryType === "MATERIAL_CONSUMPTION_BY_JOB") {
+        data = data.map((row: any, index: number) => ({
+          "#": index + 1,
+          "Job ID": row.job_number || row.job_id || "-",
+          "Job Name": row.job_name || "-",
+          "Item Category": row.item_category || "-",
+          "Item Sub Category": row.item_sub_category || "-",
+          "Item Name": row.item_name || "-",
+          "Consumed Qty": formatNum(row.consumed_qty || row.quantity),
+          "Unit Price": formatCurrency(row.unit_price || row.rate || 0),
+          "Total Cost": formatCurrency(row.total_cost || row.amount || (parseFloat(row.consumed_qty || row.quantity || 0) * parseFloat(row.unit_price || row.rate || 0)))
         }));
       }
     }
@@ -797,6 +914,42 @@ function ReportsPage() {
       return formattedRow;
     });
   }, [reportData, activeTab, watchedSalesType, selectedSalesCustomerId, selectedSalesCurrency, selectedSalespersonName, watchedGeneralType, jobList, quotationList, customer, selectedDispatchStatus]);
+
+  const reportFilename = React.useMemo(() => {
+    let name = "Report";
+    if (activeTab === "general") {
+      const type = watchedGeneralType;
+      const generalLabels: Record<string, string> = {
+        customers: "Customers Report",
+        main_inventory: "Main Inventory Report",
+        dispatch: "Dispatch Report",
+        jobs: "Jobs Report",
+        purchase_orders: "Purchase Orders Report",
+        quotations: "Quotations Report",
+      };
+      name = generalLabels[type] || REPORT_TYPES[type as keyof typeof REPORT_TYPES] || type || "General Report";
+    } else if (activeTab === "inventory") {
+      const type = watchedInventoryType;
+      const found = INVENTORY_REPORT_TYPES.find((r) => r.value === type);
+      name = found ? found.label : "Inventory Report";
+    } else if (activeTab === "sales") {
+      const type = watchedSalesType;
+      const found = SALES_REPORT_TYPES.find((r) => r.value === type);
+      name = found ? found.label : "Sales Report";
+    } else if (activeTab === "quotation") {
+      const type = watchedQuotationType;
+      const found = QUOTATION_REPORT_TYPES.find((r) => r.value === type);
+      name = found ? found.label : "Quotation Report";
+    }
+
+    const cleanName = String(name || "Report")
+      .trim()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-zA-Z0-9_-]/g, "");
+
+    const dateStr = format(new Date(), "yyyy-MM-dd");
+    return `${cleanName}_${dateStr}`;
+  }, [activeTab, watchedGeneralType, watchedInventoryType, watchedSalesType, watchedQuotationType]);
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3 w-full min-w-0 overflow-hidden">
@@ -1067,7 +1220,7 @@ function ReportsPage() {
                 </>
               )}
 
-              {inventoryForm.watch("report_type") === "STOCK_VALUE" && (
+              {["STOCK_VALUE", "GRN_REPORT", "CURRENT_STOCK", "STOCK_AGING", "LOW_STOCK", "MATERIAL_CONSUMPTION_SUMMARY"].includes(inventoryForm.watch("report_type")) && (
                 <>
                   <FormField
                     control={inventoryForm.control}
@@ -1464,7 +1617,7 @@ function ReportsPage() {
                 Total Stock Value: {new Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR' }).format(grandTotal)}
               </div>
             )}
-            <ReportsTable data={filteredReportData} isLoading={loading} />
+            <ReportsTable data={filteredReportData} isLoading={loading} filename={reportFilename} />
           </div>
         )
       )}
