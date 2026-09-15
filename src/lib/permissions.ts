@@ -2,12 +2,13 @@ import { USER_ROLES } from "@/config/enum";
 import { getUser } from "@/lib/auth";
 
 export function normalizeUserRole(role?: string): USER_ROLES {
-  if (!role) return USER_ROLES.SUPER_ADMIN;
+  // Security: default to least-privileged role when role is missing or unrecognized
+  if (!role) return USER_ROLES.PRODUCTION_EXECUTIVE;
   const normalized = role.toUpperCase().trim();
   if (Object.values(USER_ROLES).includes(normalized as USER_ROLES)) {
     return normalized as USER_ROLES;
   }
-  return USER_ROLES.SUPER_ADMIN;
+  return USER_ROLES.PRODUCTION_EXECUTIVE;
 }
 
 export function isAdminRole(role?: string): boolean {

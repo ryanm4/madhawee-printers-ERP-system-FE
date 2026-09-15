@@ -2,22 +2,37 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getDefaultRoute, isRouteAllowedForUser } from '@/lib/permissions'
 
-function getUserRoleFromRequest(request: NextRequest): string | undefined {
-    const userCookie = request.cookies.get('user')?.value
-    if (!userCookie) return undefined
-
+/**
+ * Decode JWT payload (base64) to extract user_role.
+ * This does NOT verify the signature — that's done by the backend.
+ * The middleware only needs the role for route-level access control.
+ * Tampering with the JWT will fail at the backend signature check.
+ */
+function decodeJWTPayload(token: string): { user_role?: string; name?: string; user_id?: number } | null {
     try {
-        const user = JSON.parse(userCookie) as { user_role?: string }
-        return user.user_role
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+
+        const payload = parts[1];
+        // Handle base64url encoding
+        const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = atob(base64);
+        return JSON.parse(decoded);
     } catch {
-        return undefined
+        return null;
     }
 }
 
 export function middleware(request: NextRequest) {
     const token = request.cookies.get('auth_token')?.value
-    const userRole = getUserRoleFromRequest(request)
     const { pathname } = request.nextUrl
+
+    // Decode role from the JWT payload (tamper-proof — backend verifies signature)
+    let userRole: string | undefined
+    if (token) {
+        const payload = decodeJWTPayload(token)
+        userRole = payload?.user_role
+    }
 
     // Define public routes that don't require authentication
     const publicRoutes = ['/login', '/logout']
@@ -39,7 +54,7 @@ export function middleware(request: NextRequest) {
     }
 
     // Restrict USER role to allowed pages only
-    if (token && !isPublicRoute && !isRouteAllowedForUser(pathname, userRole)) {
+    if (token && !isPublicRoute && userRole && !isRouteAllowedForUser(pathname, userRole)) {
         return NextResponse.redirect(new URL(getDefaultRoute(userRole), request.url))
     }
 

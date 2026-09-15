@@ -1,35 +1,62 @@
-// lib/auth.ts
-
+// lib/auth.ts — Tier 2 Auth: Access Token in sessionStorage + Refresh Token in HttpOnly Cookie
 import Cookies from 'js-cookie';
 import { GET_ALL_USER } from "@/modules/users/types";
 
-const TOKEN_KEY = 'auth_token';
-const USER_KEY = 'user';
-const COOKIE_OPTIONS: Cookies.CookieAttributes = {
-    expires: 7, // 7 days
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-};
+const ACCESS_TOKEN_KEY = 'access_token';
+const USER_KEY = 'user_data';
+
+// Legacy cookie key — used only for middleware to read the access token
+const AUTH_COOKIE_KEY = 'auth_token';
 
 /**
- * Get authentication token from cookies
+ * Decode JWT payload to extract user info (name, role, user_id).
+ * Does NOT verify signature — that's done server-side.
+ */
+function decodeJWTPayload(token: string): { user_id?: number; name?: string; user_role?: string } | null {
+    try {
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = atob(base64);
+        return JSON.parse(decoded);
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Get access token from sessionStorage (client-side) or cookie fallback (for middleware)
  */
 export function getToken(): string | undefined {
-    return Cookies.get(TOKEN_KEY);
+    if (typeof window === 'undefined') return undefined;
+    return sessionStorage.getItem(ACCESS_TOKEN_KEY) || Cookies.get(AUTH_COOKIE_KEY) || undefined;
 }
 
 /**
- * Set authentication token in cookies
+ * Set access token — stores in both sessionStorage and a cookie.
+ * The cookie allows the middleware (server-side) to read it for route protection.
+ * The actual token is a signed JWT — users cannot tamper with the role inside it.
  */
 export function setToken(token: string): void {
-    Cookies.set(TOKEN_KEY, token, COOKIE_OPTIONS);
+    if (typeof window !== 'undefined') {
+        sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
+    }
+    // Also set as a cookie so middleware can read it for route protection
+    Cookies.set(AUTH_COOKIE_KEY, token, {
+        expires: 1, // 1 day
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+    });
 }
 
 /**
- * Remove authentication token from cookies
+ * Remove access token
  */
 export function removeToken(): void {
-    Cookies.remove(TOKEN_KEY);
+    if (typeof window !== 'undefined') {
+        sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+    }
+    Cookies.remove(AUTH_COOKIE_KEY);
 }
 
 /**
@@ -40,31 +67,61 @@ export function isAuthenticated(): boolean {
 }
 
 /**
- * Get user from cookies
+ * Get user info. Tries sessionStorage first, then falls back to decoding the JWT.
+ * This ensures user data is available even in new tabs or after sessionStorage is cleared.
  */
 export function getUser(): GET_ALL_USER | null {
-    const userStr = Cookies.get(USER_KEY);
-    if (!userStr) return null;
+    if (typeof window === 'undefined') return null;
 
-    try {
-        return JSON.parse(userStr) as GET_ALL_USER;
-    } catch {
-        return null;
+    // 1. Try sessionStorage first (fastest)
+    const userStr = sessionStorage.getItem(USER_KEY);
+    if (userStr) {
+        try {
+            return JSON.parse(userStr) as GET_ALL_USER;
+        } catch {
+            // fall through to JWT decode
+        }
     }
+
+    // 2. Fallback: decode the JWT to get user info
+    const token = getToken();
+    if (token) {
+        const payload = decodeJWTPayload(token);
+        if (payload && payload.user_role) {
+            const user = {
+                user_id: payload.user_id,
+                name: payload.name || '',
+                user_role: payload.user_role,
+            } as unknown as GET_ALL_USER;
+
+            // Re-populate sessionStorage so next call is instant
+            sessionStorage.setItem(USER_KEY, JSON.stringify(user));
+            return user;
+        }
+    }
+
+    return null;
 }
 
 /**
- * Set user in cookies
+ * Set user in sessionStorage (display purposes only)
  */
 export function setUser(user: GET_ALL_USER): void {
-    Cookies.set(USER_KEY, JSON.stringify(user), COOKIE_OPTIONS);
+    if (typeof window !== 'undefined') {
+        sessionStorage.setItem(USER_KEY, JSON.stringify(user));
+    }
+    // Remove the old plain-text user cookie if it exists
+    Cookies.remove('user');
 }
 
 /**
- * Remove user from cookies
+ * Remove user from sessionStorage
  */
 export function removeUser(): void {
-    Cookies.remove(USER_KEY);
+    if (typeof window !== 'undefined') {
+        sessionStorage.removeItem(USER_KEY);
+    }
+    Cookies.remove('user');
 }
 
 /**

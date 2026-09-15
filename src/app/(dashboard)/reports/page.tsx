@@ -424,6 +424,7 @@ function ReportsPage() {
   const suppliers = customer.filter((c) => c.customer_type?.toLowerCase() === "supplier" || c.customer_type?.toLowerCase() === "both");
 
   const formatNum = (num: any) => { const n = parseFloat(num); return isNaN(n) ? num : new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 }).format(n); };
+  const formatCurrency = (num: any) => { const n = parseFloat(num); return isNaN(n) ? num : new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n); };
 
   // Compute filtered data for rendering
   const filteredReportData = React.useMemo(() => {
@@ -449,7 +450,7 @@ function ReportsPage() {
                 "Sales Date": row.sales_date ? format(new Date(row.sales_date), "yyyy-MM-dd") : "-",
                 "Currency": row.currency || "-",
                 "Total Orders": row.total_orders,
-                "Total Sales": formatNum(row.total_sales)
+                "Total Sales": formatCurrency(row.total_sales)
             };
         }
         if (watchedSalesType === "SALES_MONTHLY") {
@@ -458,7 +459,7 @@ function ReportsPage() {
                 "Sales Month": row.sales_month || "-",
                 "Currency": row.currency || "-",
                 "Total Orders": row.total_orders,
-                "Total Sales": formatNum(row.total_sales)
+                "Total Sales": formatCurrency(row.total_sales)
             };
         }
         if (watchedSalesType === "SALES_WEEKLY") {
@@ -469,7 +470,7 @@ function ReportsPage() {
                 "Week End Date": row.week_end_date ? format(new Date(row.week_end_date), "yyyy-MM-dd") : "-",
                 "Currency": row.currency || "-",
                 "Total Orders": row.total_orders,
-                "Total Sales": formatNum(row.total_sales)
+                "Total Sales": formatCurrency(row.total_sales)
             };
         }
         if (watchedSalesType === "SALES_BY_CUSTOMER") {
@@ -479,7 +480,7 @@ function ReportsPage() {
                 "Company Name": row.company_name || "-",
                 "Currency": row.currency || "-",
                 "Total Orders": row.total_orders,
-                "Total Sales": formatNum(row.total_sales)
+                "Total Sales": formatCurrency(row.total_sales)
             };
         }
         if (watchedSalesType === "SALES_BY_PRODUCT") {
@@ -489,7 +490,7 @@ function ReportsPage() {
                 "Description": row.description || "-",
                 "Currency": row.currency || "-",
                 "Total Quantity": formatNum(row.total_qty),
-                "Total Sales": formatNum(row.total_sales)
+                "Total Sales": formatCurrency(row.total_sales)
             };
         }
         if (watchedSalesType === "SALES_BY_SALESPERSON") {
@@ -498,7 +499,7 @@ function ReportsPage() {
                 "Salesperson": row.salesperson || "-",
                 "Currency": row.currency || "-",
                 "Total Orders": row.total_orders,
-                "Total Sales": formatNum(row.total_sales)
+                "Total Sales": formatCurrency(row.total_sales)
             };
         }
         return row;

@@ -1,4 +1,4 @@
-// app/api/auth/login/route.ts
+// app/api/login/route.ts — Tier 2 Auth: Proxies login and forwards refresh token cookie
 import { API_ENDPOINTS } from "@/config/api-endpoints";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({ name, password }),
       cache: "no-store",
+      credentials: "include",
     });
 
     // Handle backend errors
@@ -53,13 +54,20 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Return response to client
-    // Adjust based on your backend response structure
-    return NextResponse.json({
-      token: data.token || data.access_token || data.data?.token,
+    // Build response — forward accessToken and user info
+    const res = NextResponse.json({
+      accessToken: data.accessToken || data.token || data.data?.token,
       user: data.user || data.data?.user,
       message: data.message || "Login successful",
     });
+
+    // Forward the Set-Cookie header from backend (contains the HttpOnly refresh_token)
+    const setCookieHeader = response.headers.get('set-cookie');
+    if (setCookieHeader) {
+      res.headers.set('set-cookie', setCookieHeader);
+    }
+
+    return res;
   } catch (error) {
     console.error("❌ Login API Error:", error);
 

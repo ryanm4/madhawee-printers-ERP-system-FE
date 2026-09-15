@@ -6,6 +6,8 @@ export interface LoginForm {
 }
 
 export interface LoginResponse {
-  token: string;
+  accessToken: string;
+  token?: string; // Legacy fallback
   user: GET_ALL_USER;
+  message?: string;
 }
