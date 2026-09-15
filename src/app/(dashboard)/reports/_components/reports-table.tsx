@@ -34,6 +34,13 @@ import { DataTablePagination } from "@/components/shared/data-table-pagination"
 import { ExportButton } from "@/components/shared/export-button"
 
 import { Loader2 } from "lucide-react"
+
+const RIGHT_ALIGNED_COLUMNS = [
+    "Total Sales", "Unit Price", "Revenue", "Rate", "PO Grand Total",
+    "Sub Total", "Total Without Tax", "Net Total", "Amount", "Unit Rate",
+    "Total Quantity", "Quantity", "Available Qty", "Dispatch Qty", "Order Qty", "Balance Qty"
+];
+
 interface ReportsTableProps {
     data: Record<string, unknown>[]
     isLoading?: boolean
@@ -52,10 +59,12 @@ export function ReportsTable({ data, isLoading = false }: ReportsTableProps) {
         if (!data || data.length === 0) return [];
 
         const firstItem = data[0];
-        return Object.keys(firstItem).map((key) => ({
-            accessorKey: key,
-            header: () => <span className="capitalize whitespace-nowrap">{key.replace(/_/g, " ")}</span>,
-            cell: ({ row }) => {
+        return Object.keys(firstItem).map((key) => {
+            const isRightAligned = RIGHT_ALIGNED_COLUMNS.includes(key);
+            return {
+                accessorKey: key,
+                header: () => <div className={`capitalize whitespace-nowrap ${isRightAligned ? "text-right" : ""}`}>{key.replace(/_/g, " ")}</div>,
+                cell: ({ row }) => {
                 const value = row.getValue(key);
                 if (value === null || value === undefined) return "-";
                 if (typeof value === "boolean") return value ? "Yes" : "No";
@@ -75,13 +84,16 @@ export function ReportsTable({ data, isLoading = false }: ReportsTableProps) {
                     displayValue = value.split("T")[0];
                 }
 
+                if (isRightAligned) {
+                    return <div className="text-right w-full text-sm">{displayValue}</div>;
+                }
                 return (
                     <div className="max-w-[300px] break-words whitespace-pre-wrap text-sm">
                         {displayValue}
                     </div>
                 );
             },
-        }));
+        }});
     }, [data]);
 
     const table = useReactTable({
@@ -158,8 +170,10 @@ export function ReportsTable({ data, isLoading = false }: ReportsTableProps) {
                         <TableHeader>
                             {table.getHeaderGroups().map((headerGroup) => (
                                 <TableRow key={headerGroup.id}>
-                                    {headerGroup.headers.map((header) => (
-                                        <TableHead key={header.id}>
+                                    {headerGroup.headers.map((header) => {
+                                        const isRightAligned = RIGHT_ALIGNED_COLUMNS.includes(header.column.id);
+                                        return (
+                                        <TableHead key={header.id} className={isRightAligned ? "text-right" : ""}>
                                             {header.isPlaceholder
                                                 ? null
                                                 : flexRender(
@@ -167,7 +181,7 @@ export function ReportsTable({ data, isLoading = false }: ReportsTableProps) {
                                                     header.getContext()
                                                 )}
                                         </TableHead>
-                                    ))}
+                                    )})}
                                 </TableRow>
                             ))}
                         </TableHeader>
@@ -185,14 +199,16 @@ export function ReportsTable({ data, isLoading = false }: ReportsTableProps) {
                             ) : table.getRowModel().rows.length ? (
                                 table.getRowModel().rows.map((row) => (
                                     <TableRow key={row.id}>
-                                        {row.getVisibleCells().map((cell) => (
-                                            <TableCell key={cell.id}>
+                                        {row.getVisibleCells().map((cell) => {
+                                            const isRightAligned = RIGHT_ALIGNED_COLUMNS.includes(cell.column.id);
+                                            return (
+                                            <TableCell key={cell.id} className={isRightAligned ? "text-right" : ""}>
                                                 {flexRender(
                                                     cell.column.columnDef.cell,
                                                     cell.getContext()
                                                 )}
                                             </TableCell>
-                                        ))}
+                                        )})}
                                     </TableRow>
                                 ))
                             ) : (

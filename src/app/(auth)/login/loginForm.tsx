@@ -50,8 +50,9 @@ export function LoginForm({
       setIsLoading(true);
       const response = await loginApi.login(data);
 
-      // Save token and user to cookies
-      setToken(response.data.token);
+      // Save access token to sessionStorage + cookie, user info to sessionStorage
+      const token = response.data.accessToken || response.data.token || '';
+      setToken(token);
       setUser(response.data.user);
 
       toast("Login successful!");
