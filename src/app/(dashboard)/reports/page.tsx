@@ -29,6 +29,8 @@ import { userApi } from "@/modules/users/api";
 import { GET_ALL_USER } from "@/modules/users/types";
 import { quotationApi } from "@/modules/quotations/api";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
+import { issueNotesApi } from "@/modules/issue-notes/api";
+import { grnApi } from "@/modules/grn/api";
 import { ReportsTable } from "./_components/reports-table";
 import { PageLoader } from "@/components/shared/loader";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -123,6 +125,7 @@ function ReportsPage() {
   const [inventoryItems, setInventoryItems] = useState<{ value: string; label: string }[]>([]);
   const [userList, setUserList] = useState<GET_ALL_USER[]>([]);
   const [marketingPersons, setMarketingPersons] = useState<string[]>([]);
+  const [rawInventoryList, setRawInventoryList] = useState<GET_ALL_INVENTORY[]>([]);
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<any[]>([]);
   const [grandTotal, setGrandTotal] = useState<number | null>(null);
@@ -134,6 +137,8 @@ function ReportsPage() {
   const [selectedSalespersonName, setSelectedSalespersonName] = useState<string>("");
   const [jobList, setJobList] = useState<{ value: string; label: string; fullJob?: any }[]>([]);
   const [quotationList, setQuotationList] = useState<any[]>([]);
+  const [issueNotesList, setIssueNotesList] = useState<any[]>([]);
+  const [grnList, setGrnList] = useState<any[]>([]);
   const [selectedDispatchStatus, setSelectedDispatchStatus] = useState<string>("all");
 
   useEffect(() => {
@@ -149,10 +154,13 @@ function ReportsPage() {
     const fetchInventory = async () => {
       try {
         const response = await inventoryApi.getAll();
-        if (response.status === 200) {
+        const resData = (response as any)?.data;
+        const rawData = Array.isArray(resData) ? resData : (resData?.data || []);
+        if (rawData) {
+          setRawInventoryList(rawData);
           const uniqueItems = Array.from(
             new Map(
-              response.data.map((item: GET_ALL_INVENTORY) => [
+              rawData.map((item: any) => [
                 `${item.item_sub_category}${item.item_name}-${item.size || ""}`,
                 item,
               ])
@@ -160,13 +168,13 @@ function ReportsPage() {
           );
 
           setInventoryItems(
-            (uniqueItems as GET_ALL_INVENTORY[]).map((item) => {
+            (uniqueItems as any[]).map((item) => {
               const label = item.size
                 ? `${item.item_sub_category} ${item.item_name} (${item.size})`
                 : `${item.item_sub_category} ${item.item_name}`;
 
               return {
-                value: item.item_id.toString(),
+                value: (item.item_id || item.id || "").toString(),
                 label: label,
               };
             })
@@ -180,10 +188,12 @@ function ReportsPage() {
     const fetchJobs = async () => {
       try {
         const response = await jobTicketsApi.getAll();
+        const resData = (response as any)?.data;
+        const rawJobs = Array.isArray(resData) ? resData : (resData?.data || []);
         setJobList(
-          response.data.map((job: any) => ({
-            value: job.job_id.toString(),
-            label: `[#${job.job_number}] ${job.job_name}`,
+          rawJobs.map((job: any) => ({
+            value: (job.job_id || job.id || "").toString(),
+            label: `[#${job.job_number || job.job_id || job.id}] ${job.job_name || job.name || ""}`,
             fullJob: job,
           }))
         );
@@ -192,9 +202,33 @@ function ReportsPage() {
       }
     };
 
+    const fetchIssueNotes = async () => {
+      try {
+        const response = await issueNotesApi.getAll();
+        const resData = (response as any)?.data;
+        const rawNotes = Array.isArray(resData) ? resData : (resData?.data || []);
+        setIssueNotesList(rawNotes);
+      } catch (error) {
+        console.error("Failed to fetch issue notes", error);
+      }
+    };
+
+    const fetchGrn = async () => {
+      try {
+        const response = await grnApi.getAll();
+        const resData = (response as any)?.data;
+        const rawGrns = Array.isArray(resData) ? resData : (resData?.data || []);
+        setGrnList(rawGrns);
+      } catch (error) {
+        console.error("Failed to fetch GRNs", error);
+      }
+    };
+
     fetchCustomer();
     fetchInventory();
     fetchJobs();
+    fetchIssueNotes();
+    fetchGrn();
     getUserList();
     getMarketingPersons();
   }, []);
@@ -202,7 +236,9 @@ function ReportsPage() {
   const getUserList = async () => {
     try {
       const response = await userApi.getAll();
-      setUserList(response.data.users || []);
+      const resData = (response as any)?.data;
+      const usersArray = Array.isArray(resData) ? resData : (resData?.users || resData?.data || []);
+      setUserList(usersArray);
     } catch (error) {
       console.error("Failed to fetch users", error);
     }
@@ -426,6 +462,83 @@ function ReportsPage() {
   const formatNum = (num: any) => { const n = parseFloat(num); return isNaN(n) ? num : new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 }).format(n); };
   const formatCurrency = (num: any) => { const n = parseFloat(num); return isNaN(n) ? (num ?? "0.00") : new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n); };
 
+  const extractConsumedQty = (row: any) => {
+    if (!row || typeof row !== "object") return 0;
+    const possibleKeys = [
+      "consumed_qty", "consumed_quantity", "total_consumed", "qty_consumed",
+      "issued_qty", "issued_quantity", "qty_issued", "used_qty", "used_quantity",
+      "total_qty", "total_quantity", "material_qty", "material_quantity",
+      "quantity", "qty", "item_qty", "item_quantity"
+    ];
+
+    for (const key of possibleKeys) {
+      if (row[key] !== undefined && row[key] !== null && row[key] !== "") {
+        const parsed = parseFloat(row[key]);
+        if (!isNaN(parsed)) return parsed;
+      }
+    }
+
+    for (const [k, v] of Object.entries(row)) {
+      const lowerKey = k.toLowerCase();
+      if (
+        (lowerKey.includes("qty") || lowerKey.includes("quantity") || lowerKey.includes("consumed") || lowerKey.includes("issued")) &&
+        v !== null && v !== undefined && v !== ""
+      ) {
+        const parsed = parseFloat(v as any);
+        if (!isNaN(parsed)) return parsed;
+      }
+    }
+
+    return 0;
+  };
+
+  const extractUnitPrice = (row: any, inv: any) => {
+    if (!row) row = {};
+    const priceCandidates = [
+      row.unit_price, row.unitPrice, row.rate, row.price, row.item_unit_price, row.itemUnitPrice,
+      row.unit_cost, row.unitCost, row.cost_price, row.costPrice, row.cost, row.purchase_price,
+      row.purchasePrice, row.price_per_unit, row.rate_per_unit, row.avg_cost, row.avgCost,
+      inv?.unit_price, inv?.unitPrice, inv?.rate, inv?.price, inv?.unit_cost, inv?.unitCost,
+      inv?.cost_price, inv?.costPrice, inv?.cost, inv?.purchase_price, inv?.purchasePrice,
+      inv?.price_per_unit, inv?.rate_per_unit, inv?.avg_cost, inv?.avgCost, inv?.item_unit_price, inv?.unit_rate
+    ];
+    for (const val of priceCandidates) {
+      if (val !== undefined && val !== null && val !== "") {
+        const p = parseFloat(String(val));
+        if (!isNaN(p) && p > 0) return p;
+      }
+    }
+    return 0;
+  };
+
+  const findInventoryItem = (row: any) => {
+    if (!rawInventoryList || rawInventoryList.length === 0) return null;
+
+    if (row.item_id) {
+      const foundById = rawInventoryList.find(i => String(i.item_id) === String(row.item_id));
+      if (foundById) return foundById;
+    }
+
+    const targetName = String(row.item_name || row.description || row.item_code || "").trim().toLowerCase();
+    if (targetName) {
+      const foundByName = rawInventoryList.find(i => {
+        const invName = String(i.item_name || "").trim().toLowerCase();
+        const fullLabel = `${i.item_sub_category || ""} ${i.item_name || ""} (${i.size || ""})`.trim().toLowerCase();
+        const altLabel = `${i.item_sub_category || ""} ${i.item_name || ""}`.trim().toLowerCase();
+        return invName === targetName || fullLabel === targetName || altLabel === targetName;
+      });
+      if (foundByName) return foundByName;
+
+      const foundByPartial = rawInventoryList.find(i => {
+        const invName = String(i.item_name || "").trim().toLowerCase();
+        return invName.length > 3 && (targetName.includes(invName) || invName.includes(targetName));
+      });
+      if (foundByPartial) return foundByPartial;
+    }
+
+    return null;
+  };
+
   const sortInventoryItemsByCategory = (items: any[]) => {
     if (!Array.isArray(items) || items.length === 0) return items;
 
@@ -447,18 +560,21 @@ function ReportsPage() {
     });
 
     normalRows.sort((a, b) => {
-      const catA = String(a.item_category || a.itemCategory || a.category || "").toLowerCase();
-      const catB = String(b.item_category || b.itemCategory || b.category || "").toLowerCase();
+      const invA = findInventoryItem(a);
+      const invB = findInventoryItem(b);
+
+      const catA = String(a.item_category || a.itemCategory || a.category || invA?.item_category || "").toLowerCase();
+      const catB = String(b.item_category || b.itemCategory || b.category || invB?.item_category || "").toLowerCase();
       const catCompare = catA.localeCompare(catB);
       if (catCompare !== 0) return catCompare;
 
-      const subCatA = String(a.item_sub_category || a.itemSubCategory || a.subCategory || "").toLowerCase();
-      const subCatB = String(b.item_sub_category || b.itemSubCategory || b.subCategory || "").toLowerCase();
+      const subCatA = String(a.item_sub_category || a.itemSubCategory || a.subCategory || invA?.item_sub_category || "").toLowerCase();
+      const subCatB = String(b.item_sub_category || b.itemSubCategory || b.subCategory || invB?.item_sub_category || "").toLowerCase();
       const subCatCompare = subCatA.localeCompare(subCatB);
       if (subCatCompare !== 0) return subCatCompare;
 
-      const nameA = String(a.item_name || a.itemName || a.name || "").toLowerCase();
-      const nameB = String(b.item_name || b.itemName || b.name || "").toLowerCase();
+      const nameA = String(a.item_name || a.itemName || a.name || invA?.item_name || "").toLowerCase();
+      const nameB = String(b.item_name || b.itemName || b.name || invB?.item_name || "").toLowerCase();
       return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: "base" });
     });
 
@@ -761,7 +877,8 @@ function ReportsPage() {
       data = sortInventoryItemsByCategory(data);
 
       if (watchedInventoryType === "GRN_REPORT") {
-        data = data.map((row: any, index: number) => {
+        const mapped = data.map((row: any, index: number) => {
+          const inv = findInventoryItem(row);
           const isTotal = String(row.grn_id).toUpperCase() === "TOTAL" || String(row.item_category).toUpperCase() === "TOTAL";
           if (isTotal) {
             return {
@@ -780,24 +897,78 @@ function ReportsPage() {
               "Updated By": "",
             };
           }
+
+          const grnObj = grnList.find(g => 
+            String(g.id) === String(row.grn_id) || 
+            String(g.grn_id) === String(row.grn_id) ||
+            (g.supplier_name && String(g.supplier_name).toLowerCase() === String(row.supplier_name || "").toLowerCase())
+          );
+
+          const createdByRaw = row.created_by || row.createdBy || row.created_by_user || row.creator || row.created_user || row.created_by_name || grnObj?.created_by || grnObj?.createdBy;
+          const updatedByRaw = row.updated_by || row.updatedBy || row.updated_by_user || row.updater || row.updated_user || row.updated_by_name || grnObj?.updated_by || grnObj?.updatedBy;
+
+          const resolveUserName = (val: any) => {
+            if (val === undefined || val === null || val === "" || val === "-") return "-";
+            const strVal = String(val).trim();
+            if (!strVal || strVal === "-") return "-";
+
+            if (userList && userList.length > 0) {
+              const matched = userList.find((u: any) => 
+                String(u.user_id || u.id) === strVal || 
+                String(u.id) === strVal || 
+                String(u.name || "").toLowerCase() === strVal.toLowerCase() || 
+                String(u.email || "").toLowerCase() === strVal.toLowerCase() ||
+                String(u.username || "").toLowerCase() === strVal.toLowerCase()
+              );
+              if (matched) {
+                return (matched as any).name || (matched as any).full_name || (matched as any).username || strVal;
+              }
+            }
+
+            return strVal;
+          };
+
           return {
-            "#": index + 1,
+            "#": (index + 1) as any,
             "Grn Id": row.grn_id || "-",
             "Supplier Name": row.supplier_name || "-",
             "Received Date": row.received_date ? format(new Date(row.received_date), "yyyy-MM-dd") : "-",
-            "Item Category": row.item_category || "-",
-            "Item Sub Category": row.item_sub_category || "-",
-            "Item Name": row.item_name || "-",
-            "Size": row.size || "-",
+            "Item Category": row.item_category || inv?.item_category || "-",
+            "Item Sub Category": row.item_sub_category || inv?.item_sub_category || "-",
+            "Item Name": row.item_name || inv?.item_name || "-",
+            "Size": row.size || inv?.size || "-",
             "Quantity": formatNum(row.quantity),
-            "Rate": formatCurrency(row.rate),
+            "Rate": formatCurrency(row.rate || inv?.unit_price || 0),
             "Amount": formatCurrency(row.amount),
-            "Created By": row.created_by || "-",
-            "Updated By": row.updated_by || "-",
+            "Created By": resolveUserName(createdByRaw),
+            "Updated By": resolveUserName(updatedByRaw),
           };
         });
+
+        const hasTotal = mapped.some((r: any) => String(r["Grn Id"]).toUpperCase() === "TOTAL");
+        if (!hasTotal && mapped.length > 0) {
+          const totalQty = mapped.reduce((sum: number, r: any) => sum + (parseFloat(String(r["Quantity"]).replace(/,/g, "")) || 0), 0);
+          const totalAmt = mapped.reduce((sum: number, r: any) => sum + (parseFloat(String(r["Amount"]).replace(/,/g, "")) || 0), 0);
+          mapped.push({
+            "#": "",
+            "Grn Id": "TOTAL",
+            "Supplier Name": "",
+            "Received Date": "",
+            "Item Category": "",
+            "Item Sub Category": "",
+            "Item Name": `Total Items: ${mapped.length}`,
+            "Size": "",
+            "Quantity": formatNum(totalQty),
+            "Rate": "",
+            "Amount": formatCurrency(totalAmt),
+            "Created By": "",
+            "Updated By": "",
+          });
+        }
+        data = mapped;
       } else if (watchedInventoryType === "STOCK_VALUE") {
-        data = data.map((row: any, index: number) => {
+        const mapped = data.map((row: any, index: number) => {
+          const inv = findInventoryItem(row);
           const isTotal = String(row.stock_value).toUpperCase() === "TOTAL" || String(row.item_category).toUpperCase() === "TOTAL";
           if (isTotal) {
             return {
@@ -812,73 +983,316 @@ function ReportsPage() {
             };
           }
           return {
-            "#": index + 1,
-            "Item Category": row.item_category || "-",
-            "Item Sub Category": row.item_sub_category || "-",
-            "Item Name": row.item_name || "-",
-            "Size": row.size || "-",
+            "#": (index + 1) as any,
+            "Item Category": row.item_category || inv?.item_category || "-",
+            "Item Sub Category": row.item_sub_category || inv?.item_sub_category || "-",
+            "Item Name": row.item_name || inv?.item_name || "-",
+            "Size": row.size || inv?.size || "-",
             "Quantity": formatNum(row.quantity),
-            "Unit Rate": formatCurrency(row.unit_rate),
+            "Unit Rate": formatCurrency(row.unit_rate || row.rate || inv?.unit_price || 0),
             "Stock Value": formatCurrency(row.stock_value)
           };
         });
+
+        const hasTotal = mapped.some((r: any) => String(r["Item Category"]).toUpperCase() === "TOTAL");
+        if (!hasTotal && mapped.length > 0) {
+          const totalQty = mapped.reduce((sum: number, r: any) => sum + (parseFloat(String(r["Quantity"]).replace(/,/g, "")) || 0), 0);
+          const totalVal = mapped.reduce((sum: number, r: any) => sum + (parseFloat(String(r["Stock Value"]).replace(/,/g, "")) || 0), 0);
+          mapped.push({
+            "#": "",
+            "Item Category": "TOTAL",
+            "Item Sub Category": "",
+            "Item Name": `Total Items: ${mapped.length}`,
+            "Size": "",
+            "Quantity": formatNum(totalQty),
+            "Unit Rate": "",
+            "Stock Value": formatCurrency(totalVal)
+          });
+        }
+        data = mapped;
       } else if (watchedInventoryType === "CURRENT_STOCK") {
-        data = data.map((row: any, index: number) => ({
-          "#": index + 1,
-          "Item Category": row.item_category || "-",
-          "Item Sub Category": row.item_sub_category || "-",
-          "Item Name": row.item_name || "-",
-          "Size": row.size || "-",
-          "Item ID": row.item_id || "-",
-          "UOM": row.unit_of_measure || row.uom || "-",
-          "Available Qty": formatNum(row.available_qty || row.quantity)
-        }));
+        const mapped = data.map((row: any, index: number) => {
+          const inv = findInventoryItem(row);
+          return {
+            "#": (index + 1) as any,
+            "Item Category": row.item_category || inv?.item_category || "-",
+            "Item Sub Category": row.item_sub_category || inv?.item_sub_category || "-",
+            "Item Name": row.item_name || inv?.item_name || "-",
+            "Size": row.size || inv?.size || "-",
+            "Item ID": row.item_id || inv?.item_id || "-",
+            "UOM": row.unit_of_measure || row.uom || inv?.unit_of_measure || "-",
+            "Available Qty": formatNum(row.available_qty || row.quantity)
+          };
+        });
+
+        const hasTotal = mapped.some((r: any) => String(r["Item Category"]).toUpperCase() === "TOTAL");
+        if (!hasTotal && mapped.length > 0) {
+          const totalQty = mapped.reduce((sum: number, r: any) => sum + (parseFloat(String(r["Available Qty"]).replace(/,/g, "")) || 0), 0);
+          mapped.push({
+            "#": "",
+            "Item Category": "TOTAL",
+            "Item Sub Category": "",
+            "Item Name": `Total Items: ${mapped.length}`,
+            "Size": "",
+            "Item ID": "",
+            "UOM": "",
+            "Available Qty": formatNum(totalQty)
+          });
+        }
+        data = mapped;
       } else if (watchedInventoryType === "STOCK_AGING") {
-        data = data.map((row: any, index: number) => ({
-          "#": index + 1,
-          "Item Category": row.item_category || "-",
-          "Item Sub Category": row.item_sub_category || "-",
-          "Item Name": row.item_name || "-",
-          "Size": row.size || "-",
-          "Quantity": formatNum(row.quantity || row.qty),
-          "Aging (Days)": row.aging_days ?? row.days ?? "-",
-          "Last Movement": row.last_movement ? format(new Date(row.last_movement), "yyyy-MM-dd") : "-"
-        }));
+        const getAgingDays = (row: any, inv: any) => {
+          const possibleDays = [
+            row.aging_days, row.agingDays, row.days, row.Days, row.aging, row.Aging,
+            row.age_in_days, row.ageInDays, row.stock_aging_days, row.stockAgingDays,
+            row.age, row.Age, row.days_old, row.daysOld, row.item_age, row.itemAge,
+            row.aging_in_days, row.agingInDays, inv?.aging_days, inv?.agingDays, inv?.days
+          ];
+          for (const val of possibleDays) {
+            if (val !== undefined && val !== null && val !== "") {
+              const numVal = Number(val);
+              if (!isNaN(numVal)) {
+                return `${Math.floor(numVal)} Days`;
+              }
+              if (typeof val === "string" && val.trim() !== "") {
+                const cleaned = val.trim();
+                const extractedNum = parseFloat(cleaned.replace(/[^0-9.-]/g, ""));
+                if (!isNaN(extractedNum)) {
+                  return `${Math.floor(extractedNum)} Days`;
+                }
+                return cleaned;
+              }
+            }
+          }
+
+          const dateVal = row.last_movement || row.last_movement_date || row.received_date || row.grn_date || row.created_on || row.created_at || inv?.created_on || inv?.created_at;
+          if (dateVal) {
+            const d = new Date(dateVal);
+            if (!isNaN(d.getTime())) {
+              const diffTime = new Date().getTime() - d.getTime();
+              const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+              return diffDays >= 0 ? `${diffDays} Days` : "0 Days";
+            }
+          }
+
+          return "-";
+        };
+
+        const mapped = data.map((row: any, index: number) => {
+          const inv = findInventoryItem(row);
+          const daysDisplay = getAgingDays(row, inv);
+          const dateVal = row.last_movement || row.received_date || row.created_on || inv?.created_on;
+          let formattedDate = "-";
+          if (dateVal) {
+            try {
+              formattedDate = format(new Date(dateVal), "yyyy-MM-dd");
+            } catch (_e) {
+              formattedDate = String(dateVal);
+            }
+          }
+
+          return {
+            "#": (index + 1) as any,
+            "Item Category": row.item_category || inv?.item_category || "-",
+            "Item Sub Category": row.item_sub_category || inv?.item_sub_category || "-",
+            "Item Name": row.item_name || inv?.item_name || "-",
+            "Size": row.size || inv?.size || "-",
+            "Quantity": formatNum(row.quantity || row.qty || inv?.quantity || 0),
+            "Aging (Days)": daysDisplay,
+            "Last Movement": formattedDate
+          };
+        });
+
+        const hasTotal = mapped.some((r: any) => String(r["Item Category"]).toUpperCase() === "TOTAL");
+        if (!hasTotal && mapped.length > 0) {
+          const totalQty = mapped.reduce((sum: number, r: any) => sum + (parseFloat(String(r["Quantity"]).replace(/,/g, "")) || 0), 0);
+          mapped.push({
+            "#": "",
+            "Item Category": "TOTAL",
+            "Item Sub Category": "",
+            "Item Name": `Total Items: ${mapped.length}`,
+            "Size": "",
+            "Quantity": formatNum(totalQty),
+            "Aging (Days)": "",
+            "Last Movement": ""
+          });
+        }
+        data = mapped;
       } else if (watchedInventoryType === "LOW_STOCK") {
-        data = data.map((row: any, index: number) => ({
-          "#": index + 1,
-          "Item Category": row.item_category || "-",
-          "Item Sub Category": row.item_sub_category || "-",
-          "Item Name": row.item_name || "-",
-          "Size": row.size || "-",
-          "Available Qty": formatNum(row.available_qty || row.quantity),
-          "Reorder Level": formatNum(row.reorder_level || row.reorder_qty),
-          "Status": row.status || "LOW STOCK"
-        }));
+        data = data.map((row: any, index: number) => {
+          const inv = findInventoryItem(row);
+          return {
+            "#": (index + 1) as any,
+            "Item Category": row.item_category || inv?.item_category || "-",
+            "Item Sub Category": row.item_sub_category || inv?.item_sub_category || "-",
+            "Item Name": row.item_name || inv?.item_name || "-",
+            "Size": row.size || inv?.size || "-",
+            "Available Qty": formatNum(row.available_qty || row.quantity),
+            "Reorder Level": formatNum(row.reorder_level || row.reorder_qty || inv?.reorder_level || 0),
+            "Status": row.status || inv?.status || "LOW STOCK"
+          };
+        });
       } else if (watchedInventoryType === "MATERIAL_CONSUMPTION_SUMMARY") {
-        data = data.map((row: any, index: number) => ({
-          "#": index + 1,
-          "Item Category": row.item_category || "-",
-          "Item Sub Category": row.item_sub_category || "-",
-          "Item Name": row.item_name || "-",
-          "Size": row.size || "-",
-          "UOM": row.uom || row.unit_of_measure || "-",
-          "Consumed Qty": formatNum(row.consumed_qty || row.total_consumed || row.quantity),
-          "Unit Price": formatCurrency(row.unit_price || row.rate || 0),
-          "Total Amount": formatCurrency(row.total_amount || row.amount || (parseFloat(row.consumed_qty || row.quantity || 0) * parseFloat(row.unit_price || row.rate || 0)))
-        }));
+        const mapped = data.map((row: any, index: number) => {
+          const inv = findInventoryItem(row);
+          const category = row.item_category || row.category || inv?.item_category || "-";
+          const subCategory = row.item_sub_category || row.sub_category || inv?.item_sub_category || "-";
+          const name = row.item_name || row.description || inv?.item_name || "-";
+          const size = row.size || inv?.size || (inv?.width && inv?.height ? `${inv.width} x ${inv.height}` : "-");
+          const uom = row.uom || row.unit_of_measure || inv?.unit_of_measure || "-";
+          const consumedQty = extractConsumedQty(row);
+          let unitPrice = extractUnitPrice(row, inv);
+          let rawTotal = parseFloat(String(row.total_amount || row.total_cost || row.amount || 0));
+          if (rawTotal > 0 && unitPrice === 0 && consumedQty > 0) {
+            unitPrice = rawTotal / consumedQty;
+          }
+          const totalAmount = rawTotal > 0 ? rawTotal : (consumedQty * unitPrice);
+
+          return {
+            "#": (index + 1) as any,
+            "Item Category": category,
+            "Item Sub Category": subCategory,
+            "Item Name": name,
+            "Size": size,
+            "UOM": uom,
+            "Consumed Qty": formatNum(consumedQty),
+            "Unit Price": formatCurrency(unitPrice),
+            "Total Amount": formatCurrency(totalAmount)
+          };
+        });
+
+        const hasTotal = mapped.some((r: any) => String(r["Item Category"]).toUpperCase() === "TOTAL");
+        if (!hasTotal && mapped.length > 0) {
+          const totalQty = mapped.reduce((sum: number, r: any) => sum + (parseFloat(String(r["Consumed Qty"]).replace(/,/g, "")) || 0), 0);
+          const totalAmt = mapped.reduce((sum: number, r: any) => sum + (parseFloat(String(r["Total Amount"]).replace(/,/g, "")) || 0), 0);
+          mapped.push({
+            "#": "",
+            "Item Category": "TOTAL",
+            "Item Sub Category": "",
+            "Item Name": `Total Items: ${mapped.length}`,
+            "Size": "",
+            "UOM": "",
+            "Consumed Qty": formatNum(totalQty),
+            "Unit Price": "",
+            "Total Amount": formatCurrency(totalAmt)
+          });
+        }
+        data = mapped;
       } else if (watchedInventoryType === "MATERIAL_CONSUMPTION_BY_JOB") {
-        data = data.map((row: any, index: number) => ({
-          "#": index + 1,
-          "Job ID": row.job_number || row.job_id || "-",
-          "Job Name": row.job_name || "-",
-          "Item Category": row.item_category || "-",
-          "Item Sub Category": row.item_sub_category || "-",
-          "Item Name": row.item_name || "-",
-          "Consumed Qty": formatNum(row.consumed_qty || row.quantity),
-          "Unit Price": formatCurrency(row.unit_price || row.rate || 0),
-          "Total Cost": formatCurrency(row.total_cost || row.amount || (parseFloat(row.consumed_qty || row.quantity || 0) * parseFloat(row.unit_price || row.rate || 0)))
-        }));
+        const mapped = data.map((row: any, index: number) => {
+          const inv = findInventoryItem(row);
+
+          let jobKey = row.job_id || row.jobId || row.job_number || row.jobNumber || row.job_no || row.jobNo || row.job_ticket_id || row.job_ticket_no || row.ticket_id || row.ticket_no;
+          if (!jobKey) {
+            const foundKey = Object.keys(row).find(k => k.toLowerCase().includes("job"));
+            if (foundKey) jobKey = row[foundKey];
+          }
+
+          let matchedJob = jobList.find(j => {
+            const fj = j.fullJob || {};
+            return (
+              String(j.value) === String(jobKey) || 
+              String(fj.job_id) === String(jobKey) || 
+              String(fj.id) === String(jobKey) || 
+              String(fj.job_number) === String(jobKey) ||
+              String(fj.job_number) === String(row.job_number || row.job_id) ||
+              (row.job_name && String(fj.job_name || "").toLowerCase() === String(row.job_name || "").toLowerCase())
+            );
+          })?.fullJob;
+
+          if (!matchedJob && issueNotesList.length > 0) {
+            const targetItemId = row.item_id || inv?.item_id;
+            const targetItemName = String(row.item_name || inv?.item_name || "").trim().toLowerCase();
+
+            const foundNote = issueNotesList.find((note: any) => {
+              if (!note.items || !Array.isArray(note.items)) return false;
+              return note.items.some((it: any) => {
+                if (targetItemId && String(it.item_id) === String(targetItemId)) return true;
+                const name = String(it.item_name || "").trim().toLowerCase();
+                return name && targetItemName && (name.includes(targetItemName) || targetItemName.includes(name));
+              });
+            });
+
+            if (foundNote && (foundNote.job_id || foundNote.job_number)) {
+              const noteJobKey = foundNote.job_id || foundNote.job_number;
+              matchedJob = jobList.find(j => {
+                const fj = j.fullJob || {};
+                return (
+                  String(j.value) === String(noteJobKey) || 
+                  String(fj.job_id) === String(noteJobKey) ||
+                  String(fj.id) === String(noteJobKey) ||
+                  String(fj.job_number) === String(noteJobKey)
+                );
+              })?.fullJob;
+            }
+          }
+
+          const selectedJobIdInForm = inventoryForm.watch("job_id");
+          const selectedJobInForm = (selectedJobIdInForm && selectedJobIdInForm !== "ALL") 
+            ? jobList.find(j => String(j.value) === String(selectedJobIdInForm) || String(j.fullJob?.job_id) === String(selectedJobIdInForm))?.fullJob
+            : null;
+
+          const finalJob = matchedJob || selectedJobInForm || {};
+
+          let rawJobId = row.job_number || row.job_id || row.jobId || row.job_no || finalJob.job_number || (finalJob.job_id ? `MPL/${String(finalJob.job_id).padStart(4, "0")}/26/TIEP` : (finalJob.id ? `MPL/${String(finalJob.id).padStart(4, "0")}/26/TIEP` : "-"));
+          let jobIdDisplay = "-";
+          if (rawJobId && rawJobId !== "-") {
+            const strVal = String(rawJobId).trim();
+            if (strVal.startsWith("MPL/")) {
+              jobIdDisplay = strVal;
+            } else if (!isNaN(Number(strVal))) {
+              jobIdDisplay = `MPL/${strVal.padStart(4, "0")}/26/TIEP`;
+            } else {
+              jobIdDisplay = strVal;
+            }
+          }
+
+          const jobNameDisplay = row.job_name || row.jobName || finalJob.job_name || finalJob.name || "-";
+
+          const category = row.item_category || row.category || inv?.item_category || "-";
+          const subCategory = row.item_sub_category || row.sub_category || inv?.item_sub_category || "-";
+          const name = row.item_name || row.description || inv?.item_name || "-";
+          const size = row.size || inv?.size || (inv?.width && inv?.height ? `${inv.width} x ${inv.height}` : "-");
+          const consumedQty = extractConsumedQty(row);
+          let unitPrice = extractUnitPrice(row, inv);
+          let rawTotal = parseFloat(String(row.total_cost || row.total_amount || row.amount || 0));
+          if (rawTotal > 0 && unitPrice === 0 && consumedQty > 0) {
+            unitPrice = rawTotal / consumedQty;
+          }
+          const totalCost = rawTotal > 0 ? rawTotal : (consumedQty * unitPrice);
+
+          return {
+            "#": (index + 1) as any,
+            "Job ID": jobIdDisplay,
+            "Job Name": jobNameDisplay,
+            "Item Category": category,
+            "Item Sub Category": subCategory,
+            "Item Name": name,
+            "Size": size,
+            "Consumed Qty": formatNum(consumedQty),
+            "Unit Price": formatCurrency(unitPrice),
+            "Total Cost": formatCurrency(totalCost)
+          };
+        });
+
+        const hasTotal = mapped.some((r: any) => String(r["Job ID"]).toUpperCase() === "TOTAL" || String(r["Item Category"]).toUpperCase() === "TOTAL");
+        if (!hasTotal && mapped.length > 0) {
+          const totalQty = mapped.reduce((sum: number, r: any) => sum + (parseFloat(String(r["Consumed Qty"]).replace(/,/g, "")) || 0), 0);
+          const totalCost = mapped.reduce((sum: number, r: any) => sum + (parseFloat(String(r["Total Cost"]).replace(/,/g, "")) || 0), 0);
+          mapped.push({
+            "#": "",
+            "Job ID": "TOTAL",
+            "Job Name": `Total Items: ${mapped.length}`,
+            "Item Category": "",
+            "Item Sub Category": "",
+            "Item Name": "",
+            "Size": "",
+            "Consumed Qty": formatNum(totalQty),
+            "Unit Price": "",
+            "Total Cost": formatCurrency(totalCost)
+          });
+        }
+        data = mapped;
       }
     }
 
