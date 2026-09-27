@@ -170,7 +170,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const homeHref = getDefaultRoute(user?.user_role);
 
   return (
-    <Sidebar {...props}>
+    <Sidebar className="no-print" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>

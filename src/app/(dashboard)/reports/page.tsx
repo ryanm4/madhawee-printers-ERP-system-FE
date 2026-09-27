@@ -362,8 +362,10 @@ function ReportsPage() {
           from_date: data.from_date,
           to_date: data.to_date,
         }),
-        ...(data.report_type === "STOCK_VALUE" && {
+        ...(data.item_category && data.item_category !== "ALL" && {
           item_category: data.item_category,
+        }),
+        ...(data.item_sub_category && data.item_sub_category !== "ALL" && {
           item_sub_category: data.item_sub_category,
         }),
         ...(data.report_type === "MATERIAL_CONSUMPTION_SUMMARY" && {
@@ -435,16 +437,67 @@ function ReportsPage() {
     }
   };
 
-  const clearResultsAndReset = (tab: string) => {
+  const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     setReportData([]);
+    setGrandTotal(null);
+  };
+
+  const resetGeneralFilters = () => {
+    const currentType = generalForm.getValues("reportType");
+    generalForm.reset({
+      reportType: currentType,
+      fromDate: defaultFromDate,
+      toDate: defaultToDate,
+      customer_id: undefined,
+      product_type: "",
+    });
+    setSelectedDispatchStatus("all");
+    setReportData([]);
+    setGrandTotal(null);
+  };
+
+  const resetInventoryFilters = () => {
+    const currentType = inventoryForm.getValues("report_type");
+    inventoryForm.reset({
+      report_type: currentType,
+      from_date: defaultFromDate,
+      to_date: defaultToDate,
+      item_category: "ALL",
+      item_sub_category: "ALL",
+      supplier_name: "ALL",
+      item_id: "ALL",
+      job_id: "ALL",
+    });
+    setReportData([]);
+    setGrandTotal(null);
+  };
+
+  const resetSalesFilters = () => {
+    const currentType = salesForm.getValues("report_type");
+    salesForm.reset({
+      report_type: currentType,
+      from_date: defaultFromDate,
+      to_date: defaultToDate,
+    });
     setSelectedSalesCustomerId("");
     setSelectedSalesCurrency("");
     setSelectedSalespersonName("");
-    generalForm.reset();
-    inventoryForm.reset();
-    salesForm.reset();
-    quotationForm.reset();
+    setReportData([]);
+    setGrandTotal(null);
+  };
+
+  const resetQuotationFilters = () => {
+    const currentType = quotationForm.getValues("reportType");
+    quotationForm.reset({
+      reportType: currentType,
+      fromDate: defaultFromDate,
+      toDate: defaultToDate,
+      customer_id: undefined,
+      salesperson: undefined,
+    });
+    setReportData([]);
+    setGrandTotal(null);
   };
 
   // Watch values for dynamic field rendering
@@ -495,7 +548,7 @@ function ReportsPage() {
   const extractUnitPrice = (row: any, inv: any) => {
     if (!row) row = {};
     const priceCandidates = [
-      row.unit_price, row.unitPrice, row.rate, row.price, row.item_unit_price, row.itemUnitPrice,
+      row.unit_rate, row.unit_price, row.unitPrice, row.rate, row.price, row.item_unit_price, row.itemUnitPrice,
       row.unit_cost, row.unitCost, row.cost_price, row.costPrice, row.cost, row.purchase_price,
       row.purchasePrice, row.price_per_unit, row.rate_per_unit, row.avg_cost, row.avgCost,
       inv?.unit_price, inv?.unitPrice, inv?.rate, inv?.price, inv?.unit_cost, inv?.unitCost,
@@ -504,7 +557,8 @@ function ReportsPage() {
     ];
     for (const val of priceCandidates) {
       if (val !== undefined && val !== null && val !== "") {
-        const p = parseFloat(String(val));
+        const cleaned = String(val).replace(/[^0-9.-]/g, '');
+        const p = parseFloat(cleaned);
         if (!isNaN(p) && p > 0) return p;
       }
     }
@@ -1142,11 +1196,33 @@ function ReportsPage() {
           const uom = row.uom || row.unit_of_measure || inv?.unit_of_measure || "-";
           const consumedQty = extractConsumedQty(row);
           let unitPrice = extractUnitPrice(row, inv);
-          let rawTotal = parseFloat(String(row.total_amount || row.total_cost || row.amount || 0));
+          
+          let rawTotal = 0;
+          if (row.total_value !== undefined && row.total_value !== null) {
+            rawTotal = parseFloat(String(row.total_value).replace(/[^0-9.-]/g, '')) || 0;
+          } else if (row.total_amount !== undefined && row.total_amount !== null) {
+            rawTotal = parseFloat(String(row.total_amount).replace(/[^0-9.-]/g, '')) || 0;
+          }
+
           if (rawTotal > 0 && unitPrice === 0 && consumedQty > 0) {
             unitPrice = rawTotal / consumedQty;
           }
           const totalAmount = rawTotal > 0 ? rawTotal : (consumedQty * unitPrice);
+
+          const formattedUnitPrice = unitPrice > 0 ? formatCurrency(unitPrice) : (row.unit_rate && row.unit_rate !== "LKR 0.00" ? String(row.unit_rate) : "LKR 0.00");
+          const formattedTotalAmount = totalAmount > 0 ? formatCurrency(totalAmount) : (row.total_value && row.total_value !== "LKR 0.00" ? String(row.total_value) : "LKR 0.00");
+
+          const jobs = (Array.isArray(row.jobs) ? row.jobs : []).map((j: any) => {
+            const jQty = typeof j.consumed_qty === 'number' ? j.consumed_qty : (parseFloat(String(j.consumed_qty || 0).replace(/,/g, '')) || 0);
+            let jRate = parseFloat(String(j.unit_rate || '').replace(/[^0-9.-]/g, '')) || unitPrice;
+            let jVal = parseFloat(String(j.total_value || '').replace(/[^0-9.-]/g, '')) || (jQty * jRate);
+            return {
+              ...j,
+              consumed_qty: jQty,
+              unit_rate: jRate > 0 ? formatCurrency(jRate) : "LKR 0.00",
+              total_value: jVal > 0 ? formatCurrency(jVal) : "LKR 0.00",
+            };
+          });
 
           return {
             "#": (index + 1) as any,
@@ -1156,8 +1232,9 @@ function ReportsPage() {
             "Size": size,
             "UOM": uom,
             "Consumed Qty": formatNum(consumedQty),
-            "Unit Price": formatCurrency(unitPrice),
-            "Total Amount": formatCurrency(totalAmount)
+            "Unit Price": formattedUnitPrice,
+            "Total Amount": formattedTotalAmount,
+            jobs: jobs
           };
         });
 
@@ -1174,7 +1251,8 @@ function ReportsPage() {
             "UOM": "",
             "Consumed Qty": formatNum(totalQty),
             "Unit Price": "",
-            "Total Amount": formatCurrency(totalAmt)
+            "Total Amount": formatCurrency(totalAmt),
+            jobs: []
           });
         }
         data = mapped;
@@ -1371,29 +1449,31 @@ function ReportsPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3 w-full min-w-0 overflow-hidden">
-      <PageTitleWithBreadcrumb
-        title="Reports Management"
-        breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
-      />
+      <div className="no-print">
+        <PageTitleWithBreadcrumb
+          title="Reports Management"
+          breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
+        />
+      </div>
 
-      <Tabs value={activeTab} onValueChange={clearResultsAndReset} className="w-full mt-4">
-        <TabsList className="grid w-full max-w-[650px] grid-cols-4 bg-muted">
-          <TabsTrigger value="general" onClick={() => { setReportData([]); setGrandTotal(null); }}>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full mt-4">
+        <TabsList className="grid w-full max-w-[650px] grid-cols-4 bg-muted no-print">
+          <TabsTrigger value="general">
             General Reports
           </TabsTrigger>
-          <TabsTrigger value="inventory" onClick={() => { setReportData([]); setGrandTotal(null); }}>
+          <TabsTrigger value="inventory">
             Inventory Reports
           </TabsTrigger>
-          <TabsTrigger value="sales" onClick={() => { setReportData([]); setGrandTotal(null); }}>
+          <TabsTrigger value="sales">
             Sales Reports
           </TabsTrigger>
-          <TabsTrigger value="quotation" onClick={() => { setReportData([]); setGrandTotal(null); }}>
+          <TabsTrigger value="quotation">
             Quotations
           </TabsTrigger>
         </TabsList>
 
         {/* General Reports Tab */}
-        <TabsContent value="general" className="mt-4 border p-4 rounded-lg bg-card">
+        <TabsContent value="general" className="mt-4 border p-4 rounded-lg bg-card no-print">
           <Form {...generalForm}>
             <form onSubmit={generalForm.handleSubmit(handleGeneralSubmit)} className="flex flex-wrap gap-4 items-end">
               <FormField
@@ -1550,7 +1630,7 @@ function ReportsPage() {
                 </div>
               )}
 
-              <Button variant="outline" type="button" className="h-10" onClick={() => clearResultsAndReset('general')}>
+              <Button variant="outline" type="button" className="h-10" onClick={resetGeneralFilters}>
                 Reset
               </Button>
               <Button type="submit" className="bg-primary text-white h-10">
@@ -1561,7 +1641,7 @@ function ReportsPage() {
         </TabsContent>
 
         {/* Inventory Reports Tab */}
-        <TabsContent value="inventory" className="mt-4 border p-4 rounded-lg bg-card">
+        <TabsContent value="inventory" className="mt-4 border p-4 rounded-lg bg-card no-print">
           <Form {...inventoryForm}>
             <form onSubmit={inventoryForm.handleSubmit(handleInventorySubmit)} className="flex flex-wrap gap-4 items-end">
               <FormField
@@ -1638,7 +1718,7 @@ function ReportsPage() {
                 </>
               )}
 
-              {["STOCK_VALUE", "GRN_REPORT", "CURRENT_STOCK", "STOCK_AGING", "LOW_STOCK", "MATERIAL_CONSUMPTION_SUMMARY"].includes(inventoryForm.watch("report_type")) && (
+              {["STOCK_VALUE", "GRN_REPORT", "CURRENT_STOCK", "STOCK_AGING", "LOW_STOCK", "MATERIAL_CONSUMPTION_SUMMARY", "MATERIAL_CONSUMPTION_BY_JOB"].includes(inventoryForm.watch("report_type")) && (
                 <>
                   <FormField
                     control={inventoryForm.control}
@@ -1742,7 +1822,7 @@ function ReportsPage() {
                 />
               )}
 
-              <Button variant="outline" type="button" className="h-10" onClick={() => clearResultsAndReset('inventory')}>
+              <Button variant="outline" type="button" className="h-10" onClick={resetInventoryFilters}>
                 Reset
               </Button>
               <Button type="submit" className="bg-primary text-white h-10">
@@ -1753,7 +1833,7 @@ function ReportsPage() {
         </TabsContent>
 
         {/* Sales Reports Tab */}
-        <TabsContent value="sales" className="mt-4 border p-4 rounded-lg bg-card">
+        <TabsContent value="sales" className="mt-4 border p-4 rounded-lg bg-card no-print">
           <Form {...salesForm}>
             <form onSubmit={salesForm.handleSubmit(handleSalesSubmit)} className="flex flex-wrap gap-4 items-end">
               <FormField
@@ -1881,7 +1961,7 @@ function ReportsPage() {
                 </div>
               )}
 
-              <Button variant="outline" type="button" className="h-10" onClick={() => clearResultsAndReset('sales')}>
+              <Button variant="outline" type="button" className="h-10" onClick={resetSalesFilters}>
                 Reset
               </Button>
               <Button type="submit" className="bg-primary text-white h-10">
@@ -1892,7 +1972,7 @@ function ReportsPage() {
         </TabsContent>
 
         {/* Quotation Reports Tab */}
-        <TabsContent value="quotation" className="mt-4 border p-4 rounded-lg bg-card">
+        <TabsContent value="quotation" className="mt-4 border p-4 rounded-lg bg-card no-print">
           <Form {...quotationForm}>
             <form onSubmit={quotationForm.handleSubmit(handleQuotationSubmit)} className="flex flex-wrap gap-4 items-end">
               <FormField
@@ -2014,7 +2094,7 @@ function ReportsPage() {
                 )}
               />
 
-              <Button variant="outline" type="button" className="h-10" onClick={() => clearResultsAndReset('quotation')}>
+              <Button variant="outline" type="button" className="h-10" onClick={resetQuotationFilters}>
                 Reset
               </Button>
               <Button type="submit" className="bg-primary text-white h-10">
