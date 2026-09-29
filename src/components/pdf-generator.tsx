@@ -47,6 +47,21 @@ const hexToRgb = (hex: string) => {
     : rgb(0, 0, 0);
 };
 
+// Standard PDF fonts only cover WinAnsi characters; anything else (Sinhala, Tamil, emoji)
+// would make pdf-lib throw and abort the whole PDF, so print it as "?" instead
+const toPrintableText = (text: string, font: PDFFont): string =>
+  Array.from(text.replace(/\t/g, "    "))
+    .map((ch) => {
+      if (ch === "\n") return ch;
+      try {
+        font.encodeText(ch);
+        return ch;
+      } catch {
+        return "?";
+      }
+    })
+    .join("");
+
 // Start of text wrapping helper
 const wrapText = (
   text: string,
@@ -634,6 +649,40 @@ export const generateQuotationPDF = async (
     });
 
     moveDown(20);
+
+    // --- NOTES ---
+    const notes = (data.notes || "").trim();
+    if (notes) {
+      currentPage = checkPageBreak(50);
+      currentPage.drawText("Notes", {
+        x: margin,
+        y: yPosition,
+        size: 12,
+        font: helveticaBold,
+        color: colors.primary,
+      });
+      moveDown(15);
+
+      const noteLines = wrapText(
+        toPrintableText(notes, helvetica),
+        width - margin * 2,
+        helvetica,
+        9
+      );
+      noteLines.forEach((line) => {
+        currentPage = checkPageBreak(12);
+        currentPage.drawText(line.trim(), {
+          x: margin,
+          y: yPosition,
+          size: 9,
+          font: helvetica,
+          color: colors.text,
+        });
+        moveDown(12);
+      });
+
+      moveDown(15);
+    }
 
     // --- TERMS & CONDITIONS ---
     if (companyData.payment_terms) {

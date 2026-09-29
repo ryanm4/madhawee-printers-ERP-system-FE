@@ -70,7 +70,7 @@ import {
 } from "@/modules/purchase-order/types";
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { PaperTypeCombobox } from "../../_components/paper-type-combobox";
-import { JobTicketPrintDialog } from "../../_components/job-ticket-print-dialog";
+import { JobTicketPrintDialog, joinDistinct } from "../../_components/job-ticket-print-dialog";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
 import {
   CREATE_TICKETS,
@@ -428,8 +428,7 @@ function EditJobTicket() {
         toast.success("Job Ticket updated successfully");
 
         // Build print data and show print dialog
-        const firstPaperType = data.paperTypes?.[0];
-        const allRawMaterials =
+                const allRawMaterials =
           data.paperTypes?.flatMap((p) => p.rawMaterials || []) || [];
         const matchingPo = purchaseOrderData.find(
           (po) => String(po.po_id) === data.customer_po
@@ -440,11 +439,11 @@ function EditJobTicket() {
           orderReceivedDate: data.orderReceivedDate,
           quantity: data.quantity,
           jobOpenDate: data.jobOpenDate || new Date(),
-          paperType: firstPaperType?.paper,
+          paperType: joinDistinct((data.paperTypes || []).map((p) => p.paper)),
           customer:
             customerData.find((c) => String(c.customer_id) === data.customer)
               ?.company_name || data.customer,
-          coating: firstPaperType?.coating,
+          coating: joinDistinct((data.paperTypes || []).map((p) => p.coating)),
           jobName: data.jobName,
           customerDeliveryDate: data.deliveryDate,
           packingDate: data.packingDate,
@@ -455,6 +454,10 @@ function EditJobTicket() {
           remarks: data.remarks,
           oldPlatesQuantity: data.oldPlatesQuantity,
           newPlatesQuantity: data.newPlatesQuantity,
+          oldPlatesStatus: data.oldPlatesStatus || undefined,
+          oldPlatesRemarks: data.oldPlatesRemarks || undefined,
+          newPlatesStatus: data.newPlatesStatus || undefined,
+          newPlatesRemarks: data.newPlatesRemarks || undefined,
           inks: (data.inks || [])
             .filter((i) => i.ink && i.ink.trim() !== "")
             .map((i) => ({

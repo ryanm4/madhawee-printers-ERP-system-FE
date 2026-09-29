@@ -128,7 +128,20 @@ export function DispatchPrintDialog({
 }
 
 export function buildDispatchPrintHTML(data: DispatchPrintData): string {
-  const safe = (val: string | number | null | undefined) => (val !== undefined && val !== null && String(val).trim() !== "" ? String(val).replace(/\n/g, '<br/>') : "&nbsp;");
+  // Escape user text so values containing < or & print as typed and can't inject markup
+  const safe = (val: string | number | null | undefined) =>
+    val !== undefined && val !== null && String(val).trim() !== ""
+      ? String(val)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/\n/g, "<br/>")
+      : "&nbsp;";
+  const extraRemarks =
+    data.remarks && data.remarks.trim() && data.remarks.trim() !== (data.description || "").trim()
+      ? data.remarks
+      : "";
   const formattedDate = data.dispatch_date ? format(new Date(data.dispatch_date), "dd/MM/yyyy") : "";
   const formattedTime = data.dispatch_date ? format(new Date(data.dispatch_date), "hh:mm a") : "";
 
@@ -335,6 +348,12 @@ export function buildDispatchPrintHTML(data: DispatchPrintData): string {
           <div class="lbl">Address & Tel</div>
           <div class="val">: ${safe(data.customer_address)}${data.customer_phone ? " / " + data.customer_phone : ""}</div>
         </div>
+        ${data.contact_person && data.contact_person.trim()
+          ? `<div class="customer-info-line">
+          <div class="lbl">Contact Person</div>
+          <div class="val">: ${safe(data.contact_person)}</div>
+        </div>`
+          : ""}
         <div class="customer-info-line" style="margin-top: 15px;">
           <div class="lbl">Delivery To</div>
           <div class="val">: ${safe(data.delivery_address || "Same as above")}</div>
@@ -366,7 +385,7 @@ export function buildDispatchPrintHTML(data: DispatchPrintData): string {
           <td style="padding-top: 15px; font-size: 12px; line-height: 1.5;">
             <div style="font-weight: bold;text-align: center; margin-bottom: 4px;">${safe(data.job_name)}</div>
           </td>
-          <td style="padding-top: 15px; text-align: center;">${safe(data.description)}</td>
+          <td style="padding-top: 15px; text-align: center;">${safe(data.description)}${extraRemarks ? `<div style="margin-top: 6px;">${safe(extraRemarks)}</div>` : ""}</td>
         </tr>
         <!-- Fewer dummy rows to keep on one page -->
         ${[1, 2, 3].map(() => `<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>`).join("")}
