@@ -11,6 +11,7 @@ export const userSchema = z.object({
     )
     .or(z.literal(""))
     .optional(),
+  phone: z.string().optional(),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -18,5 +19,6 @@ export const editUserSchema = z.object({
   user_role: z.string().min(1, "User type is required"),
   name: z.string().min(1, "Name is required"),
   email: z.string().optional(),
+  phone: z.string().optional(),
   password: z.string().optional(),
 });

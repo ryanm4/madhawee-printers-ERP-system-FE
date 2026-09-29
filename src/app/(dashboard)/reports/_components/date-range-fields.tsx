@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Control, FieldValues, Path, PathValue, UseFormReturn } from "react-hook-form";
+import { Control, FieldValues, Path, PathValue, UseFormReturn, useWatch } from "react-hook-form";
 import { endOfMonth, format, startOfMonth, startOfYear, subMonths } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -60,8 +60,9 @@ interface DateRangeFieldsProps<T extends FieldValues> {
 
 /** From / To pickers with one-click ranges for the periods people report on most. */
 export function DateRangeFields<T extends FieldValues>({ form, fromName, toName }: DateRangeFieldsProps<T>) {
-    const from = form.watch(fromName);
-    const to = form.watch(toName);
+    // useWatch (not form.watch) so the React Compiler re-renders this when the dates change
+    const from = useWatch({ control: form.control, name: fromName });
+    const to = useWatch({ control: form.control, name: toName });
 
     return (
         <div className="flex flex-wrap items-end gap-3">

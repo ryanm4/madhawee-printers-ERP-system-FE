@@ -40,6 +40,7 @@ function CreateUser() {
     user_role: "",
     name: "",
     email: "",
+    phone: "",
     password: "",
   };
   const form = useForm<UserFormValues>({
@@ -48,13 +49,13 @@ function CreateUser() {
   });
 
   const onSubmit: SubmitHandler<UserFormValues> = async (data) => {
-    debugger;
     try {
       setIsLoading(true);
       const payload: CREATE_USER = {
         user_role: data.user_role,
         name: data.name,
         email: data.email,
+        phone: data.phone || undefined,
         password: data.password,
       };
       const response = await userApi.create(payload);
@@ -160,6 +161,15 @@ function CreateUser() {
                   <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter Email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              ))}
+              {renderFormField("phone", ({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter Phone Number" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
