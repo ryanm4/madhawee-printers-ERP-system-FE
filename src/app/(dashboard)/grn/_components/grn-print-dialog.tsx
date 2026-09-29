@@ -78,7 +78,19 @@ export function GRNPrintDialog({
 }
 
 export function buildGRNPrintHTML(data: GRN, inventoryData?: GET_ALL_INVENTORY[]): string {
-  const safe = (val: string | number | null | undefined) => (val !== undefined && val !== null && String(val).trim() !== "" ? String(val).replace(/\n/g, '<br/>') : "");
+  // Escape user text so values containing < or & print as typed and can't inject markup
+  const safe = (val: string | number | null | undefined) =>
+    val !== undefined && val !== null && String(val).trim() !== ""
+      ? String(val)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/\n/g, "<br/>")
+      : "";
+  const metaItem = (label: string, value: string | number | null | undefined) =>
+    `<div class="meta-item"><div class="meta-label">${label}</div><div class="meta-value">${safe(value)}</div></div>`;
+  const isLkr = !data.currency || data.currency.toUpperCase() === "LKR";
 
   let formattedDate = "";
   try {
@@ -141,6 +153,9 @@ export function buildGRNPrintHTML(data: GRN, inventoryData?: GET_ALL_INVENTORY[]
             <div class="meta-label">Advice No :</div>
             <div class="meta-value"></div>
           </div>
+          ${data.stock_location ? metaItem("Location :", data.stock_location) : ""}
+          ${data.payment_method ? metaItem("Payment :", data.payment_method) : ""}
+          ${data.payee_name ? metaItem("Payee :", data.payee_name) : ""}
         </div>
 
         <table class="items-table">
@@ -151,7 +166,7 @@ export function buildGRNPrintHTML(data: GRN, inventoryData?: GET_ALL_INVENTORY[]
               <th style="width: 45%;">Description</th>
               <th style="width: 10%;">Qty</th>
               <th style="width: 10%;">Rate</th>
-              <th colspan="2" style="width: 20%;">Value (Rs. / Cts.)</th>
+              <th colspan="2" style="width: 20%;">Value (${isLkr ? "Rs. / Cts." : safe(data.currency)})</th>
             </tr>
           </thead>
           <tbody>
@@ -177,7 +192,8 @@ export function buildGRNPrintHTML(data: GRN, inventoryData?: GET_ALL_INVENTORY[]
           baseName = baseName.substring(0, baseName.length - size.length - 2).trim();
         }
       }
-      const displayDescription = size ? `${safe(baseName)} (${safe(size)})` : safe(baseName);
+      // Escaped once, below, when written into the cell
+      const displayDescription = size ? `${baseName} (${size})` : baseName;
       return `
               <tr>
                 <td>${idx + 1}</td>
@@ -208,6 +224,10 @@ export function buildGRNPrintHTML(data: GRN, inventoryData?: GET_ALL_INVENTORY[]
             </tr>
           </tbody>
         </table>
+
+        ${data.remarks && String(data.remarks).trim()
+          ? `<div class="meta-item" style="margin: 6px 0;"><div class="meta-label">Remarks :</div><div class="meta-value">${safe(data.remarks)}</div></div>`
+          : ""}
 
         <div class="acknowledgement">
           I acknowledge the receipt of the above goods in good order.

@@ -30,7 +30,11 @@ export interface JobTicketPrintData {
   batchRef?: string;
   remarks?: string;
   oldPlatesQuantity?: string;
+  oldPlatesStatus?: string;
+  oldPlatesRemarks?: string;
   newPlatesQuantity?: string;
+  newPlatesStatus?: string;
+  newPlatesRemarks?: string;
   inks?: {
     ink: string;
     quantity?: string;
@@ -51,6 +55,17 @@ interface JobTicketPrintDialogProps {
   onOpenChange: (open: boolean) => void;
   data: JobTicketPrintData;
   onDecline?: () => void;
+}
+
+/** Unique, non-empty values joined for one print cell, e.g. several paper types on one job */
+export function joinDistinct(values: (string | null | undefined)[]): string | undefined {
+  const unique = Array.from(new Set(values.map((v) => (v ?? "").trim()).filter(Boolean)));
+  return unique.length > 0 ? unique.join(", ") : undefined;
+}
+
+/** Status and remarks share the Remarks column, e.g. "NOT AVAILABLE - order by Friday" */
+function statusAndRemarks(status?: string, remarks?: string): string {
+  return [status, remarks].map((v) => (v ?? "").trim()).filter(Boolean).join(" - ");
 }
 
 function formatDate(date?: Date | string): string {
@@ -171,7 +186,16 @@ export function JobTicketPrintDialog({
 }
 
 export function buildPrintHTML(data: JobTicketPrintData): string {
-  const safe = (val: unknown) => (val !== undefined && val !== null && String(val).trim() !== "" ? String(val).replace(/\n/g, '<br/>') : "&nbsp;");
+  // Escape user text so remarks containing < or & print as typed and can't inject markup
+  const safe = (val: unknown) =>
+    val !== undefined && val !== null && String(val).trim() !== ""
+      ? String(val)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/\n/g, "<br/>")
+      : "&nbsp;";
   const td = (content: string, style = "") =>
     `<td style="border:1px solid #333;padding:5px 8px;${style}">${safe(content)}</td>`;
   const tdLabel = (content: string, style = "") =>
@@ -349,29 +373,29 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
       <td rowspan="2" colspan="2" class="group-label">CTP Plates</td>
       <td colspan="4" style="padding-left: 24px;">Old Plates</td>
       <td colspan="2" class="center">${safe(formatNumber(data.oldPlatesQuantity))}</td>
-      <td colspan="4">&nbsp;</td>
+      <td colspan="4">${safe(statusAndRemarks(data.oldPlatesStatus, data.oldPlatesRemarks))}</td>
     </tr>
     <tr>
       <td colspan="4" style="padding-left: 24px;">New Plates</td>
       <td colspan="2" class="center">${safe(formatNumber(data.newPlatesQuantity))}</td>
-      <td colspan="4">&nbsp;</td>
+      <td colspan="4">${safe(statusAndRemarks(data.newPlatesStatus, data.newPlatesRemarks))}</td>
     </tr>
 
     <!-- Raw Materials -->
     ${(data.rawMaterials || []).length > 0
       ? `<tr>
       <td rowspan="${data.rawMaterials!.length}" colspan="2" class="group-label">Raw Material</td>
-      <td colspan="4" style="padding-left: 24px;">${safe(data.rawMaterials![0].material_name)} ${data.rawMaterials![0].size ? "- " + data.rawMaterials![0].size : ""}</td>
+      <td colspan="4" style="padding-left: 24px;">${safe(data.rawMaterials![0].material_name)} ${data.rawMaterials![0].size ? "- " + safe(data.rawMaterials![0].size) : ""}</td>
       <td colspan="2" class="center">${safe(formatNumber(data.rawMaterials![0].quantity))}</td>
-      <td colspan="4">${safe(data.rawMaterials![0].remarks)}</td>
+      <td colspan="4">${safe(statusAndRemarks(data.rawMaterials![0].status, data.rawMaterials![0].remarks))}</td>
     </tr>${(data.rawMaterials || [])
         .slice(1)
         .map(
           (rm) => `
     <tr>
-      <td colspan="4" style="padding-left: 24px;">${safe(rm.material_name)} ${rm.size ? "- " + rm.size : ""}</td>
+      <td colspan="4" style="padding-left: 24px;">${safe(rm.material_name)} ${rm.size ? "- " + safe(rm.size) : ""}</td>
       <td colspan="2" class="center">${safe(formatNumber(rm.quantity))}</td>
-      <td colspan="4">${safe(rm.remarks)}</td>
+      <td colspan="4">${safe(statusAndRemarks(rm.status, rm.remarks))}</td>
     </tr>`
         )
         .join("")}`
@@ -389,7 +413,7 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
       <td rowspan="${data.inks!.length}" colspan="2" class="group-label">Ink & Others</td>
       <td colspan="4" style="padding-left: 24px;">${safe(data.inks![0].ink)}</td>
       <td colspan="2" class="center">${safe(formatNumber(data.inks![0].quantity))}</td>
-      <td colspan="4">${safe(data.inks![0].remarks)}</td>
+      <td colspan="4">${safe(statusAndRemarks(data.inks![0].status, data.inks![0].remarks))}</td>
     </tr>${(data.inks || [])
         .slice(1)
         .map(
@@ -397,7 +421,7 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
     <tr>
       <td colspan="4" style="padding-left: 24px;">${safe(ink.ink)}</td>
       <td colspan="2" class="center">${safe(formatNumber(ink.quantity))}</td>
-      <td colspan="4">${safe(ink.remarks)}</td>
+      <td colspan="4">${safe(statusAndRemarks(ink.status, ink.remarks))}</td>
     </tr>`
         )
         .join("")}`

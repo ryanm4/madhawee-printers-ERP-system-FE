@@ -191,7 +191,11 @@ export interface JobTicketPrintData {
   batchRef?: string;
   remarks?: string;
   oldPlatesQuantity?: string;
+  oldPlatesStatus?: string;
+  oldPlatesRemarks?: string;
   newPlatesQuantity?: string;
+  newPlatesStatus?: string;
+  newPlatesRemarks?: string;
   inks?: {
     ink: string;
     quantity?: string;

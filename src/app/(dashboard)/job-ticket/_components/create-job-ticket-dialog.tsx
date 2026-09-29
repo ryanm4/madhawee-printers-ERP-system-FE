@@ -92,7 +92,7 @@ interface CreateJobTicketDialogProps {
 import { PaperTypeCombobox } from "./paper-type-combobox";
 import { Combobox } from "@/components/shared/combobox";
 import { getUser } from "@/lib/auth";
-import { JobTicketPrintDialog } from "./job-ticket-print-dialog";
+import { JobTicketPrintDialog, joinDistinct } from "./job-ticket-print-dialog";
 
 export function CreateJobTicketDialog({
   open,
@@ -336,8 +336,7 @@ export function CreateJobTicketDialog({
       toast.success("Job Ticket Created Successfully");
 
       // Build print data from submitted form values
-      const firstPaperType = data.paperTypes?.[0];
-      const allRawMaterials =
+            const allRawMaterials =
         data.paperTypes?.flatMap((p) => p.rawMaterials || []) || [];
       const pd: JobTicketPrintData = {
         jobNumber: jobSeqData
@@ -347,11 +346,11 @@ export function CreateJobTicketDialog({
         orderReceivedDate: data.orderReceivedDate,
         quantity: data.quantity,
         jobOpenDate: data.jobOpenDate || new Date(),
-        paperType: firstPaperType?.paper,
+        paperType: joinDistinct((data.paperTypes || []).map((p) => p.paper)),
         customer:
           customerData.find((c) => String(c.customer_id) === data.customer)
             ?.company_name || data.customer,
-        coating: firstPaperType?.coating,
+        coating: joinDistinct((data.paperTypes || []).map((p) => p.coating)),
         jobName: data.jobName,
         customerDeliveryDate: data.deliveryDate,
         packingDate: data.packingDate,
@@ -362,6 +361,10 @@ export function CreateJobTicketDialog({
         remarks: data.remarks,
         oldPlatesQuantity: data.oldPlatesQuantity,
         newPlatesQuantity: data.newPlatesQuantity,
+        oldPlatesStatus: data.oldPlatesStatus || undefined,
+        oldPlatesRemarks: data.oldPlatesRemarks || undefined,
+        newPlatesStatus: data.newPlatesStatus || undefined,
+        newPlatesRemarks: data.newPlatesRemarks || undefined,
         inks: (data.inks || [])
           .filter((i) => i.ink && i.ink.trim() !== "")
           .map((i) => ({

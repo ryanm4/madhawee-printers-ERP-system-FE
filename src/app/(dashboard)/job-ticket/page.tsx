@@ -20,6 +20,7 @@ import { PageLoader } from "@/components/shared/loader";
 import {
   JobTicketPrintDialog,
   handleJobTicketPrint,
+  joinDistinct,
 } from "./_components/job-ticket-print-dialog";
 import { CustomerApi } from "@/modules/customer/api";
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
@@ -123,8 +124,9 @@ function JobTicketComponent() {
               (c: CUSTOMER) => String(c.customer_id) === String(ticket.customer_id)
             )?.company_name || ticket.customer_id;
 
-          const firstPaperType =
-            ticket.paperCoating?.[0] || ticket.paper_coating?.[0];
+          // A job can have several paper/coating rows; print all of them
+          const paperRows: any[] =
+            ticket.paperCoating || ticket.paper_coating || [];
           const allRawMaterials = (
             ticket.paperCoating ||
             ticket.paper_coating ||
@@ -137,9 +139,9 @@ function JobTicketComponent() {
             orderReceivedDate: ticket.order_received_date,
             quantity: ticket.quantity,
             jobOpenDate: ticket.job_open_date || ticket.created_on,
-            paperType: firstPaperType?.paper || firstPaperType?.paper_type,
+            paperType: joinDistinct(paperRows.map((p) => p?.paper || p?.paper_type)),
             customer: customerName,
-            coating: firstPaperType?.coating,
+            coating: joinDistinct(paperRows.map((p) => p?.coating)),
             jobName: ticket.job_name,
             customerDeliveryDate: ticket.delivery_date || undefined,
             packingDate: ticket.packing_date || undefined,
@@ -153,6 +155,10 @@ function JobTicketComponent() {
             remarks: ticket.remarks,
             oldPlatesQuantity: ticket.old_plate_quantity !== undefined && ticket.old_plate_quantity !== null ? String(ticket.old_plate_quantity) : undefined,
             newPlatesQuantity: ticket.new_plate_quantity !== undefined && ticket.new_plate_quantity !== null ? String(ticket.new_plate_quantity) : undefined,
+            oldPlatesStatus: ticket.old_plate_status || undefined,
+            oldPlatesRemarks: ticket.old_plate_remarks || undefined,
+            newPlatesStatus: ticket.new_plate_status || undefined,
+            newPlatesRemarks: ticket.new_plate_remarks || undefined,
             rawMaterials: allRawMaterials,
             inks: ticket.inks
               ?.filter((v: any, i: number, a: any[]) => a.findIndex((t: any) => (t.ink === v.ink && t.quantity === v.quantity && t.status === v.status && t.remarks === v.remarks)) === i)
