@@ -671,20 +671,22 @@ function CreateQuotation({
                   {/* Marketing Person */}
                   {renderFormField("marketing_person", ({ field }) => (
                     <FormItem>
-                      <FormLabel>Marketing Person</FormLabel>
+                      <FormLabel>
+                        Marketing Person <span className="text-red-500">*</span>
+                      </FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select contact person" />
+                            <SelectValue placeholder="Select marketing person" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {userList.map((cp, idx) => (
                             <SelectItem key={idx} value={cp.name}>
-                              {cp.name}
+                              {cp.name}{cp.phone ? ` (${cp.phone})` : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>

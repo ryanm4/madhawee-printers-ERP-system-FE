@@ -20,7 +20,7 @@ export const createQuotationSchema = z.object({
     tax_type_id: z.coerce.number().min(0, "Tax type is required"),
     currency: z.string().min(1, "Currency required"),
     contact_person: z.string().optional(),
-    marketing_person: z.string().optional(),
+    marketing_person: z.string().trim().min(1, "Select a marketing person"),
     notes: z.string().optional(),
     status: z.string().min(1, "Status required"),
 

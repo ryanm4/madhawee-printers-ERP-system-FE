@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/error-utils";
 import { companyData as mockCompanyData } from "@/modules/quotations/mockData";
 import { QUOTATIONS, QuotationItems } from "@/modules/quotations/types";
+import { userApi } from "@/modules/users/api";
 
 const getSvgAsPngBytes = (url: string): Promise<ArrayBuffer> => {
   return new Promise((resolve, reject) => {
@@ -40,10 +41,10 @@ const hexToRgb = (hex: string) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result
     ? rgb(
-      parseInt(result[1], 16) / 255,
-      parseInt(result[2], 16) / 255,
-      parseInt(result[3], 16) / 255
-    )
+        parseInt(result[1], 16) / 255,
+        parseInt(result[2], 16) / 255,
+        parseInt(result[3], 16) / 255
+      )
     : rgb(0, 0, 0);
 };
 
@@ -312,7 +313,26 @@ export const generateQuotationPDF = async (
       leftY -= leftSpacing;
     }
     if (data.marketing_person) {
-      currentPage.drawText(`Marketing : ${data.marketing_person}`, {
+      let marketingPhone = data.marketing_person_phone;
+      if (!marketingPhone && data.marketing_person) {
+        try {
+          const userRes = await userApi.getAll();
+          const found = userRes.data?.users?.find(
+            (u: { name: string; phone?: string }) => u.name === data.marketing_person
+          );
+          if (found?.phone) {
+            marketingPhone = found.phone;
+          }
+        } catch (e) {
+          // ignore fallback error
+        }
+      }
+
+      const marketingText = marketingPhone
+        ? `${data.marketing_person.trim()} ${marketingPhone.trim()}`
+        : data.marketing_person.trim();
+
+      currentPage.drawText(marketingText, {
         x: leftColX,
         y: leftY,
         size: labelSize,
@@ -590,33 +610,33 @@ export const generateQuotationPDF = async (
       (acc: number, item: QuotationItems) =>
         acc +
         parseFloat(item.item_qty || "0") *
-        parseFloat(item.item_unit_discount || "0"),
+          parseFloat(item.item_unit_discount || "0"),
       0
     );
 
     const summaryLines = isTaxNone
       ? [
-        { label: "Subtotal :", value: formatCurrency(subtotalVal, currency) },
-        { label: "No. of Items :", value: data.no_of_items || "0" },
-        {
-          label: "TOTAL :",
-          value: formatCurrency(netTotalVal, currency),
-          highlight: true,
-        },
-      ]
+          { label: "Subtotal :", value: formatCurrency(subtotalVal, currency) },
+          { label: "No. of Items :", value: data.no_of_items || "0" },
+          {
+            label: "TOTAL :",
+            value: formatCurrency(netTotalVal, currency),
+            highlight: true,
+          },
+        ]
       : [
-        { label: "Subtotal :", value: formatCurrency(subtotalVal, currency) },
-        { label: `Tax (18%) :`, value: formatCurrency(taxAmount, currency) },
-        {
-          label: "Discount :",
-          value: formatCurrency(totalDiscount, currency),
-        },
-        {
-          label: "TOTAL :",
-          value: formatCurrency(netTotalVal, currency),
-          highlight: true,
-        },
-      ];
+          { label: "Subtotal :", value: formatCurrency(subtotalVal, currency) },
+          { label: `Tax (18%) :`, value: formatCurrency(taxAmount, currency) },
+          {
+            label: "Discount :",
+            value: formatCurrency(totalDiscount, currency),
+          },
+          {
+            label: "TOTAL :",
+            value: formatCurrency(netTotalVal, currency),
+            highlight: true,
+          },
+        ];
 
     summaryLines.forEach((line) => {
       currentPage = checkPageBreak(25);
@@ -792,8 +812,9 @@ export const generateQuotationPDF = async (
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${customerName ? customerName : data.quote_id || "quotation"
-      }.pdf`;
+    link.download = `${
+      customerName ? customerName : data.quote_id || "quotation"
+    }.pdf`;
     link.click();
     URL.revokeObjectURL(url);
   } catch (error) {

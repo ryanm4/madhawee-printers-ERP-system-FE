@@ -13,6 +13,7 @@ export interface QUOTATIONS {
     currency: string;
     contact_person: string;
     marketing_person: string;
+    marketing_person_phone?: string | null;
     notes: string;
     status: string;
     sub_total: string;

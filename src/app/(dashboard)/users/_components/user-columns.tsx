@@ -41,6 +41,11 @@ export const userColumns = (
     header: "User email",
   },
   {
+    accessorKey: "phone",
+    header: "Phone",
+    cell: ({ row }) => row.original.phone || "-",
+  },
+  {
     accessorKey: "user_role",
     header: "User Role",
   },

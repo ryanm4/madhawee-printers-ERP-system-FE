@@ -43,6 +43,7 @@ function EditUser() {
     user_role: "",
     name: "",
     email: "",
+    phone: "",
     password: "",
   };
 
@@ -66,8 +67,8 @@ function EditUser() {
     form.reset({
       user_role: user.user_role || "",
       name: user.name,
-
       email: user.email,
+      phone: user.phone || "",
       password: "", // keep empty on edit
     });
   }, [form, router]);
@@ -83,6 +84,7 @@ function EditUser() {
         user_role: data.user_role,
         name: data.name,
         email: data.email,
+        phone: data.phone || undefined,
       });
 
       toast.success("User Updated", {
@@ -188,6 +190,16 @@ function EditUser() {
                   <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              ))}
+
+              {renderFormField("phone", ({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter Phone Number" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

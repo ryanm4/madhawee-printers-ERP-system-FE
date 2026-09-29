@@ -46,6 +46,8 @@ import {
   CREATE_QUOTATION_REQUEST,
   UPDATE_QUOTATION_REQUEST,
 } from "@/modules/quotations/types";
+import { userApi } from "@/modules/users/api";
+import { GET_ALL_USER } from "@/modules/users/types";
 import { Combobox } from "@/components/shared/combobox";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -80,6 +82,7 @@ function EditQuotation({
     avatar: string;
   }>(initialUser);
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
+  const [userList, setUserList] = useState<GET_ALL_USER[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,6 +91,7 @@ function EditQuotation({
 
   useEffect(() => {
     getCustomerList();
+    getUserList();
   }, []);
 
   const getCustomerList = async () => {
@@ -98,6 +102,21 @@ function EditQuotation({
     } catch (error) {
       console.error("Failed to fetch customers", error);
       toast.error(getErrorMessage(error, "Failed to load customers"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getUserList = async () => {
+    try {
+      setLoading(true);
+      const response = await userApi.getAll();
+      if (response.status === 200 || response.status === 201) {
+        setUserList(response?.data?.users || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch users", error);
+      toast.error(getErrorMessage(error, "Failed to fetch users"));
     } finally {
       setLoading(false);
     }
@@ -718,17 +737,36 @@ function EditQuotation({
                   ))}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                   {/* Marketing Person */}
                   {renderFormField("marketing_person", ({ field }) => (
                     <FormItem>
-                      <FormLabel>Marketing Person</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter marketing person"
-                          {...field}
-                        />
-                      </FormControl>
+                      <FormLabel>
+                        Marketing Person <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select marketing person" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {field.value &&
+                            !userList.some((u) => u.name === field.value) && (
+                              <SelectItem value={field.value}>
+                                {field.value}
+                              </SelectItem>
+                            )}
+                          {userList.map((cp, idx) => (
+                            <SelectItem key={idx} value={cp.name}>
+                              {cp.name}{cp.phone ? ` (${cp.phone})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   ))}
