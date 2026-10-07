@@ -1,14 +1,9 @@
 "use client";
-import { getErrorMessage } from "@/lib/error-utils";
+import axios from "axios";
 import { Eye, EyeOff, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,8 +11,6 @@ import { loginSchema } from "@/modules/login/validation";
 import z from "zod";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import Image from "next/image";
-import company_logo from "@/assets/Images/company_logo.jpeg";
 import { loginApi } from "@/modules/login/api";
 import { setToken, setUser } from "@/lib/auth";
 import { getDefaultRoute } from "@/lib/permissions";
@@ -25,6 +18,21 @@ import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type LoginFormValues = z.infer<typeof loginSchema>;
+
+const SIGN_IN_FAILED =
+  "That username and password don't match. Check them and try again.";
+const SERVER_UNREACHABLE =
+  "The ERP server isn't responding. Check your connection and try again.";
+
+/** Prefer the server's own reason (e.g. a disabled account); never show raw HTTP errors */
+const signInErrorMessage = (error: unknown): string => {
+  if (axios.isAxiosError(error)) {
+    if (!error.response) return SERVER_UNREACHABLE;
+    const serverMessage = error.response.data?.message;
+    if (typeof serverMessage === "string" && serverMessage.trim()) return serverMessage;
+  }
+  return SIGN_IN_FAILED;
+};
 
 export function LoginForm({
   className,
@@ -43,6 +51,7 @@ export function LoginForm({
     resolver: zodResolver(loginSchema),
     defaultValues: baseDefaultValues,
   });
+  const { errors } = form.formState;
 
   const onSubmit = async (data: LoginFormValues) => {
     setError(null);
@@ -55,114 +64,98 @@ export function LoginForm({
       setToken(token);
       setUser(response.data.user);
 
-      toast("Login successful!");
+      toast("Signed in");
       router.push(getDefaultRoute(response.data.user?.user_role));
-    } catch (error: any) {
+    } catch (error) {
       console.error("Login failed:", error);
-      const errorMessage = getErrorMessage(error, "Unable to sign in. Please verify your credentials and try again.");
-      setError("Unable to sign in. Please verify your credentials and try again.");
-
-      toast(errorMessage);
+      setError(signInErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        <FieldGroup>
-          <div className="flex flex-col items-center gap-2 text-center">
-            <a
-              href="#"
-              className="flex flex-col items-center gap-2 font-medium"
-            >
-              <div className="flex h-20 w-auto items-center justify-center">
-                <Image
-                  src={company_logo}
-                  alt="madhawee printers"
-                  width={200}
-                  height={80}
-                  className="h-full w-auto object-contain"
-                />
-              </div>
-              <span className="sr-only">Madhawee Printers</span>
-            </a>
-            <h1 className="text-xl font-bold">Welcome to Madhawee Printers</h1>
-          </div>
+    <div className={cn("flex flex-col", className)} {...props}>
+      <h1 className="text-[2rem] leading-tight font-bold tracking-[-0.02em] text-[#1A2233]">
+        Sign in
+      </h1>
+      <p className="mt-2 text-[0.9375rem] leading-relaxed text-pretty text-[#5B6474]">
+        Use your Madhawee ERP username and password.
+      </p>
 
+      <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="mt-7">
+        <FieldGroup className="gap-5">
           {error && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" role="alert">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
+              <AlertTitle>Couldn&apos;t sign in</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
-          <Field>
-            <FieldLabel htmlFor="name">User name</FieldLabel>
+          <Field className="gap-2">
+            <FieldLabel htmlFor="name">Username</FieldLabel>
             <Input
               id="name"
               type="text"
-              placeholder="Enter your username"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              autoFocus
               disabled={isLoading}
+              aria-invalid={Boolean(errors.name)}
+              aria-describedby={errors.name ? "name-error" : undefined}
+              className="h-11 rounded-[4px] text-[0.9375rem] md:text-[0.9375rem]"
               {...form.register("name")}
             />
-            {form.formState.errors.name && (
-              <p className="text-sm text-red-500">
-                {form.formState.errors.name.message}
+            {errors.name && (
+              <p id="name-error" className="text-sm text-destructive">
+                {errors.name.message}
               </p>
             )}
           </Field>
-          <Field>
-            {/* <div className="flex items-center">
-              <FieldLabel htmlFor="password">Password</FieldLabel>
-              <a
-                href="#"
-                className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-              >
-                Forgot your password?
-              </a>
-            </div> */}
 
+          <Field className="gap-2">
+            <FieldLabel htmlFor="password">Password</FieldLabel>
             <div className="relative">
               <Input
                 id="password"
-                placeholder="Enter Your Password"
                 type={showPassword ? "text" : "password"}
-                className="pr-10"
+                autoComplete="current-password"
                 disabled={isLoading}
+                aria-invalid={Boolean(errors.password)}
+                aria-describedby={errors.password ? "password-error" : undefined}
+                className="h-11 rounded-[4px] pr-12 text-[0.9375rem] md:text-[0.9375rem]"
                 {...form.register("password")}
               />
-
               <Button
                 type="button"
                 variant="ghost"
-                tabIndex={-1}
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-auto px-2 py-1"
+                size="icon"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+                className="absolute right-1 top-1/2 size-9 -translate-y-1/2 text-[#5B6474] hover:text-[#1A2233]"
                 onClick={() => setShowPassword((prev) => !prev)}
               >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </Button>
             </div>
-            {form.formState.errors.password && (
-              <p className="text-sm text-red-500 mt-1">
-                {form.formState.errors.password.message}
+            {errors.password && (
+              <p id="password-error" className="text-sm text-destructive">
+                {errors.password.message}
               </p>
             )}
           </Field>
 
-          <Field>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Login"}
-            </Button>
-          </Field>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="mt-2 h-11 rounded-[4px] text-[0.9375rem] font-semibold"
+          >
+            {isLoading ? "Signing in…" : "Sign in"}
+          </Button>
         </FieldGroup>
       </form>
-      <FieldDescription className="px-6 text-center">
-        By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
-        and <a href="#">Privacy Policy</a>.
-      </FieldDescription>
     </div>
   );
 }

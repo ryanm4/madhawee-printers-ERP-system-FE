@@ -23,6 +23,8 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ data, filename, onPr
         if (!data || data.length === 0) return;
 
         const rowsToExport: Record<string, any>[] = [];
+        // Positions of job breakdown rows, so they can be grouped under their item in Excel
+        const jobRowIndexes: number[] = [];
 
         data.forEach((item) => {
             const rowCopy: Record<string, any> = {};
@@ -36,6 +38,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ data, filename, onPr
             if (Array.isArray(item.jobs) && item.jobs.length > 0) {
                 const keys = Object.keys(item).filter((k) => k !== "jobs");
                 item.jobs.forEach((job: any, idx: number) => {
+                    jobRowIndexes.push(rowsToExport.length);
                     const subRow: Record<string, any> = {};
                     keys.forEach((key) => {
                         const kLower = key.toLowerCase();
@@ -69,6 +72,21 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ data, filename, onPr
             return { wch: Math.max(maxLen, 12) };
         });
         worksheet["!cols"] = colWidths;
+
+        // Group job rows under their item so Excel shows the +/- outline buttons in the margin.
+        // "above" puts the button on the item row itself; Excel otherwise expects the summary
+        // row to sit below its detail rows.
+        if (jobRowIndexes.length > 0) {
+            const sheetRows: XLSX.RowInfo[] = [];
+            // +1 because json_to_sheet writes the column names as the first row
+            jobRowIndexes.forEach((index) => {
+                sheetRows[index + 1] = { level: 1 };
+            });
+            worksheet["!rows"] = sheetRows;
+            (worksheet as XLSX.WorkSheet & {
+                "!outline"?: { above?: boolean; left?: boolean };
+            })["!outline"] = { above: true };
+        }
 
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Report Data");
