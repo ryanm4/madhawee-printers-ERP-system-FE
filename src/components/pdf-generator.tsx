@@ -115,6 +115,7 @@ export const generateQuotationPDF = async (
       tableBody: hexToRgb("#EAECF2"), // Light gray/blue for body
       text: rgb(0, 0, 0),
       white: rgb(1, 1, 1),
+      pill: hexToRgb("#AEB2BA"), // account manager label beside the totals
     };
 
     // pdf-lib's default coordinate system has (0,0) at the bottom left.
@@ -312,8 +313,9 @@ export const generateQuotationPDF = async (
       });
       leftY -= leftSpacing;
     }
+    // Also used by the account manager label beside the totals
+    let marketingPhone = data.marketing_person_phone ?? "";
     if (data.marketing_person) {
-      let marketingPhone = data.marketing_person_phone;
       if (!marketingPhone && data.marketing_person) {
         try {
           const userRes = await userApi.getAll();
@@ -638,8 +640,51 @@ export const generateQuotationPDF = async (
           },
         ];
 
-    summaryLines.forEach((line) => {
+    // Grey rounded label with the account manager's name and mobile, level with Subtotal
+    const drawAccountManagerLabel = () => {
+      const name = String(data.marketing_person ?? "").trim();
+      if (!name) return;
+      const labelText = toPrintableText(name, helveticaBold);
+      const contact = marketingPhone
+        ? toPrintableText(`M: ${marketingPhone.trim()}`, helvetica)
+        : "";
+      const size = 9;
+      const nameW = helveticaBold.widthOfTextAtSize(labelText, size);
+      const contactW = contact ? helvetica.widthOfTextAtSize(contact, size) + 6 : 0;
+      const pillW = Math.min(nameW + contactW + 24, summaryX - margin - 16);
+      const pillH = 20;
+      const r = 5;
+      const baseline = yPosition - 10; // same baseline as the Subtotal row
+      const pillTop = baseline + 13.5;
+      // pdf-lib has no rounded rectangle; the SVG path hangs down from (x, y)
+      currentPage.drawSvgPath(
+        `M ${r} 0 H ${pillW - r} Q ${pillW} 0 ${pillW} ${r} V ${pillH - r} ` +
+          `Q ${pillW} ${pillH} ${pillW - r} ${pillH} H ${r} Q 0 ${pillH} 0 ${pillH - r} ` +
+          `V ${r} Q 0 0 ${r} 0 Z`,
+        { x: margin, y: pillTop, color: colors.pill }
+      );
+      currentPage.drawText(labelText, {
+        x: margin + 12,
+        y: baseline,
+        size,
+        font: helveticaBold,
+        color: colors.white,
+      });
+      if (contact) {
+        currentPage.drawText(contact, {
+          x: margin + 12 + nameW + 6,
+          y: baseline,
+          size,
+          font: helvetica,
+          color: colors.white,
+        });
+      }
+    };
+
+    summaryLines.forEach((line, index) => {
       currentPage = checkPageBreak(25);
+      // Drawn after the page check so it always lands beside Subtotal
+      if (index === 0) drawAccountManagerLabel();
 
       // Removed highlight background as requested
 

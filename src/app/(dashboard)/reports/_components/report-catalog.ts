@@ -1,3 +1,4 @@
+import { Banknote, FileText, LayoutList, LucideIcon, Warehouse, ChartColumn } from "lucide-react";
 import { REPORT_TYPES } from "@/config/enum";
 
 export type ReportTab = "general" | "inventory" | "sales" | "quotation";
@@ -57,7 +58,10 @@ export interface ReportEntry {
 }
 
 export interface ReportGroup {
+    id: string;
     label: string;
+    /** Shown beside the group's tab */
+    icon: LucideIcon;
     reports: ReportEntry[];
 }
 
@@ -116,12 +120,14 @@ const toEntries = (tab: ReportTab, items: { value: string; label: string }[]): R
 
 // Same names and grouping as the original tabs and report type dropdowns
 export const REPORT_CATALOG: ReportGroup[] = [
-    { label: "General Reports", reports: toEntries("general", GENERAL_REPORT_TYPES) },
-    { label: "Advanced Report Types", reports: toEntries("general", ADVANCED_REPORT_TYPES) },
-    { label: "Inventory Reports", reports: toEntries("inventory", INVENTORY_REPORT_TYPES) },
-    { label: "Sales Reports", reports: toEntries("sales", SALES_REPORT_TYPES) },
+    { id: "general", label: "General Reports", icon: LayoutList, reports: toEntries("general", GENERAL_REPORT_TYPES) },
+    { id: "advanced", label: "Advanced Report Types", icon: ChartColumn, reports: toEntries("general", ADVANCED_REPORT_TYPES) },
+    { id: "inventory", label: "Inventory Reports", icon: Warehouse, reports: toEntries("inventory", INVENTORY_REPORT_TYPES) },
+    { id: "sales", label: "Sales Reports", icon: Banknote, reports: toEntries("sales", SALES_REPORT_TYPES) },
     {
+        id: "quotations",
         label: "Quotations",
+        icon: FileText,
         reports: [
             {
                 tab: "quotation",
@@ -140,3 +146,6 @@ export const REPORT_CATALOG: ReportGroup[] = [
 
 export const findReport = (key: string | null) =>
     REPORT_CATALOG.flatMap((g) => g.reports).find((r) => reportKey(r) === key) ?? null;
+
+export const findGroup = (key: string | null) =>
+    REPORT_CATALOG.find((group) => group.reports.some((r) => reportKey(r) === key)) ?? null;

@@ -200,3 +200,103 @@ body {
     display: table-row !important;
   }
 }
+/* ---------------------------------------------------------------- sign in
+   Deep navy-blue so the light rays read clearly. The glow at the top stands in for
+   the rays before they load and for anyone who prefers reduced motion. */
+.login-panel {
+  background:
+    radial-gradient(ellipse 70% 50% at 50% -10%, rgb(110 160 240 / 0.35), transparent 70%),
+    linear-gradient(180deg, #0A2F66 0%, #061C42 55%, #041330 100%);
+}
+
+/* One 8s journey shared by the light and the rings, so they stay in step:
+   ring 1 closes, the light runs to stage 2, ring 2 closes, and so on. Rings clear at the end. */
+.login-pulse {
+  left: 0;
+  translate: -50% 0;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent, #ffffff, transparent);
+  box-shadow: 0 0 12px 2px rgb(169 200 255 / 0.7);
+  animation: login-pulse 8s ease-in-out infinite;
+}
+
+@keyframes login-pulse {
+  0%,
+  9% {
+    left: 0;
+    opacity: 0;
+  }
+  10% {
+    left: 0;
+    opacity: 1;
+  }
+  22.5%,
+  32.5% {
+    left: 33.333%;
+    opacity: 1;
+  }
+  45%,
+  55% {
+    left: 66.667%;
+    opacity: 1;
+  }
+  67.5% {
+    left: 100%;
+    opacity: 1;
+  }
+  70%,
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+
+.login-ring {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  filter: drop-shadow(0 0 4px rgb(169 200 255 / 0.9));
+  /* Longhands: the CSS build collapses a name-less animation shorthand to "none" */
+  animation-duration: 8s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.login-ring-1 { animation-name: login-ring-1; }
+.login-ring-2 { animation-name: login-ring-2; }
+.login-ring-3 { animation-name: login-ring-3; }
+.login-ring-4 { animation-name: login-ring-4; }
+
+@keyframes login-ring-1 {
+  0% { stroke-dashoffset: 100; opacity: 1; }
+  10%, 85% { stroke-dashoffset: 0; opacity: 1; }
+  95%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+
+@keyframes login-ring-2 {
+  0%, 22.5% { stroke-dashoffset: 100; opacity: 1; }
+  32.5%, 85% { stroke-dashoffset: 0; opacity: 1; }
+  95%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+
+@keyframes login-ring-3 {
+  0%, 45% { stroke-dashoffset: 100; opacity: 1; }
+  55%, 85% { stroke-dashoffset: 0; opacity: 1; }
+  95%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+
+@keyframes login-ring-4 {
+  0%, 67.5% { stroke-dashoffset: 100; opacity: 1; }
+  77.5%, 85% { stroke-dashoffset: 0; opacity: 1; }
+  95%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-pulse,
+  .login-ring {
+    display: none;
+  }
+}

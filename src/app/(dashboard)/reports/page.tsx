@@ -38,15 +38,17 @@ import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2 } from "lucide-react";
-import { ReportPicker } from "./_components/report-picker";
 import { DateRangeFields } from "./_components/date-range-fields";
+import { ReportAreaTabs, ReportSelect } from "./_components/report-selector";
 import {
   INVENTORY_REPORT_TYPES,
   QUOTATION_REPORT_TYPES,
   QUOTATIONS_ISSUED,
   QUOTATIONS_ISSUED_GROUPING,
-  ReportEntry,
+  REPORT_CATALOG,
   SALES_REPORT_TYPES,
+  ReportEntry,
+  findGroup,
   findReport,
   reportKey,
 } from "./_components/report-catalog";
@@ -492,6 +494,18 @@ function ReportsPage() {
     setLastRun(null);
   };
 
+  // The open report is kept in the address (?report=sales:SALES_MONTHLY) so a refresh keeps it
+  const openReport = (report: ReportEntry) => {
+    const key = reportKey(report);
+    if (key === selectedReportKey) return;
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}?report=${encodeURIComponent(key)}`
+    );
+    selectReport(report);
+  };
+
   const selectReport = (report: ReportEntry) => {
     const formType = report.formType ?? report.type;
     setSelectedReportKey(reportKey(report));
@@ -503,6 +517,14 @@ function ReportsPage() {
     if (report.tab === "quotation")
       quotationForm.setValue("reportType", formType);
   };
+
+  useEffect(() => {
+    // Open the report named in the address, otherwise the first one, so the page is ready to run
+    const key = new URLSearchParams(window.location.search).get("report");
+    selectReport(findReport(key) ?? REPORT_CATALOG[0].reports[0]);
+    // Runs once: selectReport only sets state and form values
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const resetGeneralFilters = () => {
     const currentType = generalForm.getValues("reportType");
@@ -2076,6 +2098,9 @@ function ReportsPage() {
     selectedDispatchStatus,
   ]);
 
+  const selectedReport = findReport(selectedReportKey);
+  const selectedGroup = findGroup(selectedReportKey);
+
   const reportFilename = React.useMemo(() => {
     let name = "Report";
     if (activeTab === "general") {
@@ -2122,7 +2147,6 @@ function ReportsPage() {
     watchedQuotationType,
   ]);
 
-  const selectedReport = findReport(selectedReportKey);
   const runRangeText =
     lastRun?.from && lastRun?.to
       ? `${format(new Date(lastRun.from), "d MMM yyyy")} to ${format(
@@ -2141,8 +2165,7 @@ function ReportsPage() {
     .sort()
     .map((name) => ({ value: String(name), label: String(name) }));
 
-  const formPanelClass =
-    "flex flex-wrap items-end gap-x-6 gap-y-4 rounded-lg border bg-card p-4";
+  const formPanelClass = "flex flex-wrap items-end gap-x-6 gap-y-4 p-4";
 
   const formActions = (onReset: () => void) => (
     <div className="flex items-end gap-2 ml-auto">
@@ -2170,367 +2193,31 @@ function ReportsPage() {
         />
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 mt-2 items-start">
-        <div className="no-print w-full lg:w-auto lg:self-stretch">
-          <ReportPicker
-            selectedKey={selectedReportKey}
-            onSelect={selectReport}
-          />
-        </div>
+      <div className="no-print mt-2">
+        <ReportAreaTabs selectedKey={selectedReportKey} onSelect={openReport} />
+      </div>
 
-        <div className="flex-1 min-w-0 w-full flex flex-col gap-5">
-          {!selectedReport ? (
-            <div className="no-print rounded-lg border border-dashed px-6 py-16 text-center">
-              <h2 className="text-lg font-semibold">Choose a report</h2>
-              <p className="mt-1 text-sm text-muted-foreground max-w-md mx-auto">
-                Pick a report from the list to set its filters. Stock, sales,
-                quotation and production reports are all in one place.
-              </p>
+      {selectedReport && selectedGroup && (
+        <div className="flex flex-col gap-5">
+          <div className="no-print rounded-lg border bg-card">
+            <div className="border-b p-4">
+              <ReportSelect
+                group={selectedGroup}
+                selectedKey={selectedReportKey}
+                onSelect={openReport}
+              />
             </div>
-          ) : (
-            <>
-              <header className="no-print">
-                <h2 className="text-xl font-semibold tracking-tight">
-                  {selectedReport.label}
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {selectedReport.description}
-                </p>
-              </header>
-
-              <Tabs value={activeTab} className="no-print">
-                <TabsContent value="general" className="mt-0">
-                  <Form {...generalForm}>
-                    <form
-                      onSubmit={generalForm.handleSubmit(handleGeneralSubmit)}
-                      className={formPanelClass}
-                    >
-                      {isGeneralAdvanced &&
-                        watchedGeneralType !== "INVENTORY_HEALTH" && (
-                          <FormField
-                            control={generalForm.control}
-                            name="customer_id"
-                            render={({ field }) => (
-                              <FormItem className="w-[220px]">
-                                <FormLabel>Customer</FormLabel>
-                                <Combobox
-                                  items={[
-                                    { value: "ALL", label: "All customers" },
-                                    ...customer.map((c) => ({
-                                      value: String(c.customer_id),
-                                      label: c.company_name,
-                                    })),
-                                  ]}
-                                  value={field.value ? String(field.value) : ""}
-                                  onValueChange={(val) =>
-                                    field.onChange(
-                                      val === "ALL"
-                                        ? "ALL"
-                                        : val
-                                        ? Number(val)
-                                        : undefined
-                                    )
-                                  }
-                                  placeholder="All customers"
-                                />
-                              </FormItem>
-                            )}
-                          />
-                        )}
-
-                      {isGeneralAdvanced && (
+            <Tabs value={activeTab} className="no-print">
+              <TabsContent value="general" className="mt-0">
+                <Form {...generalForm}>
+                  <form
+                    onSubmit={generalForm.handleSubmit(handleGeneralSubmit)}
+                    className={formPanelClass}
+                  >
+                    {isGeneralAdvanced &&
+                      watchedGeneralType !== "INVENTORY_HEALTH" && (
                         <FormField
                           control={generalForm.control}
-                          name="product_type"
-                          render={({ field }) => (
-                            <FormItem className="w-[200px]">
-                              <FormLabel>Product type</FormLabel>
-                              <Combobox
-                                items={[
-                                  { value: "ALL", label: "All product types" },
-                                  ...Object.entries(PRODUCT_TYPES).map(
-                                    ([key, val]) => ({
-                                      value: key,
-                                      label: val as string,
-                                    })
-                                  ),
-                                ]}
-                                value={field.value ?? ""}
-                                onValueChange={field.onChange}
-                                placeholder="All product types"
-                              />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-
-                      {watchedGeneralType === "DISPATCH_INSIGHTS" && (
-                        <div className="flex flex-col gap-2 w-[200px]">
-                          <Label>Status</Label>
-                          <Combobox
-                            items={[
-                              { value: "all", label: "All statuses" },
-                              { value: "Pending", label: "Pending" },
-                              {
-                                value: "Partially Dispatch",
-                                label: "Partly dispatched",
-                              },
-                              { value: "Completed", label: "Completed" },
-                            ]}
-                            value={selectedDispatchStatus}
-                            onValueChange={setSelectedDispatchStatus}
-                            placeholder="All statuses"
-                          />
-                        </div>
-                      )}
-
-                      <DateRangeFields
-                        form={generalForm}
-                        fromName="fromDate"
-                        toName="toDate"
-                      />
-
-                      {formActions(resetGeneralFilters)}
-                    </form>
-                  </Form>
-                </TabsContent>
-
-                <TabsContent value="inventory" className="mt-0">
-                  <Form {...inventoryForm}>
-                    <form
-                      onSubmit={inventoryForm.handleSubmit(
-                        handleInventorySubmit
-                      )}
-                      className={formPanelClass}
-                    >
-                      <FormField
-                        control={inventoryForm.control}
-                        name="item_category"
-                        render={({ field }) => (
-                          <FormItem className="w-[190px]">
-                            <FormLabel>Category</FormLabel>
-                            <Combobox
-                              items={[
-                                { value: "ALL", label: "All categories" },
-                                ...Object.values(ITEM_CATEGORY).map((v) => ({
-                                  value: v,
-                                  label: v,
-                                })),
-                              ]}
-                              value={field.value ?? "ALL"}
-                              onValueChange={field.onChange}
-                              placeholder="All categories"
-                            />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={inventoryForm.control}
-                        name="item_sub_category"
-                        render={({ field }) => (
-                          <FormItem className="w-[190px]">
-                            <FormLabel>Sub-category</FormLabel>
-                            <Combobox
-                              items={[
-                                { value: "ALL", label: "All sub-categories" },
-                                ...Object.values(ITEM_SUB_CATEGORY).map(
-                                  (v) => ({ value: v, label: v })
-                                ),
-                              ]}
-                              value={field.value ?? "ALL"}
-                              onValueChange={field.onChange}
-                              placeholder="All sub-categories"
-                            />
-                          </FormItem>
-                        )}
-                      />
-
-                      {watchedInventoryType === "GRN_REPORT" && (
-                        <FormField
-                          control={inventoryForm.control}
-                          name="supplier_name"
-                          render={({ field }) => (
-                            <FormItem className="w-[220px]">
-                              <FormLabel>Supplier</FormLabel>
-                              <Combobox
-                                items={[
-                                  { value: "ALL", label: "All suppliers" },
-                                  ...suppliers.map((s) => ({
-                                    value: s.company_name,
-                                    label: s.company_name,
-                                  })),
-                                ]}
-                                value={field.value ?? "ALL"}
-                                onValueChange={field.onChange}
-                                placeholder="All suppliers"
-                              />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-
-                      {watchedInventoryType ===
-                        "MATERIAL_CONSUMPTION_SUMMARY" && (
-                        <FormField
-                          control={inventoryForm.control}
-                          name="item_id"
-                          render={({ field }) => (
-                            <FormItem className="w-[280px]">
-                              <FormLabel>Item</FormLabel>
-                              <Combobox
-                                items={[
-                                  { value: "ALL", label: "All items" },
-                                  ...inventoryItems,
-                                ]}
-                                value={field.value ?? "ALL"}
-                                onValueChange={field.onChange}
-                                placeholder="All items"
-                              />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-
-                      {watchedInventoryType ===
-                        "MATERIAL_CONSUMPTION_BY_JOB" && (
-                        <FormField
-                          control={inventoryForm.control}
-                          name="job_id"
-                          render={({ field }) => (
-                            <FormItem className="w-[280px]">
-                              <FormLabel>Job</FormLabel>
-                              <Combobox
-                                items={[
-                                  { value: "ALL", label: "All jobs" },
-                                  ...jobList,
-                                ]}
-                                value={field.value ?? "ALL"}
-                                onValueChange={field.onChange}
-                                placeholder="All jobs"
-                              />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-
-                      {inventoryRequiresDates && (
-                        <DateRangeFields
-                          form={inventoryForm}
-                          fromName="from_date"
-                          toName="to_date"
-                        />
-                      )}
-
-                      {formActions(resetInventoryFilters)}
-                    </form>
-                  </Form>
-                </TabsContent>
-
-                <TabsContent value="sales" className="mt-0">
-                  <Form {...salesForm}>
-                    <form
-                      onSubmit={salesForm.handleSubmit(handleSalesSubmit)}
-                      className={formPanelClass}
-                    >
-                      {watchedSalesType === "SALES_BY_CUSTOMER" && (
-                        <>
-                          <div className="flex flex-col gap-2 w-[220px]">
-                            <Label>Customer</Label>
-                            <Combobox
-                              items={[
-                                { value: "", label: "All customers" },
-                                ...customer.map((c) => ({
-                                  value: String(c.customer_id),
-                                  label: c.company_name,
-                                })),
-                              ]}
-                              value={selectedSalesCustomerId}
-                              onValueChange={setSelectedSalesCustomerId}
-                              placeholder="All customers"
-                            />
-                          </div>
-                          <div className="flex flex-col gap-2 w-[150px]">
-                            <Label>Currency</Label>
-                            <Combobox
-                              items={[
-                                { value: "", label: "All currencies" },
-                                { value: "LKR", label: "LKR" },
-                                { value: "USD", label: "USD" },
-                              ]}
-                              value={selectedSalesCurrency}
-                              onValueChange={setSelectedSalesCurrency}
-                              placeholder="All currencies"
-                            />
-                          </div>
-                        </>
-                      )}
-
-                      {watchedSalesType === "SALES_BY_SALESPERSON" && (
-                        <div className="flex flex-col gap-2 w-[220px]">
-                          <Label>Salesperson</Label>
-                          <Combobox
-                            items={[
-                              { value: "", label: "All salespeople" },
-                              ...salespersonOptions,
-                            ]}
-                            value={selectedSalespersonName}
-                            onValueChange={setSelectedSalespersonName}
-                            placeholder="All salespeople"
-                          />
-                        </div>
-                      )}
-
-                      <DateRangeFields
-                        form={salesForm}
-                        fromName="from_date"
-                        toName="to_date"
-                      />
-
-                      {formActions(resetSalesFilters)}
-                    </form>
-                  </Form>
-                </TabsContent>
-
-                <TabsContent value="quotation" className="mt-0">
-                  <Form {...quotationForm}>
-                    <form
-                      onSubmit={quotationForm.handleSubmit(
-                        handleQuotationSubmit
-                      )}
-                      className={formPanelClass}
-                    >
-                      {selectedReport.type === QUOTATIONS_ISSUED && (
-                        <div className="flex flex-col gap-2">
-                          <Label id="quotation-grouping">Group by</Label>
-                          <ToggleGroup
-                            type="single"
-                            variant="outline"
-                            aria-labelledby="quotation-grouping"
-                            className="h-10"
-                            value={watchedQuotationType}
-                            onValueChange={(value) => {
-                              if (!value || value === watchedQuotationType) return;
-                              quotationForm.setValue("reportType", value);
-                              // Results were grouped the other way; clear them
-                              handleTabChange("quotation");
-                            }}
-                          >
-                            {QUOTATIONS_ISSUED_GROUPING.map((option) => (
-                              <ToggleGroupItem
-                                key={option.value}
-                                value={option.value}
-                                className="h-10 px-4"
-                              >
-                                {option.label}
-                              </ToggleGroupItem>
-                            ))}
-                          </ToggleGroup>
-                        </div>
-                      )}
-
-                      {watchedQuotationType === "QUOTATION_BY_CUSTOMER" && (
-                        <FormField
-                          control={quotationForm.control}
                           name="customer_id"
                           render={({ field }) => (
                             <FormItem className="w-[220px]">
@@ -2544,84 +2231,402 @@ function ReportsPage() {
                                   })),
                                 ]}
                                 value={field.value ? String(field.value) : ""}
-                                onValueChange={(val) => field.onChange(val)}
+                                onValueChange={(val) =>
+                                  field.onChange(
+                                    val === "ALL"
+                                      ? "ALL"
+                                      : val
+                                        ? Number(val)
+                                        : undefined,
+                                  )
+                                }
                                 placeholder="All customers"
                               />
                             </FormItem>
                           )}
                         />
                       )}
-                      {watchedQuotationType === "QUOTATION_BY_SALESPERSON" && (
-                        <FormField
-                          control={quotationForm.control}
-                          name="salesperson"
-                          render={({ field }) => (
-                            <FormItem className="w-[220px]">
-                              <FormLabel>Salesperson</FormLabel>
-                              <Combobox
-                                items={[
-                                  { value: "ALL", label: "All salespeople" },
-                                  ...salespersonOptions,
-                                ]}
-                                value={field.value ?? ""}
-                                onValueChange={field.onChange}
-                                placeholder="All salespeople"
-                              />
-                            </FormItem>
-                          )}
-                        />
-                      )}
 
-                      <DateRangeFields
-                        form={quotationForm}
-                        fromName="fromDate"
-                        toName="toDate"
+                    {isGeneralAdvanced && (
+                      <FormField
+                        control={generalForm.control}
+                        name="product_type"
+                        render={({ field }) => (
+                          <FormItem className="w-[200px]">
+                            <FormLabel>Product type</FormLabel>
+                            <Combobox
+                              items={[
+                                { value: "ALL", label: "All product types" },
+                                ...Object.entries(PRODUCT_TYPES).map(
+                                  ([key, val]) => ({
+                                    value: key,
+                                    label: val as string,
+                                  }),
+                                ),
+                              ]}
+                              value={field.value ?? ""}
+                              onValueChange={field.onChange}
+                              placeholder="All product types"
+                            />
+                          </FormItem>
+                        )}
                       />
+                    )}
 
-                      {formActions(resetQuotationFilters)}
-                    </form>
-                  </Form>
-                </TabsContent>
-              </Tabs>
+                    {watchedGeneralType === "DISPATCH_INSIGHTS" && (
+                      <div className="flex flex-col gap-2 w-[200px]">
+                        <Label>Status</Label>
+                        <Combobox
+                          items={[
+                            { value: "all", label: "All statuses" },
+                            { value: "Pending", label: "Pending" },
+                            {
+                              value: "Partially Dispatch",
+                              label: "Partly dispatched",
+                            },
+                            { value: "Completed", label: "Completed" },
+                          ]}
+                          value={selectedDispatchStatus}
+                          onValueChange={setSelectedDispatchStatus}
+                          placeholder="All statuses"
+                        />
+                      </div>
+                    )}
 
-              {loading ? (
-                <div
-                  className="rounded-lg border bg-card p-4 space-y-3"
-                  aria-busy="true"
-                  aria-label="Generating report"
-                >
-                  <Skeleton className="h-5 w-48" />
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <Skeleton key={i} className="h-8 w-full" />
-                  ))}
-                </div>
-              ) : !lastRun ? (
-                <p className="no-print rounded-lg border border-dashed px-6 py-10 text-center text-sm text-muted-foreground">
-                  Set the filters above, then select Generate report.
-                </p>
-              ) : filteredReportData.length === 0 ? (
-                <div className="rounded-lg border border-dashed px-6 py-10 text-center">
-                  <h3 className="font-semibold">No records found</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {runRangeText
-                      ? `Nothing matched from ${runRangeText}. Try a wider date range or fewer filters.`
-                      : "Nothing matched these filters. Try clearing some of them."}
-                  </p>
-                </div>
-              ) : (
-                <ReportsTable
-                  data={filteredReportData}
-                  isLoading={loading}
-                  filename={reportFilename}
-                  title={selectedReport.label}
-                  rangeText={runRangeText}
-                  grandTotal={grandTotal}
-                />
-              )}
-            </>
+                    <DateRangeFields
+                      form={generalForm}
+                      fromName="fromDate"
+                      toName="toDate"
+                    />
+
+                    {formActions(resetGeneralFilters)}
+                  </form>
+                </Form>
+              </TabsContent>
+
+              <TabsContent value="inventory" className="mt-0">
+                <Form {...inventoryForm}>
+                  <form
+                    onSubmit={inventoryForm.handleSubmit(handleInventorySubmit)}
+                    className={formPanelClass}
+                  >
+                    <FormField
+                      control={inventoryForm.control}
+                      name="item_category"
+                      render={({ field }) => (
+                        <FormItem className="w-[190px]">
+                          <FormLabel>Category</FormLabel>
+                          <Combobox
+                            items={[
+                              { value: "ALL", label: "All categories" },
+                              ...Object.values(ITEM_CATEGORY).map((v) => ({
+                                value: v,
+                                label: v,
+                              })),
+                            ]}
+                            value={field.value ?? "ALL"}
+                            onValueChange={field.onChange}
+                            placeholder="All categories"
+                          />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={inventoryForm.control}
+                      name="item_sub_category"
+                      render={({ field }) => (
+                        <FormItem className="w-[190px]">
+                          <FormLabel>Sub-category</FormLabel>
+                          <Combobox
+                            items={[
+                              { value: "ALL", label: "All sub-categories" },
+                              ...Object.values(ITEM_SUB_CATEGORY).map((v) => ({
+                                value: v,
+                                label: v,
+                              })),
+                            ]}
+                            value={field.value ?? "ALL"}
+                            onValueChange={field.onChange}
+                            placeholder="All sub-categories"
+                          />
+                        </FormItem>
+                      )}
+                    />
+
+                    {watchedInventoryType === "GRN_REPORT" && (
+                      <FormField
+                        control={inventoryForm.control}
+                        name="supplier_name"
+                        render={({ field }) => (
+                          <FormItem className="w-[220px]">
+                            <FormLabel>Supplier</FormLabel>
+                            <Combobox
+                              items={[
+                                { value: "ALL", label: "All suppliers" },
+                                ...suppliers.map((s) => ({
+                                  value: s.company_name,
+                                  label: s.company_name,
+                                })),
+                              ]}
+                              value={field.value ?? "ALL"}
+                              onValueChange={field.onChange}
+                              placeholder="All suppliers"
+                            />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    {watchedInventoryType ===
+                      "MATERIAL_CONSUMPTION_SUMMARY" && (
+                      <FormField
+                        control={inventoryForm.control}
+                        name="item_id"
+                        render={({ field }) => (
+                          <FormItem className="w-[280px]">
+                            <FormLabel>Item</FormLabel>
+                            <Combobox
+                              items={[
+                                { value: "ALL", label: "All items" },
+                                ...inventoryItems,
+                              ]}
+                              value={field.value ?? "ALL"}
+                              onValueChange={field.onChange}
+                              placeholder="All items"
+                            />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    {watchedInventoryType === "MATERIAL_CONSUMPTION_BY_JOB" && (
+                      <FormField
+                        control={inventoryForm.control}
+                        name="job_id"
+                        render={({ field }) => (
+                          <FormItem className="w-[280px]">
+                            <FormLabel>Job</FormLabel>
+                            <Combobox
+                              items={[
+                                { value: "ALL", label: "All jobs" },
+                                ...jobList,
+                              ]}
+                              value={field.value ?? "ALL"}
+                              onValueChange={field.onChange}
+                              placeholder="All jobs"
+                            />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    {inventoryRequiresDates && (
+                      <DateRangeFields
+                        form={inventoryForm}
+                        fromName="from_date"
+                        toName="to_date"
+                      />
+                    )}
+
+                    {formActions(resetInventoryFilters)}
+                  </form>
+                </Form>
+              </TabsContent>
+
+              <TabsContent value="sales" className="mt-0">
+                <Form {...salesForm}>
+                  <form
+                    onSubmit={salesForm.handleSubmit(handleSalesSubmit)}
+                    className={formPanelClass}
+                  >
+                    {watchedSalesType === "SALES_BY_CUSTOMER" && (
+                      <>
+                        <div className="flex flex-col gap-2 w-[220px]">
+                          <Label>Customer</Label>
+                          <Combobox
+                            items={[
+                              { value: "", label: "All customers" },
+                              ...customer.map((c) => ({
+                                value: String(c.customer_id),
+                                label: c.company_name,
+                              })),
+                            ]}
+                            value={selectedSalesCustomerId}
+                            onValueChange={setSelectedSalesCustomerId}
+                            placeholder="All customers"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-2 w-[150px]">
+                          <Label>Currency</Label>
+                          <Combobox
+                            items={[
+                              { value: "", label: "All currencies" },
+                              { value: "LKR", label: "LKR" },
+                              { value: "USD", label: "USD" },
+                            ]}
+                            value={selectedSalesCurrency}
+                            onValueChange={setSelectedSalesCurrency}
+                            placeholder="All currencies"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {watchedSalesType === "SALES_BY_SALESPERSON" && (
+                      <div className="flex flex-col gap-2 w-[220px]">
+                        <Label>Salesperson</Label>
+                        <Combobox
+                          items={[
+                            { value: "", label: "All salespeople" },
+                            ...salespersonOptions,
+                          ]}
+                          value={selectedSalespersonName}
+                          onValueChange={setSelectedSalespersonName}
+                          placeholder="All salespeople"
+                        />
+                      </div>
+                    )}
+
+                    <DateRangeFields
+                      form={salesForm}
+                      fromName="from_date"
+                      toName="to_date"
+                    />
+
+                    {formActions(resetSalesFilters)}
+                  </form>
+                </Form>
+              </TabsContent>
+
+              <TabsContent value="quotation" className="mt-0">
+                <Form {...quotationForm}>
+                  <form
+                    onSubmit={quotationForm.handleSubmit(handleQuotationSubmit)}
+                    className={formPanelClass}
+                  >
+                    {selectedReport.type === QUOTATIONS_ISSUED && (
+                      <div className="flex flex-col gap-2">
+                        <Label id="quotation-grouping">Group by</Label>
+                        <ToggleGroup
+                          type="single"
+                          variant="outline"
+                          aria-labelledby="quotation-grouping"
+                          className="h-10"
+                          value={watchedQuotationType}
+                          onValueChange={(value) => {
+                            if (!value || value === watchedQuotationType)
+                              return;
+                            quotationForm.setValue("reportType", value);
+                            // Results were grouped the other way; clear them
+                            handleTabChange("quotation");
+                          }}
+                        >
+                          {QUOTATIONS_ISSUED_GROUPING.map((option) => (
+                            <ToggleGroupItem
+                              key={option.value}
+                              value={option.value}
+                              className="h-10 px-4"
+                            >
+                              {option.label}
+                            </ToggleGroupItem>
+                          ))}
+                        </ToggleGroup>
+                      </div>
+                    )}
+
+                    {watchedQuotationType === "QUOTATION_BY_CUSTOMER" && (
+                      <FormField
+                        control={quotationForm.control}
+                        name="customer_id"
+                        render={({ field }) => (
+                          <FormItem className="w-[220px]">
+                            <FormLabel>Customer</FormLabel>
+                            <Combobox
+                              items={[
+                                { value: "ALL", label: "All customers" },
+                                ...customer.map((c) => ({
+                                  value: String(c.customer_id),
+                                  label: c.company_name,
+                                })),
+                              ]}
+                              value={field.value ? String(field.value) : ""}
+                              onValueChange={(val) => field.onChange(val)}
+                              placeholder="All customers"
+                            />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                    {watchedQuotationType === "QUOTATION_BY_SALESPERSON" && (
+                      <FormField
+                        control={quotationForm.control}
+                        name="salesperson"
+                        render={({ field }) => (
+                          <FormItem className="w-[220px]">
+                            <FormLabel>Salesperson</FormLabel>
+                            <Combobox
+                              items={[
+                                { value: "ALL", label: "All salespeople" },
+                                ...salespersonOptions,
+                              ]}
+                              value={field.value ?? ""}
+                              onValueChange={field.onChange}
+                              placeholder="All salespeople"
+                            />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    <DateRangeFields
+                      form={quotationForm}
+                      fromName="fromDate"
+                      toName="toDate"
+                    />
+
+                    {formActions(resetQuotationFilters)}
+                  </form>
+                </Form>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {loading ? (
+            <div
+              className="rounded-lg border bg-card p-4 space-y-3"
+              aria-busy="true"
+              aria-label="Generating report"
+            >
+              <Skeleton className="h-5 w-48" />
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full" />
+              ))}
+            </div>
+          ) : !lastRun ? (
+            <p className="no-print rounded-lg border border-dashed px-6 py-10 text-center text-sm text-muted-foreground">
+              Set the filters above, then select Generate report.
+            </p>
+          ) : filteredReportData.length === 0 ? (
+            <div className="rounded-lg border border-dashed px-6 py-10 text-center">
+              <h3 className="font-semibold">No records found</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {runRangeText
+                  ? `Nothing matched from ${runRangeText}. Try a wider date range or fewer filters.`
+                  : "Nothing matched these filters. Try clearing some of them."}
+              </p>
+            </div>
+          ) : (
+            <ReportsTable
+              data={filteredReportData}
+              isLoading={loading}
+              filename={reportFilename}
+              title={selectedReport.label}
+              rangeText={runRangeText}
+              grandTotal={grandTotal}
+            />
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 }
