@@ -18,7 +18,7 @@ export interface AnalyticsData {
         total_dispatches: number | string;
         completed_dispatches: number | string;
     };
-    revenueTrend: Array<{ month: string; revenue: string | number }>;
+    revenueTrend: Array<{ month: string; revenue: string | number; currency?: string }>;
     stockReminders?: Array<{
         item_name: string;
         item_sub_category: string;

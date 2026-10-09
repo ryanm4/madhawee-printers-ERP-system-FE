@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { getErrorMessage } from "@/lib/error-utils";
 import { toast } from "sonner";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
@@ -11,20 +12,16 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import {
+  AlertTriangle,
+  Banknote,
   CalendarIcon,
-  TrendingUp,
-  Package,
-  Truck,
-  ClipboardList,
   CheckCircle2,
-  AlertCircle,
   ChevronLeft,
   ChevronRight,
-  Clock,
+  ClipboardList,
   FileText,
-  Banknote,
-  BarChart3,
-  LucideIcon,
+  Package,
+  Truck,
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -32,12 +29,35 @@ import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { DashboardApi } from "@/modules/dashboard/api";
 import { KPIItem, AnalyticsData } from "@/modules/dashboard/types";
-import { PageLoader } from "@/components/shared/loader";
-import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TileWaves } from "./_components/tile-waves";
+import { CurrencyCode, ProgressLine, Tile, TileHeader } from "./_components/tile";
+import { RevenueTwelveMonths, TrendPoint, twelveMonthWindow } from "./_components/revenue-twelve-months";
 
-import { ChartRadialShape } from "@/components/chart-radial-shape";
-import { AdditionalKPIs } from "@/components/additional-kpis";
-import { RevenueTrendChart } from "@/components/revenue-trend-chart";
+const REMINDERS_PER_PAGE = 5;
+
+const money = (value: number) =>
+  value.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+const withSymbol = (currency: CurrencyCode, value: number) =>
+  currency === "USD" ? `$ ${money(value)}` : `Rs. ${money(value)}`;
+
+/** Revenue KPIs arrive per currency ({ LKR, USD }); older responses send one LKR number */
+const byCurrency = (value: KPIItem["value"] | undefined): Record<CurrencyCode, number> => {
+  if (value && typeof value === "object") {
+    const v = value as unknown as Partial<Record<CurrencyCode, number>>;
+    return { LKR: Number(v.LKR || 0), USD: Number(v.USD || 0) };
+  }
+  return { LKR: Number(value || 0), USD: 0 };
+};
+
+const percent = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100 : 0);
+
+/** Notes from the backend that describe a problem rather than a healthy state */
+const isWarning = (insight: string) => !/healthy/i.test(insight);
 
 function DashboardPage({
   user: initialUser,
@@ -61,8 +81,11 @@ function DashboardPage({
   const [kpiData, setKpiData] = useState<KPIItem[]>([]);
   const [insights, setInsights] = useState<string[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const [chartCurrency, setChartCurrency] = useState<"LKR" | "USD">("LKR");
   const [stockReminderPage, setStockReminderPage] = useState(0);
+  const [yearTrend, setYearTrend] = useState<TrendPoint[]>([]);
+  const [yearTrendLoading, setYearTrendLoading] = useState(false);
+  const [yearTrendFailed, setYearTrendFailed] = useState(false);
+  const [yearCurrency, setYearCurrency] = useState<CurrencyCode>("LKR");
 
   useEffect(() => {
     const userData = getUser();
@@ -88,6 +111,7 @@ function DashboardPage({
         setKpiData(response.data?.kpis || []);
         setInsights(response.data?.insights || []);
         setAnalytics(response.data?.analytics || null);
+        setStockReminderPage(0);
       }
     } catch (error) {
       console.error("Dashboard data fetch failed:", error);
@@ -101,64 +125,80 @@ function DashboardPage({
     handleGenerateKPI();
   }, [handleGenerateKPI]);
 
-  const KAR_CONFIG: Record<
-    string,
-    { label: string; color: string; badgeBg: string; icon: LucideIcon }
-  > = {
-    totalRevenue: {
-      label: "Total Revenue",
-      color: "#8b5cf6",
-      badgeBg: "#8b5cf615",
-      icon: Banknote,
-    },
-    dispatchRevenue: {
-      label: "Total Dispatch Revenue",
-      color: "#f59e0b",
-      badgeBg: "#f59e0b15",
-      icon: Truck,
-    },
-    totalQuotations: {
-      label: "Total Quotations",
-      color: "#223F7A",
-      badgeBg: "#223F7A15",
-      icon: FileText,
-    },
-    approvedQuotations: {
-      label: "Approved Quotations",
-      color: "#10b981",
-      badgeBg: "#10b98115",
-      icon: CheckCircle2,
-    },
-  };
+  // The 12 months ending with the selected period, whatever its length. Uses the same
+  // dashboard endpoint and keeps only its monthly revenue figures.
+  const yearEnd = date?.to ?? date?.from ?? new Date();
+  const yearEndKey = format(yearEnd, "yyyy-MM");
+  useEffect(() => {
+    let cancelled = false;
+    const [year, month] = yearEndKey.split("-").map(Number);
+    const months = twelveMonthWindow(new Date(year, month - 1, 1));
+    setYearTrendLoading(true);
+    setYearTrendFailed(false);
+    DashboardApi.create({
+      dateFrom: format(months[0], "yyyy-MM-dd 00:00:00"),
+      dateTo: format(endOfMonth(months[11]), "yyyy-MM-dd 23:59:59"),
+    })
+      .then((response) => {
+        if (!cancelled) setYearTrend(response.data?.analytics?.revenueTrend ?? []);
+      })
+      .catch((error) => {
+        console.error("12-month revenue fetch failed:", error);
+        if (!cancelled) setYearTrendFailed(true);
+      })
+      .finally(() => {
+        if (!cancelled) setYearTrendLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [yearEndKey]);
+
+  const kpi = (key: string) => kpiData.find((k) => k.key === key)?.value;
+
+  const totalQuotations = Number(kpi("totalQuotations") || 0);
+  const approvedQuotations = Number(kpi("approvedQuotations") || 0);
+  const revenue = byCurrency(kpi("totalRevenue"));
+  const dispatchRevenue = byCurrency(kpi("dispatchRevenue"));
+  const lowStockItems = Number(kpi("lowStockItems") || 0);
+
+  const totalJobs = Number(analytics?.jobStats?.total_jobs || 0);
+  const completedJobs = Number(analytics?.jobStats?.completed_jobs || 0);
+  const efficiency = Number(analytics?.jobStats?.production_efficiency || 0);
+  const totalDispatches = Number(analytics?.dispatchStats?.total_dispatches || 0);
+  const completedDispatches = Number(analytics?.dispatchStats?.completed_dispatches || 0);
+
+  const reminders = analytics?.stockReminders ?? [];
+  const belowCount = reminders.filter((r) => r.stock_status === "BELOW").length;
+  const nearCount = reminders.filter((r) => r.stock_status === "NEAR").length;
+  const pageCount = Math.max(1, Math.ceil(reminders.length / REMINDERS_PER_PAGE));
+  const pageStart = stockReminderPage * REMINDERS_PER_PAGE;
+  const visibleReminders = reminders.slice(pageStart, pageStart + REMINDERS_PER_PAGE);
+
+  const rangeLabel = date?.from
+    ? date.to
+      ? `${format(date.from, "d MMM yyyy")} to ${format(date.to, "d MMM yyyy")}`
+      : format(date.from, "d MMM yyyy")
+    : "Pick a date range";
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-8 min-h-screen bg-[#FDFDFF]">
-      {/* Header with Breadcrumbs and Date Picker */}
-      <div className="flex flex-row items-center justify-between mb-2">
+    <div className="flex min-h-screen flex-1 flex-col gap-6 bg-[#F6F7FA] p-4 sm:p-6 lg:p-8">
+      {/* Greeting and period */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <PageTitleWithBreadcrumb isDashboard={true} userName={user?.name} />
         <Popover>
           <PopoverTrigger asChild>
             <Button
               id="date"
-              variant={"outline"}
+              variant="outline"
               className={cn(
-                "w-full justify-start text-left font-normal sm:w-[300px] rounded-2xl h-11 border-gray-100 shadow-sm",
-                !date && "text-muted-foreground",
+                "h-10 w-full justify-start gap-2 rounded-xl border-[#E4E8F0] bg-white text-left font-normal sm:w-auto",
+                !date && "text-muted-foreground"
               )}
             >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {date?.from ? (
-                date.to ? (
-                  <>
-                    {format(date.from, "LLL dd, y")} -{" "}
-                    {format(date.to, "LLL dd, y")}
-                  </>
-                ) : (
-                  format(date.from, "LLL dd, y")
-                )
-              ) : (
-                <span>Pick a date</span>
-              )}
+              <CalendarIcon className="size-4 text-[#5B6474]" />
+              <span className="text-[#5B6474]">Showing</span>
+              <span className="font-medium text-[#1B2433] tabular-nums">{rangeLabel}</span>
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="end">
@@ -184,394 +224,299 @@ function DashboardPage({
       </div>
 
       {isLoading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <PageLoader />
-        </div>
+        <DashboardSkeleton />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          {/* Top Row: Full-width Hero with KPIs inside */}
-          <Card className="md:col-span-12 border-none shadow-sm rounded-[2rem] overflow-hidden relative group bg-white">
-            {/* Gradient Ring — centered at top, half visible */}
-            <div className="absolute left-1/2 -translate-x-1/2 -top-56 w-[400px] h-[400px] group-hover:scale-105 transition-transform duration-700 ease-out pointer-events-none">
-              <div
-                className="w-full h-full rounded-full"
-                style={{
-                  background:
-                    "conic-gradient(from 160deg, #223F7A, #3b5998, #4a7cc9, #223F7A, #1a3060, #223F7A)",
-                  mask: "radial-gradient(farthest-side, transparent calc(100% - 40px), #000 calc(100% - 40px))",
-                  WebkitMask:
-                    "radial-gradient(farthest-side, transparent calc(100% - 40px), #000 calc(100% - 40px))",
-                }}
-              />
-              <div
-                className="absolute inset-0 rounded-full opacity-10 blur-3xl -z-10"
-                style={{
-                  background:
-                    "conic-gradient(from 160deg, #223F7A, #4a7cc9, #223F7A)",
-                }}
-              />
-            </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-6 lg:grid-cols-12 lg:gap-5">
+          {/* Welcome: the one bold tile */}
+          <section className="relative overflow-hidden rounded-2xl bg-[#223F7A] p-7 text-white md:col-span-6 lg:col-span-7 lg:row-span-2 lg:p-9">
+            <TileWaves className="pointer-events-none absolute inset-0" />
+            <div className="relative flex h-full max-w-md flex-col">
+              <h2 className="text-3xl font-bold leading-tight tracking-tight lg:text-[2.5rem]">
+                Welcome back, {user?.name}
+              </h2>
+              <p className="mt-3 text-[15px] leading-relaxed text-white/75">
+                You have{" "}
+                <span className="font-semibold text-white">{totalQuotations}</span>{" "}
+                {totalQuotations === 1 ? "quotation" : "quotations"} in this period
+                to review.
+              </p>
 
-            {/* Content Grid: Welcome left, KPIs right */}
-            <div className="relative z-10 flex flex-col lg:flex-row items-stretch">
-              {/* Left: Welcome */}
-              <div className="flex-1 px-10 pb-8 pt-6 flex flex-col justify-center">
-                <h2 className="text-4xl md:text-5xl font-black text-gray-900 leading-tight mb-4">
-                  Welcome Back,
-                  <br />
-                  {user?.name}!
-                </h2>
-                <p className="text-gray-500 text-lg max-w-md mb-6 leading-relaxed">
-                  Ready to manage your printing operations? You have{" "}
-                  <span className="font-bold" style={{ color: "#223F7A" }}>
-                    {kpiData.find((k) => k.key === "totalQuotations")?.value ||
-                      0}
-                  </span>{" "}
-                  active quotations to review.
-                </p>
-                <div className="flex gap-4">
-                  <Button
-                    onClick={() => (window.location.href = "/job-ticket")}
-                    className="w-fit rounded-2xl h-12 px-6 text-white font-bold border-none shadow-lg transition-all duration-300 hover:shadow-xl"
-                    style={{
-                      background: "linear-gradient(135deg, #223F7A, #3b5998)",
-                    }}
-                  >
-                    View Jobs
-                  </Button>
-                  <Button
-                    onClick={() =>
-                      (window.location.href = "/quotation-management")
-                    }
-                    variant="outline"
-                    className="w-fit rounded-2xl h-12 px-6 text-gray-700 hover:text-white font-bold transition-all duration-300"
-                    style={{ borderColor: "#223F7A" }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#223F7A";
-                      e.currentTarget.style.color = "white";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "transparent";
-                      e.currentTarget.style.color = "#374151";
-                    }}
-                  >
-                    Quotations
-                  </Button>
-                </div>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Button
+                  asChild
+                  className="h-10 rounded-xl bg-white px-5 font-semibold text-[#223F7A] hover:bg-white/90"
+                >
+                  <Link href="/job-ticket">View jobs</Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-10 rounded-xl border-white/40 bg-transparent px-5 font-semibold text-white hover:bg-white/10 hover:text-white"
+                >
+                  <Link href="/quotation-management">Quotations</Link>
+                </Button>
               </div>
 
-              {/* Right: KPI Grid */}
-              <div className="lg:w-[480px] xl:w-[540px] p-6 lg:p-10 flex items-center">
-                <div className="grid grid-cols-2 gap-6 w-full">
-                  {Object.keys(KAR_CONFIG).flatMap((key) => {
-                    const item = kpiData.find((d) => d.key === key);
-                    if (!item) return [];
-
-                    const config = KAR_CONFIG[key];
-                    const isCurrency =
-                      key === "totalRevenue" || key === "avgQuoteValue";
-                    const isObjectValue =
-                      typeof item.value === "object" && item.value !== null;
-
-                    // Display the full value without abbreviation
-                    const formatValue = (val: number, currency: boolean) => {
-                      if (currency) {
-                        return val.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        });
-                      }
-                      return val.toLocaleString();
-                    };
-
-                    const Icon = config.icon || TrendingUp;
-
-                    // Dynamic font sizing based on length to prevent layout breaks
-                    const getFontSize = (strVal: string) => {
-                      const len = strVal.length;
-                      if (isCurrency) {
-                        if (len > 14) return "text-lg";
-                        if (len > 11) return "text-xl";
-                        if (len > 8) return "text-xl";
-                        return "text-xl";
-                      } else {
-                        if (len > 5) return "text-xl";
-                        return "text-xl";
-                      }
-                    };
-
-                    if (isObjectValue) {
-                      return Object.entries(
-                        item.value as unknown as Record<string, number>,
-                      ).map(([currencyCode, val]) => {
-                        const formattedString =
-                          currencyCode === "USD"
-                            ? `$ ${formatValue(Number(val), true)}`
-                            : `Rs. ${formatValue(Number(val), true)}`;
-
-                        const flag = currencyCode === "USD" ? "🇺🇸" : "🇱🇰";
-
-                        return (
-                          <div
-                            key={`${item.key}-${currencyCode}`}
-                            className="bg-gray-50/80 backdrop-blur-sm border border-gray-100 rounded-[2.5rem] p-8 hover:shadow-xl hover:border-gray-200 transition-all group/kpi min-h-[160px] flex flex-col justify-between"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <p className="text-[13px] font-bold text-gray-400 uppercase tracking-widest leading-tight">
-                                {config.label} ({currencyCode}) {flag}
-                              </p>
-                              <div
-                                className="w-10 h-10 rounded-2xl flex-shrink-0 flex items-center justify-center group-hover/kpi:scale-110 transition-transform"
-                                style={{ backgroundColor: config.badgeBg }}
-                              >
-                                <Icon
-                                  className="w-5 h-5"
-                                  style={{ color: config.color }}
-                                />
-                              </div>
-                            </div>
-                            <div>
-                              <h3
-                                className={cn(
-                                  "font-black tracking-tighter text-gray-900 leading-none",
-                                  getFontSize(formattedString),
-                                )}
-                              >
-                                {formattedString}
-                              </h3>
-                            </div>
-                          </div>
-                        );
-                      });
-                    }
-
-                    const rawValue = Number(item.value);
-                    const formattedValue = isCurrency
-                      ? `Rs. ${formatValue(rawValue, true)}`
-                      : formatValue(rawValue, false);
-
-                    return [
-                      <div
-                        key={item.key}
-                        className="bg-gray-50/80 backdrop-blur-sm border border-gray-100 rounded-[2.5rem] p-8 hover:shadow-xl hover:border-gray-200 transition-all group/kpi min-h-[160px] flex flex-col justify-between"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-[13px] font-bold text-gray-400 uppercase tracking-widest leading-tight">
-                            {config.label}
-                          </p>
-                          <div
-                            className="w-10 h-10 rounded-2xl flex-shrink-0 flex items-center justify-center group-hover/kpi:scale-110 transition-transform"
-                            style={{ backgroundColor: config.badgeBg }}
-                          >
-                            <Icon
-                              className="w-5 h-5"
-                              style={{ color: config.color }}
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <h3
-                            className={cn(
-                              "font-black tracking-tighter text-gray-900 leading-none",
-                              getFontSize(formattedValue),
-                            )}
-                          >
-                            {formattedValue}
-                          </h3>
-                        </div>
-                      </div>,
-                    ];
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Stats Footer */}
-            <div className="relative z-10 border-t border-gray-100 px-10 py-4 flex items-center gap-8">
-              <div className="flex items-center gap-2">
-                <ClipboardList className="w-4 h-4 text-[#223F7A]" />
-                <span className="text-sm font-bold text-gray-900">
-                  {analytics?.jobStats?.total_jobs || 0}
-                </span>
-                <span className="text-xs text-gray-400">Active Jobs</span>
-              </div>
-              <div className="w-px h-4 bg-gray-200" />
-              <div className="flex items-center gap-2">
-                <Truck className="w-4 h-4 text-[#223F7A]" />
-                <span className="text-sm font-bold text-gray-900">
-                  {analytics?.dispatchStats?.total_dispatches || 0}
-                </span>
-                <span className="text-xs text-gray-400">Dispatches</span>
-              </div>
-              <div className="w-px h-4 bg-gray-200" />
-              <div className="flex items-center gap-2">
-                <Package className="w-4 h-4 text-[#223F7A]" />
-                <span className="text-sm font-bold text-gray-900">
-                  {kpiData.find((k) => k.key === "lowStockItems")?.value || 0}
-                </span>
-                <span className="text-xs text-gray-400">Low Stock</span>
-              </div>
-            </div>
-          </Card>
-
-          {/* Middle Row: Efficiency Status Indicators (PROMINENT) */}
-          <div className="md:col-span-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <ChartRadialShape
-              title="Dispatch Track"
-              description="Status of current deliveries"
-              total={Number(analytics?.dispatchStats?.total_dispatches || 0)}
-              completed={Number(
-                analytics?.dispatchStats?.completed_dispatches || 0,
-              )}
-              label="Dispatch"
-              color="#6366f1"
-              footerTitle="Speed Score"
-              footerDescription="Real-time dispatch fulfillment"
-            />
-            <ChartRadialShape
-              title="Production Flow"
-              description="Current manufacturing cycle"
-              total={Number(analytics?.jobStats?.total_jobs || 0)}
-              completed={Number(analytics?.jobStats?.completed_jobs || 0)}
-              label="Jobs"
-              color="#10b981"
-              footerTitle="Output Rate"
-              footerDescription="Active job ticket progress"
-              percentage={Number(
-                analytics?.jobStats?.production_efficiency || 0,
-              )}
-            />
-            <Card className="lg:col-span-1 border-none shadow-sm rounded-[2rem] p-8 bg-white flex flex-col h-full justify-between">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">Revenue Trend</h3>
-                  <p className="text-xs text-gray-400">Monthly revenue breakdown</p>
-                </div>
-                <div className="flex gap-1 bg-gray-100 p-0.5 rounded-xl text-xs">
-                  <button
-                    onClick={() => setChartCurrency("LKR")}
-                    className={cn(
-                      "px-2.5 py-1 rounded-lg font-semibold transition-all",
-                      chartCurrency === "LKR" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
-                    )}
-                  >
-                    LKR
-                  </button>
-                  <button
-                    onClick={() => setChartCurrency("USD")}
-                    className={cn(
-                      "px-2.5 py-1 rounded-lg font-semibold transition-all",
-                      chartCurrency === "USD" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
-                    )}
-                  >
-                    USD
-                  </button>
-                </div>
-              </div>
-              <div className="flex-1 min-h-[200px] flex items-center justify-center">
-                {analytics?.revenueTrend && analytics.revenueTrend.length > 0 ? (
-                  <RevenueTrendChart
-                    data={analytics.revenueTrend.filter((item: any) => item.currency === chartCurrency)}
-                  />
-                ) : (
-                  <div className="text-sm text-gray-400">No revenue data available</div>
-                )}
-              </div>
-            </Card>
-          </div>
-
-          {/* Bottom Row: Alerts and Stock Summary */}
-          <div className="md:col-span-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-2 border-none shadow-sm rounded-[2rem] bg-white p-8">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                  <h3 className="text-xl font-bold text-gray-900">
-                    Stock Reminders
-                  </h3>
-                  {analytics?.stockReminders && analytics.stockReminders.length > 4 && (
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7 rounded-full border-gray-200"
-                        onClick={() => setStockReminderPage(Math.max(0, stockReminderPage - 1))}
-                        disabled={stockReminderPage === 0}
-                      >
-                        <ChevronLeft className="h-4 w-4 text-gray-500" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7 rounded-full border-gray-200"
-                        onClick={() => setStockReminderPage(stockReminderPage + 1)}
-                        disabled={(stockReminderPage + 1) * 4 >= analytics.stockReminders.length}
-                      >
-                        <ChevronRight className="h-4 w-4 text-gray-500" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-                  </span>
-                  LIVE UPDATES
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {analytics?.stockReminders && analytics.stockReminders.length > 0 ? (
-                  analytics.stockReminders.slice(stockReminderPage * 4, (stockReminderPage + 1) * 4).map((reminder, idx) => {
-                    const isBelow = reminder.stock_status === 'BELOW';
-                    const title = reminder.size
-                      ? `${reminder.item_sub_category || ''} ${reminder.item_name} (${reminder.size})`
-                      : `${reminder.item_sub_category || ''} ${reminder.item_name}`;
-                    const bg = isBelow ? "bg-red-50" : "bg-orange-50";
-                    const color = isBelow ? "text-red-600" : "text-orange-600";
-                    const desc = isBelow ? "Below Reorder Level" : "Nearing Reorder Level";
-
+              {insights.length > 0 && (
+                <ul className="mt-8 flex flex-col gap-2 border-t border-white/15 pt-5" aria-label="Notes for this period">
+                  {insights.map((insight) => {
+                    const warn = isWarning(insight);
+                    const Icon = warn ? AlertTriangle : CheckCircle2;
                     return (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-4 p-5 rounded-3xl border border-gray-50 hover:border-gray-100 hover:bg-gray-50/50 transition-all cursor-pointer"
-                      >
-                        <div className={cn("p-3 rounded-2xl", bg, color)}>
-                          <AlertCircle className="w-5 h-5" />
-                        </div>
-                        <div className="flex-1 overflow-hidden">
-                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider truncate">
-                            {title}
-                          </p>
-                          <p className="text-lg font-black text-gray-900">
-                            {Number(reminder.available_qty || reminder.quantity || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                          </p>
-                          <p className={cn("text-[10px] font-semibold", color)}>{desc}</p>
-                        </div>
-                      </div>
+                      <li key={insight} className="flex items-center gap-2 text-sm text-white/85">
+                        <Icon
+                          className={cn("size-4 shrink-0", warn ? "text-[#FCD34D]" : "text-[#86EFAC]")}
+                          aria-hidden
+                        />
+                        {insight}
+                      </li>
                     );
-                  })
-                ) : (
-                  <div className="col-span-1 md:col-span-2 flex flex-col items-center justify-center p-10 text-gray-400">
-                    <CheckCircle2 className="w-10 h-10 mb-2 text-green-500 opacity-50" />
-                    <p>Inventory levels are optimal.</p>
-                  </div>
-                )}
-              </div>
-            </Card>
+                  })}
+                </ul>
+              )}
+            </div>
+          </section>
 
-            <AdditionalKPIs
-              productionEfficiency={
-                analytics?.jobStats?.production_efficiency || "0.00"
-              }
-              lowStockItems={
-                kpiData.find((item) => item.key === "lowStockItems")?.value || 0
-              }
-              totalDispatches={analytics?.dispatchStats?.total_dispatches || 0}
-              className="border-none shadow-sm rounded-[2rem] p-8 bg-white lg:col-span-1"
+          {/* Revenue */}
+          <Tile className="md:col-span-3 lg:col-span-5">
+            <TileHeader icon={Banknote} title="Revenue" />
+            <div className="mt-5 flex flex-col gap-3">
+              <div>
+                <p className="text-[13px] text-[#5B6474]">Total revenue (LKR)</p>
+                <p className="mt-1 whitespace-nowrap text-[1.75rem] font-bold leading-tight tracking-tight text-[#1B2433] tabular-nums">
+                  {withSymbol("LKR", revenue.LKR)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[13px] text-[#5B6474]">Total revenue (USD)</p>
+                <p className="mt-1 whitespace-nowrap text-xl font-bold tracking-tight text-[#1B2433] tabular-nums">
+                  {withSymbol("USD", revenue.USD)}
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-4 border-t border-[#EEF1F6] pt-4">
+              {(["LKR", "USD"] as const).map((code) => (
+                <div key={code}>
+                  <p className="flex items-center gap-1.5 text-[13px] text-[#5B6474]">
+                    <Truck className="size-3.5" aria-hidden />
+                    Dispatch revenue ({code})
+                  </p>
+                  <p className="mt-1 whitespace-nowrap text-base font-semibold text-[#1B2433] tabular-nums">
+                    {withSymbol(code, dispatchRevenue[code])}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </Tile>
+
+          {/* Quotations */}
+          <Tile className="md:col-span-3 lg:col-span-5">
+            <TileHeader
+              icon={FileText}
+              title="Quotations"
+              href="/quotation-management"
+              linkLabel="Open quotations"
             />
-          </div>
+            <div className="mt-5 flex items-end gap-8">
+              <div>
+                <p className="text-[13px] text-[#5B6474]">Total quotations</p>
+                <p className="mt-1 text-3xl font-bold tracking-tight text-[#1B2433] tabular-nums">
+                  {totalQuotations.toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-[13px] text-[#5B6474]">Approved</p>
+                <p className="mt-1 text-3xl font-bold tracking-tight text-[#16A34A] tabular-nums">
+                  {approvedQuotations.toLocaleString()}
+                </p>
+              </div>
+            </div>
+            <div className="mt-5">
+              <ProgressLine
+                tone="green"
+                value={percent(approvedQuotations, totalQuotations)}
+                label={`${Math.round(percent(approvedQuotations, totalQuotations))}% of quotations approved`}
+              />
+            </div>
+          </Tile>
+
+          {/* Production */}
+          <Tile className="md:col-span-2 lg:col-span-4">
+            <TileHeader icon={ClipboardList} title="Production" href="/job-ticket" linkLabel="Jobs" />
+            <div className="mt-5 flex items-baseline gap-2">
+              <p className="text-3xl font-bold tracking-tight text-[#1B2433] tabular-nums">
+                {totalJobs.toLocaleString()}
+              </p>
+              <p className="text-sm text-[#5B6474]">active jobs</p>
+            </div>
+            <div className="mt-auto flex flex-col gap-4 pt-5">
+              <ProgressLine
+                value={efficiency}
+                label={`Production efficiency ${efficiency.toFixed(2)}%`}
+              />
+              <p className="text-[13px] text-[#5B6474]">
+                {completedJobs.toLocaleString()} of {totalJobs.toLocaleString()} jobs completed
+              </p>
+            </div>
+          </Tile>
+
+          {/* Dispatch */}
+          <Tile className="md:col-span-2 lg:col-span-4">
+            <TileHeader icon={Truck} title="Dispatch" href="/dispatch-invoice" linkLabel="Dispatches" />
+            <div className="mt-5 flex items-baseline gap-2">
+              <p className="text-3xl font-bold tracking-tight text-[#1B2433] tabular-nums">
+                {totalDispatches.toLocaleString()}
+              </p>
+              <p className="text-sm text-[#5B6474]">dispatches</p>
+            </div>
+            <div className="mt-auto pt-5">
+              <ProgressLine
+                value={percent(completedDispatches, totalDispatches)}
+                label={`${completedDispatches.toLocaleString()} of ${totalDispatches.toLocaleString()} completed (${Math.round(
+                  percent(completedDispatches, totalDispatches)
+                )}%)`}
+              />
+            </div>
+          </Tile>
+
+          {/* Stock */}
+          <Tile className="md:col-span-2 lg:col-span-4">
+            <TileHeader icon={Package} title="Stock" href="/inventory" linkLabel="Stock list" />
+            <div className="mt-5 flex items-baseline gap-2">
+              <p
+                className={cn(
+                  "text-3xl font-bold tracking-tight tabular-nums",
+                  lowStockItems > 0 ? "text-[#DC2626]" : "text-[#1B2433]"
+                )}
+              >
+                {lowStockItems.toLocaleString()}
+              </p>
+              <p className="text-sm text-[#5B6474]">low stock items</p>
+            </div>
+            <div className="mt-auto flex flex-wrap gap-2 pt-5">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FEF2F2] px-2.5 py-1 text-[13px] font-medium text-[#B91C1C]">
+                <span className="size-1.5 rounded-full bg-[#DC2626]" aria-hidden />
+                {belowCount} below reorder level
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FFFBEB] px-2.5 py-1 text-[13px] font-medium text-[#B45309]">
+                <span className="size-1.5 rounded-full bg-[#D97706]" aria-hidden />
+                {nearCount} nearing reorder level
+              </span>
+            </div>
+          </Tile>
+
+          {/* Revenue trend: always the last 12 months, so a short period still shows a trend */}
+          <RevenueTwelveMonths
+            className="md:col-span-6 lg:col-span-7"
+            data={yearTrend}
+            end={yearEnd}
+            currency={yearCurrency}
+            onCurrencyChange={setYearCurrency}
+            isLoading={yearTrendLoading}
+            failed={yearTrendFailed}
+          />
+
+          {/* Stock reminders */}
+          <Tile className="md:col-span-6 lg:col-span-5">
+            <TileHeader icon={AlertTriangle} title="Stock reminders">
+              {reminders.length > REMINDERS_PER_PAGE && (
+                <div className="flex items-center gap-1">
+                  <span className="mr-1 text-xs text-[#5B6474] tabular-nums">
+                    {pageStart + 1}–{Math.min(pageStart + REMINDERS_PER_PAGE, reminders.length)} of{" "}
+                    {reminders.length}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-7 rounded-lg border-[#E4E8F0]"
+                    aria-label="Previous reminders"
+                    onClick={() => setStockReminderPage((p) => Math.max(0, p - 1))}
+                    disabled={stockReminderPage === 0}
+                  >
+                    <ChevronLeft className="size-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-7 rounded-lg border-[#E4E8F0]"
+                    aria-label="Next reminders"
+                    onClick={() => setStockReminderPage((p) => Math.min(pageCount - 1, p + 1))}
+                    disabled={stockReminderPage >= pageCount - 1}
+                  >
+                    <ChevronRight className="size-4" />
+                  </Button>
+                </div>
+              )}
+            </TileHeader>
+
+            {reminders.length > 0 ? (
+              <ul className="mt-4 divide-y divide-[#EEF1F6]">
+                {visibleReminders.map((reminder, idx) => {
+                  const isBelow = reminder.stock_status === "BELOW";
+                  const name = [reminder.item_sub_category, reminder.item_name]
+                    .filter(Boolean)
+                    .join(" ");
+                  const qty = Number(reminder.available_qty || reminder.quantity || 0);
+                  return (
+                    <li key={`${pageStart + idx}-${reminder.item_name}`} className="flex items-center gap-3 py-3">
+                      <span
+                        className={cn(
+                          "size-2 shrink-0 rounded-full",
+                          isBelow ? "bg-[#DC2626]" : "bg-[#D97706]"
+                        )}
+                        aria-hidden
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-[#1B2433]">
+                          {name}
+                          {reminder.size && (
+                            <span className="font-normal text-[#5B6474]"> ({reminder.size})</span>
+                          )}
+                        </p>
+                        <p className={cn("text-xs", isBelow ? "text-[#B91C1C]" : "text-[#B45309]")}>
+                          {isBelow ? "Below reorder level" : "Nearing reorder level"}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-[#1B2433] tabular-nums">
+                          {qty.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-xs text-[#5B6474]">available</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <div className="flex flex-1 flex-col items-center justify-center gap-2 py-10 text-center">
+                <CheckCircle2 className="size-8 text-[#16A34A]/70" aria-hidden />
+                <p className="text-sm font-medium text-[#1B2433]">Inventory levels are optimal.</p>
+                <p className="text-[13px] text-[#5B6474]">No item is near its reorder level.</p>
+              </div>
+            )}
+          </Tile>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Placeholder tiles in the same layout, so the page doesn't jump when data arrives */
+function DashboardSkeleton() {
+  return (
+    <div
+      className="grid grid-cols-1 gap-4 md:grid-cols-6 lg:grid-cols-12 lg:gap-5"
+      aria-busy="true"
+      aria-label="Loading dashboard"
+    >
+      <Skeleton className="h-[280px] rounded-2xl md:col-span-6 lg:col-span-7 lg:row-span-2 lg:h-auto" />
+      <Skeleton className="h-[200px] rounded-2xl md:col-span-3 lg:col-span-5" />
+      <Skeleton className="h-[200px] rounded-2xl md:col-span-3 lg:col-span-5" />
+      <Skeleton className="h-[190px] rounded-2xl md:col-span-2 lg:col-span-4" />
+      <Skeleton className="h-[190px] rounded-2xl md:col-span-2 lg:col-span-4" />
+      <Skeleton className="h-[190px] rounded-2xl md:col-span-2 lg:col-span-4" />
+      <Skeleton className="h-[320px] rounded-2xl md:col-span-6 lg:col-span-7" />
+      <Skeleton className="h-[320px] rounded-2xl md:col-span-6 lg:col-span-5" />
     </div>
   );
 }
