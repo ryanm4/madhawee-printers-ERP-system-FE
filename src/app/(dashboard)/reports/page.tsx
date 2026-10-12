@@ -355,7 +355,10 @@ function ReportsPage() {
     try {
       setLoading(true);
       if (data.reportType === JOB_DELIVERY_SUMMARY) {
-        const customerId = data.customer_id && data.customer_id !== "ALL" ? Number(data.customer_id) : undefined;
+        const customerId =
+          data.customer_id && data.customer_id !== "ALL"
+            ? Number(data.customer_id)
+            : undefined;
         const jobName = data.job_name?.trim() || undefined;
         const response = await ReportsApi.jobDeliverySummary({
           fromDate: `${data.fromDate} 00:00:00`,
@@ -366,9 +369,16 @@ function ReportsPage() {
         setReportData(response.data?.data || []);
         setGrandTotal(null);
         // Saved with the run, so the PDF names the filters that produced it
-        const customerName = customerId ? customer.find((c) => c.customer_id === customerId)?.company_name : undefined;
+        const customerName = customerId
+          ? customer.find((c) => c.customer_id === customerId)?.company_name
+          : undefined;
         setJobDeliveryFilters(
-          [customerName && `Customer: ${customerName}`, jobName && `Job name contains "${jobName}"`].filter(Boolean).join(". ")
+          [
+            customerName && `Customer: ${customerName}`,
+            jobName && `Job name contains "${jobName}"`,
+          ]
+            .filter(Boolean)
+            .join(". ")
         );
         setLastRun({ from: data.fromDate, to: data.toDate });
         return;
@@ -1150,7 +1160,9 @@ function ReportsPage() {
         const wanted = selectedDispatchStatus.toUpperCase();
         data = data.filter((row: any) => {
           const status = String(row.status || "").toUpperCase();
-          return wanted.startsWith("PARTIAL") ? status.startsWith("PARTIAL") : status === wanted;
+          return wanted.startsWith("PARTIAL")
+            ? status.startsWith("PARTIAL")
+            : status === wanted;
         });
       }
       data = data.map((row: any, index: number) => {
@@ -1547,7 +1559,8 @@ function ReportsPage() {
           const totalVal = mapped.reduce(
             (sum: number, r: any) =>
               sum +
-              (parseFloat(String(r["Stock Value"]).replace(/[^0-9.-]/g, "")) || 0),
+              (parseFloat(String(r["Stock Value"]).replace(/[^0-9.-]/g, "")) ||
+                0),
             0
           );
           mapped.push({
@@ -2134,7 +2147,7 @@ function ReportsPage() {
         jobs: "Jobs Report",
         purchase_orders: "Purchase Orders Report",
         quotations: "Quotations Report",
-        JOB_DELIVERY_SUMMARY: "Job Delivery Summary",
+        JOB_DELIVERY_SUMMARY: "Job Summary",
       };
       name =
         generalLabels[type] ||
@@ -2237,38 +2250,39 @@ function ReportsPage() {
                     onSubmit={generalForm.handleSubmit(handleGeneralSubmit)}
                     className={formPanelClass}
                   >
-                    {((isGeneralAdvanced && watchedGeneralType !== "INVENTORY_HEALTH") ||
+                    {((isGeneralAdvanced &&
+                      watchedGeneralType !== "INVENTORY_HEALTH") ||
                       watchedGeneralType === JOB_DELIVERY_SUMMARY) && (
-                        <FormField
-                          control={generalForm.control}
-                          name="customer_id"
-                          render={({ field }) => (
-                            <FormItem className="w-[220px]">
-                              <FormLabel>Customer</FormLabel>
-                              <Combobox
-                                items={[
-                                  { value: "ALL", label: "All customers" },
-                                  ...customer.map((c) => ({
-                                    value: String(c.customer_id),
-                                    label: c.company_name,
-                                  })),
-                                ]}
-                                value={field.value ? String(field.value) : ""}
-                                onValueChange={(val) =>
-                                  field.onChange(
-                                    val === "ALL"
-                                      ? "ALL"
-                                      : val
-                                        ? Number(val)
-                                        : undefined,
-                                  )
-                                }
-                                placeholder="All customers"
-                              />
-                            </FormItem>
-                          )}
-                        />
-                      )}
+                      <FormField
+                        control={generalForm.control}
+                        name="customer_id"
+                        render={({ field }) => (
+                          <FormItem className="w-[220px]">
+                            <FormLabel>Customer</FormLabel>
+                            <Combobox
+                              items={[
+                                { value: "ALL", label: "All customers" },
+                                ...customer.map((c) => ({
+                                  value: String(c.customer_id),
+                                  label: c.company_name,
+                                })),
+                              ]}
+                              value={field.value ? String(field.value) : ""}
+                              onValueChange={(val) =>
+                                field.onChange(
+                                  val === "ALL"
+                                    ? "ALL"
+                                    : val
+                                    ? Number(val)
+                                    : undefined
+                                )
+                              }
+                              placeholder="All customers"
+                            />
+                          </FormItem>
+                        )}
+                      />
+                    )}
 
                     {watchedGeneralType === JOB_DELIVERY_SUMMARY && (
                       <FormField
@@ -2278,7 +2292,11 @@ function ReportsPage() {
                           <FormItem className="w-[240px]">
                             <FormLabel>Job name</FormLabel>
                             <FormControl>
-                              <Input placeholder="Any job name" {...field} value={field.value ?? ""} />
+                              <Input
+                                placeholder="Any job name"
+                                {...field}
+                                value={field.value ?? ""}
+                              />
                             </FormControl>
                           </FormItem>
                         )}
@@ -2649,7 +2667,10 @@ function ReportsPage() {
               key={JSON.stringify(lastRun) + jobDeliveryFilters}
               rows={reportData}
               filename={reportFilename}
-              subtitle={[runRangeText && `Jobs opened ${runRangeText}.`, jobDeliveryFilters && `${jobDeliveryFilters}.`]
+              subtitle={[
+                runRangeText && `Jobs opened ${runRangeText}.`,
+                jobDeliveryFilters && `${jobDeliveryFilters}.`,
+              ]
                 .filter(Boolean)
                 .join(" ")}
             />
@@ -2668,6 +2689,5 @@ function ReportsPage() {
     </div>
   );
 }
-
 
 export default ReportsPage;
