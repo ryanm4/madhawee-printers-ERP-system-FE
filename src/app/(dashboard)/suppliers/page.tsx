@@ -1,5 +1,6 @@
 "use client";
 import { useSessionStorage } from "@/hooks/use-session-storage";
+import { TableSkeleton } from "@/components/shared/page-skeletons";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,6 @@ import { SUPPLIER } from "@/modules/supplier/types";
 import { SupplierApi } from "@/modules/supplier/api";
 import { toast as appToast } from "sonner";
 import { ExportButton } from "@/components/shared/export-button";
-import { PageLoader } from "@/components/shared/loader";
 import { EmptyState } from "@/components/shared/empty-page";
 
 import { CustomerType } from "@/config/enum";
@@ -25,7 +25,7 @@ export default function SuppliersPage() {
     const router = useRouter();
     const { canModifySupplier, canCreateSupplier, canExportList } = usePermissions();
     const [data, setData] = useState<SUPPLIER[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);  // starts loading: the page fetches as soon as it opens
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const [search, setSearch] = useSessionStorage("suppliers-search", "");
 
@@ -87,7 +87,7 @@ export default function SuppliersPage() {
                 description: "Supplier has been deleted successfully."
             });
             await fetchData();
-        } catch (error) {
+        } catch {
             console.error("Failed to delete supplier");
             appToast.error("Delete Failed", {
                 description: "An error occurred while deleting the supplier."
@@ -107,8 +107,8 @@ export default function SuppliersPage() {
                         { title: "Dashboard", href: "/dashboard" },
                     ]}
                 />
-                <div className="flex flex-row justify-end gap-[24px]">
-                    <div className="relative w-[320px]">
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                    <div className="relative w-full sm:w-[300px]">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
                           type="search"
@@ -127,7 +127,7 @@ export default function SuppliersPage() {
                     )}
                 </div>
                 {isLoading ? (
-                    <PageLoader />
+                    <TableSkeleton />
                 ) : data.length === 0 ? (
                     <EmptyState
                         title="No Suppliers Found"
@@ -140,7 +140,6 @@ export default function SuppliersPage() {
                         columns={columns}
                         data={data}
                         searchValue={search}
-                        searchColumn="company_name"
                     />
                 )}
             </div>

@@ -77,15 +77,6 @@ function formatDate(date?: Date | string): string {
   }
 }
 
-function formatMonthYear(date?: Date | string): string {
-  if (!date) return "";
-  try {
-    return format(parseLocalDate(date), "MMM yyyy");
-  } catch {
-    return String(date);
-  }
-}
-
 function formatNumber(value?: string | number): string {
   if (value === undefined || value === null || value === "") return "";
   const num = Number(value);
@@ -185,7 +176,7 @@ export function JobTicketPrintDialog({
   );
 }
 
-export function buildPrintHTML(data: JobTicketPrintData): string {
+function buildPrintHTML(data: JobTicketPrintData): string {
   // Escape user text so remarks containing < or & print as typed and can't inject markup
   const safe = (val: unknown) =>
     val !== undefined && val !== null && String(val).trim() !== ""
@@ -196,10 +187,6 @@ export function buildPrintHTML(data: JobTicketPrintData): string {
           .replace(/"/g, "&quot;")
           .replace(/\n/g, "<br/>")
       : "&nbsp;";
-  const td = (content: string, style = "") =>
-    `<td style="border:1px solid #333;padding:5px 8px;${style}">${safe(content)}</td>`;
-  const tdLabel = (content: string, style = "") =>
-    `<td style="border:1px solid #333;padding:5px 8px;font-weight:bold;background:#f8f8f8;${style}">${safe(content)}</td>`;
 
   return `
 <!DOCTYPE html>

@@ -1,6 +1,6 @@
 "use client";
 import { dispatchInvoiceScheme } from "@/modules/dispatch-invoice/validation";
-import { DispatchStatus } from "@/config/enum";
+import { FormSkeleton } from "@/components/shared/page-skeletons";
 import { useParams, useRouter } from "next/navigation";
 import { getErrorMessage } from "@/lib/error-utils";
 import React, { useEffect, useState } from "react";
@@ -49,6 +49,8 @@ function EditDispatchandInvoice() {
   const router = useRouter();
   const { canModify } = usePermissions();
   const [isLoading, setIsLoading] = useState(false);
+  // False until the record has been fetched; until then a skeleton stands in for the form
+  const [recordLoaded, setRecordLoaded] = useState(false);
   const [JobData, setJobData] = useState<ALL_TICKETS[]>([]);
   const [originalDispatchQty, setOriginalDispatchQty] = useState(0);
   const params = useParams();
@@ -270,6 +272,7 @@ function EditDispatchandInvoice() {
         form.setValue("dispatch_description", "");
       } finally {
         setIsLoading(false);
+        setRecordLoaded(true);
       }
     };
 
@@ -282,7 +285,7 @@ function EditDispatchandInvoice() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      {isLoading && <FullPageLoader />}
+      {isLoading && recordLoaded && <FullPageLoader />}
       <PageTitleWithBreadcrumb
         title="Edit Dispatch Note"
         breadcrumbs={[
@@ -293,8 +296,10 @@ function EditDispatchandInvoice() {
           },
         ]}
       />
+      {!recordLoaded && <FormSkeleton />}
 
       <Form {...form}>
+        <div className={recordLoaded ? "contents" : "hidden"}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6  pb-0"
@@ -302,11 +307,11 @@ function EditDispatchandInvoice() {
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
+                "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Purchase Order</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Purchase Order</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Edit your purchase order details here
                 </p>
@@ -428,11 +433,11 @@ function EditDispatchandInvoice() {
 
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
+                "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Dispatch Note</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Dispatch Note</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Add your dispatch note details here
                 </p>
@@ -552,6 +557,7 @@ function EditDispatchandInvoice() {
             </Button>
           </div>
         </form>
+        </div>
       </Form>
     </div>
   );

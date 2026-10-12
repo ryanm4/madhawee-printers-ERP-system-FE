@@ -1,5 +1,6 @@
 "use client";
 import { useSessionStorage } from "@/hooks/use-session-storage";
+import { TableSkeleton } from "@/components/shared/page-skeletons";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,6 @@ import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 import { appToast } from "@/lib/toast-utils";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
-import { PageLoader } from "@/components/shared/loader";
 import { CustomerType } from "@/config/enum";
 import { usePermissions } from "@/hooks/use-permissions";
 
@@ -22,7 +22,7 @@ export default function CRMPage() {
   const router = useRouter();
   const { canModifyCustomer, canCreateCustomer, canExportList } = usePermissions();
   const [data, setData] = useState<CUSTOMER[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);  // starts loading: the page fetches as soon as it opens
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useSessionStorage("customers-search", "");
 
@@ -79,7 +79,7 @@ export default function CRMPage() {
       await CustomerApi.delete(deleteId);
       appToast.success("Customer Deleted", "Customer has been deleted successfully.");
       await fetchData();
-    } catch (_error) {
+    } catch {
       console.error("Failed to delete inventory item");
       appToast.error("Failed to Delete Customer", "An error occurred while deleting the customer. Please try again.");
     } finally {
@@ -94,8 +94,8 @@ export default function CRMPage() {
           title="Customer "
           breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
         />
-        <div className="flex flex-row justify-end gap-[24px]">
-          <div className="relative w-[320px]">
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="relative w-full sm:w-[300px]">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
@@ -114,7 +114,7 @@ export default function CRMPage() {
           )}
         </div>
         {isLoading ? (
-          <PageLoader />
+          <TableSkeleton />
         ) : data.length === 0 ? (
           <EmptyState
             title="No Customers Found"
@@ -127,7 +127,6 @@ export default function CRMPage() {
             columns={columns}
             data={data}
             searchValue={search}
-            searchColumn="company_name"
           />
         )}
       </div>

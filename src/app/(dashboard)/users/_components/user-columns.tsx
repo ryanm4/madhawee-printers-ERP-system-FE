@@ -6,7 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, PencilIcon, TrashIcon } from "lucide-react";
+import { MoreHorizontal, PencilIcon } from "lucide-react";
 import { ArrowUpDown } from "lucide-react";
 import { GET_ALL_USER } from "@/modules/users/types";
 

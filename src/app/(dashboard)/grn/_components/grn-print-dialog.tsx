@@ -1,26 +1,9 @@
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Printer } from "lucide-react";
 import { format } from "date-fns";
 import { parseLocalDate } from "@/hooks/sql-date-time";
 import { GRN } from "@/modules/grn/types";
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
-
-interface GRNPrintDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  data: GRN;
-  inventoryData?: GET_ALL_INVENTORY[];
-  onDecline?: () => void;
-}
 
 export function handleGRNPrint(data: GRN, inventoryData?: GET_ALL_INVENTORY[]) {
   const printContent = buildGRNPrintHTML(data, inventoryData);
@@ -34,50 +17,7 @@ export function handleGRNPrint(data: GRN, inventoryData?: GET_ALL_INVENTORY[]) {
   // Print will be triggered by image onload
 }
 
-export function GRNPrintDialog({
-  open,
-  onOpenChange,
-  data,
-  inventoryData,
-  onDecline,
-}: GRNPrintDialogProps) {
-  const handlePrint = () => {
-    handleGRNPrint(data, inventoryData);
-    onOpenChange(false);
-  };
-
-  const handleDecline = () => {
-    onDecline?.();
-    onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Printer className="h-5 w-5" />
-            Print Goods Received Note?
-          </DialogTitle>
-        </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          GRN record is ready. Would you like to print/download the Goods Received Note now?
-        </p>
-        <DialogFooter className="flex gap-2 sm:justify-end">
-          <Button variant="outline" onClick={handleDecline}>
-            No, skip
-          </Button>
-          <Button onClick={handlePrint} className="bg-primary text-white">
-            <Printer className="h-4 w-4 mr-2" />
-            Print GRN
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-export function buildGRNPrintHTML(data: GRN, inventoryData?: GET_ALL_INVENTORY[]): string {
+function buildGRNPrintHTML(data: GRN, inventoryData?: GET_ALL_INVENTORY[]): string {
   // Escape user text so values containing < or & print as typed and can't inject markup
   const safe = (val: string | number | null | undefined) =>
     val !== undefined && val !== null && String(val).trim() !== ""
@@ -95,7 +35,7 @@ export function buildGRNPrintHTML(data: GRN, inventoryData?: GET_ALL_INVENTORY[]
   let formattedDate = "";
   try {
     formattedDate = data.received_date ? format(parseLocalDate(data.received_date), "dd/MM/yyyy") : "";
-  } catch (_e) {
+  } catch {
     formattedDate = safe(data.received_date);
   }
 

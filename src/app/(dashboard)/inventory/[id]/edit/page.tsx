@@ -1,5 +1,6 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { FormSkeleton } from "@/components/shared/page-skeletons";
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -20,11 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  ITEM_CATEGORY,
-  ITEM_SUB_CATEGORY,
-  UNIT_OF_MEASSURE,
-} from "@/config/enum";
+import { useOptionList } from "@/hooks/use-option-list";
 import { cn } from "@/lib/utils";
 import { inventoryApi } from "@/modules/inventory/api";
 import { CREATE_INVENTORY } from "@/modules/inventory/types";
@@ -46,6 +43,8 @@ function EditInventoryManagement() {
   const { canModifyInventoryItem } = usePermissions();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  // False until the record has been fetched; until then a skeleton stands in for the form
+  const [recordLoaded, setRecordLoaded] = useState(false);
   const [user, setUser] = useState<{
     name: string;
     email: string;
@@ -73,6 +72,9 @@ function EditInventoryManagement() {
     resolver: zodResolver(inventoryManagementScheme) as any,
     defaultValues: baseDefaultValues,
   });
+  const categoryOptions = useOptionList("item_category", form.watch("item_category"));
+  const subCategoryOptions = useOptionList("item_sub_category", form.watch("item_sub_category"));
+  const unitOptions = useOptionList("unit_of_measure", form.watch("unit_of_measure"));
 
   useEffect(() => {
     const userData = getUser();
@@ -127,6 +129,7 @@ function EditInventoryManagement() {
         router.push("/inventory");
       } finally {
         setIsLoading(false);
+        setRecordLoaded(true);
       }
     }
 
@@ -195,7 +198,7 @@ function EditInventoryManagement() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      {isLoading && <FullPageLoader />}
+      {isLoading && recordLoaded && <FullPageLoader />}
       <PageTitleWithBreadcrumb
         title="Edit Stock"
         breadcrumbs={[
@@ -203,19 +206,21 @@ function EditInventoryManagement() {
           { title: "Stock List", href: "/inventory" },
         ]}
       />
+      {!recordLoaded && <FormSkeleton />}
 
       <Form {...form}>
+        <div className={recordLoaded ? "contents" : "hidden"}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6  pb-0"
         >
           <Card
             className={cn(
-              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col"
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
-              <h3 className="text-md font-medium mb-2">Stock Details</h3>
+              <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Stock Details</h3>
               <p className="text-xs text-muted-foreground mb-4">
                 Edit your stock details here
               </p>
@@ -238,9 +243,9 @@ function EditInventoryManagement() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.entries(ITEM_CATEGORY).map(([key, value]) => (
-                          <SelectItem key={key} value={value}>
-                            {value}
+                        {categoryOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -263,13 +268,11 @@ function EditInventoryManagement() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.entries(ITEM_SUB_CATEGORY).map(
-                          ([key, value]) => (
-                            <SelectItem key={key} value={value}>
-                              {value}
-                            </SelectItem>
-                          )
-                        )}
+                        {subCategoryOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -356,9 +359,9 @@ function EditInventoryManagement() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {Object.values(UNIT_OF_MEASSURE).map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
+                          {unitOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -463,6 +466,7 @@ function EditInventoryManagement() {
             </Button>
           </div>
         </form>
+        </div>
       </Form>
     </div>
   );

@@ -11,7 +11,11 @@ export const GENERAL_REPORT_TYPES = [
     { value: "jobs", label: "JOBS" },
     { value: "purchase_orders", label: "PURCHASE ORDERS" },
     { value: "quotations", label: "QUOTATIONS" },
+    { value: "JOB_DELIVERY_SUMMARY", label: "JOB DELIVERY SUMMARY" },
 ];
+
+/** Runs on its own endpoint and shows grouped by customer, exported as PDF only */
+export const JOB_DELIVERY_SUMMARY = "JOB_DELIVERY_SUMMARY";
 
 export const ADVANCED_REPORT_TYPES = Object.entries(REPORT_TYPES).map(([key, label]) => ({
     value: key,
@@ -73,6 +77,7 @@ const DESCRIPTIONS: Record<string, string> = {
     "general:jobs": "Every job ticket opened in the period.",
     "general:purchase_orders": "Customer purchase orders received in the period.",
     "general:quotations": "Every quotation issued in the period.",
+    "general:JOB_DELIVERY_SUMMARY": "Ordered, delivered and balance quantities for each job not yet completed, by customer.",
     "general:JOB_PRODUCTION": "Jobs produced in the period, with quantities.",
     "general:QUOTATION_SUMMARY": "How quotations were answered, by customer and product type.",
     "general:QUOTE_TO_PO_CONVERSION": "How many quotations became purchase orders.",

@@ -49,16 +49,11 @@ function CreateIssueNote() {
   const [user, setUser] = useState<{ name: string } | null>(null);
 
   const [jobs, setJobs] = useState<{ value: string; label: string }[]>([]);
-  const [inventoryItems, setInventoryItems] = useState<
-    { value: string; label: string }[]
-  >([]);
   const [rawInventory, setRawInventory] = useState<GET_ALL_INVENTORY[]>([]);
 
   const [jobMaterials, setJobMaterials] = useState<
     { value: number; label: string; quantity: number }[]
   >([]);
-
-  const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
 
   const [isFetchingJob, setIsFetchingJob] = useState(false);
 
@@ -92,30 +87,6 @@ function CreateIssueNote() {
         const response = await inventoryApi.getAll();
         if (response.status === 200) {
           setRawInventory(response.data);
-          const uniqueItems = Array.from(
-            new Map(
-              response.data.map((item: GET_ALL_INVENTORY) => [
-                `${item.item_name}-${item.size || ""}`,
-                item,
-              ])
-            ).values()
-          );
-
-          setInventoryItems(
-            (uniqueItems as GET_ALL_INVENTORY[]).map(
-              (item: GET_ALL_INVENTORY) => {
-                const label = item.size
-                  ? `${item.item_name} (${item.size})`
-                  : item.item_name;
-                return {
-                  value: item.size
-                    ? `${item.item_name}|||${item.size}`
-                    : item.item_name,
-                  label: label,
-                };
-              }
-            )
-          );
         }
       } catch (error) {
         console.error("Failed to fetch inventory items", error);
@@ -213,8 +184,6 @@ function CreateIssueNote() {
   const handleJobChange = (jobId: string) => {
     const id = Number(jobId);
 
-    setSelectedJobId(id);
-
     if (id > 0) {
       fetchJobById(id);
     } else {
@@ -290,8 +259,6 @@ function CreateIssueNote() {
     }
   }
 
-  const job_id = form.watch("job_id");
-
   if (isLoading) {
     return (
       <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
@@ -326,7 +293,7 @@ function CreateIssueNote() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <h3 className="text-lg font-medium">Issue Note Details</h3>
+                <h3 className="text-[15px] font-semibold text-[#14213D]">Issue Note Details</h3>
                 <p className="text-sm text-muted-foreground">
                   General information about this issue note
                 </p>
@@ -438,7 +405,7 @@ function CreateIssueNote() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>
-                  <h3 className="text-lg font-medium">Items List</h3>
+                  <h3 className="text-[15px] font-semibold text-[#14213D]">Items List</h3>
                   <p className="text-sm text-muted-foreground">
                     Specify items to be issued
                   </p>

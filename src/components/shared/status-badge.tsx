@@ -15,6 +15,8 @@ interface StatusBadgeProps {
   status: string;
   type: StatusType;
   className?: string;
+  /** Text to show instead of the raw status, e.g. "In production" */
+  label?: string;
 }
 
 const statusStyles: Record<string, string> = {
@@ -22,6 +24,7 @@ const statusStyles: Record<string, string> = {
   "PENDING": "border-yellow-200 bg-yellow-50 text-yellow-800 hover:bg-yellow-100",
   "CREATED": "border-blue-200 bg-blue-50 text-[#223F7A] hover:bg-blue-100",
   "APPROVED": "border-green-200 bg-green-50 text-green-800 hover:bg-green-100",
+  "ACCEPTED": "border-green-200 bg-green-50 text-green-800 hover:bg-green-100",
   "COMPLETED": "border-green-200 bg-green-50 text-green-800 hover:bg-green-100",
   "REJECTED": "border-red-200 bg-red-50 text-red-800 hover:bg-red-100",
 
@@ -50,7 +53,17 @@ const statusStyles: Record<string, string> = {
   "NONE": "border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200",
 };
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
+// Codes that read as abbreviations stay in capitals; everything else is sentence case
+const KEEP_UPPERCASE = new Set(["VAT", "SVAT", "NON", "NONE", "TIEP", "NON-TIEP", "MP", "LKR", "USD"]);
+
+const toLabel = (status: string) => {
+  const upper = status.toUpperCase();
+  if (KEEP_UPPERCASE.has(upper)) return upper;
+  const text = status.replace(/_/g, " ").toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
+
+export function StatusBadge({ status, className, label }: StatusBadgeProps) {
   if (!status) return null;
   const normalizedStatus = status.toUpperCase();
   const style = statusStyles[normalizedStatus] || "border-gray-200 bg-gray-50 text-gray-800 hover:bg-gray-100";
@@ -59,17 +72,19 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
     <Badge
       variant="outline"
       className={cn(
-        "uppercase font-bold border shadow-none transition-colors whitespace-nowrap tracking-wide flex items-center justify-center",
+        "inline-flex items-center justify-center gap-1.5 border font-semibold shadow-none transition-colors whitespace-nowrap",
         // Default size/rounding if no specific classes provided
-        !className?.includes("text-") && "text-[11px]",
-        !className?.includes("px-") && "px-2.5",
+        !className?.includes("text-") && "text-xs",
+        !className?.includes("px-") && "px-2",
         !className?.includes("py-") && "py-0.5",
-        !className?.includes("rounded-") && "rounded-full",
+        !className?.includes("rounded-") && "rounded-md",
         style,
         className
       )}
     >
-      {status}
+      {/* Small dot in the badge colour, matching the status dots on cards */}
+      <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-current opacity-70" />
+      {label ?? toLabel(status)}
     </Badge>
   );
 }

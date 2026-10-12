@@ -4,7 +4,7 @@ import { getErrorMessage } from "@/lib/error-utils";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { supplierSchema } from "@/modules/supplier/validation";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FieldPath,
   useForm,
@@ -45,14 +45,12 @@ type SupplierFormValues = z.infer<typeof supplierSchema>;
 
 function CreateSupplierProfile() {
   const router = useRouter();
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<{
     name: string;
     email: string;
     avatar: string;
   } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const baseDefaultValues: SupplierFormValues = {
     customer_type: CustomerType.SUPPLIER, // Hardcoded for this module
@@ -99,39 +97,6 @@ function CreateSupplierProfile() {
       });
     }
   }, []);
-
-  const handleFileSelect = (file: File | null) => {
-    if (file) {
-      const validTypes = [
-        "image/jpeg",
-        "image/png",
-        "image/svg+xml",
-        "application/zip",
-      ];
-      const maxSize = 10 * 1024 * 1024; // 10MB
-
-      if (validTypes.includes(file.type) && file.size <= maxSize) {
-        setUploadedFile(file);
-      } else {
-        alert(
-          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB.",
-        );
-      }
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    handleFileSelect(file);
-  };
-
-  const removeFile = () => {
-    setUploadedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
 
   const onSubmit: SubmitHandler<SupplierFormValues> = async (data) => {
     try {
@@ -198,11 +163,11 @@ function CreateSupplierProfile() {
           <div className="grid grid-cols-1 gap-4">
             <Card
               className={cn(
-                "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col",
+                "w-full rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Supplier Details</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Supplier Details</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Core information for the new supplier profile.
                 </p>

@@ -1,5 +1,6 @@
 "use client";
 import { useSessionStorage } from "@/hooks/use-session-storage";
+import { TableSkeleton } from "@/components/shared/page-skeletons";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,6 @@ import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
 import { appToast } from "@/lib/toast-utils";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
-import { PageLoader } from "@/components/shared/loader";
 import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
 import { useMemo } from "react";
 import {
@@ -39,7 +39,7 @@ function InventoryManagement() {
   const { canModifyInventoryItem, canCreateInventoryItem, canExportList } = usePermissions();
   const [data, setData] = useState<GET_ALL_INVENTORY[]>([]);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);  // starts loading: the page fetches as soon as it opens
   const [sizeFilter, setSizeFilter] = useState("all");
   const [subCategoryFilter, setSubCategoryFilter] = useState("all");
   const [search, setSearch] = useSessionStorage("inventory-search", "");
@@ -120,8 +120,8 @@ function InventoryManagement() {
           title="Stock List"
           breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
         />
-        <div className="flex flex-row justify-end gap-[24px]">
-          <div className="relative w-[320px]">
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="relative w-full sm:w-[300px]">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
@@ -138,7 +138,7 @@ function InventoryManagement() {
                 variant="outline"
                 role="combobox"
                 aria-expanded={subCategoryOpen}
-                className="w-[200px] justify-between"
+                className="w-full justify-between sm:w-[200px]"
               >
                 {subCategoryFilter !== "all" ? subCategoryFilter : "All Sub Categories"}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -203,7 +203,7 @@ function InventoryManagement() {
                 variant="outline"
                 role="combobox"
                 aria-expanded={sizeOpen}
-                className="w-[200px] justify-between"
+                className="w-full justify-between sm:w-[200px]"
               >
                 {sizeFilter !== "all" ? sizeFilter : "All Sizes"}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -271,7 +271,7 @@ function InventoryManagement() {
           )}
         </div>
         {isLoading ? (
-          <PageLoader />
+          <TableSkeleton />
         ) : data.length === 0 ? (
           <EmptyState
             title="Stock List Empty"
@@ -284,7 +284,6 @@ function InventoryManagement() {
             columns={columns}
             data={data}
             searchValue={search}
-            searchColumn="item_name"
             filters={[
               { id: "size", value: sizeFilter },
               { id: "item_sub_category", value: subCategoryFilter }

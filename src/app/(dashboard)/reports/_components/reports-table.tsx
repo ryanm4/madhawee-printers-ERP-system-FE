@@ -106,22 +106,6 @@ export function ReportsTable({
         }
     };
 
-    const handlePrint = () => {
-        if (hasExpandableJobs) {
-            const next: Record<string, boolean> = {};
-            data.forEach((row: any, idx) => {
-                if (Array.isArray(row.jobs) && row.jobs.length > 0) {
-                    next[String(idx)] = true;
-                }
-            });
-            setExpandedRows(next);
-            setAllExpanded(true);
-        }
-        setTimeout(() => {
-            window.print();
-        }, 300);
-    };
-
     const columns = useMemo<ColumnDef<Record<string, unknown>>[]>(() => {
         if (!data || data.length === 0) return [];
 
@@ -339,7 +323,6 @@ export function ReportsTable({
                     <ExportButton
                         data={exportRows}
                         filename={filename}
-                        onPrint={handlePrint}
                     />
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>

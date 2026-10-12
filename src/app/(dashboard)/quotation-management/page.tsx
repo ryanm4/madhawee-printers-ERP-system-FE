@@ -1,5 +1,6 @@
 "use client";
 import { useSessionStorage } from "@/hooks/use-session-storage";
+import { TableSkeleton } from "@/components/shared/page-skeletons";
 import React, { useEffect, useState } from "react";
 import { getUser } from "@/lib/auth";
 import { useRouter } from "next/navigation";
@@ -18,15 +19,13 @@ import { appToast } from "@/lib/toast-utils";
 import { EmptyState } from "@/components/shared/empty-page";
 import { generateQuotationPDF } from "@/components/pdf-generator";
 import { ExportButton } from "@/components/shared/export-button";
-import { PageLoader } from "@/components/shared/loader";
-import { CONTACT_PERSON } from "@/modules/customer/types";
 import { usePermissions } from "@/hooks/use-permissions";
 
 function QuotationsManagement() {
   const router = useRouter();
   const { canModifyQuotation, canCreateQuotation, canExportList, canApprove } = usePermissions();
   const [data, setData] = useState<QUOTATIONS[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);  // starts loading: the page fetches as soon as it opens
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useSessionStorage("quotation-management-search", "");
 
@@ -183,8 +182,8 @@ function QuotationsManagement() {
         title="Quotations Management"
         breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
       />
-      <div className="flex flex-row justify-end gap-[24px]">
-        <div className="relative w-[320px]">
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <div className="relative w-full sm:w-[300px]">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
@@ -203,7 +202,7 @@ function QuotationsManagement() {
         )}
       </div>
       {loading ? (
-        <PageLoader />
+        <TableSkeleton />
       ) : data.length === 0 ? (
         <EmptyState
           title="No Quotations Yet"
@@ -216,7 +215,6 @@ function QuotationsManagement() {
           columns={columns}
           data={data}
           searchValue={search}
-          searchColumn="quote_id"
         />
       )}
       <AlertDeleteDialog

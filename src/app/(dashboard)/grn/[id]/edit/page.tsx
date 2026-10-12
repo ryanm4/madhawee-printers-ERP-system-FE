@@ -1,5 +1,6 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { FormSkeleton } from "@/components/shared/page-skeletons";
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -7,7 +8,6 @@ import { grnSchema } from "@/modules/grn/validation";
 import { cn } from "@/lib/utils";
 import { useRouter, useParams } from "next/navigation";
 import { useFieldArray, useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
@@ -38,7 +38,6 @@ import { useEffect, useState } from "react";
 import { grnApi } from "@/modules/grn/api";
 import { appToast } from "@/lib/toast-utils";
 import { getUser } from "@/lib/auth";
-import { FullPageLoader } from "@/components/shared/loader";
 import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
 import { usePermissions } from "@/hooks/use-permissions";
 import { SupplierCombobox } from "../../_components/supplier-combobox";
@@ -231,7 +230,13 @@ function EditGRN() {
     }
   }
 
-  if (loading) return <FullPageLoader />;
+  if (loading) {
+    return (
+      <div className="mt-3 flex flex-1 flex-col gap-4 p-[24px] pt-0">
+        <FormSkeleton />
+      </div>
+    );
+  }
 
   if (!canModifyGRN) {
     return <RestrictedRouteGuard />;
@@ -252,7 +257,7 @@ function EditGRN() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <h3 className="text-lg font-medium">Basic Information</h3>
+                <h3 className="text-[15px] font-semibold text-[#14213D]">Basic Information</h3>
               </CardHeader>
               <CardContent className="space-y-4">
                 <FormField
@@ -346,7 +351,7 @@ function EditGRN() {
 
             <Card>
               <CardHeader>
-                <h3 className="text-lg font-medium">Payment & Invoice</h3>
+                <h3 className="text-[15px] font-semibold text-[#14213D]">Payment & Invoice</h3>
               </CardHeader>
               <CardContent className="space-y-4">
                 <FormField
@@ -453,7 +458,7 @@ function EditGRN() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <h3 className="text-lg font-medium">Items List</h3>
+              <h3 className="text-[15px] font-semibold text-[#14213D]">Items List</h3>
               <Button
                 type="button"
                 variant="outline"

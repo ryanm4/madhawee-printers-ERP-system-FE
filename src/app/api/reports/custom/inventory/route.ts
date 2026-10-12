@@ -21,8 +21,14 @@ export async function POST(request: NextRequest) {
         });
 
         if (!response.ok) {
+            // Keep the backend's reason so the page can show what went wrong
+            const failure = await response.json().catch(() => null);
             return NextResponse.json(
-                { message: "Failed to generate inventory report" },
+                {
+                    message: [failure?.message || "Failed to generate inventory report", typeof failure?.error === "string" ? failure.error : ""]
+                        .filter(Boolean)
+                        .join(": "),
+                },
                 { status: response.status }
             );
         }
@@ -30,7 +36,7 @@ export async function POST(request: NextRequest) {
         const data = await response.json();
         const responseData = Array.isArray(data) ? data : data.data;
         return NextResponse.json(responseData || [], { status: 201 });
-    } catch (error) {
+    } catch {
         return NextResponse.json(
             { message: "Internal server error" },
             { status: 500 }

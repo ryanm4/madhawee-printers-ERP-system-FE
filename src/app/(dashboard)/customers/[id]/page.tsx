@@ -1,114 +1,42 @@
 "use client";
 
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
-import { customerSchema } from "@/modules/customer/validation";
+import { RecordViewSkeleton } from "@/components/shared/page-skeletons";
 import { useParams, useRouter } from "next/navigation";
-import React, { useEffect, useRef, useState } from "react";
-import { FieldPath, useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
-import { CloudUpload, FileArchive, X, Edit } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { CustomerType, VatType } from "@/config/enum";
+import { Edit } from "lucide-react";
+import { CustomerType } from "@/config/enum";
 import { CustomerApi } from "@/modules/customer/api";
+import { CUSTOMER } from "@/modules/customer/types";
 import { toast } from "sonner";
-import { FullPageLoader } from "@/components/shared/loader";
 import { usePermissions } from "@/hooks/use-permissions";
+import {
+  Detail,
+  DetailGrid,
+  ViewHeader,
+  ViewSection,
+  ViewTable,
+  sentenceCase,
+} from "@/components/shared/record-view";
 
-type CustomerFormValues = z.infer<typeof customerSchema>;
+type Contact = { id?: number; name?: string; email?: string; phone?: string };
 
 function ViewCustomerRelationship() {
   const router = useRouter();
   const { canModifyCustomer } = usePermissions();
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const params = useParams();
   const id = params.id as string;
 
-  const baseDefaultValues: CustomerFormValues = {
-    customer_type: "",
-    companyName: "",
-    address: "",
-    phone: "",
-    email: "",
-    creditPeriod: "",
-    vat_type: "",
-    vat_no: "",
-    logoUrl: "",
-    contactPersons: [
-      {
-        name: "",
-        email: "",
-        phone: "",
-      },
-    ],
-    created_by: "",
-    status: "Active",
-  };
-
-  const form = useForm<CustomerFormValues>({
-    resolver: zodResolver(customerSchema) as any,
-    defaultValues: baseDefaultValues,
-  });
+  const [customer, setCustomer] = useState<CUSTOMER | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchInventoryData() {
+    async function fetchCustomer() {
       try {
         setIsLoading(true);
         const response = await CustomerApi.getById(id);
-        const data = response.data;
-
-        // ✅ Populate form with fetched data
-        form.reset({
-          customer_type: data.customer_type,
-          companyName: data.company_name,
-          address: data.address,
-          phone: data.phone,
-          email: data.email ?? "",
-          creditPeriod: data.credit_period,
-          vat_type: data.vat_type,
-          vat_no: data.vat_no,
-          logoUrl: data.logo_url,
-          contactPersons: (() => {
-            const arr = Array.isArray(data.contacts) ? data.contacts : [];
-            return arr.length > 0
-              ? arr.map(
-                  (cp: {
-                    id?: number;
-                    name?: string;
-                    email?: string;
-                    phone?: string;
-                  }) => ({
-                    id: cp.id || undefined,
-                    name: cp.name || "",
-                    email: cp.email ?? "",
-                    phone: cp.phone || "",
-                  }),
-                )
-              : [{ name: "", email: "", phone: "" }];
-          })(),
-          created_by: data.created_by,
-        });
+        setCustomer(response.data);
       } catch (error) {
         console.error("Failed to fetch customer:", error);
         toast.error("Failed to load customer data");
@@ -118,69 +46,19 @@ function ViewCustomerRelationship() {
       }
     }
 
-    if (id) {
-      fetchInventoryData();
-    }
-  }, [id, form, router]);
+    if (id) fetchCustomer();
+  }, [id, router]);
 
-  const handleFileSelect = (file: File | null) => {
-    if (file) {
-      const validTypes = [
-        "image/jpeg",
-        "image/png",
-        "image/svg+xml",
-        "application/zip",
-      ];
-      const maxSize = 10 * 1024 * 1024; // 10MB
+  const c = customer;
+  const contacts: Contact[] = (Array.isArray(c?.contacts) ? (c.contacts as Contact[]) : []).filter(
+    (cp) => cp.name || cp.email || cp.phone
+  );
+  // Credit period only applies to suppliers
+  const isCustomerOnly = c?.customer_type === CustomerType.CUSTOMER;
+  const hasLogo = typeof c?.logo_url === "string" && /^(https?:|data:image|\/)/.test(c.logo_url);
 
-      if (validTypes.includes(file.type) && file.size <= maxSize) {
-        setUploadedFile(file);
-      } else {
-        alert(
-          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB.",
-        );
-      }
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    handleFileSelect(file);
-  };
-
-  const removeFile = () => {
-    setUploadedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + sizes[i];
-  };
-
-  const renderFormField = <TName extends FieldPath<CustomerFormValues>>(
-    name: TName,
-    render: Parameters<
-      typeof FormField<CustomerFormValues, TName>
-    >["0"]["render"],
-  ) => <FormField control={form.control} name={name} render={render} />;
-
-  const supplierType = form.watch("customer_type");
-  useEffect(() => {
-    if (supplierType === CustomerType.CUSTOMER) {
-      form.setValue("creditPeriod", "");
-      form.clearErrors("creditPeriod");
-    }
-  }, [supplierType, form]);
   return (
-    <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      {isLoading && <FullPageLoader />}
+    <div className="mt-3 flex flex-1 flex-col gap-5 p-4 pt-0 sm:p-6 sm:pt-0">
       <PageTitleWithBreadcrumb
         title="View Customer"
         breadcrumbs={[
@@ -189,312 +67,88 @@ function ViewCustomerRelationship() {
         ]}
       />
 
-      <Form {...form}>
-        <form className="space-y-6  pb-0">
-          <div className="flex items-center justify-end gap-3 w-full mt-6 mb-4">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => router.push("/customers")}
-            >
+      <ViewHeader
+        title={c?.company_name}
+        status={c?.status}
+        statusType="CUSTOMER"
+        subtitle={c && sentenceCase(c.customer_type)}
+        actions={
+          <>
+            <Button variant="outline" type="button" onClick={() => router.push("/customers")}>
               Back to List
             </Button>
             {canModifyCustomer && (
-              <Button
-                type="button"
-                onClick={() => router.push(`/customers/${id}/edit`)}
-                className="bg-primary hover:bg-primary/90"
-              >
-                <Edit className="mr-2 h-4 w-4" /> Edit Customer
+              <Button type="button" onClick={() => router.push(`/customers/${id}/edit`)}>
+                <Edit className="h-4 w-4" /> Edit Customer
               </Button>
             )}
-          </div>
+          </>
+        }
+      />
+      {isLoading && !customer && <RecordViewSkeleton />}
 
-          <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-            <Card
-              className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
-              )}
-            >
-              <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Customer</h3>
-                <p className="text-xs text-muted-foreground mb-4">
-                  View your customer details here
-                </p>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                {renderFormField("customer_type", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Customer / Supplier<span className="text-red-500">*</span>
-                    </FormLabel>
-                    <Select
-                      disabled
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select Customer" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Object.values(CustomerType).map((customer) => (
-                          <SelectItem key={customer} value={customer}>
-                            {customer.charAt(0).toUpperCase() +
-                              customer.slice(1).toLowerCase()}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                ))}
-                <div className="flex flex-row gap-4">
-                  {renderFormField("companyName", ({ field }) => (
-                    <FormItem className="w-full">
-                      <FormLabel>
-                        Company Name<span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          readOnly
-                          placeholder="Enter Company Name"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                  {renderFormField("phone", ({ field }) => (
-                    <FormItem className="w-full">
-                      <FormLabel>Company Phone</FormLabel>
-                      <FormControl>
-                        <Input
-                          readOnly
-                          placeholder="Enter Company Phone"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                </div>
-                {renderFormField("address", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>Customer Address</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        readOnly
-                        placeholder="Enter Customer Address"
-                        className="resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                ))}
-                <div className="flex flex-row gap-4">
-                  {renderFormField("email", ({ field }) => (
-                    <FormItem className="w-full">
-                      <FormLabel>Company Email</FormLabel>
-                      <FormControl>
-                        <Input
-                          readOnly
-                          placeholder="Enter Company Email"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                  {renderFormField("creditPeriod", ({ field }) => (
-                    <FormItem className="w-full">
-                      <FormLabel>Credit Period (For Suppliers)</FormLabel>
-                      <FormControl>
-                        <Input
-                          readOnly
-                          placeholder="Enter Credit Period"
-                          disabled={supplierType === CustomerType.CUSTOMER}
-                          className={
-                            supplierType === CustomerType.CUSTOMER
-                              ? "bg-muted cursor-not-allowed"
-                              : ""
-                          }
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                </div>
-                <div className="flex flex-row gap-4">
-                  {renderFormField("vat_type", ({ field }) => (
-                    <FormItem className="w-full">
-                      <FormLabel>VAT Type</FormLabel>
-                      <Select
-                        disabled
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select Vat Type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {Object.values(VatType).map((customer) => (
-                            <SelectItem key={customer} value={customer}>
-                              {customer}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                  {renderFormField("vat_no", ({ field }) => (
-                    <FormItem className="w-full">
-                      <FormLabel>VAT No</FormLabel>
-                      <FormControl>
-                        <Input
-                          readOnly
-                          placeholder="Enter VAT  No"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                </div>
-                {renderFormField("logoUrl", ({ field: _field }) => (
-                  <FormItem>
-                    <FormLabel>Company Logo</FormLabel>
-                    <FormControl>
-                      <div>
-                        <div
-                          className="border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center text-center cursor-pointer hover:border-gray-400 transition-colors"
-                          onClick={() => fileInputRef.current?.click()}
-                          onDrop={handleDrop}
-                          onDragOver={(e) => e.preventDefault()}
-                        >
-                          <CloudUpload className="h-10 w-10 text-muted-foreground mb-2" />
-                          <p className="text-sm font-medium">
-                            Drag your file(s) or{" "}
-                            <span className="font-bold underline">browse</span>
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Max 10 MB files are allowed
-                          </p>
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept=".jpg,.jpeg,.png,.svg,.zip"
-                            className="hidden"
-                            onChange={(e) =>
-                              handleFileSelect(e.target.files?.[0] || null)
-                            }
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2 mb-3">
-                          Only support .jpg, .png and .svg and zip files
-                        </p>
+      {c && (
+        <div className="grid gap-5 lg:grid-cols-2">
+          <ViewSection
+            title="Customer"
+            aside={
+              hasLogo && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={c.logo_url} alt={`${c.company_name} logo`} className="h-10 max-w-[120px] object-contain" />
+              )
+            }
+          >
+            <DetailGrid columns={2}>
+              <Detail label="Customer / Supplier" value={sentenceCase(c.customer_type)} />
+              <Detail label="Company name" value={c.company_name} />
+              <Detail
+                label="Company phone"
+                value={c.phone && <a href={`tel:${c.phone}`} className="hover:text-[#223F7A] hover:underline">{c.phone}</a>}
+              />
+              <Detail
+                label="Company email"
+                value={c.email && <a href={`mailto:${c.email}`} className="hover:text-[#223F7A] hover:underline">{c.email}</a>}
+              />
+              <Detail label="Customer address" value={c.address} className="col-span-2" />
+              <Detail label="VAT type" value={c.vat_type} />
+              <Detail label="VAT no" value={c.vat_no} />
+              <Detail
+                label="Credit period (for suppliers)"
+                value={isCustomerOnly ? "Not applicable to customers" : c.credit_period}
+              />
+            </DetailGrid>
+          </ViewSection>
 
-                        {/* File Preview */}
-                        {uploadedFile && (
-                          <div className="mt-4 border rounded-lg p-3 flex items-center justify-between bg-gray-50">
-                            <div className="flex items-center gap-3">
-                              <div className="bg-blue-100 p-2 rounded">
-                                <FileArchive className="h-6 w-6 text-blue-600" />
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="text-sm font-medium">
-                                  {uploadedFile.name}
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                  {formatFileSize(uploadedFile.size)}
-                                </span>
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={removeFile}
-                              className="p-1 hover:bg-gray-200 rounded-full transition-colors"
-                            >
-                              <X className="h-5 w-5 text-gray-600" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </FormControl>
-                  </FormItem>
-                ))}
-              </CardContent>
-            </Card>
-
-            <div className="space-y-4">
-              <Card
-                className={cn(
-                  "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col",
-                )}
-              >
-                <CardHeader className="flex flex-col gap-[0.5px]">
-                  <h3 className="text-md font-medium mb-2">
-                    Point of Contacts
-                  </h3>
-                  <p className="text-xs text-muted-foreground mb-4">
-                    View your contact person details here
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {form.watch("contactPersons")?.map((contact, index) => (
-                    <div
-                      key={index}
-                      className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 border rounded-lg bg-accent/5"
-                    >
-                      {renderFormField(
-                        `contactPersons.${index}.name`,
-                        ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Name</FormLabel>
-                            <FormControl>
-                              <Input readOnly placeholder="Name" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        ),
-                      )}
-                      {renderFormField(
-                        `contactPersons.${index}.email`,
-                        ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input readOnly placeholder="Email" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        ),
-                      )}
-                      {renderFormField(
-                        `contactPersons.${index}.phone`,
-                        ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Phone</FormLabel>
-                            <FormControl>
-                              <Input readOnly placeholder="Phone" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        ),
-                      )}
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </form>
-      </Form>
+          <ViewSection title={`Point of contacts (${contacts.length})`}>
+            <ViewTable
+              rows={contacts}
+              rowKey={(cp, i) => cp.id ?? i}
+              empty="No contact people have been added."
+              columns={[
+                { header: "Name", cell: (cp) => <span className="font-medium">{cp.name || "Not set"}</span> },
+                {
+                  header: "Email",
+                  cell: (cp) =>
+                    cp.email ? (
+                      <a href={`mailto:${cp.email}`} className="break-all hover:text-[#223F7A] hover:underline">{cp.email}</a>
+                    ) : (
+                      <span className="text-muted-foreground">Not set</span>
+                    ),
+                },
+                {
+                  header: "Phone",
+                  cell: (cp) =>
+                    cp.phone ? (
+                      <a href={`tel:${cp.phone}`} className="hover:text-[#223F7A] hover:underline">{cp.phone}</a>
+                    ) : (
+                      <span className="text-muted-foreground">Not set</span>
+                    ),
+                },
+              ]}
+            />
+          </ViewSection>
+        </div>
+      )}
     </div>
   );
 }

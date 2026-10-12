@@ -1,5 +1,6 @@
 "use client";
 import { useSessionStorage } from "@/hooks/use-session-storage";
+import { TableSkeleton } from "@/components/shared/page-skeletons";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { userColumns } from "./_components/user-columns";
@@ -12,13 +13,11 @@ import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcr
 import { getErrorMessage } from "@/lib/error-utils";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { PageLoader } from "@/components/shared/loader";
 
 function UsersComponent() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);  // starts loading: the page fetches as soon as it opens
   const [search, setSearch] = useSessionStorage("users-search", "");
-  const [deleteId, setDeleteId] = useState<number | null>(null);
   const [data, setData] = useState<GET_ALL_USER[]>([]);
 
   const columns = userColumns({
@@ -53,8 +52,8 @@ function UsersComponent() {
         title="User Management"
         breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
       />
-      <div className="flex flex-row justify-end gap-[24px]">
-        <div className="relative w-[320px]">
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <div className="relative w-full sm:w-[300px]">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
@@ -70,13 +69,12 @@ function UsersComponent() {
         </Button>
       </div>
       {loading ? (
-        <PageLoader />
+        <TableSkeleton />
       ) : (
         <DataTable
           columns={columns}
           data={data}
           searchValue={search}
-          searchColumn="quote_id"
         />
       )}
     </div>

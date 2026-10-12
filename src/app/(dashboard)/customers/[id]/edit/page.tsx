@@ -1,6 +1,7 @@
 "use client";
 
 import { getErrorMessage } from "@/lib/error-utils";
+import { FormSkeleton } from "@/components/shared/page-skeletons";
 
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { customerSchema } from "@/modules/customer/validation";
@@ -51,6 +52,8 @@ function EditCustomerRelationship() {
   const router = useRouter();
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // False until the record has been fetched; until then a skeleton stands in for the form
+  const [recordLoaded, setRecordLoaded] = useState(false);
   const [user, setUser] = useState<{
     name: string;
     email: string;
@@ -149,6 +152,7 @@ function EditCustomerRelationship() {
         router.push("/customers");
       } finally {
         setIsLoading(false);
+        setRecordLoaded(true);
       }
     }
 
@@ -266,7 +270,7 @@ function EditCustomerRelationship() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      {isLoading && <FullPageLoader />}
+      {isLoading && recordLoaded && <FullPageLoader />}
       <PageTitleWithBreadcrumb
         title={`Edit ${supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"}`}
         breadcrumbs={[
@@ -274,10 +278,12 @@ function EditCustomerRelationship() {
           { title: "Customer / Supplier Management", href: "/customers" },
         ]}
       />
+      {!recordLoaded && <FormSkeleton />}
 
       <Form {...form}>
+        <div className={recordLoaded ? "contents" : "hidden"}>
         <form
-          onSubmit={form.handleSubmit(onSubmit, (_errors) => {
+          onSubmit={form.handleSubmit(onSubmit, () => {
             toast("Please fill in all required fields correctly");
           })}
           className="space-y-6  pb-0"
@@ -299,11 +305,11 @@ function EditCustomerRelationship() {
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
+                "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">
                   {supplierType === CustomerType.SUPPLIER
                     ? "Supplier"
                     : "Customer"}{" "}
@@ -443,7 +449,7 @@ function EditCustomerRelationship() {
                     </FormItem>
                   ))}
                 </div>
-                {renderFormField("logoUrl", ({ field: _field }) => (
+                {renderFormField("logoUrl", () => (
                   <FormItem>
                     <FormLabel>Company Logo</FormLabel>
                     <FormControl>
@@ -511,12 +517,12 @@ function EditCustomerRelationship() {
             <div className="space-y-4">
               <Card
                 className={cn(
-                  "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col",
+                  "w-full rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
                 )}
               >
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div className="flex flex-col gap-[0.5px]">
-                    <h3 className="text-md font-medium mb-2">
+                    <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">
                       Point of Contacts
                     </h3>
                     <p className="text-xs text-muted-foreground mb-4">
@@ -598,6 +604,7 @@ function EditCustomerRelationship() {
             </div>
           </div>
         </form>
+        </div>
       </Form>
     </div>
   );

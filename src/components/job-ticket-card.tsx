@@ -1,192 +1,279 @@
-import { StatusBadge } from "./shared/status-badge";
-import { Badge } from "@/components/ui/badge";
+import { StatusPill, toneFor } from "./shared/status-text";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { parseLocalDate } from "@/hooks/sql-date-time";
 import {
-    Barcode,
-    Calendar,
-    EyeIcon,
-    FileText,
-    MoreVertical,
-    PencilIcon,
-    Ticket,
-    TrashIcon,
-    ArrowRightIcon,
-    History,
-    Loader2,
-    LayoutPanelTop,
-    Printer
+  EyeIcon,
+  MoreVertical,
+  PencilIcon,
+  TrashIcon,
+  Loader2,
+  Printer,
+  Boxes,
+  CalendarDays,
+  CircleCheck,
+  Factory,
+  FileText,
+  Gauge,
+  Hash,
+  Package,
+  Play,
 } from "lucide-react";
 import React, { useState } from "react";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { format } from "date-fns";
 import { ALL_TICKETS } from "@/modules/job-tickets/types";
 import { JobTicketStatus } from "@/config/enum";
 
 export interface JobTicketCardOptions {
-    canModify?: boolean;
-    canUpdateStatus?: boolean;
+  canModify?: boolean;
+  canUpdateStatus?: boolean;
 }
 
 export interface JobTicketCardProps {
-    ticket: ALL_TICKETS;
-    onEdit: (id: number) => void;
-    onDelete: (id: number) => void;
-    onView: (id: number) => void;
-    onDownload: (id: number) => void;
-    onStatusChange: (id: number, status: string) => void;
-    className?: string;
-    permissions?: JobTicketCardOptions;
+  ticket: ALL_TICKETS;
+  onEdit: (id: number) => void;
+  onDelete: (id: number) => void;
+  onView: (id: number) => void;
+  onDownload: (id: number) => void;
+  onStatusChange: (id: number, status: string) => void;
+  className?: string;
+  permissions?: JobTicketCardOptions;
 }
 
 export function JobTicketCard({
-    ticket,
-    onEdit,
-    onDelete,
-    onView,
-    onDownload,
-    onStatusChange,
-    className,
-    permissions,
+  ticket,
+  onEdit,
+  onDelete,
+  onView,
+  onDownload,
+  onStatusChange,
+  className,
+  permissions,
 }: JobTicketCardProps) {
-    const canModify = permissions?.canModify ?? true;
-    const canUpdateStatus = permissions?.canUpdateStatus ?? true;
-    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const canModify = permissions?.canModify ?? true;
+  const canUpdateStatus = permissions?.canUpdateStatus ?? true;
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-    return (
-        <Card className={cn("w-full shadow-sm hover:shadow-md transition-shadow flex flex-col", className)}>
-            <CardHeader className="flex flex-row items-start justify-between space-y-0 p-6 pb-2 shrink-0">
-                <div className="flex items-center gap-4 min-w-0">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                        <Ticket className="h-6 w-6" />
-                    </div>
-                    <div className="flex flex-col gap-1 min-w-0">
-                        <h3 className="font-medium leading-tight line-clamp-2" title={ticket.job_name}>
-                            {ticket.job_name}
-                        </h3>
-                        <p className="text-sm text-muted-foreground truncate" title={ticket.job_number}>{ticket.job_number}</p>
-                    </div>
-                </div>
-                <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon" className="h-8 w-8 shrink-0">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-[200px]" align="end">
-                        <DropdownMenuItem onSelect={() => onView(ticket.job_id)}>
-                            <EyeIcon className="mr-2 h-4 w-4" />
-                            View Details
-                        </DropdownMenuItem>
-                        {canModify && (
-                            <DropdownMenuItem onSelect={() => onEdit(ticket.job_id)}>
-                                <PencilIcon className="mr-2 h-4 w-4" />
-                                Edit Ticket
-                            </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onSelect={() => onDownload(ticket.job_id)}>
-                            <Printer className="mr-2 h-4 w-4" />
-                            Print Ticket
-                        </DropdownMenuItem>
-                        {canModify && (
-                            <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                    onSelect={() => onDelete(ticket.job_id)}
-                                    className="text-destructive focus:text-destructive"
-                                >
-                                    <TrashIcon className="mr-2 h-4 w-4" />
-                                    Delete Ticket
-                                </DropdownMenuItem>
-                            </>
-                        )}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </CardHeader>
-            <CardContent className="p-6 pt-4">
-                <div className="grid grid-cols-2 gap-2 mb-6">
-                    <Badge className="h-[32px] w-full justify-center rounded-md px-3 bg-primary hover:bg-primary/90 text-white text-sm font-medium">
-                        Qty: {ticket.quantity}
-                    </Badge>
-                    <div className="flex items-center justify-center h-[32px] w-full rounded-md px-3 bg-muted border border-border">
-                        <StatusBadge status={ticket.status} type="JOB_TICKET" />
-                    </div>
-                </div>
+  const quantity = Number(ticket.quantity) || 0;
+  const completed = Number(ticket.completed_qty) || 0;
+  const done = quantity > 0 && completed >= quantity;
+  // Once production has started the button is only a label, so it steps back visually
+  const inProduction =
+    ticket.status === JobTicketStatus.IN_PRODUCTION ||
+    ticket.status === JobTicketStatus.PARTIALLY_DISPATCHED ||
+    ticket.status === JobTicketStatus.COMPLETED;
+  const progress =
+    quantity > 0 ? Math.min(100, (completed / quantity) * 100) : 0;
 
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div className="flex flex-col gap-1 min-w-0">
-                        <span className="text-[12px] text-muted-foreground flex items-center gap-2 whitespace-nowrap uppercase tracking-wider font-semibold">
-                            <Barcode className="h-3.5 w-3.5" /> PO Number
-                        </span>
-                        <span className="font-semibold text-sm truncate" title={ticket.customer_po}>{ticket.customer_po || "N/A"}</span>
-                    </div>
-                    <div className="flex flex-col gap-1 min-w-0">
-                        <span className="text-[12px] text-muted-foreground flex items-center gap-2 whitespace-nowrap uppercase tracking-wider font-semibold">
-                            <Calendar className="h-3.5 w-3.5" /> Open Date
-                        </span>
-                        <span className="font-semibold text-sm truncate">
-                            {ticket.job_open_date ? format(parseLocalDate(ticket.job_open_date), "dd MMM yyyy") : "N/A"}
-                        </span>
-                    </div>
-                </div>
+  return (
+    <Card
+      className={cn(
+        "relative flex w-full flex-col gap-0 overflow-hidden rounded-lg border-[#D9DFE8] p-0 pl-1 shadow-none",
+        className
+      )}
+    >
+      <div className="flex items-start gap-2 px-4 pt-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span
+              className="inline-flex min-w-0 items-center gap-1 text-[13px] text-[#4B5567]"
+              title={ticket.job_number}
+            >
+              <Hash className="size-3.5 shrink-0" aria-hidden />
+              <span className="shrink-0">Job no.</span>
+              <span className="truncate font-semibold text-[#14213D]">
+                {ticket.job_number}
+              </span>
+            </span>
+            <StatusPill status={ticket.status} className="ml-auto text-xs" />
+          </div>
+          {/* Always two lines tall, so everything below lines up across cards */}
+          <button
+            type="button"
+            onClick={() => onView(ticket.job_id)}
+            className="mt-1.5 min-h-[2.75em] w-full rounded-sm text-left text-[15px] font-bold leading-[1.375] text-[#14213D] line-clamp-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#223F7A]/30"
+            title={ticket.job_name}
+          >
+            {ticket.job_name}
+          </button>
+        </div>
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="-mt-1 -mr-2 h-7 w-7 shrink-0 text-[#4B5567]"
+              aria-label={`Actions for ${ticket.job_number || "job ticket"}`}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-[200px]" align="end">
+            <DropdownMenuItem onSelect={() => onView(ticket.job_id)}>
+              <EyeIcon className="mr-2 h-4 w-4" />
+              View Details
+            </DropdownMenuItem>
+            {canModify && (
+              <DropdownMenuItem onSelect={() => onEdit(ticket.job_id)}>
+                <PencilIcon className="mr-2 h-4 w-4" />
+                Edit Ticket
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onSelect={() => onDownload(ticket.job_id)}>
+              <Printer className="mr-2 h-4 w-4" />
+              Print Ticket
+            </DropdownMenuItem>
+            {canModify && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={() => onDelete(ticket.job_id)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <TrashIcon className="mr-2 h-4 w-4" />
+                  Delete Ticket
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
-                <div className="pt-4 border-t flex items-center justify-between text-sm">
-                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                        <span className="text-muted-foreground text-[12px] uppercase tracking-wider font-semibold">Product Type</span>
-                        <span className="font-medium truncate" title={ticket.product_type}>{ticket.product_type}</span>
-                    </div>
-                    <div className="flex flex-col items-end gap-0.5 shrink-0 ml-4">
-                        <span className="text-muted-foreground text-[12px] uppercase tracking-wider font-semibold">Completed</span>
-                        <span className={cn(
-                            "font-bold",
-                            ticket.completed_qty >= ticket.quantity ? "text-green-600" : "text-amber-600"
-                        )}>
-                            {ticket.completed_qty || 0} / {ticket.quantity}
-                        </span>
-                    </div>
-                </div>
+      {/* Which order it belongs to, when it started, and what it is */}
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 px-4 pt-2 text-[13px] text-[#4B5567]">
+        <div
+          className="flex min-w-0 items-center gap-1.5"
+          title={ticket.customer_po}
+        >
+          <FileText className="size-3.5 shrink-0" aria-hidden />
+          <dt className="shrink-0">PO</dt>
+          <dd className="truncate font-semibold text-[#14213D]">
+            {ticket.customer_po || "N/A"}
+          </dd>
+        </div>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <CalendarDays className="size-3.5 shrink-0" aria-hidden />
+          <dt className="shrink-0">Opened</dt>
+          <dd className="truncate font-semibold text-[#14213D]">
+            {ticket.job_open_date
+              ? format(parseLocalDate(ticket.job_open_date), "dd MMM yyyy")
+              : "N/A"}
+          </dd>
+        </div>
+        <div
+          className="col-span-2 flex min-w-0 items-center gap-1.5"
+          title={ticket.product_type}
+        >
+          <Package className="size-3.5 shrink-0" aria-hidden />
+          <dt className="sr-only">Product type</dt>
+          <dd className="truncate font-semibold text-[#14213D]">
+            {ticket.product_type || "N/A"}
+          </dd>
+        </div>
+      </dl>
 
-                {canUpdateStatus && (
-                    <div className="mt-6">
-                        <Button
-                            className="w-full h-[40px] bg-primary hover:bg-primary/90 text-white font-semibold shadow-sm transition-all"
-                            onClick={async () => {
-                                setIsUpdatingStatus(true);
-                                try {
-                                    await onStatusChange(ticket.job_id, JobTicketStatus.IN_PRODUCTION);
-                                } finally {
-                                    setIsUpdatingStatus(false);
-                                }
-                            }}
-                            disabled={
-                                ticket.status === JobTicketStatus.IN_PRODUCTION ||
-                                ticket.status === JobTicketStatus.PARTIALLY_DISPATCHED ||
-                                ticket.status === JobTicketStatus.COMPLETED ||
-                                isUpdatingStatus
-                            }
-                        >
-                            {isUpdatingStatus ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <LayoutPanelTop className="mr-2 h-4 w-4" />
-                            )}
-                            {ticket.status === JobTicketStatus.IN_PRODUCTION ||
-                                ticket.status === JobTicketStatus.PARTIALLY_DISPATCHED ||
-                                ticket.status === JobTicketStatus.COMPLETED
-                                ? "In Production"
-                                : "Start Production"}
-                        </Button>
-                    </div>
-                )}
-            </CardContent>
-        </Card>
-    );
+      {/* How much to make, and how much is done */}
+      <div className="mx-4 mt-3 rounded-md border border-[#E6EAF0] px-3 py-2.5">
+        <div className="flex flex-col gap-1 text-[13px] text-[#4B5567]">
+          <span className="inline-flex items-center gap-1.5">
+            <Boxes className="size-3.5 shrink-0" aria-hidden />
+            Quantity{" "}
+            <span className="text-base font-bold tabular-nums text-[#14213D]">
+              {quantity.toLocaleString()}
+            </span>
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            {done ? (
+              <CircleCheck
+                className="size-3.5 shrink-0 text-[#15803D]"
+                aria-hidden
+              />
+            ) : (
+              <Gauge className="size-3.5 shrink-0" aria-hidden />
+            )}
+            Completed{" "}
+            <span
+              className={cn(
+                "font-bold tabular-nums",
+                done ? "text-[#15803D]" : "text-[#B45309]"
+              )}
+            >
+              {completed.toLocaleString()} of {quantity.toLocaleString()}
+            </span>
+            <span className="tabular-nums">({Math.round(progress)}%)</span>
+          </span>
+        </div>
+        <div
+          className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#EDF0F5]"
+          role="progressbar"
+          aria-valuenow={Math.round(progress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Completed quantity"
+        >
+          <div
+            className={cn(
+              "h-full rounded-full",
+              done ? "bg-[#16A34A]" : "bg-[#D97706]"
+            )}
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-1 flex-col justify-end px-4 pb-3">
+        {canUpdateStatus && (
+          <div className="mt-3">
+            <Button
+              className={cn(
+                "h-9 w-full font-semibold",
+                inProduction &&
+                  "bg-[#F1F3F8] text-[#4B5567] disabled:opacity-100"
+              )}
+              onClick={async () => {
+                setIsUpdatingStatus(true);
+                try {
+                  await onStatusChange(
+                    ticket.job_id,
+                    JobTicketStatus.IN_PRODUCTION
+                  );
+                } finally {
+                  setIsUpdatingStatus(false);
+                }
+              }}
+              disabled={
+                ticket.status === JobTicketStatus.IN_PRODUCTION ||
+                ticket.status === JobTicketStatus.PARTIALLY_DISPATCHED ||
+                ticket.status === JobTicketStatus.COMPLETED ||
+                isUpdatingStatus
+              }
+            >
+              {isUpdatingStatus ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : ticket.status === JobTicketStatus.COMPLETED ? (
+                <CircleCheck className="mr-2 h-4 w-4" />
+              ) : inProduction ? (
+                <Factory className="mr-2 h-4 w-4" />
+              ) : (
+                <Play className="mr-2 h-4 w-4" />
+              )}
+              {ticket.status === JobTicketStatus.COMPLETED
+                ? "Completed"
+                : inProduction
+                ? "In production"
+                : "Start production"}
+            </Button>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
 }

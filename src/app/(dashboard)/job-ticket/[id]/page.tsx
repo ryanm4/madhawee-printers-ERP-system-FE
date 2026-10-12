@@ -1,131 +1,117 @@
 "use client"
 
-import { FieldPath, useFieldArray, useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { CalendarIcon, Edit2 } from "lucide-react" // Import icons
+import { Edit2 } from "lucide-react"
+import { RecordViewSkeleton } from "@/components/shared/page-skeletons";
 import { format } from "date-fns"
 import { parseLocalDate } from "@/hooks/sql-date-time"
 import { useState, useEffect } from "react"
 
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { jobTicketSchema } from "@/modules/job-tickets/validation"
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { useRouter, useParams } from "next/navigation"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { CUSTOMER } from "@/modules/customer/types"
 import { CustomerApi } from "@/modules/customer/api"
-import { COATING_TYPES, PLATES_STATUS, PRODUCT_TYPES } from "@/config/enum"
-import { PaperTypeCombobox } from "../_components/paper-type-combobox"
-import { Combobox } from "@/components/shared/combobox"
 import { PURCHASE_ORDER, PURCHASE_ORDER_ID } from "@/modules/purchase-order/types"
 import { purchaseOrderApi } from "@/modules/purchase-order/api"
 import { jobTicketsApi } from "@/modules/job-tickets/api"
+import { JOB_TICKET_DETAIL } from "@/modules/job-tickets/types"
 
-import { FullPageLoader } from "@/components/shared/loader"
 import { usePermissions } from "@/hooks/use-permissions"
+import { StatusChanger } from "@/components/shared/status-changer"
+import { toast } from "sonner"
+import { getErrorMessage } from "@/lib/error-utils"
+import { statusActions } from "@/lib/status-actions"
+import { updateJobTicketStatus } from "@/modules/job-tickets/update-status"
+import {
+    Detail,
+    DetailGrid,
+    ViewError,
+    ViewHeader,
+    ViewSection,
+    ViewTable,
+    sentenceCase,
+} from "@/components/shared/record-view"
 
-type JobTicketFormValues = z.infer<typeof jobTicketSchema>
+interface RawMaterial {
+    size: string;
+    quantity: number;
+    status: string;
+    remarks: string;
+}
+
+interface PaperSet {
+    paper: string;
+    coating: string;
+    rawMaterials: RawMaterial[];
+}
+
+interface InkRow {
+    ink: string;
+    quantity: string;
+    status: string;
+    remarks: string;
+}
+
+const notSet = <span className="text-muted-foreground">Not set</span>
+const orNotSet = (value?: string | number | null) => (value === undefined || value === null || value === "" ? notSet : value)
+
+/** dd MMM yyyy for SQL dates; anything unparseable is shown as saved */
+const showDate = (value?: string | Date | null) => {
+    if (!value) return null
+    try {
+        const date = value instanceof Date ? value : parseLocalDate(String(value))
+        return Number.isNaN(date.getTime()) ? String(value) : format(date, "dd MMM yyyy")
+    } catch {
+        return String(value)
+    }
+}
+
+/** Paper sets with only the raw materials that belong to each paper */
+const toPaperSets = (data: JOB_TICKET_DETAIL): PaperSet[] =>
+    (((data as Record<string, unknown>).paperCoatingData || data.paperCoating || []) as Array<Record<string, unknown>>).map((p) => {
+        let paperValue = String(p.paper || "")
+        const materials = (Array.isArray(p.materials) ? p.materials : []) as Array<Record<string, unknown>>
+        if (!paperValue && materials.length > 0 && materials[0].material_type && materials[0].material_name) {
+            paperValue = `${materials[0].material_type} ${materials[0].material_name}`
+        }
+        const filtered = materials.filter((m) => {
+            if (!paperValue) return true
+            return `${m.material_type || ""} ${m.material_name || ""}`.trim().toLowerCase() === paperValue.trim().toLowerCase()
+        })
+        return {
+            paper: paperValue,
+            coating: String(p.coating || ""),
+            rawMaterials: filtered.map((rm) => ({
+                size: String(rm.size || ""),
+                quantity: Number(rm.quantity || 0),
+                status: String(rm.status || ""),
+                remarks: String(rm.remarks || ""),
+            })),
+        }
+    })
+
+/** Ink lines without the duplicates the API sometimes returns */
+const toInks = (data: JOB_TICKET_DETAIL): InkRow[] =>
+    (Array.isArray(data.inks) ? data.inks : [])
+        .filter((v, i, a) => a.findIndex((t) => t.ink === v.ink && t.quantity === v.quantity && t.status === v.status && t.remarks === v.remarks) === i)
+        .map((i) => ({
+            ink: i.ink,
+            quantity: i.quantity !== null && i.quantity !== undefined ? String(i.quantity) : "",
+            status: i.status || "",
+            remarks: i.remarks || "",
+        }))
 
 function JobViewTicket() {
     const router = useRouter();
     const params = useParams();
     const id = params.id as string;
-    const { canModifyJobTicket } = usePermissions();
+    const permissions = usePermissions();
+    const { canModifyJobTicket } = permissions;
 
-    const [isLoading, setIsLoading] = useState(false);
-    const [customerData, setCustomerData] = useState<CUSTOMER[]>([])
-    const [purchaseOrderData, setPurchaseOrderData] = useState<PURCHASE_ORDER[]>([]);
-    const [selectedPoDetails, setSelectedPoDetails] = useState<PURCHASE_ORDER_ID | null>(null);
-
-    const baseDefaultValues = {
-        customer_po: "",
-        item: "",
-        orderReceivedDate: undefined,
-        jobNumber: "",
-        jobOpenDate: undefined,
-        customer: "",
-        jobName: "",
-        productType: "",
-        quantity: "",
-        wastage: "",
-        deliveryDate: undefined,
-        packingDate: undefined,
-        expiryDate: undefined,
-        tcNo: "",
-        batchRef: "",
-        remarks: "",
-        addAnotherJob: false,
-        oldPlatesQuantity: "",
-        oldPlatesStatus: "",
-        oldPlatesRemarks: "",
-        newPlatesQuantity: "",
-        newPlatesStatus: "",
-        newPlatesRemarks: "",
-        inks: [
-            { ink: "Black", quantity: "", status: "", remarks: "" },
-            { ink: "Cyan", quantity: "", status: "", remarks: "" },
-            { ink: "Magenta", quantity: "", status: "", remarks: "" },
-            { ink: "Yellow", quantity: "", status: "", remarks: "" },
-        ],
-        paperTypes: [{ paper: "", coating: "", rawMaterials: [{ item_id: undefined, material_name: "", material_type: "", size: "", material_description: "", quantity: 0, status: "", remarks: "" }] }],
-    }
-
-    const form = useForm<JobTicketFormValues>({
-        resolver: zodResolver(jobTicketSchema) as any,
-        defaultValues: baseDefaultValues,
-    })
-
-
-
-    const { fields: paperTypeFields } = useFieldArray({
-        control: form.control,
-        name: "paperTypes",
-    })
-
-    const { fields: inkFields } = useFieldArray({
-        control: form.control,
-        name: "inks",
-    })
-
-    useEffect(() => {
-        const fetchInitialData = async () => {
-            try {
-                setIsLoading(true);
-                const [poResponse, customerResponse] = await Promise.all([
-                    purchaseOrderApi.getAll(),
-                    CustomerApi.getAll()
-                ]);
-
-                setPurchaseOrderData(poResponse.data);
-                setCustomerData(customerResponse.data);
-            } catch (error) {
-                console.error('Failed to fetch initial data', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchInitialData();
-    }, []);
+    const [job, setJob] = useState<JOB_TICKET_DETAIL | null>(null);
+    const [po, setPo] = useState<PURCHASE_ORDER_ID | null>(null);
+    const [customerName, setCustomerName] = useState<string>("");
+    const [isLoading, setIsLoading] = useState(true);
+    const [failed, setFailed] = useState(false);
 
     useEffect(() => {
         const fetchJobTicket = async () => {
@@ -133,178 +119,66 @@ function JobViewTicket() {
             try {
                 setIsLoading(true);
                 const response = await jobTicketsApi.getById(id);
-                if (response.status === 200) {
-                    const data = response.data; // Use the data from response
+                if (response.status !== 200) {
+                    setFailed(true);
+                    return;
+                }
+                const data = response.data;
+                setJob(data);
+                setCustomerName(data.customer?.company_name || "");
 
-                    // Map API data to form values
-                    const formValues: JobTicketFormValues = {
-                        customer_po: data.customer_po ? String(data.customer_po) : (data.po_id ? String(data.po_id) : ""),
-                        item: data.item_code ? String(data.item_code) : "",
-                        jobNumber: data.job_number || "",
-                        orderReceivedDate: data.order_received_date
-                            ? parseLocalDate(data.order_received_date)
-                            : undefined,
-                        jobOpenDate: data.job_open_date
-                            ? parseLocalDate(data.job_open_date)
-                            : data.created_on
-                                ? parseLocalDate(data.created_on)
-                                : undefined,
-                        customer: data.customer_id ? String(data.customer_id) : "",
-                        jobName: data.job_name || "",
-                        productType: data.product_type || "",
-                        quantity: data.quantity ? String(data.quantity) : "",
-                        deliveryDate: data.delivery_date ? parseLocalDate(data.delivery_date) : undefined,
-                        wastage: data.wastage ? String(data.wastage) : "",
-                        packingDate: data.packing_date ? String(data.packing_date) : "",
-                        expiryDate: data.expiry_date ? String(data.expiry_date) : "",
-                        tcNo: data.tc_no || "",
-                        batchRef: data.batch_ref || "",
-                        remarks: data.remarks || "",
-
-                        oldPlatesQuantity: data.old_plate_quantity !== undefined && data.old_plate_quantity !== null ? String(data.old_plate_quantity) : "",
-                        oldPlatesStatus: data.old_plate_status || "",
-                        oldPlatesRemarks: data.old_plate_remarks || "",
-                        newPlatesQuantity: data.new_plate_quantity !== undefined && data.new_plate_quantity !== null ? String(data.new_plate_quantity) : "",
-                        newPlatesStatus: data.new_plate_status || "",
-                        newPlatesRemarks: data.new_plate_remarks || "",
-
-
-                        inks: (Array.isArray(data.inks) && data.inks.length > 0) ? (data.inks as Array<{ ink: string, quantity: string, status: string, remarks: string }>)
-                            .filter((v, i, a) => a.findIndex(t => (t.ink === v.ink && t.quantity === v.quantity && t.status === v.status && t.remarks === v.remarks)) === i)
-                            .map(i => ({
-                                ink: i.ink,
-                                quantity: i.quantity !== null && i.quantity !== undefined ? String(i.quantity) : "",
-                                status: i.status || "",
-                                remarks: i.remarks || ""
-                            })) : [
-                            { ink: "Black", quantity: "", status: "", remarks: "" },
-                            { ink: "Cyan", quantity: "", status: "", remarks: "" },
-                            { ink: "Magenta", quantity: "", status: "", remarks: "" },
-                            { ink: "Yellow", quantity: "", status: "", remarks: "" },
-                        ],
-                        paperTypes: (((data as Record<string, unknown>).paperCoatingData || data.paperCoating || []) as Array<Record<string, unknown>>).map((p) => {
-                            let paperValue = String(p.paper || "");
-                            const materials = Array.isArray(p.materials) ? p.materials : [];
-                            if (!paperValue && materials.length > 0) {
-                                const mat = materials[0] as Record<string, unknown>;
-                                if (mat.material_type && mat.material_name) {
-                                    paperValue = `${mat.material_type} ${mat.material_name}`;
-                                }
-                            }
-                            // Filter raw materials to match the paper value
-                            const filteredMaterials = materials.filter((m: Record<string, unknown>) => {
-                                if (!paperValue) return true;
-                                const mKey = `${m.material_type || ""} ${m.material_name || ""}`.trim().toLowerCase();
-                                const pKey = paperValue.trim().toLowerCase();
-                                return mKey === pKey;
-                            });
-
-                            return {
-                                paper: paperValue,
-                                coating: String(p.coating || ""),
-                                rawMaterials: filteredMaterials.map((rm: Record<string, unknown>) => ({
-                                    item_id: rm.item_id ? Number(rm.item_id) : undefined,
-                                    material_name: String(rm.material_name || ""),
-                                    material_type: String(rm.material_type || ""),
-                                    size: String(rm.size || ""),
-                                    material_description: String(rm.material_description || ""),
-                                    quantity: Number(rm.quantity || 0),
-                                    status: String(rm.status || ""),
-                                    remarks: String(rm.remarks || ""),
-                                })),
-                            };
-                        }),
-                    };
-
-                    form.reset(formValues);
-
-                    // If PO is selected, fetch PO details to populate item options (though read-only)
-                    const poIdentifier = data.po_id || data.customer_po;
-                    if (poIdentifier) {
-                        // If it's a string name, find the ID first
-                        let poIdToFetch = String(poIdentifier);
-                        if (isNaN(Number(poIdToFetch))) {
-                            const match = purchaseOrderData.find(p => String(p.customer_po) === poIdToFetch);
-                            if (match) poIdToFetch = String(match.po_id);
-                        }
-
-                        const poResponse = await purchaseOrderApi.getById(poIdToFetch);
+                // The order the job belongs to supplies its received date, TC no and batch ref
+                let poId = data.po_id ? String(data.po_id) : "";
+                if (!poId && data.customer_po) {
+                    if (!isNaN(Number(data.customer_po))) {
+                        poId = String(data.customer_po);
+                    } else {
+                        const list = await purchaseOrderApi.getAll();
+                        const match = (list.data as PURCHASE_ORDER[]).find((p) => String(p.customer_po) === String(data.customer_po));
+                        if (match) poId = String(match.po_id);
+                    }
+                }
+                if (poId) {
+                    try {
+                        const poResponse = await purchaseOrderApi.getById(poId);
                         if (poResponse.status === 200) {
-                            setSelectedPoDetails(poResponse.data);
+                            setPo(poResponse.data);
+                            if (poResponse.data.customer?.name) setCustomerName(poResponse.data.customer.name);
                         }
+                    } catch (err) {
+                        console.error("Error fetching PO details in view", err);
+                    }
+                }
+
+                if (!data.customer?.company_name && data.customer_id) {
+                    try {
+                        const customerResponse = await CustomerApi.getById(String(data.customer_id));
+                        setCustomerName((name) => name || customerResponse.data.company_name);
+                    } catch (err) {
+                        console.error("Error fetching customer in view", err);
                     }
                 }
             } catch (error) {
                 console.error('Failed to fetch job ticket', error);
+                setFailed(true);
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchJobTicket();
-    }, [id, form, purchaseOrderData]);
+    }, [id]);
 
-    const selectedPoId = form.watch("customer_po");
-
-    useEffect(() => {
-        const fetchPoDetails = async () => {
-            if (!selectedPoId || selectedPoId === "undefined") {
-                setSelectedPoDetails(null);
-                return;
-            }
-
-            // Map display string to internal ID if needed
-            let internalId = selectedPoId;
-            if (isNaN(Number(selectedPoId)) && purchaseOrderData.length > 0) {
-                const matchingPo = purchaseOrderData.find(
-                    (po) => String(po.customer_po) === selectedPoId
-                );
-                if (matchingPo) {
-                    internalId = String(matchingPo.po_id);
-                    // Sync form state to the ID so ComboBox highlights correctly
-                    form.setValue("customer_po", internalId);
-                }
-            }
-
-            try {
-                const response = await purchaseOrderApi.getById(internalId);
-                if (response.status === 200) {
-                    const po = response.data;
-                    setSelectedPoDetails(po);
-
-                    if (po.customer) {
-                        form.setValue("customer", String(po.customer.customer_id));
-                    }
-                    if (po.po_date) {
-                        form.setValue("orderReceivedDate", new Date(po.po_date));
-                    }
-                    form.setValue("tcNo", po.TC_E_PR_No);
-                    form.setValue("batchRef", po.batch_ref);
-                }
-            } catch (err) {
-                console.error("Error fetching PO details in view", err);
-            }
-        };
-
-        fetchPoDetails();
-    }, [selectedPoId, form, purchaseOrderData]);
-
-    const renderFormField = <TName extends FieldPath<JobTicketFormValues>>(
-        name: TName,
-        render: Parameters<typeof FormField<JobTicketFormValues, TName>>["0"]["render"]
-    ) => (
-        <FormField
-            control={form.control}
-            name={name}
-            render={render}
-        />
-    );
-
-    const selectedPoItems = selectedPoDetails?.po_items ?? [];
+    const paperSets = job ? toPaperSets(job) : [];
+    const inks = job ? toInks(job) : [];
+    const orderReceived = po?.po_date ?? job?.order_received_date;
+    const tcNo = po?.TC_E_PR_No || job?.tc_no;
+    const batchRef = po?.batch_ref || job?.batch_ref;
+    const hasPlates = job && [job.old_plate_quantity, job.old_plate_status, job.old_plate_remarks, job.new_plate_quantity, job.new_plate_status, job.new_plate_remarks]
+        .some((v) => v !== undefined && v !== null && v !== "");
 
     return (
-        <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-            {isLoading && <FullPageLoader />}
+        <div className="mt-3 flex flex-1 flex-col gap-5 p-4 pt-0 sm:p-6 sm:pt-0">
             <PageTitleWithBreadcrumb
                 title="View Job Ticket"
                 breadcrumbs={[
@@ -314,397 +188,162 @@ function JobViewTicket() {
                 ]}
             />
 
-            <Form {...form}>
-                <form className="space-y-6 pb-0">
-                    <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-                        <Button size="lg" variant="outline" type="button" onClick={() => router.push("/job-ticket")}>Back</Button>
+            <ViewHeader
+                title={job && (job.job_number || `Job ${job.job_id}`)}
+                status={job?.status}
+                statusType="JOB_TICKET"
+                subtitle={
+                    job && (
+                        <>
+                            <span className="font-medium text-[#1B2433]">{job.job_name}</span>
+                            {customerName && <> for {customerName}</>}
+                        </>
+                    )
+                }
+                actions={
+                    <>
+                        <Button variant="outline" type="button" onClick={() => router.push("/job-ticket")}>Back</Button>
+                        {job && (
+                            <StatusChanger
+                                current={job.status}
+                                actions={statusActions.jobTicket(job.status, permissions)}
+                                onChange={async (to) => {
+                                    try {
+                                        await updateJobTicketStatus(job, to);
+                                        setJob({ ...job, status: to });
+                                        toast.success(`Job is now ${sentenceCase(to).toLowerCase()}`);
+                                        return true;
+                                    } catch (error) {
+                                        toast.error(getErrorMessage(error, "Couldn't change the status"));
+                                        return false;
+                                    }
+                                }}
+                            />
+                        )}
                         {canModifyJobTicket && (
-                            <Button size="lg" type="button" className="bg-primary hover:bg-primary/90" onClick={() => router.push(`/job-ticket/${id}/edit`)}>
-                                <Edit2 className="mr-2 h-4 w-4" /> Edit Job Ticket
+                            <Button type="button" onClick={() => router.push(`/job-ticket/${id}/edit`)}>
+                                <Edit2 className="h-4 w-4" /> Edit Job Ticket
                             </Button>
                         )}
+                    </>
+                }
+            />
+            {isLoading && !job && <RecordViewSkeleton />}
+
+            {failed && !isLoading && (
+                <ViewError>Couldn&apos;t load this job ticket. Go back to the list and open it again.</ViewError>
+            )}
+
+            {job && (
+                <>
+                    <div className="grid gap-5 lg:grid-cols-3">
+                        <ViewSection title="Job ticket details" className="lg:col-span-2">
+                            <DetailGrid columns={3}>
+                                <Detail
+                                    label="PO number"
+                                    value={
+                                        (po?.customer_po || job.customer_po) && (
+                                            po ? (
+                                                <a href={`/purchase-order/${po.po_id}/view`} className="hover:text-[#223F7A] hover:underline">
+                                                    {po.customer_po}
+                                                </a>
+                                            ) : job.customer_po
+                                        )
+                                    }
+                                />
+                                <Detail label="Item" value={job.item_code} />
+                                <Detail label="Job number" value={job.job_number} />
+                                <Detail label="Customer" value={customerName} />
+                                <Detail label="Job name" value={job.job_name} className="col-span-2" />
+                                <Detail label="Order received date" value={showDate(orderReceived)} />
+                                <Detail label="Job open date" value={showDate(job.job_open_date || job.created_on)} />
+                                <Detail label="Delivery date" value={showDate(job.delivery_date)} />
+                            </DetailGrid>
+                        </ViewSection>
+
+                        <ViewSection title="Product">
+                            <DetailGrid columns={2}>
+                                <Detail label="Product type" value={job.product_type} />
+                                <Detail label="Quantity" value={job.quantity ? Number(job.quantity).toLocaleString() : null} />
+                                <Detail label="Wastage" value={job.wastage ? `${job.wastage}%` : null} />
+                                <Detail label="Packing date" value={showDate(job.packing_date)} />
+                                <Detail label="Expiry date" value={showDate(job.expiry_date)} />
+                                <Detail label="TC no" value={tcNo} />
+                                <Detail label="Batch ref" value={batchRef} />
+                                <Detail label="Remarks" value={job.remarks} className="col-span-2" />
+                            </DetailGrid>
+                        </ViewSection>
                     </div>
-                    <Card className={cn("w-full shdow-sm hover:shadow-md transition-shadow flex flex-col")}>
-                        <CardHeader className="flex flex-col gap-[0.5px]">
-                            <h3 className="text-md font-medium mb-2">Job Ticket Details</h3>
-                            <p className="text-xs text-muted-foreground mb-4">View Job Ticket Details</p>
-                        </CardHeader>
-                        <CardContent className="flex flex-col gap-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {renderFormField("customer_po", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>PO Number</FormLabel>
-                                        <Combobox
-                                            items={purchaseOrderData.map(po => ({ value: String(po.po_id), label: String(po.customer_po) }))}
-                                            value={field.value || ""}
-                                            onValueChange={() => { }}
-                                            placeholder="Select PO Number"
-                                            searchPlaceholder="Search PO..."
-                                            disabled
-                                        />
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("item", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Item</FormLabel>
-                                        <Combobox
-                                            items={selectedPoItems.map((item) => ({ value: item.item_code, label: item.item_code }))}
-                                            value={field.value || ""}
-                                            onValueChange={() => { }}
-                                            placeholder={field.value || "Select Item"}
-                                            disabled
-                                            searchPlaceholder="Search item..."
-                                        />
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("jobNumber", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Job Number</FormLabel>
-                                        <FormControl><Input placeholder="MPL/####/YY/TIEP" {...field} readOnly /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("orderReceivedDate", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Order Received Date</FormLabel>
-                                        <FormControl>
-                                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled>
-                                                {field.value ? format(field.value, "PPP") : "No Date"}
-                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                            </Button>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                            </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {renderFormField("jobOpenDate", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Job Open Date</FormLabel>
-                                        <FormControl>
-                                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled>
-                                                {field.value ? format(field.value, "PPP") : "No Date"}
-                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                            </Button>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("customer", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Customer</FormLabel>
-                                        <Combobox
-                                            items={customerData.map((customer) => ({
-                                                value: String(customer.customer_id),
-                                                label: `Job-${customer.customer_id} (${customer.company_name})`
-                                            }))}
-                                            value={field.value || ""}
-                                            onValueChange={() => { }}
-                                            placeholder="Select Customer"
-                                            searchPlaceholder="Search customer..."
-                                            disabled
-                                        />
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("jobName", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Job Name</FormLabel>
-                                        <FormControl><Input placeholder="Enter Job Name" {...field} readOnly /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                            </div>
-
-                            {/* Product Details */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                {renderFormField("productType", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Product Type</FormLabel>
-                                        <Select value={field.value} disabled>
-                                            <FormControl>
-                                                <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Select Product Type" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {Object.entries(PRODUCT_TYPES).map(([key, value]) => (
-                                                    <SelectItem key={key} value={value}>
-                                                        {value}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("quantity", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Quantity</FormLabel>
-                                        <FormControl><Input min={0} type="number" step="any" placeholder="Enter Quantity" {...field} readOnly /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("deliveryDate", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Delivery Date</FormLabel>
-                                        <FormControl>
-                                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled>
-                                                {field.value ? format(field.value, "PPP") : "No Date"}
-                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                            </Button>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-
-                                {renderFormField("wastage", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Wastage %</FormLabel>
-                                        <FormControl><Input min={0} type="number" step="any" placeholder="Enter Wastage" {...field} readOnly /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                            </div>
-
-                            <div>
-                                <h3 className="text-sm font-medium mb-2">Paper & Raw Material</h3>
-                                {paperTypeFields.map((field, index) => {
-                                    const rawMaterials = form.watch(`paperTypes.${index}.rawMaterials`) || [];
-                                    return (
-                                        <div key={field.id} className="border rounded-lg p-4 mb-4 bg-muted/20">
-                                            <h4 className="text-sm font-semibold mb-4">Set {index + 1}</h4>
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                                {renderFormField(`paperTypes.${index}.paper`, ({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Paper Type</FormLabel>
-                                                        <div className="pointer-events-none opacity-50">
-                                                            <PaperTypeCombobox value={field.value} onChange={() => { }} />
-                                                        </div>
-                                                        <FormMessage className="min-h-[20px]" />
-                                                    </FormItem>
-                                                ))}
-                                                {renderFormField(`paperTypes.${index}.coating`, ({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Coating</FormLabel>
-                                                        <Select value={field.value} disabled>
-                                                            <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select Coating" /></SelectTrigger></FormControl>
-                                                            <SelectContent>
-                                                                {Object.entries(COATING_TYPES).map(([key, value]) => (
-                                                                    <SelectItem key={key} value={value}>
-                                                                        {value}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                        <FormMessage className="min-h-[20px]" />
-                                                    </FormItem>
-                                                ))}
-                                            </div>
-
-                                            {/* Raw Materials for this Paper Type */}
-                                            <h5 className="text-xs font-medium mb-2 mt-2">Raw Materials</h5>
-                                            {rawMaterials.map((_rm, rmIndex: number) => (
-                                                <div key={rmIndex} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2">
-                                                    {renderFormField(`paperTypes.${index}.rawMaterials.${rmIndex}.size`, ({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel className={rmIndex !== 0 ? "sr-only" : ""}>Raw Material Size</FormLabel>
-                                                            <FormControl><Input placeholder="Size" {...field} value={field.value as string || ""} readOnly /></FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    ))}
-                                                    {renderFormField(`paperTypes.${index}.rawMaterials.${rmIndex}.quantity`, ({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel className={rmIndex !== 0 ? "sr-only" : ""}>Quantity</FormLabel>
-                                                            <FormControl><Input min={0} type="number" step="any" placeholder="Quantity" {...field} value={field.value as number || 0} readOnly /></FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    ))}
-                                                    {renderFormField(`paperTypes.${index}.rawMaterials.${rmIndex}.status`, ({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel className={rmIndex !== 0 ? "sr-only" : ""}>Status</FormLabel>
-                                                            <FormControl><Input placeholder="Status" {...field} value={field.value as string || ""} readOnly /></FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    ))}
-                                                    {renderFormField(`paperTypes.${index}.rawMaterials.${rmIndex}.remarks`, ({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel className={rmIndex !== 0 ? "sr-only" : ""}>Remarks</FormLabel>
-                                                            <FormControl><Input placeholder="Remarks" {...field} value={field.value as string || ""} readOnly /></FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    ))}
-                                                </div>
-                                            ))}
+                    <ViewSection title={`Paper and raw material (${paperSets.length} ${paperSets.length === 1 ? "set" : "sets"})`}>
+                        {paperSets.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">No paper has been added to this job.</p>
+                        ) : (
+                            <div className="flex flex-col gap-6">
+                                {paperSets.map((set, index) => (
+                                    <div key={index} className="min-w-0">
+                                        <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                                            <h3 className="text-sm font-semibold text-[#1B2433]">
+                                                Set {index + 1}: {set.paper || "Paper not set"}
+                                            </h3>
+                                            <span className="text-[13px] text-muted-foreground">
+                                                Coating: {set.coating || "none"}
+                                            </span>
                                         </div>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Dates */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {renderFormField("packingDate", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Packing Date</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="No Date" {...field} value={field.value as string || ""} readOnly />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("expiryDate", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Expiry Date</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="No Date" {...field} value={field.value as string || ""} readOnly />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                            </div>
-
-                            <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-                                {renderFormField("tcNo", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>TC No</FormLabel>
-                                        <FormControl><Input placeholder="Enter TC No" {...field} readOnly /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("batchRef", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Batch Ref</FormLabel>
-                                        <FormControl><Input placeholder="Enter Batch Ref" {...field} readOnly /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                            </div>
-
-                            {renderFormField("remarks", ({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Remarks</FormLabel>
-                                    <FormControl><Textarea placeholder="Enter Remarks" className="resize-none" {...field} readOnly /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            ))}
-
-                            {/* CTP Plates */}
-                            <div>
-                                <h3 className="text-sm font-medium mb-2">CTP Plates</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
-                                    {renderFormField("oldPlatesQuantity", ({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Old Plates Quantity</FormLabel>
-                                            <FormControl><Input min={0} type="number" step="any" placeholder="Quantity" {...field} readOnly /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    ))}
-                                    {renderFormField("oldPlatesStatus", ({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Old Plates Status</FormLabel>
-                                            <Select value={field.value} disabled>
-                                                <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Status" /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    {Object.entries(PLATES_STATUS).map(([key, value]) => (
-                                                        <SelectItem key={key} value={value}>
-                                                            {value}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    ))}
-                                    {renderFormField("oldPlatesRemarks", ({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Old Plates Remarks</FormLabel>
-                                            <FormControl><Input placeholder="Remarks" {...field} readOnly /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    ))}
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    {renderFormField("newPlatesQuantity", ({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>New Plates Quantity</FormLabel>
-                                            <FormControl><Input min={0} type="number" step="any" placeholder="Quantity" {...field} readOnly /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    ))}
-                                    {renderFormField("newPlatesStatus", ({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>New Plates Status</FormLabel>
-                                            <Select value={field.value} disabled>
-                                                <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Status" /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    {Object.entries(PLATES_STATUS).map(([key, value]) => (
-                                                        <SelectItem key={key} value={value}>
-                                                            {value}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    ))}
-                                    {renderFormField("newPlatesRemarks", ({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>New Plates Remarks</FormLabel>
-                                            <FormControl><Input placeholder="Remarks" {...field} readOnly /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Ink & Others Section */}
-                            <div>
-                                <h3 className="text-sm font-medium">Ink & Others</h3>
-                                {inkFields.map((field, index) => (
-                                    <div key={field.id} className="flex gap-2 mb-2">
-                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
-                                            {renderFormField(`inks.${index}.ink`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Ink & Others</FormLabel>
-                                                    <FormControl><Input placeholder="Item Name" {...field} value={field.value || ""} readOnly /></FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            ))}
-                                            {renderFormField(`inks.${index}.quantity`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Quantity</FormLabel>
-                                                    <FormControl><Input min={0} type="number" step="any" placeholder="Enter Quantity" {...field} readOnly /></FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            ))}
-                                            {renderFormField(`inks.${index}.status`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Status</FormLabel>
-                                                    <Select value={field.value} disabled>
-                                                        <FormControl><SelectTrigger className="w-full"><SelectValue placeholder="Select an Status" /></SelectTrigger></FormControl>
-                                                        <SelectContent><SelectItem value="s1">Status 1</SelectItem></SelectContent>
-                                                    </Select>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            ))}
-                                            {renderFormField(`inks.${index}.remarks`, ({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Remarks</FormLabel>
-                                                    <FormControl><Input placeholder="Enter Remarks" {...field} readOnly /></FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            ))}
-                                        </div>
+                                        <ViewTable
+                                            rows={set.rawMaterials}
+                                            rowKey={(_, i) => i}
+                                            empty="No raw materials for this paper."
+                                            columns={[
+                                                { header: "Raw material size", cell: (rm) => <span className="font-medium">{rm.size || "Not set"}</span> },
+                                                { header: "Quantity", align: "right", cell: (rm) => rm.quantity.toLocaleString() },
+                                                { header: "Status", cell: (rm) => orNotSet(rm.status && sentenceCase(rm.status)) },
+                                                { header: "Remarks", muted: true, cell: (rm) => rm.remarks || "None" },
+                                            ]}
+                                        />
                                     </div>
                                 ))}
                             </div>
-                        </CardContent>
-                    </Card>
-                </form>
-            </Form>
+                        )}
+                    </ViewSection>
+
+                    <div className="grid gap-5 lg:grid-cols-2">
+                        <ViewSection title="CTP plates">
+                            {hasPlates ? (
+                                <ViewTable
+                                    rows={[
+                                        { label: "Old plates", quantity: job.old_plate_quantity, status: job.old_plate_status, remarks: job.old_plate_remarks },
+                                        { label: "New plates", quantity: job.new_plate_quantity, status: job.new_plate_status, remarks: job.new_plate_remarks },
+                                    ]}
+                                    rowKey={(row) => row.label}
+                                    columns={[
+                                        { header: "Plates", cell: (row) => <span className="font-medium">{row.label}</span> },
+                                        { header: "Quantity", align: "right", cell: (row) => orNotSet(row.quantity) },
+                                        { header: "Status", cell: (row) => orNotSet(row.status && sentenceCase(row.status)) },
+                                        { header: "Remarks", muted: true, cell: (row) => row.remarks || "None" },
+                                    ]}
+                                />
+                            ) : (
+                                <p className="text-sm text-muted-foreground">No plate details recorded.</p>
+                            )}
+                        </ViewSection>
+
+                        <ViewSection title={`Ink and others (${inks.length})`}>
+                            <ViewTable
+                                rows={inks}
+                                rowKey={(_, i) => i}
+                                empty="No inks recorded."
+                                columns={[
+                                    { header: "Ink and others", cell: (ink) => <span className="font-medium">{ink.ink}</span> },
+                                    { header: "Quantity", align: "right", cell: (ink) => orNotSet(ink.quantity) },
+                                    { header: "Status", cell: (ink) => orNotSet(ink.status && sentenceCase(ink.status)) },
+                                    { header: "Remarks", muted: true, cell: (ink) => ink.remarks || "None" },
+                                ]}
+                            />
+                        </ViewSection>
+                    </div>
+                </>
+            )}
         </div>
     )
 }

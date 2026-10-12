@@ -1,5 +1,6 @@
 "use client";
 import { useSessionStorage } from "@/hooks/use-session-storage";
+import { TableSkeleton } from "@/components/shared/page-skeletons";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,6 @@ import { IssueNote } from "@/modules/issue-notes/types";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
-import { PageLoader } from "@/components/shared/loader";
 import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
 import { useMemo } from "react";
 import { generateIssueNotePdf } from "@/modules/issue-notes/pdf-utils";
@@ -28,7 +28,7 @@ function IssueNotesManagement() {
   const router = useRouter();
   const { canModifyIssueNote, canCreateIssueNote, canExportList } = usePermissions();
   const [data, setData] = useState<IssueNote[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);  // starts loading: the page fetches as soon as it opens
   const [search, setSearch] = useSessionStorage("issue-notes-search", "");
 
   const [jobs, setJobs] = useState<
@@ -177,8 +177,8 @@ function IssueNotesManagement() {
           title="Issue Material"
           breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
         />
-        <div className="flex flex-row justify-end gap-[24px]">
-          <div className="relative w-[320px]">
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="relative w-full sm:w-[300px]">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
@@ -197,7 +197,7 @@ function IssueNotesManagement() {
           )}
         </div>
         {isLoading ? (
-          <PageLoader />
+          <TableSkeleton />
         ) : data.length === 0 ? (
           <EmptyState
             title="No Issue Materials Found"

@@ -1,182 +1,78 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { RecordViewSkeleton } from "@/components/shared/page-skeletons";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { purchaseOrderScheme } from "@/modules/purchase-order/validation";
-import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { useRouter, useParams } from "next/navigation";
-import { FieldPath, useFieldArray, useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { CalendarIcon, Edit2 } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
+import { Edit2 } from "lucide-react";
 import { format } from "date-fns";
 import { PurchaseOrderType } from "@/config/enum";
 import { useEffect, useState } from "react";
-import { CustomerApi } from "@/modules/customer/api";
-import { CUSTOMER } from "@/modules/customer/types";
-import { QUOTATIONS } from "@/modules/quotations/types";
-import { quotationApi } from "@/modules/quotations/api";
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
-
-
-import { FullPageLoader } from "@/components/shared/loader";
+import { PURCHASE_ORDER_ID } from "@/modules/purchase-order/types";
+import { parseLocalDate } from "@/hooks/sql-date-time";
 import { usePermissions } from "@/hooks/use-permissions";
+import { StatusChanger } from "@/components/shared/status-changer";
+import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/error-utils";
+import { statusActions } from "@/lib/status-actions";
+import { updatePurchaseOrderStatus } from "@/modules/purchase-order/update-status";
+import {
+  Detail,
+  ViewError,
+  ViewSection,
+  formatAmount,
+  formatViewDate,
+  sentenceCase,
+} from "@/components/shared/record-view";
 
-type PurchaseOrderFormValues = z.infer<typeof purchaseOrderScheme>;
+const poTypeLabels: Record<number, string> = {
+  [PurchaseOrderType.TIEP]: "TIEP",
+  [PurchaseOrderType.NON_TIEP]: "NON-TIEP",
+  [PurchaseOrderType.MP]: "MP",
+};
 
 function ViewPurchaseOrder() {
   const router = useRouter();
-  const { canModifyPO } = usePermissions();
+  const permissions = usePermissions();
+  const { canModifyPO } = permissions;
   const params = useParams();
-  const [customer, setCustomer] = useState<CUSTOMER[]>([]);
-  const [quotationList, setQuotationList] = useState<QUOTATIONS[]>([]);
-  const [loading, setLoading] = useState(false);
-
   const id = params.id as string;
-  useEffect(() => {
-    getCustomerList();
-    getQuotationList();
-  }, []);
 
-  const getCustomerList = async () => {
-    try {
-      setLoading(true);
-      const response = await CustomerApi.getAll();
-      setCustomer(response.data);
-    } catch (error) {
-      console.error("Failed to fetch customers");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getQuotationList = async () => {
-    try {
-      setLoading(true);
-      const response = await quotationApi.getAll();
-      setQuotationList(response.data);
-    } catch (error) {
-      console.error("Failed to fetch quotations");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const baseDefaultValues: PurchaseOrderFormValues = {
-    customer: "",
-    customerAddress: "",
-    customerEmail: "",
-    customerPhone: "",
-    customer_po: "",
-    quotationId: "",
-    tceprNo: "",
-    purchaseOrderType: PurchaseOrderType.TIEP,
-    batchRef: "",
-    salesRef: "",
-    poDate: new Date(),
-    currency: "LKR",
-    itemDetails: [
-      { itemCode: "", description: "", quantity: "", unit: 0, price: "" },
-    ],
-  };
-
-  const form = useForm<PurchaseOrderFormValues>({
-    resolver: zodResolver(purchaseOrderScheme) as any,
-    defaultValues: baseDefaultValues,
-  });
-
-  const {
-    fields: itemDetailsFields,
-    append: appendItemDetails,
-    remove: removeItemDetails,
-  } = useFieldArray({
-    control: form.control,
-    name: "itemDetails",
-  });
-
-  async function onSubmit(data: PurchaseOrderFormValues) {
-    // This is a view page, onSubmit won't be called, but we keep it for form compatibility
-  }
-
-  // Helper to render FormField with correct typing
-  const renderFormField = <TName extends FieldPath<PurchaseOrderFormValues>>(
-    name: TName,
-    render: Parameters<
-      typeof FormField<PurchaseOrderFormValues, TName>
-    >["0"]["render"]
-  ) => <FormField control={form.control} name={name} render={render} />;
+  const [po, setPo] = useState<PURCHASE_ORDER_ID | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
+    if (!id) return;
     const fetchPurchaseOrder = async () => {
       try {
-        setLoading(true); 3
-
+        setLoading(true);
         const response = await purchaseOrderApi.getById(id);
-        if (response.status === 200) {
-          const poData = response.data;
-
-          form.reset({
-            customer: String(poData.customer.customer_id),
-            customerPhone: poData.customer.phone,
-            customerAddress: poData.customer.address,
-            customerEmail: poData.customer.email,
-            customer_po: String(poData.customer_po),
-            quotationId: String(poData.quote_id),
-            tceprNo: poData.TC_E_PR_No,
-            purchaseOrderType: poData.po_type_id as PurchaseOrderType,
-            batchRef: poData.batch_ref,
-            salesRef: poData.sales_ref || "",
-            poDate: new Date(poData.po_date),
-            currency: poData.currency || "LKR",
-            itemDetails: poData.po_items.map((item) => ({
-              itemCode: item.item_code,
-              description: item.description,
-              quantity: String(item.quantity),
-              unit: Number(item.uom),
-              price: String(item.price),
-            })),
-          });
-        }
+        if (response.status === 200) setPo(response.data);
+        else setFailed(true);
       } catch (err) {
         console.error("Failed to fetch purchase order:", err);
+        setFailed(true);
       } finally {
         setLoading(false);
       }
     };
+    fetchPurchaseOrder();
+  }, [id]);
 
-    if (id) {
-      fetchPurchaseOrder();
-    }
-  }, [id, form]);
+  const currency = po?.currency || "LKR";
+  const items = (po?.po_items ?? []).map((item) => {
+    const quantity = Number(item.quantity) || 0;
+    const price = Number(item.price) || 0;
+    return { ...item, quantity, price, amount: quantity * price };
+  });
+  const total = items.reduce((sum, item) => sum + item.amount, 0);
+  const jobs = po?.jobs ?? [];
+  const status = po?.status || po?.po_status;
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      {loading && <FullPageLoader />}
+    <div className="mt-3 flex flex-1 flex-col gap-5 p-4 pt-0 sm:p-6 sm:pt-0">
       <PageTitleWithBreadcrumb
         title="View Purchase Order"
         breadcrumbs={[
@@ -185,452 +81,207 @@ function ViewPurchaseOrder() {
         ]}
       />
 
-      <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-6  pb-0"
-        >
-          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-            <Button
-              size="lg"
-              variant="outline"
-              type="button"
-              onClick={() => router.push("/purchase-order")}
-            >
-              Back to List
+      {/* What this order is, and what you can do with it */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        {po && (
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-2xl font-bold tracking-tight text-[#1B2433]">{po.customer_po}</h2>
+              {status && (
+                <StatusBadge
+                  status={status}
+                  label={sentenceCase(status)}
+                  type="PURCHASE_ORDER"
+                  className="rounded-md px-2.5 py-1 text-xs font-semibold normal-case tracking-normal"
+                />
+              )}
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              From <span className="font-medium text-[#1B2433]">{po.customer?.name}</span>
+              {formatViewDate(po.po_date) && <>, dated {formatViewDate(po.po_date)}</>}
+            </p>
+          </div>
+        )}
+        <div className="ml-auto flex items-center gap-3">
+          <Button variant="outline" type="button" onClick={() => router.push("/purchase-order")}>
+            Back to List
+          </Button>
+          {po && (
+            <StatusChanger
+              current={status ?? ""}
+              actions={statusActions.purchaseOrder(status ?? "", (po.jobs ?? []).map((job) => job.status), permissions)}
+              onChange={async (to) => {
+                try {
+                  await updatePurchaseOrderStatus(po, to);
+                  setPo({ ...po, status: to, po_status: to });
+                  toast.success(`Order is now ${sentenceCase(to).toLowerCase()}`);
+                  return true;
+                } catch (error) {
+                  toast.error(getErrorMessage(error, "Couldn't change the status"));
+                  return false;
+                }
+              }}
+            />
+          )}
+          {canModifyPO && (
+            <Button type="button" onClick={() => router.push(`/purchase-order/${id}/edit`)}>
+              <Edit2 className="h-4 w-4" /> Edit Purchase Order
             </Button>
-            {canModifyPO && (
-              <Button
-                size="lg"
-                type="button"
-                className="bg-primary hover:bg-primary/90"
-                onClick={() => router.push(`/purchase-order/${id}/edit`)}
-              >
-                <Edit2 className="mr-2 h-4 w-4" /> Edit Purchase Order
-              </Button>
-            )}
+          )}
+        </div>
+      </div>
+
+      {loading && !po && <RecordViewSkeleton />}
+
+      {failed && !loading && (
+        <ViewError>Couldn&apos;t load this purchase order. Go back to the list and open it again.</ViewError>
+      )}
+
+      {po && (
+        <>
+          <div className="grid gap-5 lg:grid-cols-3">
+            <ViewSection title="Purchase order" className="lg:col-span-2">
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3">
+                <Detail label="Purchase order no" value={po.customer_po} />
+                <Detail label="Quotation no" value={po.quote_id ? String(po.quote_id) : null} />
+                <Detail label="Purchase order type" value={poTypeLabels[Number(po.po_type_id)]} />
+                <Detail label="PO date" value={formatViewDate(po.po_date)} />
+                <Detail label="Currency" value={currency} />
+                <Detail label="Sales ref" value={po.sales_ref} />
+                <Detail label="Batch ref" value={po.batch_ref} />
+                <Detail label="TC/E/PR/No" value={po.TC_E_PR_No} />
+              </dl>
+            </ViewSection>
+
+            <ViewSection title="Customer">
+              <dl className="flex flex-col gap-5">
+                <Detail label="Customer" value={po.customer?.name} />
+                <Detail
+                  label="Phone"
+                  value={
+                    po.customer?.phone && (
+                      <a href={`tel:${po.customer.phone}`} className="hover:text-[#223F7A] hover:underline">
+                        {po.customer.phone}
+                      </a>
+                    )
+                  }
+                />
+                <Detail
+                  label="Email"
+                  value={
+                    po.customer?.email && (
+                      <a href={`mailto:${po.customer.email}`} className="hover:text-[#223F7A] hover:underline">
+                        {po.customer.email}
+                      </a>
+                    )
+                  }
+                />
+                <Detail label="Address" value={po.customer?.address} />
+              </dl>
+            </ViewSection>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-            <Card
-              className={cn(
-                "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col"
-              )}
-            >
-              <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Customer</h3>
-                <p className="text-xs text-muted-foreground mb-4">
-                  View customer details
+          <ViewSection
+            title={`Items (${items.length})`}
+            aside={
+              items.length > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Total{" "}
+                  <span className="font-semibold text-[#1B2433] tabular-nums">
+                    {currency} {formatAmount(total)}
+                  </span>
                 </p>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                {renderFormField("customer", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>Customer</FormLabel>
-                    <Select value={field.value} disabled={true}>
-                      <FormControl>
-                        <SelectTrigger className="w-full disabled:opacity-100 disabled:text-black disabled:cursor-default">
-                          <SelectValue placeholder="Select Customer" />
-                        </SelectTrigger>
-                      </FormControl>
-
-                      <SelectContent>
-                        {customer.map((cust) => (
-                          <SelectItem
-                            key={cust.customer_id}
-                            value={String(cust.customer_id)}
-                          >
-                            {cust.company_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                ))}
-                {renderFormField("customerPhone", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>Customer Phone</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter Customer Phone"
-                        {...field}
-                        disabled={true}
-                        className="disabled:opacity-100 disabled:text-black disabled:cursor-default"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                ))}
-                {renderFormField("customerAddress", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>Customer Address</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter Customer Address"
-                        className="resize-none disabled:opacity-100 disabled:text-black disabled:cursor-default"
-                        {...field}
-                        disabled={true}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                ))}
-                {renderFormField("customerEmail", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>Customer Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter Customer e-mail address..."
-                        {...field}
-                        disabled={true}
-                        className="disabled:opacity-100 disabled:text-black disabled:cursor-default"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                ))}
-              </CardContent>
-            </Card>
-            <Card
-              className={cn(
-                "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col"
-              )}
-            >
-              <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Purchase Order</h3>
-                <p className="text-xs text-muted-foreground mb-4">
-                  View purchase order details
-                </p>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                {renderFormField("customer_po", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Purchase Order No <span className="text-red-500">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter Purchase Order No"
-                        {...field}
-                        disabled={true}
-                        className="disabled:opacity-100 disabled:text-black disabled:cursor-default"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                ))}
-
-                {renderFormField("quotationId", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quotation No</FormLabel>
-                    <Select value={field.value} disabled={true}>
-                      <FormControl>
-                        <SelectTrigger className="w-full disabled:opacity-100 disabled:text-black disabled:cursor-default">
-                          <SelectValue placeholder="Select a Quotation" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {quotationList.map(
-                          (quote: QUOTATIONS, index: number) => (
-                            <SelectItem
-                              key={quote.quote_id || index}
-                              value={String(quote.quote_id)}
-                            >
-                              {quote.quote_id}
-                            </SelectItem>
-                          )
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                ))}
-
-                <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-                  {renderFormField("purchaseOrderType", ({ field }) => {
-                    const poTypeLabels: Record<PurchaseOrderType, string> = {
-                      [PurchaseOrderType.TIEP]: "TIEP",
-                      [PurchaseOrderType.NON_TIEP]: "NON-TIEP",
-                      [PurchaseOrderType.MP]: "MP",
-                    };
-                    return (
-                      <FormItem>
-                        <FormLabel>
-                          Purchase Order Type{" "}
-                          <span className="text-red-500">*</span>
-                        </FormLabel>
-                        <RadioGroup
-                          value={String(field.value)}
-                          className="flex gap-4"
-                          disabled={true}
-                        >
-                          {Object.values(PurchaseOrderType)
-                            .filter(
-                              (v): v is PurchaseOrderType =>
-                                typeof v === "number"
-                            )
-                            .map((type) => (
-                              <div
-                                key={type}
-                                className="flex items-center gap-2"
-                              >
-                                <RadioGroupItem
-                                  value={String(type)}
-                                  id={String(type)}
-                                  className="disabled:opacity-100 text-black"
-                                />
-                                <Label
-                                  htmlFor={String(type)}
-                                  className="disabled:opacity-100 disabled:text-black disabled:cursor-default"
-                                >
-                                  {poTypeLabels[type]}
-                                </Label>
-                              </div>
-                            ))}
-                        </RadioGroup>
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  })}
-                  {renderFormField("tceprNo", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>TC/E/PR/No</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter TC/E/PR/No"
-                          {...field}
-                          disabled={true}
-                          className="disabled:opacity-100 disabled:text-black disabled:cursor-default"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-                  {renderFormField("batchRef", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>Batch Ref</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter Batch Ref"
-                          {...field}
-                          disabled={true}
-                          className="disabled:opacity-100 disabled:text-black disabled:cursor-default"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                  {renderFormField("salesRef", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sales Ref</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter Sales Ref"
-                          {...field}
-                          disabled={true}
-                          className="disabled:opacity-100 disabled:text-black disabled:cursor-default"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-                  {renderFormField("poDate", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        PO Date <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal disabled:opacity-100 disabled:text-black disabled:cursor-default",
-                                !field.value && "text-muted-foreground"
-                              )}
-                              disabled={true}
-                            >
-                              {field.value
-                                ? format(field.value, "PPP")
-                                : format(new Date(), "PPP")}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            captionLayout="dropdown"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-
-                  {renderFormField("currency", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>Currency</FormLabel>
-                      <Select value={field.value} disabled={true}>
-                        <FormControl>
-                          <SelectTrigger className="w-full disabled:opacity-100 disabled:text-black disabled:cursor-default">
-                            <SelectValue placeholder="Select Currency" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="LKR">🇱🇰 LKR</SelectItem>
-                          <SelectItem value="USD">🇺🇸 USD</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card
-            className={cn(
-              "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col"
-            )}
+              )
+            }
           >
-            <CardHeader className="flex flex-col gap-[0.5px]">
-              <h3 className="text-md font-medium mb-2">Item Details</h3>
-              <p className="text-xs text-muted-foreground mb-4">
-                View Item Details
-              </p>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <div>
-                {itemDetailsFields.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className="grid grid-cols-[1fr_auto] gap-2 mb-2 items-start"
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1">
-                      {renderFormField(
-                        `itemDetails.${index}.itemCode`,
-                        ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Item Type</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Enter Item Type"
-                                {...field}
-                                disabled={true}
-                                className="disabled:opacity-100 disabled:text-black disabled:cursor-default"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )
-                      )}
-                      {renderFormField(
-                        `itemDetails.${index}.description`,
-                        ({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Description{" "}
-                              <span className="text-red-500">*</span>
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Enter Description"
-                                {...field}
-                                disabled={true}
-                                className="disabled:opacity-100 disabled:text-black disabled:cursor-default"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )
-                      )}
-                      {renderFormField(
-                        `itemDetails.${index}.quantity`,
-                        ({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Quantity <span className="text-red-500">*</span>
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number" step="any"
-                                min={0}
-                                placeholder="Enter Quantity"
-                                value={field.value}
-                                onChange={(e) => field.onChange(e.target.value)}
-                                onBlur={field.onBlur}
-                                name={field.name}
-                                ref={field.ref}
-                                disabled={true}
-                                className="disabled:opacity-100 disabled:text-black disabled:cursor-default"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )
-                      )}
-                      {renderFormField(
-                        `itemDetails.${index}.unit`,
-                        ({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Unit <span className="text-red-500">*</span>
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Enter Unit"
-                                {...field}
-                                disabled={true}
-                                className="disabled:opacity-100 disabled:text-black disabled:cursor-default"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )
-                      )}
-                      {renderFormField(
-                        `itemDetails.${index}.price`,
-                        ({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Price <span className="text-red-500">*</span>
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number" step="any"
-                                min={0}
-                                placeholder="Enter Price"
-                                value={field.value}
-                                onChange={(e) => field.onChange(e.target.value)}
-                                onBlur={field.onBlur}
-                                name={field.name}
-                                ref={field.ref}
-                                disabled={true}
-                                className="disabled:opacity-100 disabled:text-black disabled:cursor-default"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )
-                      )}
+            {items.length === 0 ? (
+              <p className="text-sm text-muted-foreground">This purchase order has no items.</p>
+            ) : (
+              <>
+                {/* Wide screens: a table */}
+                <table className="hidden w-full text-sm md:table">
+                  <thead>
+                    <tr className="text-left text-[13px] text-muted-foreground">
+                      <th className="pb-3 pr-4 font-normal">Item type</th>
+                      <th className="pb-3 pr-4 font-normal">Description</th>
+                      <th className="pb-3 pr-4 text-right font-normal">Quantity</th>
+                      <th className="pb-3 pr-4 font-normal">Unit</th>
+                      <th className="pb-3 pr-4 text-right font-normal">Price</th>
+                      <th className="pb-3 text-right font-normal">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#EEF1F5] border-t border-[#EEF1F5]">
+                    {items.map((item, index) => (
+                      <tr key={item.po_item_id ?? index} className="align-top">
+                        <td className="py-3 pr-4 text-muted-foreground">{item.item_code || "Not set"}</td>
+                        <td className="py-3 pr-4 font-medium text-[#1B2433]">{item.description}</td>
+                        <td className="py-3 pr-4 text-right tabular-nums">{item.quantity.toLocaleString()}</td>
+                        <td className="py-3 pr-4 text-muted-foreground">{item.uom || "Not set"}</td>
+                        <td className="py-3 pr-4 text-right tabular-nums">{item.price.toLocaleString()}</td>
+                        <td className="py-3 text-right font-medium tabular-nums text-[#1B2433]">
+                          {formatAmount(item.amount)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t border-[#E4E8F0]">
+                      <td colSpan={5} className="pt-3 pr-4 text-right text-muted-foreground">
+                        Total ({currency})
+                      </td>
+                      <td className="pt-3 text-right font-semibold tabular-nums text-[#1B2433]">
+                        {formatAmount(total)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+
+                {/* Phones: one block per item */}
+                <ul className="divide-y divide-[#EEF1F5] md:hidden">
+                  {items.map((item, index) => (
+                    <li key={item.po_item_id ?? index} className="py-3 first:pt-0">
+                      <p className="text-sm font-medium text-[#1B2433]">{item.description}</p>
+                      <p className="mt-0.5 text-[13px] text-muted-foreground">{item.item_code}</p>
+                      <p className="mt-2 flex justify-between text-sm tabular-nums">
+                        <span className="text-muted-foreground">
+                          {item.quantity.toLocaleString()} {item.uom} at {item.price.toLocaleString()}
+                        </span>
+                        <span className="font-medium text-[#1B2433]">{formatAmount(item.amount)}</span>
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </ViewSection>
+
+          <ViewSection title={`Job tickets (${jobs.length})`}>
+            {jobs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No job tickets have been created for this order yet.</p>
+            ) : (
+              <ul className="divide-y divide-[#EEF1F5]">
+                {jobs.map((job) => (
+                  <li key={job.job_id} className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[#1B2433]">{job.job_name}</p>
+                      <p className="mt-0.5 text-[13px] text-muted-foreground">
+                        {job.job_number}, opened{" "}
+                        {job.job_open_date ? format(parseLocalDate(job.job_open_date), "dd MMM yyyy") : "date not set"}
+                      </p>
                     </div>
-                  </div>
+                    <StatusBadge
+                      status={job.status}
+                      label={sentenceCase(job.status)}
+                      type="JOB_TICKET"
+                      className="shrink-0 rounded-md px-2 py-0.5 text-xs font-medium normal-case tracking-normal"
+                    />
+                  </li>
                 ))}
-              </div>
-            </CardContent>
-          </Card>
-        </form>
-      </Form>
+              </ul>
+            )}
+          </ViewSection>
+        </>
+      )}
     </div>
   );
 }

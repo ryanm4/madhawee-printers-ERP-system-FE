@@ -60,13 +60,6 @@ export function removeToken(): void {
 }
 
 /**
- * Check if user is authenticated
- */
-export function isAuthenticated(): boolean {
-    return !!getToken();
-}
-
-/**
  * Get user info. Tries sessionStorage first, then falls back to decoding the JWT.
  * This ensures user data is available even in new tabs or after sessionStorage is cleared.
  */

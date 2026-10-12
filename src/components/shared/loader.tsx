@@ -4,35 +4,46 @@ import { cn } from '@/lib/utils';
 export interface LoaderProps {
     className?: string;
     size?: number | string;
+    /** Read out to screen readers */
+    label?: string;
 }
 
-const Loader: React.FC<LoaderProps> = ({ className, size = 60 }) => {
+// Process inks in the order a press lays them down
+const INKS = ["#00AEEF", "#EC008C", "#FFDE00", "#1B2433"];
+
+/**
+ * A small press: four ink squares print one after another while a sheet runs underneath.
+ * Animations live in globals.css (ink-press) and stop for people who ask for reduced motion.
+ */
+const Loader: React.FC<LoaderProps> = ({ className, size = 60, label = "Loading" }) => {
     return (
         <div
-            className={cn("grid grid-cols-3 gap-1", className)}
-            style={{ width: size, height: size }}
+            role="status"
+            aria-live="polite"
+            className={cn("flex flex-col items-center gap-2", className)}
+            style={{ width: size }}
         >
-            {[...Array(6)].map((_, i) => (
-                <span
-                    key={i}
-                    className="w-full h-full bg-primary animate-blink"
-                    style={{ animationDelay: `${i === 0 ? 0 : i * 100 + 100}ms` }}
-                />
-            ))}
+            <div className="grid w-full grid-cols-2 gap-1.5" style={{ height: size }}>
+                {INKS.map((color, i) => (
+                    <span
+                        key={color}
+                        className="ink-press-cell rounded-[3px]"
+                        style={{ backgroundColor: color, animationDelay: `${i * 0.18}s` }}
+                    />
+                ))}
+            </div>
+            <div className="relative h-1 w-full overflow-hidden rounded-full bg-[#223F7A]/10" aria-hidden>
+                <span className="ink-press-sheet absolute inset-y-0 left-0 w-1/2 rounded-full bg-[#223F7A]/60" />
+            </div>
+            <span className="sr-only">{label}</span>
         </div>
     );
 };
 
 export default Loader;
 
-export const PageLoader: React.FC = () => (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/50 backdrop-blur-sm min-h-[200px]">
-        <Loader size={70} />
-    </div>
-);
-
 export const FullPageLoader: React.FC = () => (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/60 backdrop-blur-[2px]">
-        <Loader size={80} />
+        <Loader size={64} />
     </div>
 );

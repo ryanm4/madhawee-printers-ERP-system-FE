@@ -158,6 +158,52 @@ body {
   animation: keyframes-blink 0.6s alternate infinite linear;
 }
 
+/* Loader: four ink squares print in turn (cyan, magenta, yellow, black), hold, then lift */
+@keyframes ink-press {
+  0%, 100% {
+    opacity: 0.18;
+    transform: scale(0.72);
+  }
+  18%, 58% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  76% {
+    opacity: 0.18;
+    transform: scale(0.72);
+  }
+}
+
+.ink-press-cell {
+  animation-name: ink-press;
+  animation-duration: 1.8s;
+  animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+  animation-iteration-count: infinite;
+}
+
+/* The sheet underneath slides through once per cycle */
+@keyframes ink-press-sheet {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(110%); }
+}
+
+.ink-press-sheet {
+  animation-name: ink-press-sheet;
+  animation-duration: 1.8s;
+  animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+  animation-iteration-count: infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ink-press-cell,
+  .ink-press-sheet {
+    animation: none;
+  }
+  .ink-press-cell {
+    opacity: 1;
+  }
+}
+
 @media print {
   @page {
     size: A4 landscape;

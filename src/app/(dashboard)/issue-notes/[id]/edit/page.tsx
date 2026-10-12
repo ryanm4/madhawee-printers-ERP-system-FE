@@ -34,7 +34,6 @@ import { jobTicketsApi } from "@/modules/job-tickets/api";
 import { inventoryApi } from "@/modules/inventory/api";
 import { toast } from "sonner";
 import { getUser } from "@/lib/auth";
-import { FullPageLoader } from "@/components/shared/loader";
 import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Combobox } from "@/components/shared/combobox";
@@ -356,7 +355,7 @@ function EditIssueNote() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <h3 className="text-lg font-medium">Issue Note Details</h3>
+                <h3 className="text-[15px] font-semibold text-[#14213D]">Issue Note Details</h3>
               </CardHeader>
               <CardContent className="space-y-4">
                 <FormField
@@ -455,7 +454,7 @@ function EditIssueNote() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <h3 className="text-lg font-medium">Items List</h3>
+                <h3 className="text-[15px] font-semibold text-[#14213D]">Items List</h3>
                 <Button
                   type="button"
                   variant="outline"

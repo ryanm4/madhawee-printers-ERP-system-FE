@@ -71,7 +71,7 @@ export async function PUT(
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
@@ -101,7 +101,7 @@ export async function DELETE(
     }
 
     return NextResponse.json({ message: "GRN deleted successfully" });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

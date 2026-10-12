@@ -137,7 +137,7 @@ function EditUser() {
 
           <Card className={cn("w-full shadow-sm")}>
             <CardHeader>
-              <h3 className="text-md font-medium mb-2">Edit User Details</h3>
+              <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Edit User Details</h3>
               <p className="text-xs text-muted-foreground">
                 Update your user details here
               </p>

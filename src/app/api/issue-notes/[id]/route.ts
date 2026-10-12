@@ -70,7 +70,7 @@ export async function PUT(
           { message: errorData.message || "Failed to update Issue Note" },
           { status: response.status }
         );
-      } catch (_) {
+      } catch {
         return NextResponse.json(
           { message: "Failed to update Issue Note", details: errorText },
           { status: response.status }
@@ -80,7 +80,7 @@ export async function PUT(
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
@@ -110,7 +110,7 @@ export async function DELETE(
           { message: errorData.message || "Failed to delete Issue Note" },
           { status: response.status }
         );
-      } catch (_) {
+      } catch {
         return NextResponse.json(
           { message: "Failed to delete Issue Note", details: errorText },
           { status: response.status }
@@ -119,7 +119,7 @@ export async function DELETE(
     }
 
     return NextResponse.json({ message: "Issue Note deleted successfully" });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

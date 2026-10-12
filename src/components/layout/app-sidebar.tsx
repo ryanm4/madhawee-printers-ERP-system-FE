@@ -4,10 +4,7 @@ import * as React from "react";
 import { getUser } from "@/lib/auth";
 import { isAdminRole, isRouteAllowedForUser, getDefaultRoute } from "@/lib/permissions";
 import {
-  IconHelp,
   IconInnerShadowTop,
-  IconSearch,
-  IconSettings,
 } from "@tabler/icons-react";
 import { NavMain } from "@/components/layout/nav-main";
 import { NavUser } from "@/components/layout/nav-user";
@@ -19,7 +16,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarInput,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarGroupContent,
@@ -40,7 +36,6 @@ import {
   PackageOpen,
   Store,
 } from "lucide-react";
-import { NavSecondary } from "./nav-secondary";
 import Image from "next/image";
 import company_logo from "@/assets/Images/company_logo.jpeg";
 

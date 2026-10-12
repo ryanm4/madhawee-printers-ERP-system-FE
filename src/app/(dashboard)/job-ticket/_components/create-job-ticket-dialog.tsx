@@ -52,11 +52,9 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { jobTicketSchema } from "@/modules/job-tickets/validation";
 import {
-  COATING_TYPES,
-  INK_STATUS,
   JobTicketStatus,
-  PRODUCT_TYPES,
 } from "@/config/enum";
+import { useOptionList } from "@/hooks/use-option-list";
 import {
   PURCHASE_ORDER,
   PURCHASE_ORDER_ID,
@@ -67,7 +65,6 @@ import { CustomerApi } from "@/modules/customer/api";
 import { CUSTOMER } from "@/modules/customer/types";
 import { jobTicketsApi, NextSequenceResponse } from "@/modules/job-tickets/api";
 import {
-  ALL_TICKETS,
   CREATE_TICKETS,
   JobTicketPrintData,
 } from "@/modules/job-tickets/types";
@@ -106,14 +103,12 @@ export function CreateJobTicketDialog({
   const [customerData, setCustomerData] = useState<CUSTOMER[]>([]);
   const [selectedPoDetails, setSelectedPoDetails] =
     useState<PURCHASE_ORDER_ID | null>(null);
-  const [_loading, setLoading] = useState(false);
   const [fetchingDetails, setFetchingDetails] = useState(false);
   const [user, setUser] = useState<{
     name: string;
     email: string;
     avatar: string;
   } | null>(null);
-  const [_existingTickets, _setExistingTickets] = useState<ALL_TICKETS[]>([]);
   const [inventoryList, setInventoryList] = useState<GET_ALL_INVENTORY[]>([]);
   const [inkItems, setInkItems] = useState<{ value: string; label: string }[]>(
     []
@@ -183,6 +178,9 @@ export function CreateJobTicketDialog({
     resolver: zodResolver(jobTicketSchema) as any,
     defaultValues: baseDefaultValues,
   });
+  const productTypeOptions = useOptionList("product_type");
+  const coatingOptions = useOptionList("coating_type");
+  const inkStatusOptions = useOptionList("ink_status");
 
   const {
     fields: paperTypeFields,
@@ -253,19 +251,6 @@ export function CreateJobTicketDialog({
     }
 
     try {
-      setLoading(true);
-
-      // Find numeric PO ID from customer_po string if necessary
-      let _poIdValue = data.customer_po ? Number(data.customer_po) : undefined;
-      if (data.customer_po && isNaN(Number(data.customer_po))) {
-        const matchingPo = purchaseOrderData.find(
-          (po) => String(po.customer_po) === data.customer_po,
-        );
-        if (matchingPo) {
-          _poIdValue = matchingPo.po_id;
-        }
-      }
-
       const payload: CREATE_TICKETS = {
         po_id: data.customer_po ? Number(data.customer_po) : undefined,
         job_item: data.item,
@@ -331,7 +316,7 @@ export function CreateJobTicketDialog({
         created_on: toMySQLDateTime(new Date()),
       };
 
-      const _response = await jobTicketsApi.create(payload);
+      await jobTicketsApi.create(payload);
 
       toast.success("Job Ticket Created Successfully");
 
@@ -398,13 +383,11 @@ export function CreateJobTicketDialog({
         description: getErrorMessage(error),
       });
     } finally {
-      setLoading(false);
     }
   }
 
   const getInventoryList = useCallback(async () => {
     try {
-      setLoading(true);
       const response = await inventoryApi.getAll();
 
       if (response.status === 200) {
@@ -435,16 +418,14 @@ export function CreateJobTicketDialog({
         
         setInkItems(fetchedInkItems);
       }
-    } catch (_error) {
+    } catch {
       console.error("Failed to fetch inventory");
     } finally {
-      setLoading(false);
     }
   }, [dispatch]);
 
   const fetchData = useCallback(async () => {
     try {
-      setLoading(true);
       const [poResponse, customerResponse] = await Promise.all([
         purchaseOrderApi.getAll(),
         CustomerApi.getAll(),
@@ -455,7 +436,6 @@ export function CreateJobTicketDialog({
     } catch (error) {
       console.error("Failed to fetch data", error);
     } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -560,9 +540,6 @@ export function CreateJobTicketDialog({
       typeof FormField<JobTicketFormValues, TName>
     >["0"]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
-
-  const now = new Date();
-  const _currentYear = now.getFullYear();
 
   return (
     <>
@@ -819,9 +796,9 @@ export function CreateJobTicketDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.entries(PRODUCT_TYPES).map(([key, value]) => (
-                          <SelectItem key={key} value={value}>
-                            {value}
+                        {productTypeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1046,13 +1023,11 @@ export function CreateJobTicketDialog({
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {Object.entries(COATING_TYPES).map(
-                                    ([key, value]) => (
-                                      <SelectItem key={key} value={value}>
-                                        {value}
-                                      </SelectItem>
-                                    ),
-                                  )}
+                                  {coatingOptions.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                               <FormMessage className="min-h-[20px]" />
@@ -1443,9 +1418,9 @@ export function CreateJobTicketDialog({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {Object.entries(INK_STATUS).map(([key, value]) => (
-                                <SelectItem key={key} value={value}>
-                                  {value}
+                              {inkStatusOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
                                 </SelectItem>
                               ))}
                             </SelectContent>

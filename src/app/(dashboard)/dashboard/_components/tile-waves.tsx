@@ -11,7 +11,7 @@ const subscribe = (onChange: () => void) => {
 };
 
 /**
- * Slow navy waves rolling under the welcome tile, like sheets moving through a press.
+ * Slow silver-grey waves rolling under the welcome tile, like sheets moving through a press.
  * Held still for people who ask for reduced motion. Purely decorative.
  */
 export function TileWaves({ className }: { className?: string }) {
@@ -25,13 +25,13 @@ export function TileWaves({ className }: { className?: string }) {
   return (
     <div className={className} aria-hidden>
       <GradientWaves
-        horizonColor="#223F7A"
-        waveColor="#5A86D8"
-        crestColor="#C6D8F8"
+        horizonColor="#1F242D"
+        waveColor="#4A5262"
+        crestColor="#B9C0CC"
         speed={reduceMotion ? 0 : 0.15}
         amplitude={4}
         height={4}
-        fogDepth={26}
+        fogDepth={24}
         brightness={1}
         opacity={1}
         mouseInteraction={false}

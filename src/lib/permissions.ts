@@ -16,10 +16,6 @@ export function isAdminRole(role?: string): boolean {
   return normalized === USER_ROLES.SUPER_ADMIN || normalized === USER_ROLES.DIRECTOR_GM;
 }
 
-export function isRestrictedUser(role?: string): boolean {
-  return !isAdminRole(role);
-}
-
 /** Default landing page after login for each role */
 export function getDefaultRoute(role?: string): string {
   const normalized = normalizeUserRole(role);

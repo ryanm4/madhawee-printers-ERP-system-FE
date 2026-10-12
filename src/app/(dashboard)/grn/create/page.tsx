@@ -7,7 +7,6 @@ import { grnSchema } from "@/modules/grn/validation";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useFieldArray, useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
@@ -191,7 +190,7 @@ function CreateGRN() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <h3 className="text-lg font-medium">Basic Information</h3>
+                <h3 className="text-[15px] font-semibold text-[#14213D]">Basic Information</h3>
                 <p className="text-sm text-muted-foreground">
                   General details of the GRN
                 </p>
@@ -294,7 +293,7 @@ function CreateGRN() {
 
             <Card>
               <CardHeader>
-                <h3 className="text-lg font-medium">Payment & Invoice</h3>
+                <h3 className="text-[15px] font-semibold text-[#14213D]">Payment & Invoice</h3>
                 <p className="text-sm text-muted-foreground">
                   Financial and tracking details
                 </p>
@@ -411,7 +410,7 @@ function CreateGRN() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <h3 className="text-lg font-medium">Items List</h3>
+                <h3 className="text-[15px] font-semibold text-[#14213D]">Items List</h3>
                 <p className="text-sm text-muted-foreground">
                   Add items received in this GRN
                 </p>

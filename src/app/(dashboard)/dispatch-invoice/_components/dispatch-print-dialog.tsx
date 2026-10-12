@@ -1,14 +1,5 @@
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Printer, Download } from "lucide-react";
 import { format } from "date-fns";
 
 export interface DispatchPrintData {
@@ -29,13 +20,6 @@ export interface DispatchPrintData {
   contact_person?: string;
   remarks?: string;
   created_by?: string;
-}
-
-interface DispatchPrintDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  data: DispatchPrintData;
-  onDecline?: () => void;
 }
 
 export function handleDispatchPrint(data: DispatchPrintData) {
@@ -85,49 +69,7 @@ export function handleDispatchPrint(data: DispatchPrintData) {
   });
 }
 
-export function DispatchPrintDialog({
-  open,
-  onOpenChange,
-  data,
-  onDecline,
-}: DispatchPrintDialogProps) {
-  const handlePrint = () => {
-    handleDispatchPrint(data);
-    onOpenChange(false);
-  };
-
-  const handleDecline = () => {
-    onDecline?.();
-    onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Printer className="h-5 w-5" />
-            Print Delivery Note?
-          </DialogTitle>
-        </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          Dispatch record has been saved successfully. Would you like to print/download the Delivery Note now?
-        </p>
-        <DialogFooter className="flex gap-2 sm:justify-end">
-          <Button variant="outline" onClick={handleDecline}>
-            No, skip
-          </Button>
-          <Button onClick={handlePrint} className="bg-primary text-white">
-            <Download className="h-4 w-4 mr-2" />
-            Download PDF
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-export function buildDispatchPrintHTML(data: DispatchPrintData): string {
+function buildDispatchPrintHTML(data: DispatchPrintData): string {
   // Escape user text so values containing < or & print as typed and can't inject markup
   const safe = (val: string | number | null | undefined) =>
     val !== undefined && val !== null && String(val).trim() !== ""

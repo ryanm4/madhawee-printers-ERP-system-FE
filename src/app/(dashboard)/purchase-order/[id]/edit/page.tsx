@@ -1,5 +1,6 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { FormSkeleton } from "@/components/shared/page-skeletons";
 import { GET_ALL_USER } from "@/modules/users/types";
 import { userApi } from "@/modules/users/api";
 import { getErrorMessage } from "@/lib/error-utils";
@@ -49,7 +50,6 @@ import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { toast } from "sonner";
 import {
   CREATE_PURCHASE_ORDER,
-  PURCHASE_ORDER,
 } from "@/modules/purchase-order/types";
 import { Combobox } from "@/components/shared/combobox";
 import { getUser } from "@/lib/auth";
@@ -66,6 +66,8 @@ function EditPurchaseOrder() {
   const [quotationList, setQuotationList] = useState<QUOTATIONS[]>([]);
   const [userList, setUserList] = useState<GET_ALL_USER[]>([]);
   const [loading, setLoading] = useState(false);
+  // False until the record has been fetched; until then a skeleton stands in for the form
+  const [recordLoaded, setRecordLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [user, setUser] = useState<{
     name: string;
@@ -92,7 +94,7 @@ function EditPurchaseOrder() {
       setLoading(true);
       const response = await CustomerApi.getAll();
       setCustomer(response.data);
-    } catch (error) {
+    } catch {
       console.error("Failed to fetch customers");
     } finally {
       setLoading(false);
@@ -106,7 +108,7 @@ function EditPurchaseOrder() {
       if (response.status === 200) {
         setUserList(response?.data?.users);
       }
-    } catch (error) {
+    } catch {
       console.error("Failed to fetch users");
     }
   };
@@ -116,7 +118,7 @@ function EditPurchaseOrder() {
       setLoading(true);
       const response = await quotationApi.getAll();
       setQuotationList(response.data);
-    } catch (error) {
+    } catch {
       console.error("Failed to fetch quotations");
     } finally {
       setLoading(false);
@@ -164,10 +166,6 @@ function EditPurchaseOrder() {
         [PurchaseOrderType.NON_TIEP]: 2,
         [PurchaseOrderType.MP]: 3,
       };
-      const formatDate = (date: Date) => {
-        return date.toISOString().split("T")[0]; // "YYYY-MM-DD" format
-      };
-
       const payload: CREATE_PURCHASE_ORDER = {
         quote_id: data.quotationId ? parseInt(data.quotationId) : 0,
         customer_id: data.customer ? parseInt(data.customer) : 0,
@@ -190,7 +188,7 @@ function EditPurchaseOrder() {
         })),
       };
 
-      const response = await purchaseOrderApi.update(Number(id), payload);
+      await purchaseOrderApi.update(Number(id), payload);
 
       toast.success("Purchase Order Updated", {
         description: `Purchase Order ${data.customer_po} has been updated successfully.`,
@@ -257,6 +255,7 @@ function EditPurchaseOrder() {
         toast.error(getErrorMessage(err, "Failed to load purchase order data"));
       } finally {
         setLoading(false);
+        setRecordLoaded(true);
       }
     };
 
@@ -271,7 +270,7 @@ function EditPurchaseOrder() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      {loading && <FullPageLoader />}
+      {loading && recordLoaded && <FullPageLoader />}
       <PageTitleWithBreadcrumb
         title="Edit Purchase Order Management"
         breadcrumbs={[
@@ -279,8 +278,10 @@ function EditPurchaseOrder() {
           { title: "Purchase Order Management", href: "/purchase-order" },
         ]}
       />
+      {!recordLoaded && <FormSkeleton />}
 
       <Form {...form}>
+        <div className={recordLoaded ? "contents" : "hidden"}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6  pb-0"
@@ -288,11 +289,11 @@ function EditPurchaseOrder() {
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
+                "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Customer</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Customer</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Add your customer details here
                 </p>
@@ -375,11 +376,11 @@ function EditPurchaseOrder() {
             </Card>
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
+                "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Purchase Order</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Purchase Order</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Add your purchase order details here
                 </p>
@@ -567,11 +568,11 @@ function EditPurchaseOrder() {
 
           <Card
             className={cn(
-              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
+              "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
-              <h3 className="text-md font-medium mb-2">Item Details</h3>
+              <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Item Details</h3>
               <p className="text-xs text-muted-foreground mb-4">
                 Add your Item Details here
               </p>
@@ -768,6 +769,7 @@ function EditPurchaseOrder() {
             </Button>
           </div>
         </form>
+        </div>
       </Form>
     </div>
   );

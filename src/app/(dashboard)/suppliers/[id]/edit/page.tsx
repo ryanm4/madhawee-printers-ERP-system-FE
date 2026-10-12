@@ -1,10 +1,11 @@
 "use client";
 
 import { getErrorMessage } from "@/lib/error-utils";
+import { FormSkeleton } from "@/components/shared/page-skeletons";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { supplierSchema } from "@/modules/supplier/validation";
 import { useParams, useRouter } from "next/navigation";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FieldPath,
   useForm,
@@ -25,7 +26,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import {
   Select,
@@ -58,6 +58,8 @@ function EditSupplierRelationship() {
   const params = useParams();
   const id = params.id as string;
   const [isLoading, setIsLoading] = useState(false);
+  // False until the record has been fetched; until then a skeleton stands in for the form
+  const [recordLoaded, setRecordLoaded] = useState(false);
 
   const [user, setUser] = useState<{
     name: string;
@@ -145,6 +147,7 @@ function EditSupplierRelationship() {
         router.push("/suppliers");
       } finally {
         setIsLoading(false);
+        setRecordLoaded(true);
       }
     }
 
@@ -213,7 +216,7 @@ function EditSupplierRelationship() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      {isLoading && <FullPageLoader />}
+      {isLoading && recordLoaded && <FullPageLoader />}
       <PageTitleWithBreadcrumb
         title="Edit Supplier"
         breadcrumbs={[
@@ -222,8 +225,10 @@ function EditSupplierRelationship() {
           { title: "Edit", href: "" },
         ]}
       />
+      {!recordLoaded && <FormSkeleton />}
 
       <Form {...form}>
+        <div className={recordLoaded ? "contents" : "hidden"}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 gap-4">
             <Card className="w-full shadow-sm">
@@ -443,6 +448,7 @@ function EditSupplierRelationship() {
             </Button>
           </div>
         </form>
+        </div>
       </Form>
     </div>
   );

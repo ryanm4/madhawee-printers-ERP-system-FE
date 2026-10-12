@@ -1,453 +1,191 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { RecordViewSkeleton } from "@/components/shared/page-skeletons";
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { issueNoteSchema } from "@/modules/issue-notes/validation";
-import { cn } from "@/lib/utils";
 import { useRouter, useParams } from "next/navigation";
-import { useFieldArray, useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { CalendarIcon, Edit } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import { format, parseISO } from "date-fns";
+import { Edit } from "lucide-react";
 import { useEffect, useState } from "react";
 import { issueNotesApi } from "@/modules/issue-notes/api";
+import { IssueNote } from "@/modules/issue-notes/types";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
 import { inventoryApi } from "@/modules/inventory/api";
-import { toast } from "sonner";
-import { FullPageLoader } from "@/components/shared/loader";
-import { Combobox } from "@/components/shared/combobox";
-import { ALL_TICKETS } from "@/modules/job-tickets/types";
-import { useCallback } from "react";
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
+import { toast } from "sonner";
 import { usePermissions } from "@/hooks/use-permissions";
+import {
+  Detail,
+  DetailGrid,
+  ViewHeader,
+  ViewSection,
+  ViewTable,
+  formatViewDate,
+} from "@/components/shared/record-view";
 
-type IssueNoteFormValues = z.infer<typeof issueNoteSchema>;
+interface IssuedItem {
+  key: number | string;
+  name: string;
+  detail?: string;
+  quantity: number;
+  unit?: string;
+}
+
+/** Find the stock item an issued line refers to, by id first and then by name */
+const findInventoryItem = (inventory: GET_ALL_INVENTORY[], item: Record<string, unknown>) =>
+  inventory.find((i) => i.item_id === item.item_id) ||
+  inventory.find(
+    (i) =>
+      i.item_name === item.item_name ||
+      `${i.item_sub_category} ${i.item_name}` === item.item_name ||
+      `${i.item_sub_category} ${i.item_name} ${i.size || ""}`.trim() === item.item_name ||
+      `${i.item_name} ${i.size || ""}`.trim() === item.item_name
+  );
 
 function ViewIssueNote() {
   const router = useRouter();
   const { id } = useParams();
   const { canModifyIssueNote } = usePermissions();
+
+  const [note, setNote] = useState<IssueNote | null>(null);
+  const [items, setItems] = useState<IssuedItem[]>([]);
+  const [job, setJob] = useState<{ number?: string; name?: string } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [jobs, setJobs] = useState<{ value: string; label: string }[]>([]);
-  const [inventoryItems, setInventoryItems] = useState<GET_ALL_INVENTORY[]>([]);
-  const [jobMaterials, setJobMaterials] = useState<
-    { value: number; label: string; quantity: number }[]
-  >([]);
-
-  const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
-  const [isFetchingJob, setIsFetchingJob] = useState(false);
-
-  const form = useForm<IssueNoteFormValues>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(issueNoteSchema) as any,
-    defaultValues: {
-      date: new Date(),
-      collector_name: "",
-      remarks: "",
-      job_id: 0,
-      items: [{ item_id: 0, quantity: 0 }],
-    },
-  });
-
-  const { fields } = useFieldArray({
-    control: form.control,
-    name: "items",
-  });
-
-  const fetchIssueNote = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [response, inventoryResponse] = await Promise.all([
-        issueNotesApi.getById(id as string),
-        inventoryApi.getAll(),
-      ]);
-      if (response.status === 200 && inventoryResponse.status === 200) {
-        setInventoryItems(inventoryResponse.data);
-        const data = response.data;
-        form.reset({
-          date: parseISO(data.date),
-          collector_name: data.collector_name,
-          job_id: data.job_id || 0,
-          remarks: data.remarks || "",
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          items: data.items.map((item: any) => {
-            // Match by item_id directly since the API provides it
-            const invItem = inventoryResponse.data.find(
-              (i: GET_ALL_INVENTORY) => i.item_id === item.item_id
-            );
-            // Fallback: try matching by name if item_id wasn't found
-            const matchedItem = invItem || inventoryResponse.data.find(
-              (i: GET_ALL_INVENTORY) =>
-                i.item_name === item.item_name ||
-                `${i.item_sub_category} ${i.item_name}` === item.item_name ||
-                `${i.item_sub_category} ${i.item_name} ${
-                  i.size || ""
-                }`.trim() === item.item_name ||
-                `${i.item_name} ${i.size || ""}`.trim() === item.item_name
-            );
-
-            return {
-              item_id: matchedItem ? matchedItem.item_id : (item.item_id || 0),
-              quantity: Number(item.quantity),
-            };
-          }),
-        });
-
-        if (data.job_id) {
-          setSelectedJobId(data.job_id);
-          await fetchJobById(data.job_id);
-        }
-      }
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Failed to fetch Issue Note details"));
-      router.push("/issue-notes");
-    } finally {
-      setLoading(false);
-    }
-  }, [id, form, router]);
-
-  const fetchJobById = async (jobId: number) => {
-    try {
-      setIsFetchingJob(true);
-
-      const response = await jobTicketsApi.getById(jobId);
-
-      if (response.status === 200 && response.data) {
-        const jobData = response.data;
-
-        const materials: {
-          value: number;
-          label: string;
-          quantity: number;
-        }[] = [];
-
-        const pcList =
-          jobData.paperCoating ||
-          jobData.paper_coating ||
-          jobData.paperCoatingData ||
-          [];
-
-        if (Array.isArray(pcList)) {
-          pcList.forEach((pc: any) => {
-            const matList = pc.materials || pc.raw_materials;
-
-            if (Array.isArray(matList)) {
-              matList.forEach((material: any) => {
-                materials.push({
-                  value: material.item_id,
-                  label:
-                    `${material.material_type} ${material.material_name} ${material.size}`.trim(),
-                  quantity: material.quantity || 0,
-                });
-              });
-            }
-          });
-        }
-
-        if (jobData.inks && Array.isArray(jobData.inks)) {
-          jobData.inks.forEach((ink: any) => {
-            if (ink.ink) {
-              let itemId = ink.item_id;
-              if (!itemId) {
-                const matchedItem = inventoryItems.find((item) => item.item_name === ink.ink.trim());
-                if (matchedItem) {
-                  itemId = matchedItem.item_id;
-                }
-              }
-              materials.push({
-                value: itemId || ink.id,
-                label: ink.ink.trim(),
-                quantity: Number(ink.quantity || 0),
-              });
-            }
-          });
-        }
-
-        setJobMaterials(materials);
-      }
-    } catch (error) {
-      console.error("Failed to fetch job details:", error);
-      setJobMaterials([]);
-    } finally {
-      setIsFetchingJob(false);
-    }
-  };
 
   useEffect(() => {
-    if (id) {
-      fetchIssueNote();
-    }
-
-    const fetchJobs = async () => {
+    if (!id) return;
+    const fetchIssueNote = async () => {
       try {
-        const response = await jobTicketsApi.getAll();
-        if (response.status === 200) {
-          setJobs(
-            response.data.map((job: ALL_TICKETS) => ({
-              value: job.job_id.toString(),
-              label: job.job_number || `Job #${job.job_id}`,
-            }))
-          );
+        setLoading(true);
+        const [response, inventoryResponse] = await Promise.all([
+          issueNotesApi.getById(id as string),
+          inventoryApi.getAll(),
+        ]);
+        const data: IssueNote = response.data;
+        const inventory: GET_ALL_INVENTORY[] = inventoryResponse.data ?? [];
+        setNote(data);
+        setItems(
+          (data.items ?? []).map((item, index) => {
+            const inv = findInventoryItem(inventory, item);
+            return {
+              key: item.id ?? index,
+              name: inv?.item_name || (item.item_name as string) || `Item #${item.item_id}`,
+              detail: [inv?.item_sub_category, inv?.size].filter(Boolean).join(", "),
+              quantity: Number(item.quantity) || 0,
+              unit: inv?.unit_of_measure,
+            };
+          })
+        );
+
+        if (data.job_id) {
+          try {
+            const jobResponse = await jobTicketsApi.getById(data.job_id);
+            const j = jobResponse.data as unknown as { job_number?: string; job_name?: string };
+            setJob({ number: j.job_number || `Job #${data.job_id}`, name: j.job_name || data.job_name });
+          } catch (err) {
+            console.error("Failed to fetch job details:", err);
+            setJob({ number: `Job #${data.job_id}`, name: data.job_name });
+          }
         }
-      } catch (err) {
-        console.error("Failed to fetch jobs", err);
+      } catch (error) {
+        toast.error(getErrorMessage(error, "Failed to fetch Issue Note details"));
+        router.push("/issue-notes");
+      } finally {
+        setLoading(false);
       }
     };
-    fetchJobs();
-  }, [id, fetchIssueNote]);
-
-  const readonlyClass =
-    "disabled:opacity-100 disabled:text-black disabled:cursor-default bg-muted/50";
-
-  if (loading) {
-    return (
-      <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-        <PageTitleWithBreadcrumb
-          title="View Issue Material"
-          breadcrumbs={[
-            { title: "Dashboard", href: "/dashboard" },
-            { title: "View", href: "#" },
-          ]}
-        />
-        <div className="flex items-center justify-end gap-3 w-full mt-6">
-          <Skeleton className="h-10 w-28" />
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Skeleton className="h-[400px] w-full rounded-xl" />
-          <Skeleton className="h-[400px] w-full rounded-xl" />
-        </div>
-      </div>
-    );
-  }
+    fetchIssueNote();
+  }, [id, router]);
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+    <div className="mt-3 flex flex-1 flex-col gap-5 p-4 pt-0 sm:p-6 sm:pt-0">
       <PageTitleWithBreadcrumb
         title="View Issue Material"
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
-          { title: "View", href: "#" },
+          { title: "Issue Material", href: "/issue-notes" },
         ]}
       />
 
-      <Form {...form}>
-        <form className="space-y-6">
-          <div className="flex items-center justify-end gap-3 w-full mt-6">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => router.push("/issue-notes")}
-            >
+      <ViewHeader
+        title={note && `Issue note ${note.id}`}
+        subtitle={
+          note && (
+            <>
+              {formatViewDate(note.date) ? <>Issued {formatViewDate(note.date)}</> : "Issued"}
+              {note.collector_name && (
+                <> to <span className="font-medium text-[#1B2433]">{note.collector_name}</span></>
+              )}
+              {job?.number && <>, for {job.number}</>}
+            </>
+          )
+        }
+        actions={
+          <>
+            <Button variant="outline" type="button" onClick={() => router.push("/issue-notes")}>
               Back to List
             </Button>
             {canModifyIssueNote && (
-              <Button
-                type="button"
-                onClick={() => router.push(`/issue-notes/${id}/edit`)}
-                className="bg-primary hover:bg-primary/90"
-              >
-                <Edit className="mr-2 h-4 w-4" /> Edit Note
+              <Button type="button" onClick={() => router.push(`/issue-notes/${id}/edit`)}>
+                <Edit className="h-4 w-4" /> Edit Note
               </Button>
             )}
-          </div>
+          </>
+        }
+      />
+      {loading && !note && <RecordViewSkeleton />}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <h3 className="text-lg font-medium">Issue Note Details</h3>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                readonlyClass
-                              )}
-                              disabled
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            initialFocus
-                            disabled
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="collector_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Collector Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} disabled className={readonlyClass} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="job_id"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Related Job</FormLabel>
-                      <Combobox
-                        items={jobs}
-                        value={field.value ? field.value.toString() : ""}
-                        onValueChange={() => {}}
-                        placeholder="Select Job"
-                        searchPlaceholder="Search job..."
-                        disabled
-                        className={readonlyClass}
-                      />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="remarks"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Remarks</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          className={cn("resize-none", readonlyClass)}
-                          {...field}
-                          disabled
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
+      {note && (
+        <div className="grid gap-5 lg:grid-cols-5">
+          <ViewSection title="Issue note details" className="lg:col-span-2">
+            <DetailGrid columns={2}>
+              <Detail label="Date" value={formatViewDate(note.date)} />
+              <Detail label="Collector name" value={note.collector_name} />
+              <Detail
+                label="Related job"
+                value={
+                  job && (
+                    <>
+                      {job.number}
+                      {job.name && <span className="block font-normal text-muted-foreground">{job.name}</span>}
+                    </>
+                  )
+                }
+                className="col-span-2"
+              />
+              <Detail label="Remarks" value={note.remarks} className="col-span-2" />
+            </DetailGrid>
+          </ViewSection>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <h3 className="text-lg font-medium">Items List</h3>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {fields.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className="flex gap-4 items-start p-4 border rounded-lg bg-muted/10 relative"
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
-                      <FormField
-                        control={form.control}
-                        name={`items.${index}.item_id`}
-                        render={({ field }) => {
-                          const currentItems = jobMaterials.map((m) => ({
-                            value: m.value.toString(),
-                            label: m.label,
-                          }));
-                          // If current item is not in jobMaterials, find it in inventoryItems and add it to the list
-                          if (
-                            field.value &&
-                            !currentItems.find(
-                              (m) => m.value === field.value.toString()
-                            )
-                          ) {
-                            const invItem = inventoryItems.find(
-                              (i: GET_ALL_INVENTORY) =>
-                                i.item_id === field.value
-                            );
-                            if (invItem) {
-                              currentItems.push({
-                                value: invItem.item_id.toString(),
-                                label: invItem.size
-                                  ? `${invItem.item_name} (${invItem.size})`
-                                  : invItem.item_name,
-                              });
-                            }
-                          }
-                          return (
-                            <FormItem className="flex flex-col">
-                              <FormLabel>Item Name</FormLabel>
-                              <Combobox
-                                items={currentItems}
-                                value={
-                                  field.value ? field.value.toString() : ""
-                                }
-                                onValueChange={() => {}}
-                                placeholder={
-                                  isFetchingJob ? "Loading..." : "Select Item"
-                                }
-                                searchPlaceholder="Search item..."
-                                disabled
-                                className={readonlyClass}
-                              />
-                              <FormMessage />
-                            </FormItem>
-                          );
-                        }}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`items.${index}.quantity`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Quantity</FormLabel>
-                            <FormControl>
-                              <Input min={0} type="number" step="any"
-                                {...field}
-                                disabled
-                                className={readonlyClass}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-        </form>
-      </Form>
+          <ViewSection title={`Items issued (${items.length})`} className="lg:col-span-3">
+            <ViewTable
+              rows={items}
+              rowKey={(item) => item.key}
+              empty="No items were issued on this note."
+              columns={[
+                {
+                  header: "Item name",
+                  cell: (item) => (
+                    <>
+                      <span className="font-medium">{item.name}</span>
+                      {item.detail && <span className="block text-[13px] text-muted-foreground">{item.detail}</span>}
+                    </>
+                  ),
+                },
+                {
+                  header: "Quantity",
+                  align: "right",
+                  cell: (item) => (
+                    <>
+                      {item.quantity.toLocaleString()}
+                      {item.unit && <span className="text-muted-foreground"> {item.unit}</span>}
+                    </>
+                  ),
+                },
+              ]}
+            />
+          </ViewSection>
+        </div>
+      )}
     </div>
   );
 }

@@ -21,8 +21,11 @@ import {
   ClipboardList,
   FileText,
   Package,
+  PackagePlus,
+  Plus,
   Truck,
 } from "lucide-react";
+import { usePermissions } from "@/hooks/use-permissions";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
@@ -30,9 +33,11 @@ import { cn } from "@/lib/utils";
 import { DashboardApi } from "@/modules/dashboard/api";
 import { KPIItem, AnalyticsData } from "@/modules/dashboard/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import Loader from "@/components/shared/loader";
 import { TileWaves } from "./_components/tile-waves";
 import { CurrencyCode, ProgressLine, Tile, TileHeader } from "./_components/tile";
 import { RevenueTwelveMonths, TrendPoint, twelveMonthWindow } from "./_components/revenue-twelve-months";
+import { OrdersWithoutJobs } from "./_components/orders-without-jobs";
 
 const REMINDERS_PER_PAGE = 5;
 
@@ -56,9 +61,6 @@ const byCurrency = (value: KPIItem["value"] | undefined): Record<CurrencyCode, n
 
 const percent = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100 : 0);
 
-/** Notes from the backend that describe a problem rather than a healthy state */
-const isWarning = (insight: string) => !/healthy/i.test(insight);
-
 function DashboardPage({
   user: initialUser,
 }: {
@@ -73,13 +75,20 @@ function DashboardPage({
     email: string;
     avatar: string;
   }>(initialUser);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { canCreateQuotation, canCreateJobTicket, canCreateGRN, canCreateDispatch } = usePermissions();
+  // Shortcuts to start the most common records; each shows only if the user may create it
+  const quickActions = [
+    { href: "/quotation-management/create", label: "New quotation", icon: FileText, allowed: canCreateQuotation },
+    { href: "/job-ticket/create", label: "New job ticket", icon: ClipboardList, allowed: canCreateJobTicket },
+    { href: "/grn/create", label: "Receive goods", icon: PackagePlus, allowed: canCreateGRN },
+    { href: "/dispatch-invoice/create", label: "New dispatch", icon: Truck, allowed: canCreateDispatch },
+  ].filter((action) => action.allowed);  // starts loading: the page fetches as soon as it opens
   const [date, setDate] = React.useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
   });
   const [kpiData, setKpiData] = useState<KPIItem[]>([]);
-  const [insights, setInsights] = useState<string[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [stockReminderPage, setStockReminderPage] = useState(0);
   const [yearTrend, setYearTrend] = useState<TrendPoint[]>([]);
@@ -109,7 +118,6 @@ function DashboardPage({
       const response = await DashboardApi.create(formData);
       if (response && response.data) {
         setKpiData(response.data?.kpis || []);
-        setInsights(response.data?.insights || []);
         setAnalytics(response.data?.analytics || null);
         setStockReminderPage(0);
       }
@@ -228,9 +236,9 @@ function DashboardPage({
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-6 lg:grid-cols-12 lg:gap-5">
           {/* Welcome: the one bold tile */}
-          <section className="relative overflow-hidden rounded-2xl bg-[#223F7A] p-7 text-white md:col-span-6 lg:col-span-7 lg:row-span-2 lg:p-9">
+          <section className="relative overflow-hidden rounded-2xl bg-[#1F242D] p-7 text-white md:col-span-6 lg:col-span-7 lg:row-span-2 lg:p-9">
             <TileWaves className="pointer-events-none absolute inset-0" />
-            <div className="relative flex h-full max-w-md flex-col">
+            <div className="relative flex h-full flex-col">
               <h2 className="text-3xl font-bold leading-tight tracking-tight lg:text-[2.5rem]">
                 Welcome back, {user?.name}
               </h2>
@@ -257,22 +265,25 @@ function DashboardPage({
                 </Button>
               </div>
 
-              {insights.length > 0 && (
-                <ul className="mt-8 flex flex-col gap-2 border-t border-white/15 pt-5" aria-label="Notes for this period">
-                  {insights.map((insight) => {
-                    const warn = isWarning(insight);
-                    const Icon = warn ? AlertTriangle : CheckCircle2;
-                    return (
-                      <li key={insight} className="flex items-center gap-2 text-sm text-white/85">
-                        <Icon
-                          className={cn("size-4 shrink-0", warn ? "text-[#FCD34D]" : "text-[#86EFAC]")}
-                          aria-hidden
-                        />
-                        {insight}
+              {quickActions.length > 0 && (
+                <nav aria-label="Quick actions" className="mt-8 border-t border-white/15 pt-5 lg:mt-auto">
+                  <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {quickActions.map(({ href, label, icon: Icon }) => (
+                      <li key={href}>
+                        <Link
+                          href={href}
+                          className="group flex items-center gap-3 rounded-xl border border-white/15 bg-white/[0.07] px-4 py-3.5 text-[15px] font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                        >
+                          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#223F7A]">
+                            <Icon className="size-4" aria-hidden />
+                          </span>
+                          {label}
+                          <Plus className="ml-auto size-4 text-white/60 transition-colors group-hover:text-white" aria-hidden />
+                        </Link>
                       </li>
-                    );
-                  })}
-                </ul>
+                    ))}
+                  </ul>
+                </nav>
               )}
             </div>
           </section>
@@ -405,6 +416,9 @@ function DashboardPage({
             </div>
           </Tile>
 
+          {/* Open purchase orders nobody has made a job ticket for yet */}
+          <OrdersWithoutJobs className="md:col-span-6 lg:col-span-12" canCreateJob={canCreateJobTicket} />
+
           {/* Revenue trend: always the last 12 months, so a short period still shows a trend */}
           <RevenueTwelveMonths
             className="md:col-span-6 lg:col-span-7"
@@ -502,21 +516,77 @@ function DashboardPage({
 }
 
 /** Placeholder tiles in the same layout, so the page doesn't jump when data arrives */
+/** Grey placeholder line, firmer than the default skeleton so it reads on white tiles */
+function Bone({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return <Skeleton className={cn("bg-[#E3E8EF]", className)} style={style} />;
+}
+
+/** An empty tile: header line, a big figure and a few rows, shaped like the real tiles */
+function TileSkeleton({ className, rows = 2, tall = false }: { className?: string; rows?: number; tall?: boolean }) {
+  return (
+    <div className={cn("flex flex-col rounded-2xl border border-[#E4E8F0] bg-white p-6", className)}>
+      <div className="flex items-center gap-2.5">
+        <Bone className="size-8 rounded-lg" />
+        <Bone className="h-4 w-28" />
+      </div>
+      <Bone className={cn("mt-6 w-40", tall ? "h-9" : "h-7")} />
+      <div className="mt-4 flex flex-col gap-3">
+        {Array.from({ length: rows }, (_, i) => (
+          <Bone key={i} className="h-3.5" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function DashboardSkeleton() {
   return (
     <div
       className="grid grid-cols-1 gap-4 md:grid-cols-6 lg:grid-cols-12 lg:gap-5"
+      role="status"
       aria-busy="true"
       aria-label="Loading dashboard"
     >
-      <Skeleton className="h-[280px] rounded-2xl md:col-span-6 lg:col-span-7 lg:row-span-2 lg:h-auto" />
-      <Skeleton className="h-[200px] rounded-2xl md:col-span-3 lg:col-span-5" />
-      <Skeleton className="h-[200px] rounded-2xl md:col-span-3 lg:col-span-5" />
-      <Skeleton className="h-[190px] rounded-2xl md:col-span-2 lg:col-span-4" />
-      <Skeleton className="h-[190px] rounded-2xl md:col-span-2 lg:col-span-4" />
-      <Skeleton className="h-[190px] rounded-2xl md:col-span-2 lg:col-span-4" />
-      <Skeleton className="h-[320px] rounded-2xl md:col-span-6 lg:col-span-7" />
-      <Skeleton className="h-[320px] rounded-2xl md:col-span-6 lg:col-span-5" />
+      {/* Welcome tile keeps its navy so the page doesn't flash white, with the press loader in it */}
+      <div className="flex min-h-[280px] flex-col justify-between rounded-2xl bg-[#1F242D] p-7 md:col-span-6 lg:col-span-7 lg:row-span-2 lg:p-9">
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-9 w-72 max-w-full bg-white/15" />
+          <Skeleton className="h-4 w-64 max-w-full bg-white/10" />
+          <div className="mt-3 flex gap-3">
+            <Skeleton className="h-10 w-28 rounded-lg bg-white/20" />
+            <Skeleton className="h-10 w-28 rounded-lg bg-white/10" />
+          </div>
+        </div>
+        <div className="flex items-center gap-4 self-end">
+          <span className="text-sm text-white/70">Loading your figures</span>
+          <div className="rounded-lg bg-white p-2.5">
+            <Loader size={36} label="Loading dashboard" />
+          </div>
+        </div>
+      </div>
+      <TileSkeleton className="md:col-span-3 lg:col-span-5" rows={3} tall />
+      <TileSkeleton className="md:col-span-3 lg:col-span-5" rows={2} />
+      <TileSkeleton className="md:col-span-2 lg:col-span-4" />
+      <TileSkeleton className="md:col-span-2 lg:col-span-4" />
+      <TileSkeleton className="md:col-span-2 lg:col-span-4" />
+      <div className="flex flex-col rounded-2xl border border-[#E4E8F0] bg-white p-6 md:col-span-6 lg:col-span-7">
+        <div className="flex items-center gap-2.5">
+          <Bone className="size-8 rounded-lg" />
+          <Bone className="h-4 w-32" />
+        </div>
+        <div className="mt-6 grid grid-cols-3 gap-4">
+          <Bone className="h-12 rounded-xl" />
+          <Bone className="h-12 rounded-xl" />
+          <Bone className="h-12 rounded-xl" />
+        </div>
+        {/* A faint chart outline instead of a solid block */}
+        <div className="mt-6 flex h-[200px] items-end gap-2">
+          {[38, 52, 45, 60, 48, 70, 64, 58, 75, 68, 82, 76].map((h, i) => (
+            <Bone key={i} className="flex-1 rounded-t-md rounded-b-none" style={{ height: `${h}%` }} />
+          ))}
+        </div>
+      </div>
+      <TileSkeleton className="md:col-span-6 lg:col-span-5" rows={5} />
     </div>
   );
 }

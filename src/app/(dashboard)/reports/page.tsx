@@ -5,17 +5,15 @@ import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import {
   Form,
+  FormControl,
   FormField,
   FormItem,
   FormLabel,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/shared/combobox";
-import {
-  PRODUCT_TYPES,
-  REPORT_TYPES,
-  ITEM_CATEGORY,
-  ITEM_SUB_CATEGORY,
-} from "@/config/enum";
+import { PRODUCT_TYPES, REPORT_TYPES } from "@/config/enum";
+import { useOptionList } from "@/hooks/use-option-list";
 import { CustomerApi } from "@/modules/customer/api";
 import { CUSTOMER } from "@/modules/customer/types";
 import { inventoryApi } from "@/modules/inventory/api";
@@ -51,7 +49,9 @@ import {
   findGroup,
   findReport,
   reportKey,
+  JOB_DELIVERY_SUMMARY,
 } from "./_components/report-catalog";
+import { JobDeliveryReport } from "./_components/job-delivery-report";
 
 // Zod Schemas
 const GeneralReportSchema = z.object({
@@ -62,6 +62,7 @@ const GeneralReportSchema = z.object({
   toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "To date must be YYYY-MM-DD"),
   customer_id: z.union([z.number(), z.string()]).optional(),
   product_type: z.string().optional(),
+  job_name: z.string().optional(),
 });
 
 const InventoryReportSchema = z
@@ -128,6 +129,7 @@ function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<any[]>([]);
   const [grandTotal, setGrandTotal] = useState<number | null>(null);
+  const [jobDeliveryFilters, setJobDeliveryFilters] = useState("");
   const [activeTab, setActiveTab] = useState("general");
   const [selectedReportKey, setSelectedReportKey] = useState<string | null>(
     null
@@ -284,6 +286,10 @@ function ReportsPage() {
   );
   const defaultToDate = format(new Date(), "yyyy-MM-dd");
 
+  const productTypeOptions = useOptionList("product_type");
+  const categoryOptions = useOptionList("item_category");
+  const subCategoryOptions = useOptionList("item_sub_category");
+
   const generalForm = useForm<z.infer<typeof GeneralReportSchema>>({
     resolver: zodResolver(GeneralReportSchema) as any,
     defaultValues: {
@@ -292,6 +298,7 @@ function ReportsPage() {
       toDate: defaultToDate,
       customer_id: undefined,
       product_type: "",
+      job_name: "",
     },
   });
 
@@ -347,18 +354,40 @@ function ReportsPage() {
   ) => {
     try {
       setLoading(true);
+      if (data.reportType === JOB_DELIVERY_SUMMARY) {
+        const customerId = data.customer_id && data.customer_id !== "ALL" ? Number(data.customer_id) : undefined;
+        const jobName = data.job_name?.trim() || undefined;
+        const response = await ReportsApi.jobDeliverySummary({
+          fromDate: `${data.fromDate} 00:00:00`,
+          toDate: `${data.toDate} 23:59:59`,
+          customer_id: customerId,
+          job_name: jobName,
+        });
+        setReportData(response.data?.data || []);
+        setGrandTotal(null);
+        // Saved with the run, so the PDF names the filters that produced it
+        const customerName = customerId ? customer.find((c) => c.customer_id === customerId)?.company_name : undefined;
+        setJobDeliveryFilters(
+          [customerName && `Customer: ${customerName}`, jobName && `Job name contains "${jobName}"`].filter(Boolean).join(". ")
+        );
+        setLastRun({ from: data.fromDate, to: data.toDate });
+        return;
+      }
       const isAdvanced = Object.keys(REPORT_TYPES).includes(data.reportType);
       const payload: any = {
         reportType: data.reportType,
         filters: {
-          fromDate: new Date(data.fromDate),
-          toDate: new Date(data.toDate),
+          // Whole days in local time; a bare date would stop at midnight and drop the last day
+          fromDate: `${data.fromDate} 00:00:00`,
+          toDate: `${data.toDate} 23:59:59`,
           ...(isAdvanced && {
             customer_id: (data.customer_id && data.customer_id !== "ALL"
               ? Number(data.customer_id)
               : undefined) as number | undefined,
             product_type:
-              data.product_type && data.product_type !== "ALL"
+              data.reportType === "JOB_PRODUCTION" &&
+              data.product_type &&
+              data.product_type !== "ALL"
                 ? data.product_type
                 : undefined,
           }),
@@ -461,8 +490,9 @@ function ReportsPage() {
       const payload = {
         reportType: data.reportType,
         filters: {
-          fromDate: new Date(data.fromDate),
-          toDate: new Date(data.toDate),
+          // Whole days in local time; a bare date would stop at midnight and drop the last day
+          fromDate: `${data.fromDate} 00:00:00`,
+          toDate: `${data.toDate} 23:59:59`,
           customer_id: (data.customer_id && data.customer_id !== "ALL"
             ? Number(data.customer_id)
             : undefined) as number | undefined,
@@ -534,6 +564,7 @@ function ReportsPage() {
       toDate: defaultToDate,
       customer_id: undefined,
       product_type: "",
+      job_name: "",
     });
     setSelectedDispatchStatus("all");
     setReportData([]);
@@ -592,22 +623,7 @@ function ReportsPage() {
   const isGeneralAdvanced =
     Object.keys(REPORT_TYPES).includes(watchedGeneralType);
 
-  const salesRequiresDates =
-    watchedSalesType &&
-    !["SALES_BY_CUSTOMER", "SALES_BY_PRODUCT", "SALES_BY_SALESPERSON"].includes(
-      watchedSalesType
-    );
-
   const watchedInventoryType = inventoryForm.watch("report_type");
-  const isInventoryAdvanced = [
-    "CURRENT_STOCK",
-    "STOCK_VALUE",
-    "STOCK_AGING",
-    "LOW_STOCK",
-    "GRN_REPORT",
-    "MATERIAL_CONSUMPTION_SUMMARY",
-    "MATERIAL_CONSUMPTION_BY_JOB",
-  ].includes(watchedInventoryType);
   const inventoryRequiresDates =
     watchedInventoryType &&
     !["STOCK_VALUE", "STOCK_AGING", "LOW_STOCK"].includes(watchedInventoryType);
@@ -1130,7 +1146,12 @@ function ReportsPage() {
       watchedGeneralType === "DISPATCH_INSIGHTS"
     ) {
       if (selectedDispatchStatus && selectedDispatchStatus !== "all") {
-        data = data.filter((row: any) => row.status === selectedDispatchStatus);
+        // Saved statuses are upper case, and "partially" is stored in a few spellings
+        const wanted = selectedDispatchStatus.toUpperCase();
+        data = data.filter((row: any) => {
+          const status = String(row.status || "").toUpperCase();
+          return wanted.startsWith("PARTIAL") ? status.startsWith("PARTIAL") : status === wanted;
+        });
       }
       data = data.map((row: any, index: number) => {
         const orderQty = parseFloat(row.order_qty || row.quantity) || 0;
@@ -1522,10 +1543,11 @@ function ReportsPage() {
               sum + (parseFloat(String(r["Quantity"]).replace(/,/g, "")) || 0),
             0
           );
+          // Stock values arrive as text like "LKR 718,956.00"; drop everything but the number
           const totalVal = mapped.reduce(
             (sum: number, r: any) =>
               sum +
-              (parseFloat(String(r["Stock Value"]).replace(/,/g, "")) || 0),
+              (parseFloat(String(r["Stock Value"]).replace(/[^0-9.-]/g, "")) || 0),
             0
           );
           mapped.push({
@@ -1536,7 +1558,7 @@ function ReportsPage() {
             Size: "",
             Quantity: formatNum(totalQty),
             "Unit Rate": "",
-            "Stock Value": formatCurrency(totalVal),
+            "Stock Value": `LKR ${formatCurrency(totalVal)}`,
           });
         }
         data = mapped;
@@ -1655,7 +1677,7 @@ function ReportsPage() {
           if (dateVal) {
             try {
               formattedDate = format(new Date(dateVal), "yyyy-MM-dd");
-            } catch (_e) {
+            } catch {
               formattedDate = String(dateVal);
             }
           }
@@ -1770,11 +1792,11 @@ function ReportsPage() {
                   ? j.consumed_qty
                   : parseFloat(String(j.consumed_qty || 0).replace(/,/g, "")) ||
                     0;
-              let jRate =
+              const jRate =
                 parseFloat(
                   String(j.unit_rate || "").replace(/[^0-9.-]/g, "")
                 ) || unitPrice;
-              let jVal =
+              const jVal =
                 parseFloat(
                   String(j.total_value || "").replace(/[^0-9.-]/g, "")
                 ) || jQty * jRate;
@@ -1916,7 +1938,7 @@ function ReportsPage() {
 
           const finalJob = matchedJob || selectedJobInForm || {};
 
-          let rawJobId =
+          const rawJobId =
             row.job_number ||
             row.job_id ||
             row.jobId ||
@@ -1961,7 +1983,7 @@ function ReportsPage() {
             (inv?.width && inv?.height ? `${inv.width} x ${inv.height}` : "-");
           const consumedQty = extractConsumedQty(row);
           let unitPrice = extractUnitPrice(row, inv);
-          let rawTotal = parseFloat(
+          const rawTotal = parseFloat(
             String(row.total_cost || row.total_amount || row.amount || 0)
           );
           if (rawTotal > 0 && unitPrice === 0 && consumedQty > 0) {
@@ -2112,6 +2134,7 @@ function ReportsPage() {
         jobs: "Jobs Report",
         purchase_orders: "Purchase Orders Report",
         quotations: "Quotations Report",
+        JOB_DELIVERY_SUMMARY: "Job Delivery Summary",
       };
       name =
         generalLabels[type] ||
@@ -2214,8 +2237,8 @@ function ReportsPage() {
                     onSubmit={generalForm.handleSubmit(handleGeneralSubmit)}
                     className={formPanelClass}
                   >
-                    {isGeneralAdvanced &&
-                      watchedGeneralType !== "INVENTORY_HEALTH" && (
+                    {((isGeneralAdvanced && watchedGeneralType !== "INVENTORY_HEALTH") ||
+                      watchedGeneralType === JOB_DELIVERY_SUMMARY) && (
                         <FormField
                           control={generalForm.control}
                           name="customer_id"
@@ -2247,7 +2270,23 @@ function ReportsPage() {
                         />
                       )}
 
-                    {isGeneralAdvanced && (
+                    {watchedGeneralType === JOB_DELIVERY_SUMMARY && (
+                      <FormField
+                        control={generalForm.control}
+                        name="job_name"
+                        render={({ field }) => (
+                          <FormItem className="w-[240px]">
+                            <FormLabel>Job name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Any job name" {...field} value={field.value ?? ""} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    {/* Only the job production report filters by product type */}
+                    {watchedGeneralType === "JOB_PRODUCTION" && (
                       <FormField
                         control={generalForm.control}
                         name="product_type"
@@ -2257,12 +2296,8 @@ function ReportsPage() {
                             <Combobox
                               items={[
                                 { value: "ALL", label: "All product types" },
-                                ...Object.entries(PRODUCT_TYPES).map(
-                                  ([key, val]) => ({
-                                    value: key,
-                                    label: val as string,
-                                  }),
-                                ),
+                                // Jobs store the type's name ("MASTER CARTON"), not its key
+                                ...productTypeOptions,
                               ]}
                               value={field.value ?? ""}
                               onValueChange={field.onChange}
@@ -2319,10 +2354,7 @@ function ReportsPage() {
                           <Combobox
                             items={[
                               { value: "ALL", label: "All categories" },
-                              ...Object.values(ITEM_CATEGORY).map((v) => ({
-                                value: v,
-                                label: v,
-                              })),
+                              ...categoryOptions,
                             ]}
                             value={field.value ?? "ALL"}
                             onValueChange={field.onChange}
@@ -2340,10 +2372,7 @@ function ReportsPage() {
                           <Combobox
                             items={[
                               { value: "ALL", label: "All sub-categories" },
-                              ...Object.values(ITEM_SUB_CATEGORY).map((v) => ({
-                                value: v,
-                                label: v,
-                              })),
+                              ...subCategoryOptions,
                             ]}
                             value={field.value ?? "ALL"}
                             onValueChange={field.onChange}
@@ -2615,6 +2644,15 @@ function ReportsPage() {
                   : "Nothing matched these filters. Try clearing some of them."}
               </p>
             </div>
+          ) : selectedReport.type === JOB_DELIVERY_SUMMARY ? (
+            <JobDeliveryReport
+              key={JSON.stringify(lastRun) + jobDeliveryFilters}
+              rows={reportData}
+              filename={reportFilename}
+              subtitle={[runRangeText && `Jobs opened ${runRangeText}.`, jobDeliveryFilters && `${jobDeliveryFilters}.`]
+                .filter(Boolean)
+                .join(" ")}
+            />
           ) : (
             <ReportsTable
               data={filteredReportData}

@@ -34,7 +34,6 @@ interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[]
     data: TData[]
     searchValue?: string
-    searchColumn?: string;
     filters?: { id: string; value: string }[]
 }
 
@@ -44,7 +43,6 @@ export function DataTable<TData, TValue>({
     columns,
     data,
     searchValue = "",
-    searchColumn: _searchColumn,
     filters = DEFAULT_FILTERS,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = useState<SortingState>([])
@@ -126,7 +124,7 @@ export function DataTable<TData, TValue>({
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
-            <div className="overflow-hidden rounded-md border">
+            <div className="overflow-hidden rounded-lg border border-[#E4E8F0] bg-white">
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
@@ -161,7 +159,7 @@ export function DataTable<TData, TValue>({
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={columns.length} className="h-24 text-center">
+                                <TableCell colSpan={columns.length} className="h-24 text-center text-[#4B5567]">
                                     No results.
                                 </TableCell>
                             </TableRow>

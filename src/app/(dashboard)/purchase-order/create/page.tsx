@@ -90,7 +90,7 @@ function CreatePurchaseOrder() {
       const response = await CustomerApi.getAll();
 
       setCustomer(response.data);
-    } catch (error) {
+    } catch {
       console.error("Failed to fetch POs");
     } finally {
       setLoading(false);
@@ -102,7 +102,7 @@ function CreatePurchaseOrder() {
       const response = await quotationApi.getAll();
 
       setQuotationList(response.data);
-    } catch (error) {
+    } catch {
       console.error("Failed to fetch POs");
     } finally {
       setLoading(false);
@@ -162,10 +162,6 @@ function CreatePurchaseOrder() {
         [PurchaseOrderType.NON_TIEP]: 2,
         [PurchaseOrderType.MP]: 3,
       };
-      const formatDate = (date: Date) => {
-        return date.toISOString().split("T")[0]; // "YYYY-MM-DD" format
-      };
-
       const payload: CREATE_PURCHASE_ORDER = {
         quote_id: data.quotationId ? parseInt(data.quotationId) : 0,
         customer_id: data.customer ? parseInt(data.customer) : 0,
@@ -191,7 +187,7 @@ function CreatePurchaseOrder() {
         }),
       };
 
-      const response = await purchaseOrderApi.create(payload);
+      await purchaseOrderApi.create(payload);
 
       toast.success("Purchase Order Created", {
         description: `Purchase Order ${data.customer_po} has been created successfully.`,
@@ -242,11 +238,11 @@ function CreatePurchaseOrder() {
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
+                "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Customer</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Customer</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Add your customer details here
                 </p>
@@ -329,11 +325,11 @@ function CreatePurchaseOrder() {
             </Card>
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
+                "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Purchase Order</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Purchase Order</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Add your purchase order details here
                 </p>
@@ -521,11 +517,11 @@ function CreatePurchaseOrder() {
 
           <Card
             className={cn(
-              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col",
+              "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
-              <h3 className="text-md font-medium mb-2">Item Details</h3>
+              <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Item Details</h3>
               <p className="text-xs text-muted-foreground mb-4">
                 Add your Item Details here
               </p>

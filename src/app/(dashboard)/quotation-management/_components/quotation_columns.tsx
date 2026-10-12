@@ -6,7 +6,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ColumnDef } from "@tanstack/react-table"
-import { Download, MoreHorizontal, PencilIcon, Printer, TrashIcon, ArrowRightIcon, EyeIcon } from "lucide-react"
+import { MoreHorizontal, PencilIcon, Printer, TrashIcon, ArrowRightIcon, EyeIcon } from "lucide-react"
 import { QUOTATIONS } from "@/modules/quotations/types"
 import { ArrowUpDown } from "lucide-react"
 import { StatusBadge } from "@/components/shared/status-badge";

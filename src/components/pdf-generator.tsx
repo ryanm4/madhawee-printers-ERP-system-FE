@@ -3,6 +3,7 @@ import { formatCurrency, Currency } from "@/lib/currencyUtils";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/error-utils";
 import { companyData as mockCompanyData } from "@/modules/quotations/mockData";
+import { SettingsApi } from "@/modules/settings/api";
 import { QUOTATIONS, QuotationItems } from "@/modules/quotations/types";
 import { userApi } from "@/modules/users/api";
 
@@ -98,6 +99,51 @@ const wrapText = (
   return result;
 };
 
+/**
+ * Company details, terms and the default bank account from Settings. Falls back to the
+ * built-in details if Settings can't be reached, so a quotation can always be printed.
+ */
+async function loadPrintDetails() {
+  const [companyResult, banksResult] = await Promise.allSettled([
+    SettingsApi.getCompany(),
+    SettingsApi.getBankAccounts(),
+  ]);
+  const saved = companyResult.status === "fulfilled" ? companyResult.value.data : null;
+  const fallbackBank = {
+    account_number: mockCompanyData.bankDetails.accountNumber,
+    bank_name: mockCompanyData.bankDetails.bankName,
+    branch: mockCompanyData.bankDetails.branchName,
+    account_holder_name: mockCompanyData.bankDetails.accountName,
+    swift_code: "",
+  };
+
+  let account_details: typeof fallbackBank | null = fallbackBank;
+  if (banksResult.status === "fulfilled") {
+    const banks = banksResult.value.data ?? [];
+    const bank = banks.find((b) => b.is_default) ?? banks[0];
+    account_details = bank
+      ? {
+          account_number: bank.account_number,
+          bank_name: bank.bank_name,
+          branch: bank.branch_name ?? "",
+          account_holder_name: bank.account_name,
+          swift_code: bank.swift_code ?? "",
+        }
+      : null;
+  }
+
+  return {
+    company_logo: "/images/madhawee_logo.svg",
+    company_address: saved ? saved.company_address : mockCompanyData.address,
+    company_email: saved ? saved.company_email : "",
+    company_website: saved ? saved.company_website : mockCompanyData.website,
+    company_phone: saved ? saved.company_phone : mockCompanyData.tel,
+    vat_registration_number: saved?.vat_registration_number ?? "",
+    payment_terms: saved ? saved.quotation_terms : mockCompanyData.terms,
+    account_details,
+  };
+}
+
 export const generateQuotationPDF = async (
   data: QUOTATIONS & { showAccountDetails?: boolean; items: QuotationItems[] }
 ) => {
@@ -140,23 +186,7 @@ export const generateQuotationPDF = async (
       return pdfDoc.getPages()[pdfDoc.getPageCount() - 1]; // Return current page
     };
 
-    // Construct company data from mock and imported assets, mapping to expected format
-    const companyData = {
-      company_logo: "/images/madhawee_logo.svg",
-      company_address: mockCompanyData.address,
-      company_email: "",
-      company_website: mockCompanyData.website,
-      company_phone: mockCompanyData.tel,
-      payment_terms: mockCompanyData.terms,
-      account_details: {
-        account_number: mockCompanyData.bankDetails.accountNumber,
-        bank_name: mockCompanyData.bankDetails.bankName,
-        branch: mockCompanyData.bankDetails.branchName,
-        account_holder_name: mockCompanyData.bankDetails.accountName,
-        swift_code: "",
-        iban: "",
-      },
-    };
+    const companyData = await loadPrintDetails();
 
     const currency = (data.currency || "LKR") as Currency;
 
@@ -208,24 +238,6 @@ export const generateQuotationPDF = async (
     }
 
     // --- CONTACT INFO ---
-    const formatPhone = (phone?: string) => {
-      if (!phone) return "";
-      const digits = phone.replace(/\D/g, "");
-      if (digits.length < 7) return phone;
-      const countryCode = digits.slice(0, 2);
-      const part1 = digits.slice(2, 5);
-      const part2 = digits.slice(5);
-      return `+${countryCode} ${part1} ${part2}`;
-    };
-
-    // Mock data phone is already formatted, so use directly or format if needed.
-    // Mock: "011-2824984 / 011-2824985" -> formatPhone won't handle multiple numbers nicely with this logic string slice logic.
-    // So we assume mock data is display-ready or use as is.
-    // The previous logic used `formatPhone(data)`.
-    // Since we control mock data, let's use it as is for simplicity, or just apply format if single number.
-    // Given the string "011-...", formatPhone logic `slice(0,2)` logic implies formatting simple numbers.
-    // I'll skip formatting for the hardcoded mock phone string to avoid breaking it.
-
     const contactText = [
       companyData.company_email,
       companyData.company_website,
@@ -234,8 +246,12 @@ export const generateQuotationPDF = async (
       .filter(Boolean)
       .join(" | ");
 
-    if (contactText) {
-      currentPage.drawText(contactText, {
+    const headerLines = [
+      ...(contactText ? wrapText(contactText, width - margin * 2, helvetica, fontSizeSmall) : []),
+      ...(companyData.vat_registration_number ? [`VAT Reg. No: ${companyData.vat_registration_number}`] : []),
+    ];
+    headerLines.forEach((line) => {
+      currentPage.drawText(line.trim(), {
         x: margin,
         y: yPosition,
         size: fontSizeSmall,
@@ -243,7 +259,7 @@ export const generateQuotationPDF = async (
         color: colors.text,
       });
       moveDown(12);
-    }
+    });
 
     moveDown(40);
 
@@ -324,7 +340,7 @@ export const generateQuotationPDF = async (
           if (found?.phone) {
             marketingPhone = found.phone;
           }
-        } catch (e) {
+        } catch {
           // ignore fallback error
         }
       }
@@ -814,7 +830,6 @@ export const generateQuotationPDF = async (
           val: companyData.account_details.account_holder_name,
         },
         { label: "SWIFT Code", val: companyData.account_details.swift_code },
-        { label: "IBAN", val: companyData.account_details.iban },
       ];
 
       details.forEach((det) => {

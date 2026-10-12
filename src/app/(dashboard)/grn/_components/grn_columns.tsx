@@ -56,7 +56,7 @@ export const grnColumns = (
       const date = row.original.received_date;
       try {
         return date ? format(parseISO(date), "PPP") : "-";
-      } catch (_e) {
+      } catch {
         return date || "-";
       }
     },
@@ -88,7 +88,7 @@ export const grnColumns = (
       const date = row.original.created_on;
       try {
         return date ? format(parseISO(date), "PPP") : "-";
-      } catch (_e) {
+      } catch {
         return date || "-";
       }
     },

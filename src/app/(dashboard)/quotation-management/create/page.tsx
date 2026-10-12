@@ -53,6 +53,7 @@ import {
 } from "@/config/enum";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
+import { formatAmount } from "@/components/shared/record-view";
 import { GET_ALL_USER } from "@/modules/users/types";
 import { userApi } from "@/modules/users/api";
 
@@ -179,17 +180,11 @@ function CreateQuotation({
     currentItems: QuotationFormValues["items"],
     taxTypeId: number,
   ) => {
-    let subTotal = 0;
-    const updatedItems = currentItems.map((item) => {
-      const qty = parseFloat(item.item_qty || "0");
-      const price = parseFloat(item.item_unit_price || "0");
-      const total = qty * price;
-      subTotal += total;
-      return {
-        ...item,
-        item_total_price: String(Number(total.toFixed(4))),
-      };
-    });
+    const subTotal = currentItems.reduce(
+      (sum, item) =>
+        sum + parseFloat(item.item_qty || "0") * parseFloat(item.item_unit_price || "0"),
+      0,
+    );
 
     // Calculate net total based on tax type
     let netTotal = subTotal;
@@ -303,7 +298,7 @@ function CreateQuotation({
         })),
       };
 
-      const response = await quotationApi.create(payload);
+      await quotationApi.create(payload);
 
       toast.success("Quotation Created", {
         description: `Quotation has been created successfully.`,
@@ -350,11 +345,11 @@ function CreateQuotation({
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
               className={cn(
-                "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col",
+                "w-full rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Customer Details</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Customer Details</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Select customer and enter details
                 </p>
@@ -516,11 +511,11 @@ function CreateQuotation({
             {/* Card 2: Quotation Overview */}
             <Card
               className={cn(
-                "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col",
+                "w-full rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Quotation Overview</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Quotation Overview</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Configure quotation settings
                 </p>
@@ -722,11 +717,11 @@ function CreateQuotation({
           {/* Card 3: Item Table */}
           <Card
             className={cn(
-              "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col",
+              "w-full rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
-              <h3 className="text-md font-medium mb-2">Items</h3>
+              <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Items</h3>
               <p className="text-xs text-muted-foreground mb-4">
                 Add items to the quotation
               </p>
@@ -894,14 +889,14 @@ function CreateQuotation({
                           <td className="p-2">
                             <Input
                               type="text"
-                              value={`${getCurrencySymbol(form.watch("currency") as Currency)} ${Number(totalExclusive.toFixed(4))}`}
+                              value={`${getCurrencySymbol(form.watch("currency") as Currency)} ${formatAmount(totalExclusive)}`}
                               className="w-[120px]"
                             />
                           </td>
                           <td className="p-2">
                             <Input
                               type="text"
-                              value={`${getCurrencySymbol(form.watch("currency") as Currency)} ${Number(totalInclusive.toFixed(4))}`}
+                              value={`${getCurrencySymbol(form.watch("currency") as Currency)} ${formatAmount(totalInclusive)}`}
                               className="w-[120px]"
                             />
                           </td>
@@ -1003,7 +998,7 @@ function CreateQuotation({
                           {getCurrencySymbol(
                             form.watch("currency") as Currency,
                           )}{" "}
-                          {form.watch("sub_total") || "0"}
+                          {formatAmount(form.watch("sub_total") || 0)}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm text-muted-foreground italic">
@@ -1012,7 +1007,7 @@ function CreateQuotation({
                           {getCurrencySymbol(
                             form.watch("currency") as Currency,
                           )}{" "}
-                          {form.watch("total_without_tax") || "0"}
+                          {formatAmount(form.watch("total_without_tax") || 0)}
                         </span>
                       </div>
                     </>
@@ -1032,11 +1027,7 @@ function CreateQuotation({
                         </span>
                         <span className="font-medium">
                           {getCurrencySymbol(form.watch("currency") as Currency)}{" "}
-                          {Number(
-                            (
-                              parseFloat(form.watch("sub_total") || "0") * 0.18
-                            ).toFixed(4),
-                          )}
+                          {formatAmount(parseFloat(form.watch("sub_total") || "0") * 0.18)}
                         </span>
                       </div>
                     )}
@@ -1044,7 +1035,7 @@ function CreateQuotation({
                     <span>Net Total:</span>
                     <span>
                       {getCurrencySymbol(form.watch("currency") as Currency)}{" "}
-                      {form.watch("net_total") || "0"}
+                      {formatAmount(form.watch("net_total") || 0)}
                     </span>
                   </div>
                 </div>

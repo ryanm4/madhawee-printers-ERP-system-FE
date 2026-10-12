@@ -52,7 +52,7 @@ export const issueNotesColumns = (
       const date = row.original.date;
       try {
         return date ? format(parseISO(date), "PPP") : "-";
-      } catch (_e) {
+      } catch {
         return date || "-";
       }
     },

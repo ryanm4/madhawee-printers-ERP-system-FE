@@ -1,20 +1,17 @@
 "use client";
 import { useSessionStorage } from "@/hooks/use-session-storage";
+import { TableSkeleton } from "@/components/shared/page-skeletons";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { getErrorMessage } from "@/lib/error-utils";
-import { PurchaseOrderCard } from "@/components/purchase-order-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, LayoutPanelTop, PlusIcon, Search, Table2 } from "lucide-react";
+import { CalendarIcon, PlusIcon, Search } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { getUser } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { appToast } from "@/lib/toast-utils";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
-import { PageLoader } from "@/components/shared/loader";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
@@ -22,16 +19,17 @@ import { cn } from "@/lib/utils";
 
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { PURCHASE_ORDER } from "@/modules/purchase-order/types";
+import { updatePurchaseOrderStatus } from "@/modules/purchase-order/update-status";
 import { PurchaseOrderStatus, JobTicketStatus } from "@/config/enum";
-import { DataTable } from "./_components/purchase-order-table";
-import { purchaseOrderColumns } from "./_components/purchase-order-columns";
+import { PurchaseOrderList } from "./_components/purchase-order-list";
 import { usePermissions } from "@/hooks/use-permissions";
 
 function PurchaseOrderPage() {
   const { canModifyPO, canCreatePO, canExportList } = usePermissions();
   const [data, setData] = useState<PURCHASE_ORDER[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);  // starts loading: the page fetches as soon as it opens
   const [search, setSearch] = useSessionStorage("purchase-order-search", "");
+  const [jobFilter, setJobFilter] = useSessionStorage<"ALL" | "OPEN" | "DONE">("purchase-order-jobs", "ALL");
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), 0, 1),
     to: new Date(),
@@ -93,28 +91,7 @@ function PurchaseOrderPage() {
           }
         }
 
-        const payload = {
-          quote_id: Number(data.quote_id),
-          customer_id: data.customer ? Number(data.customer.customer_id) : 0,
-          po_type_id: Number(data.po_type_id),
-          batch_ref: data.batch_ref,
-          po_date: data.po_date,
-          delivery_date: data.delivery_date,
-          TC_E_PR_No: data.TC_E_PR_No,
-          updated_by: getUser()?.name || "User", // Ideally from user context
-          status: status,
-          customer_po: String(data.customer_po),
-          currency: data.currency,
-          sales_ref: data.sales_ref,
-          po_items: (data.po_items || []).map((item) => ({
-            item_code: item.item_code,
-            description: item.description,
-            quantity: String(item.quantity),
-            uom: item.uom,
-            price: String(item.price),
-          })),
-        };
-        await purchaseOrderApi.update(id, payload);
+        await updatePurchaseOrderStatus(data, status);
         appToast.success("Status Updated", `Purchase Order status updated to ${status}`);
         await fetchData();
       } else {
@@ -128,20 +105,16 @@ function PurchaseOrderPage() {
     }
   };
 
-  const columns = purchaseOrderColumns({
-    onEdit: (id) => router.push(`/purchase-order/${id}/edit`),
-    onDelete: (id) => handleDelete(id),
-    onView: (id) => router.push(`/purchase-order/${id}/view`),
-    onStatusChange: handleStatusChange,
-  }, { canModify: canModifyPO });
-
-  const filteredData = data.filter((item) => {
+  const searchedData = data.filter((item) => {
     const matchesSearch = !search || (() => {
       const s = search.toLowerCase();
       return (
         String(item.po_id).toLowerCase().includes(s) ||
         (item.customer?.name || "").toLowerCase().includes(s) ||
-        (item.customer_po || "").toLowerCase().includes(s)
+        (item.customer_po || "").toLowerCase().includes(s) ||
+        (item.jobs || []).some(
+          (job) => (job.job_number || "").toLowerCase().includes(s) || (job.job_name || "").toLowerCase().includes(s)
+        )
       );
     })();
 
@@ -155,47 +128,88 @@ function PurchaseOrderPage() {
     return matchesSearch && matchesDate;
   });
 
+  // Orders with job tickets still to finish, and orders whose job tickets are all done
+  const hasOpenJobs = (po: PURCHASE_ORDER) => (po.jobs || []).some((job) => job.status !== JobTicketStatus.COMPLETED);
+  const allJobsDone = (po: PURCHASE_ORDER) => (po.jobs || []).length > 0 && !hasOpenJobs(po);
+  const jobTabs = [
+    { value: "ALL" as const, label: "All orders", count: searchedData.length },
+    { value: "OPEN" as const, label: "Jobs still open", count: searchedData.filter(hasOpenJobs).length },
+    { value: "DONE" as const, label: "All jobs done", count: searchedData.filter(allJobsDone).length },
+  ];
+  const visibleData =
+    jobFilter === "OPEN" ? searchedData.filter(hasOpenJobs) : jobFilter === "DONE" ? searchedData.filter(allJobsDone) : searchedData;
+
   return (
-    <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      <PageTitleWithBreadcrumb
-        title="Purchase Orders"
-        breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
-      />
-      <Tabs
-        defaultValue="Grid-View"
-        className="w-full flex-1 flex flex-col gap-4"
-      >
-        <div className="flex flex-row justify-end gap-[24px]">
-          <div className="relative w-[320px]">
+    <div className="mt-3 flex flex-1 flex-col gap-4 p-4 pt-0 sm:p-6 sm:pt-0">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <PageTitleWithBreadcrumb title="Purchase Orders" breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]} />
+          <p className="mt-1 text-sm text-[#4B5567]">Orders from customers, and the print jobs created for each one.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {canExportList && <ExportButton data={data} filename="purchase-orders" />}
+          {canCreatePO && (
+            <Button onClick={() => router.push("/purchase-order/create")} disabled={loading}>
+              <PlusIcon /> New purchase order
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div
+          role="group"
+          aria-label="Show orders"
+          className="-mx-4 flex gap-1 overflow-x-auto px-4 sm:mx-0 sm:rounded-lg sm:bg-[#EDF0F5] sm:p-1"
+        >
+          {jobTabs.map((tab) => {
+            const active = jobFilter === tab.value;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setJobFilter(tab.value)}
+                className={cn(
+                  "inline-flex h-8 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#223F7A]/30",
+                  active ? "bg-white text-[#14213D] shadow-sm" : "text-[#4B5567] hover:text-[#14213D]"
+                )}
+              >
+                {tab.label}
+                <span className="min-w-5 rounded bg-[#E4E8F0] px-1.5 text-xs font-semibold tabular-nums text-[#14213D]">
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <div className="relative w-full sm:w-[320px]">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search PO / Customer..."
-              className="w-full pl-8"
+              placeholder="Search PO number, customer, job or item"
+              className="w-full bg-white pl-8"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 id="date"
-                variant={"outline"}
-                className={cn(
-                  "w-[300px] justify-start text-left font-normal",
-                  !date && "text-muted-foreground"
-                )}
+                variant="outline"
+                className={cn("w-full justify-start text-left font-normal sm:w-[250px]", !date && "text-muted-foreground")}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {date?.from ? (
                   date.to ? (
                     <>
-                      {format(date.from, "LLL dd, y")} -{" "}
-                      {format(date.to, "LLL dd, y")}
+                      {format(date.from, "dd MMM yyyy")} - {format(date.to, "dd MMM yyyy")}
                     </>
                   ) : (
-                    format(date.from, "LLL dd, y")
+                    format(date.from, "dd MMM yyyy")
                   )
                 ) : (
                   <span>Pick a date range</span>
@@ -203,83 +217,49 @@ function PurchaseOrderPage() {
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={date?.from}
-                selected={date}
-                onSelect={setDate}
-                numberOfMonths={2}
-              />
+              <Calendar initialFocus mode="range" defaultMonth={date?.from} selected={date} onSelect={setDate} numberOfMonths={2} />
             </PopoverContent>
           </Popover>
-
-          <TabsList>
-            <TabsTrigger value="Grid-View">
-              <LayoutPanelTop />
-            </TabsTrigger>
-            <TabsTrigger value="Table-View">
-              <Table2 />
-            </TabsTrigger>
-          </TabsList>
-          {canExportList && <ExportButton data={data} filename="purchase-orders" />}
-          {canCreatePO && (
-            <Button
-              onClick={() => router.push("/purchase-order/create")}
-              disabled={loading}
-            >
-              <PlusIcon /> Create New
-            </Button>
-          )}
         </div>
+      </div>
 
-        {loading ? (
-          <PageLoader />
-        ) : data.length === 0 ? (
-          <EmptyState
-            title="No Purchase Orders"
-            description="You haven't received or created any purchase orders yet. Start by creating a NEW PO."
-            createLabel={canCreatePO ? "Create New PO" : ""}
-            createPath={canCreatePO ? "/purchase-order/create" : ""}
+      {loading ? (
+        <TableSkeleton columns={7} label="Loading purchase orders" />
+      ) : data.length === 0 ? (
+        <EmptyState
+          title="No Purchase Orders"
+          description="You haven't received or created any purchase orders yet. Start by creating a NEW PO."
+          createLabel={canCreatePO ? "Create New PO" : ""}
+          createPath={canCreatePO ? "/purchase-order/create" : ""}
+        />
+      ) : visibleData.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-[#D9DFE8] bg-white px-6 py-10 text-center text-sm text-[#4B5567]">
+          No purchase orders match these filters.{" "}
+          <button
+            type="button"
+            className="font-semibold text-[#223F7A] underline underline-offset-2"
+            onClick={() => {
+              setSearch("");
+              setJobFilter("ALL");
+            }}
+          >
+            Clear search and filters
+          </button>
+        </div>
+      ) : (
+        <>
+          <PurchaseOrderList
+            orders={visibleData}
+            canModify={canModifyPO}
+            onDelete={handleDelete}
+            onRefresh={fetchData}
+            onStatusChange={handleStatusChange}
           />
-        ) : (
-          <>
-            <TabsContent value="Grid-View">
-              <div className="grid gap-[24px] grid-cols-[repeat(auto-fill,minmax(450px,1fr))]">
-                {filteredData.map((item: PURCHASE_ORDER) => (
-                  <PurchaseOrderCard
-                    key={item.po_id}
-                    po_id={item.po_id}
-                    customer_po={item.customer_po}
-                    companyName={item.customer?.name}
-                    contactEmail={item.customer?.email}
-                    poNumber={item.po_id}
-                    poDate={item.po_date}
-                    deliveryDate={item.delivery_date}
-                    jobs={item.jobs}
-                    totalJobs={item.jobs.length}
-                    additionalJobs={item.jobs.filter(job => job.status !== 'COMPLETED').length}
-                    status={item.status}
-                    onDelete={handleDelete}
-                    onRefresh={fetchData}
-                    onStatusChange={handleStatusChange}
-                    permissions={{ canModify: canModifyPO }}
-                  />
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="Table-View">
-              <DataTable
-                columns={columns}
-                data={filteredData}
-                searchValue={search}
-                searchColumn="po_id"
-              />
-            </TabsContent>
-          </>
-        )}
-      </Tabs>
+          <p className="text-sm text-[#4B5567]">
+            Showing {visibleData.length} of {data.length} purchase {data.length === 1 ? "order" : "orders"}
+          </p>
+        </>
+      )}
     </div>
   );
 }

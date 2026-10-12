@@ -6,7 +6,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Download, Printer } from "lucide-react";
+import { Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/error-utils";
@@ -15,10 +15,18 @@ import { generateReportPdf } from "@/lib/report-pdf";
 interface ExportButtonProps {
     data: Record<string, unknown>[];
     filename: string;
-    onPrint?: () => void;
 }
 
-export const ExportButton: React.FC<ExportButtonProps> = ({ data, filename, onPrint }) => {
+/** "LKR 718,956.00" -> 718956; anything else is returned as null */
+const currencyToNumber = (value: unknown): number | null => {
+    if (typeof value !== "string") return null;
+    const match = value.trim().match(/^LKR\s*(-?[\d,]+(?:\.\d+)?)$/i);
+    if (!match) return null;
+    const n = Number(match[1].replace(/,/g, ""));
+    return Number.isFinite(n) ? n : null;
+};
+
+export const ExportButton: React.FC<ExportButtonProps> = ({ data, filename }) => {
     const exportToXLSX = () => {
         if (!data || data.length === 0) return;
 
@@ -58,7 +66,29 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ data, filename, onPr
             }
         });
 
+        // Excel gets the amount only, as a real number, without the "LKR" prefix
+        const moneyCells: { row: number; key: string }[] = [];
+        rowsToExport.forEach((r, rowIndex) => {
+            Object.keys(r).forEach((key) => {
+                const n = currencyToNumber(r[key]);
+                if (n !== null) {
+                    r[key] = n;
+                    moneyCells.push({ row: rowIndex, key });
+                }
+            });
+        });
+
         const worksheet = XLSX.utils.json_to_sheet(rowsToExport);
+
+        // Show those amounts with thousands separators and two decimals
+        const headers = Object.keys(rowsToExport[0] || {});
+        moneyCells.forEach(({ row, key }) => {
+            const col = headers.indexOf(key);
+            if (col < 0) return;
+            // +1 because json_to_sheet writes the column names as the first row
+            const cell = worksheet[XLSX.utils.encode_cell({ r: row + 1, c: col })];
+            if (cell) cell.z = "#,##0.00";
+        });
 
         // Adjust column widths based on maximum string lengths
         const colWidths = Object.keys(rowsToExport[0] || {}).map((key) => {
@@ -102,20 +132,8 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ data, filename, onPr
         }
     };
 
-    const handlePrint = () => {
-        if (onPrint) {
-            onPrint();
-        } else {
-            window.print();
-        }
-    };
-
     return (
         <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handlePrint} className="flex items-center gap-2">
-                <Printer className="h-4 w-4" />
-                Print report
-            </Button>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="flex items-center gap-2">

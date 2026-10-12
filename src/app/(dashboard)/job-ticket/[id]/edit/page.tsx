@@ -1,6 +1,7 @@
 "use client";
 
 import { getErrorMessage } from "@/lib/error-utils";
+import { FormSkeleton } from "@/components/shared/page-skeletons";
 import {
   FieldErrors,
   FieldPath,
@@ -54,13 +55,10 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CUSTOMER } from "@/modules/customer/types";
 import { CustomerApi } from "@/modules/customer/api";
 import {
-  COATING_TYPES,
-  INK_STATUS,
   JobTicketStatus,
-  PLATES_STATUS,
-  PRODUCT_TYPES,
   PurchaseOrderStatus,
 } from "@/config/enum";
+import { useOptionList } from "@/hooks/use-option-list";
 
 import { Combobox } from "@/components/shared/combobox";
 import {
@@ -210,6 +208,8 @@ function EditJobTicket() {
   const router = useRouter();
   const { id } = useParams() as { id: string };
   const [isPageLoading, setIsPageLoading] = useState(false);
+  // False until the record has been fetched; until then a skeleton stands in for the form
+  const [recordLoaded, setRecordLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isInitialLoad = useRef(true);
   const [customerData, setCustomerData] = useState<CUSTOMER[]>([]);
@@ -284,6 +284,13 @@ function EditJobTicket() {
     resolver: zodResolver(jobTicketSchema) as any,
     defaultValues: baseDefaultValues,
   });
+  const productTypeOptions = useOptionList("product_type", form.watch("productType"));
+  const coatingOptions = useOptionList("coating_type", form.watch("paperTypes")?.map((p) => p.coating));
+  const plateStatusOptions = useOptionList("plate_status", [form.watch("oldPlatesStatus"), form.watch("newPlatesStatus")]);
+  const inkStatusOptions = useOptionList("ink_status", [
+    ...(form.watch("inks") ?? []).map((ink) => ink.status),
+    ...(form.watch("paperTypes") ?? []).flatMap((p) => (p.rawMaterials ?? []).map((rm) => rm.status)),
+  ]);
 
   const {
     fields: paperTypeFields,
@@ -610,6 +617,7 @@ function EditJobTicket() {
         toast.error(getErrorMessage(error, "Failed to load job ticket data"));
       } finally {
         setIsPageLoading(false);
+        setRecordLoaded(true);
       }
     };
 
@@ -687,7 +695,7 @@ function EditJobTicket() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      {isPageLoading && <FullPageLoader />}
+      {isPageLoading && recordLoaded && <FullPageLoader />}
       <PageTitleWithBreadcrumb
         title="Edit Job Ticket"
         breadcrumbs={[
@@ -695,8 +703,10 @@ function EditJobTicket() {
           { title: "Job Ticket", href: "/job-ticket" },
         ]}
       />
+      {!recordLoaded && <FormSkeleton />}
 
       <Form {...form}>
+        <div className={recordLoaded ? "contents" : "hidden"}>
         <form
           onSubmit={form.handleSubmit(onSubmit, onInvalid)}
           className="space-y-6 pb-0"
@@ -722,11 +732,11 @@ function EditJobTicket() {
           </div>
           <Card
             className={cn(
-              "w-full shdow-sm hover:shadow-md transition-shadow flex flex-col"
+              "w-full rounded-xl border-[#E4E8F0] shadow-none flex flex-col"
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
-              <h3 className="text-md font-medium mb-2">Job Ticket Details</h3>
+              <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Job Ticket Details</h3>
               <p className="text-xs text-muted-foreground mb-4">
                 Enter Job Ticket Details
               </p>
@@ -929,9 +939,9 @@ function EditJobTicket() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.entries(PRODUCT_TYPES).map(([key, value]) => (
-                          <SelectItem key={key} value={value}>
-                            {value}
+                        {productTypeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1098,13 +1108,11 @@ function EditJobTicket() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {Object.entries(COATING_TYPES).map(
-                                    ([key, value]) => (
-                                      <SelectItem key={key} value={value}>
-                                        {value}
-                                      </SelectItem>
-                                    )
-                                  )}
+                                  {coatingOptions.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -1231,13 +1239,11 @@ function EditJobTicket() {
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    {Object.entries(INK_STATUS).map(
-                                      ([key, value]) => (
-                                        <SelectItem key={key} value={value}>
-                                          {value}
-                                        </SelectItem>
-                                      )
-                                    )}
+                                    {inkStatusOptions.map((option) => (
+                                      <SelectItem key={option.value} value={option.value}>
+                                        {option.label}
+                                      </SelectItem>
+                                    ))}
                                   </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -1447,9 +1453,9 @@ function EditJobTicket() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {Object.entries(PLATES_STATUS).map(([key, value]) => (
-                            <SelectItem key={key} value={value}>
-                              {value}
+                          {plateStatusOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1493,9 +1499,9 @@ function EditJobTicket() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {Object.entries(PLATES_STATUS).map(([key, value]) => (
-                            <SelectItem key={key} value={value}>
-                              {value}
+                          {plateStatusOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1573,13 +1579,11 @@ function EditJobTicket() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {Object.entries(INK_STATUS).map(
-                                ([key, value]) => (
-                                  <SelectItem key={key} value={value}>
-                                    {value}
-                                  </SelectItem>
-                                )
-                              )}
+                              {inkStatusOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -1696,6 +1700,7 @@ function EditJobTicket() {
             </CardContent>
           </Card>
         </form>
+        </div>
       </Form>
 
       {/* Print dialog — shown after successful save */}

@@ -53,13 +53,22 @@ export function DataTablePagination<TData>({
     }
 
     const pages = getPageNumbers()
+    const totalRows = table.getFilteredRowModel().rows.length
+    const firstRow = totalRows === 0 ? 0 : pageIndex * pageSize + 1
+    const lastRow = Math.min(totalRows, (pageIndex + 1) * pageSize)
 
     return (
-        <div className="flex items-center justify-end px-2 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-1 py-4">
+            {/* Which rows are on screen, out of how many */}
+            <p className="text-sm text-[#4B5567] tabular-nums">
+                {totalRows === 0
+                    ? "No records"
+                    : <>Showing <span className="font-semibold text-[#14213D]">{firstRow}–{lastRow}</span> of <span className="font-semibold text-[#14213D]">{totalRows}</span></>}
+            </p>
 
-            <div className="flex justify-end gap-4 lg:gap-8">
+            <div className="flex flex-wrap items-center justify-end gap-4 lg:gap-8">
                 <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium whitespace-nowrap">Rows per page</p>
+                    <p className="text-sm whitespace-nowrap text-[#4B5567]">Rows per page</p>
                     <Select
                         value={`${pageSize}`}
                         onValueChange={(value) => {

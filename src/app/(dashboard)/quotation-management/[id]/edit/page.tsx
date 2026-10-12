@@ -1,5 +1,6 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { FormSkeleton } from "@/components/shared/page-skeletons";
 import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -43,7 +44,6 @@ import { CUSTOMER } from "@/modules/customer/types";
 import { quotationApi } from "@/modules/quotations/api";
 import { toast } from "sonner";
 import {
-  CREATE_QUOTATION_REQUEST,
   UPDATE_QUOTATION_REQUEST,
 } from "@/modules/quotations/types";
 import { userApi } from "@/modules/users/api";
@@ -58,6 +58,7 @@ import {
 } from "@/config/enum";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
+import { formatAmount } from "@/components/shared/record-view";
 import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
 import { usePermissions } from "@/hooks/use-permissions";
 
@@ -85,6 +86,10 @@ function EditQuotation({
   const [userList, setUserList] = useState<GET_ALL_USER[]>([]);
 
   const [loading, setLoading] = useState(false);
+
+  // False until the record has been fetched; until then a skeleton stands in for the form
+
+  const [recordLoaded, setRecordLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quoteDate, setQuoteDate] = useState<Date>(new Date());
   const [showAccountDetails, setShowAccountDetails] = useState(false);
@@ -187,17 +192,11 @@ function EditQuotation({
     currentItems: QuotationFormValues["items"],
     taxTypeId: number,
   ) => {
-    let subTotal = 0;
-    const updatedItems = currentItems.map((item) => {
-      const qty = parseFloat(item.item_qty || "0");
-      const price = parseFloat(item.item_unit_price || "0");
-      const total = qty * price;
-      subTotal += total;
-      return {
-        ...item,
-        item_total_price: String(Number(total.toFixed(4))),
-      };
-    });
+    const subTotal = currentItems.reduce(
+      (sum, item) =>
+        sum + parseFloat(item.item_qty || "0") * parseFloat(item.item_unit_price || "0"),
+      0,
+    );
 
     // Calculate net total based on tax type
     let netTotal = subTotal;
@@ -311,7 +310,7 @@ function EditQuotation({
         })),
       };
 
-      const response = await quotationApi.update(id, payload);
+      await quotationApi.update(id, payload);
 
       toast.success("Quotation Updated", {
         description: `Quotation has been updated successfully.`,
@@ -384,6 +383,7 @@ function EditQuotation({
         toast.error(getErrorMessage(err, "Failed to load quotation data"));
       } finally {
         setLoading(false);
+        setRecordLoaded(true);
       }
     };
 
@@ -398,7 +398,7 @@ function EditQuotation({
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      {loading && <FullPageLoader />}
+      {loading && recordLoaded && <FullPageLoader />}
       <PageTitleWithBreadcrumb
         title="Edit Quotation"
         breadcrumbs={[
@@ -406,8 +406,10 @@ function EditQuotation({
           { title: "Quotation Management", href: "/quotation-management" },
         ]}
       />
+      {!recordLoaded && <FormSkeleton />}
 
       <Form {...form}>
+        <div className={recordLoaded ? "contents" : "hidden"}>
         <form
           onSubmit={form.handleSubmit(onSubmit, (errors) => {
             console.error("Form validation errors:", errors);
@@ -421,11 +423,11 @@ function EditQuotation({
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
               className={cn(
-                "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col",
+                "w-full rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Customer Details</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Customer Details</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Select customer and enter details
                 </p>
@@ -586,11 +588,11 @@ function EditQuotation({
             {/* Card 2: Quotation Overview */}
             <Card
               className={cn(
-                "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col",
+                "w-full rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Quotation Overview</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Quotation Overview</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Configure quotation settings
                 </p>
@@ -798,11 +800,11 @@ function EditQuotation({
           {/* Card 3: Item Table */}
           <Card
             className={cn(
-              "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col",
+              "w-full rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
-              <h3 className="text-md font-medium mb-2">Items</h3>
+              <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Items</h3>
               <p className="text-xs text-muted-foreground mb-4">
                 Add items to the quotation
               </p>
@@ -967,14 +969,14 @@ function EditQuotation({
                           <td className="p-2">
                             <Input
                               type="text"
-                              value={`${getCurrencySymbol(form.watch("currency") as Currency)} ${Number(totalExclusive.toFixed(4))}`}
+                              value={`${getCurrencySymbol(form.watch("currency") as Currency)} ${formatAmount(totalExclusive)}`}
                               className="w-[120px]"
                             />
                           </td>
                           <td className="p-2">
                             <Input
                               type="text"
-                              value={`${getCurrencySymbol(form.watch("currency") as Currency)} ${Number(totalInclusive.toFixed(4))}`}
+                              value={`${getCurrencySymbol(form.watch("currency") as Currency)} ${formatAmount(totalInclusive)}`}
                               className="w-[120px]"
                             />
                           </td>
@@ -1076,7 +1078,7 @@ function EditQuotation({
                           {getCurrencySymbol(
                             form.watch("currency") as Currency,
                           )}{" "}
-                          {form.watch("sub_total") || "0"}
+                          {formatAmount(form.watch("sub_total") || 0)}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm text-muted-foreground italic">
@@ -1085,7 +1087,7 @@ function EditQuotation({
                           {getCurrencySymbol(
                             form.watch("currency") as Currency,
                           )}{" "}
-                          {form.watch("total_without_tax") || "0"}
+                          {formatAmount(form.watch("total_without_tax") || 0)}
                         </span>
                       </div>
                     </>
@@ -1105,11 +1107,7 @@ function EditQuotation({
                         </span>
                         <span className="font-medium">
                           {getCurrencySymbol(form.watch("currency") as Currency)}{" "}
-                          {Number(
-                            (
-                              parseFloat(form.watch("sub_total") || "0") * 0.18
-                            ).toFixed(4),
-                          )}
+                          {formatAmount(parseFloat(form.watch("sub_total") || "0") * 0.18)}
                         </span>
                       </div>
                     )}
@@ -1117,7 +1115,7 @@ function EditQuotation({
                     <span>Net Total:</span>
                     <span>
                       {getCurrencySymbol(form.watch("currency") as Currency)}{" "}
-                      {form.watch("net_total") || "0"}
+                      {formatAmount(form.watch("net_total") || 0)}
                     </span>
                   </div>
                 </div>
@@ -1151,6 +1149,7 @@ function EditQuotation({
             </Button>
           </div>
         </form>
+        </div>
       </Form>
     </div>
   );

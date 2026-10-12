@@ -58,7 +58,7 @@ function CreateUser() {
         phone: data.phone || undefined,
         password: data.password,
       };
-      const response = await userApi.create(payload);
+      await userApi.create(payload);
 
       toast.success("User Created", {
         description: "The user record has been created successfully.",
@@ -112,11 +112,11 @@ function CreateUser() {
 
           <Card
             className={cn(
-              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col"
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
-              <h3 className="text-md font-medium mb-2">User Details</h3>
+              <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">User Details</h3>
               <p className="text-xs text-muted-foreground mb-4">
                 Edit your user details here
               </p>

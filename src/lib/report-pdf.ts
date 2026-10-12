@@ -197,6 +197,56 @@ const getLogoDataUrl = (): Promise<string> => {
     return logoCache;
 };
 
+/** Logo, title, two right-aligned lines and the CMYK bar across the top of a report page */
+const drawBrandHeader = (doc: jsPDF, logo: string, title: string, rightLines: string[]) => {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const contentWidth = pageWidth - MARGIN_X * 2;
+    if (logo) {
+        const logoWidth = 44;
+        doc.addImage(logo, "PNG", MARGIN_X, 11, logoWidth, logoWidth / LOGO_ASPECT);
+    } else {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(...COLORS.brand);
+        doc.text("Madhawee Printers", MARGIN_X, 16);
+    }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(...COLORS.ink);
+    doc.text(title, MARGIN_X, 27);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...COLORS.muted);
+    rightLines.slice(0, 2).forEach((line, i) => doc.text(line, pageWidth - MARGIN_X, 22 + i * 5, { align: "right" }));
+
+    const segment = contentWidth / CMYK_BAR.length;
+    CMYK_BAR.forEach((color, i) => {
+        doc.setFillColor(...color);
+        doc.rect(MARGIN_X + segment * i, 30.5, segment, 0.9, "F");
+    });
+};
+
+/** "Madhawee Printers | title" and "Page x of y" on every page, drawn once all pages exist */
+const drawFooters = (doc: jsPDF, title: string) => {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const totalPages = doc.getNumberOfPages();
+    for (let page = 1; page <= totalPages; page++) {
+        doc.setPage(page);
+        const y = pageHeight - 9;
+        doc.setDrawColor(...COLORS.rule);
+        doc.setLineWidth(0.2);
+        doc.line(MARGIN_X, y - 4, pageWidth - MARGIN_X, y - 4);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(...COLORS.muted);
+        doc.text(`Madhawee Printers  |  ${title}`, MARGIN_X, y);
+        doc.text(`Page ${page} of ${totalPages}`, pageWidth - MARGIN_X, y, { align: "right" });
+    }
+};
+
 export async function generateReportPdf(data: Record<string, unknown>[], filename: string) {
     if (!data || data.length === 0) return;
 
@@ -204,7 +254,6 @@ export async function generateReportPdf(data: Record<string, unknown>[], filenam
     const orientation = keys.length > 5 ? "landscape" : "portrait";
     const doc = new jsPDF({ orientation, unit: "mm", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
     const contentWidth = pageWidth - MARGIN_X * 2;
 
     // Build body rows, remembering which rows are job breakdowns
@@ -239,34 +288,8 @@ export async function generateReportPdf(data: Record<string, unknown>[], filenam
     const headers = keys.map(formatHeader);
     const columnStyles = fitColumnWidths(doc, headers, body, fontSize, contentWidth);
 
-    const drawHeader = () => {
-        if (logo) {
-            const logoWidth = 44;
-            doc.addImage(logo, "PNG", MARGIN_X, 11, logoWidth, logoWidth / LOGO_ASPECT);
-        } else {
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(11);
-            doc.setTextColor(...COLORS.brand);
-            doc.text("Madhawee Printers", MARGIN_X, 16);
-        }
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(15);
-        doc.setTextColor(...COLORS.ink);
-        doc.text(title, MARGIN_X, 27);
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
-        doc.setTextColor(...COLORS.muted);
-        doc.text(`Generated ${generatedAt}`, pageWidth - MARGIN_X, 22, { align: "right" });
-        doc.text(`${rowCount.toLocaleString()} ${rowCount === 1 ? "row" : "rows"}`, pageWidth - MARGIN_X, 27, { align: "right" });
-
-        const segment = contentWidth / CMYK_BAR.length;
-        CMYK_BAR.forEach((color, i) => {
-            doc.setFillColor(...color);
-            doc.rect(MARGIN_X + segment * i, 30.5, segment, 0.9, "F");
-        });
-    };
+    const drawHeader = () =>
+        drawBrandHeader(doc, logo, title, [`Generated ${generatedAt}`, `${rowCount.toLocaleString()} ${rowCount === 1 ? "row" : "rows"}`]);
 
     autoTable(doc, {
         head: [headers],
@@ -316,20 +339,137 @@ export async function generateReportPdf(data: Record<string, unknown>[], filenam
         didDrawPage: drawHeader,
     });
 
-    // Footer with total page count, drawn once all pages exist
-    const totalPages = doc.getNumberOfPages();
-    for (let page = 1; page <= totalPages; page++) {
-        doc.setPage(page);
-        const y = pageHeight - 9;
-        doc.setDrawColor(...COLORS.rule);
-        doc.setLineWidth(0.2);
-        doc.line(MARGIN_X, y - 4, pageWidth - MARGIN_X, y - 4);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(7.5);
-        doc.setTextColor(...COLORS.muted);
-        doc.text(`Madhawee Printers  |  ${title}`, MARGIN_X, y);
-        doc.text(`Page ${page} of ${totalPages}`, pageWidth - MARGIN_X, y, { align: "right" });
-    }
+    drawFooters(doc, title);
 
+    doc.save(`${filename}.pdf`);
+}
+
+export interface JobDeliveryGroup {
+    customer: string;
+    rows: {
+        job_number: string | null;
+        job_open_date: string | null;
+        job_name: string | null;
+        order_qty: number;
+        delivery_qty: number;
+        balance_qty: number;
+    }[];
+}
+
+const qty = (value: number) => value.toLocaleString("en-US", { maximumFractionDigits: 2 });
+
+/**
+ * Job Delivery Summary as a PDF: one section per customer with its jobs and a subtotal, every
+ * section printed in full, then a grand total. `subtitle` says which dates and filters were used.
+ */
+export async function generateJobDeliveryPdf(groups: JobDeliveryGroup[], filename: string, subtitle: string) {
+    if (groups.length === 0) return;
+
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const title = "Job Delivery Summary";
+    const generatedAt = format(new Date(), "d MMM yyyy, h:mm a");
+    const logo = await getLogoDataUrl().catch(() => "");
+    const jobCount = groups.reduce((sum, g) => sum + g.rows.length, 0);
+
+    type Kind = "group" | "job" | "subtotal" | "grand";
+    const kinds: Kind[] = [];
+    const body: (string | { content: string; colSpan: number })[][] = [];
+    const sum = (rows: JobDeliveryGroup["rows"], key: "order_qty" | "delivery_qty" | "balance_qty") =>
+        rows.reduce((total, r) => total + (Number(r[key]) || 0), 0);
+
+    groups.forEach((group) => {
+        kinds.push("group");
+        body.push([{ content: `${group.customer}   (${group.rows.length} ${group.rows.length === 1 ? "job" : "jobs"})`, colSpan: 6 }]);
+        group.rows.forEach((row) => {
+            kinds.push("job");
+            body.push([
+                row.job_number || "-",
+                row.job_open_date ? format(new Date(`${row.job_open_date}T00:00:00`), "dd MMM yyyy") : "-",
+                row.job_name || "-",
+                qty(row.order_qty),
+                qty(row.delivery_qty),
+                qty(row.balance_qty),
+            ]);
+        });
+        kinds.push("subtotal");
+        body.push([
+            { content: `Total for ${group.customer}`, colSpan: 3 },
+            qty(sum(group.rows, "order_qty")),
+            qty(sum(group.rows, "delivery_qty")),
+            qty(sum(group.rows, "balance_qty")),
+        ]);
+    });
+    const all = groups.flatMap((g) => g.rows);
+    kinds.push("grand");
+    body.push([
+        { content: `Grand total, ${groups.length} ${groups.length === 1 ? "customer" : "customers"}`, colSpan: 3 },
+        qty(sum(all, "order_qty")),
+        qty(sum(all, "delivery_qty")),
+        qty(sum(all, "balance_qty")),
+    ]);
+
+    const drawHeader = () => {
+        drawBrandHeader(doc, logo, title, [`Generated ${generatedAt}`, `${jobCount.toLocaleString()} ${jobCount === 1 ? "job" : "jobs"}`]);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.setTextColor(...COLORS.muted);
+        doc.text(subtitle, MARGIN_X, 36);
+    };
+
+    autoTable(doc, {
+        head: [["Job No", "Job Open Date", "Job Name", "Order Qty", "Delivery Qty", "Balance Qty"]],
+        body,
+        startY: TABLE_TOP + 5,
+        margin: { top: TABLE_TOP + 5, left: MARGIN_X, right: MARGIN_X, bottom: 16 },
+        theme: "plain",
+        showHead: "everyPage",
+        rowPageBreak: "avoid",
+        columnStyles: {
+            0: { cellWidth: 30 },
+            1: { cellWidth: 27 },
+            3: { cellWidth: 22, halign: "right" },
+            4: { cellWidth: 23, halign: "right" },
+            5: { cellWidth: 23, halign: "right" },
+        },
+        styles: {
+            font: "helvetica",
+            fontSize: 8.5,
+            textColor: COLORS.ink,
+            cellPadding: { top: 1.9, bottom: 1.9, left: 2.5, right: 2.5 },
+            overflow: "linebreak",
+            valign: "middle",
+        },
+        headStyles: {
+            fontStyle: "bold",
+            textColor: COLORS.brand,
+            fillColor: [255, 255, 255],
+            lineColor: COLORS.brand,
+            lineWidth: { bottom: 0.5 },
+        },
+        didParseCell: (cell) => {
+            if (cell.section === "head" && cell.column.index >= 3) cell.cell.styles.halign = "right";
+            if (cell.section !== "body") return;
+            const kind = kinds[cell.row.index];
+            if (kind === "group") {
+                cell.cell.styles.fontStyle = "bold";
+                cell.cell.styles.fontSize = 9.5;
+                cell.cell.styles.textColor = COLORS.brand;
+                cell.cell.styles.fillColor = COLORS.subRow;
+                cell.cell.styles.cellPadding = { top: 2.6, bottom: 2.2, left: 2.5, right: 2.5 };
+            } else if (kind === "subtotal" || kind === "grand") {
+                cell.cell.styles.fontStyle = "bold";
+                cell.cell.styles.lineColor = kind === "grand" ? COLORS.brand : COLORS.rule;
+                cell.cell.styles.lineWidth = { top: kind === "grand" ? 0.5 : 0.2 };
+                if (kind === "grand") cell.cell.styles.fillColor = COLORS.zebra;
+            }
+            // Delivered more than ordered shows as a negative balance, in red
+            if (cell.column.index === 5 && kind !== "group" && String(cell.cell.raw).startsWith("-")) {
+                cell.cell.styles.textColor = COLORS.negative;
+            }
+        },
+        didDrawPage: drawHeader,
+    });
+
+    drawFooters(doc, title);
     doc.save(`${filename}.pdf`);
 }

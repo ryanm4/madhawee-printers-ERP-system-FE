@@ -1,4 +1,4 @@
-import { JobTicketStatus, PurchaseOrderStatus, QuotationStatus } from "@/config/enum";
+import { JobTicketStatus, QuotationStatus } from "@/config/enum";
 
 export const getNextJobTicketStatus = (currentStatus: string): JobTicketStatus | null => {
     const statusOrder = [
@@ -29,20 +29,6 @@ export const getNextQuotationStatus = (currentStatus: string): QuotationStatus |
     // For a linear flow user request, let's stick to the happy path.
 
     const currentIndex = statusOrder.indexOf(currentStatus as QuotationStatus);
-    if (currentIndex === -1 || currentIndex === statusOrder.length - 1) {
-        return null;
-    }
-    return statusOrder[currentIndex + 1];
-};
-
-export const getNextPurchaseOrderStatus = (currentStatus: string): PurchaseOrderStatus | null => {
-    const statusOrder = [
-        PurchaseOrderStatus.CREATED,
-        PurchaseOrderStatus.APPROVED,
-        PurchaseOrderStatus.COMPLETED
-    ];
-
-    const currentIndex = statusOrder.indexOf(currentStatus as PurchaseOrderStatus);
     if (currentIndex === -1 || currentIndex === statusOrder.length - 1) {
         return null;
     }

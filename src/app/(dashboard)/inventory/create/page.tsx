@@ -20,11 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  ITEM_CATEGORY,
-  ITEM_SUB_CATEGORY,
-  UNIT_OF_MEASSURE,
-} from "@/config/enum";
+import { useOptionList } from "@/hooks/use-option-list";
 import { cn } from "@/lib/utils";
 import { inventoryApi } from "@/modules/inventory/api";
 import { CREATE_INVENTORY } from "@/modules/inventory/types";
@@ -69,6 +65,9 @@ function CreateInventoryManagement() {
     resolver: zodResolver(inventoryManagementScheme) as any,
     defaultValues: baseDefaultValues,
   });
+  const categoryOptions = useOptionList("item_category");
+  const subCategoryOptions = useOptionList("item_sub_category");
+  const unitOptions = useOptionList("unit_of_measure");
 
   useEffect(() => {
     const userData = getUser();
@@ -154,11 +153,11 @@ function CreateInventoryManagement() {
         >
           <Card
             className={cn(
-              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col"
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
-              <h3 className="text-md font-medium mb-2">Stock Details</h3>
+              <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Stock Details</h3>
               <p className="text-xs text-muted-foreground mb-4">
                 Add your stock details here
               </p>
@@ -181,9 +180,9 @@ function CreateInventoryManagement() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.entries(ITEM_CATEGORY).map(([key, value]) => (
-                          <SelectItem key={key} value={value}>
-                            {value}
+                        {categoryOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -206,13 +205,11 @@ function CreateInventoryManagement() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.entries(ITEM_SUB_CATEGORY).map(
-                          ([key, value]) => (
-                            <SelectItem key={key} value={value}>
-                              {value}
-                            </SelectItem>
-                          )
-                        )}
+                        {subCategoryOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -257,9 +254,9 @@ function CreateInventoryManagement() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {Object.values(UNIT_OF_MEASSURE).map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
+                          {unitOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
                             </SelectItem>
                           ))}
                         </SelectContent>

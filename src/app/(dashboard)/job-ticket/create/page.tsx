@@ -51,12 +51,9 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CUSTOMER } from "@/modules/customer/types";
 import { CustomerApi } from "@/modules/customer/api";
 import {
-  COATING_TYPES,
-  INK_STATUS,
   JobTicketStatus,
-  PLATES_STATUS,
-  PRODUCT_TYPES,
 } from "@/config/enum";
+import { useOptionList } from "@/hooks/use-option-list";
 import { PaperTypeCombobox } from "../_components/paper-type-combobox";
 import { Combobox } from "@/components/shared/combobox";
 import {
@@ -168,6 +165,10 @@ function CreateJobTicket() {
     resolver: zodResolver(jobTicketSchema) as any,
     defaultValues: baseDefaultValues,
   });
+  const productTypeOptions = useOptionList("product_type");
+  const coatingOptions = useOptionList("coating_type");
+  const plateStatusOptions = useOptionList("plate_status");
+  const inkStatusOptions = useOptionList("ink_status");
 
   const {
     fields: paperTypeFields,
@@ -230,9 +231,6 @@ function CreateJobTicket() {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + sizes[i];
   };
-
-  const now = new Date();
-  const _currentYear = now.getFullYear();
 
   async function onSubmit(data: JobTicketFormValues) {
     if (!jobSeqData || !jobSeqOverride || jobSeqOverride.trim() === "") {
@@ -307,7 +305,7 @@ function CreateJobTicket() {
         created_on: toMySQLDateTime(new Date()),
       };
 
-      const _response = await jobTicketsApi.create(payload);
+      await jobTicketsApi.create(payload);
 
       toast.success("Job Ticket Created", {
         description: "The job ticket has been created successfully.",
@@ -378,13 +376,18 @@ function CreateJobTicket() {
 
       setPurchaseOrderData(poResponse.data);
       setCustomerData(customerResponse.data);
+      // Opened from "Orders waiting for jobs" on the dashboard: start with that order picked
+      const poFromLink = new URLSearchParams(window.location.search).get("po");
+      if (poFromLink && poResponse.data.some((po) => String(po.po_id) === poFromLink)) {
+        form.setValue("customer_po", poFromLink);
+      }
     } catch (error) {
       console.error("Failed to fetch data", error);
       toast.error(getErrorMessage(error, "Failed to fetch data"));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [form]);
 
   const getInventoryList = useCallback(async () => {
     try {
@@ -419,7 +422,7 @@ function CreateJobTicket() {
         
         setInkItems(inkItems);
       }
-    } catch (error) {
+    } catch {
       console.error("Failed to fetch inventory");
     } finally {
       setIsLoading(false);
@@ -524,7 +527,7 @@ function CreateJobTicket() {
       if (response.status === 200) {
         setCustomerData(response.data);
       }
-    } catch (error) {
+    } catch {
       console.error("Failed to fetch inventory");
     } finally {
       setIsLoading(false);
@@ -554,11 +557,11 @@ function CreateJobTicket() {
           >
             <Card
               className={cn(
-                "w-full shdow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full rounded-xl border-[#E4E8F0] shadow-none flex flex-col"
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Job Ticket Details</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Job Ticket Details</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Enter Job Ticket Details
                 </p>
@@ -781,9 +784,9 @@ function CreateJobTicket() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {Object.entries(PRODUCT_TYPES).map(([key, value]) => (
-                            <SelectItem key={key} value={value}>
-                              {value}
+                          {productTypeOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1010,13 +1013,11 @@ function CreateJobTicket() {
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    {Object.entries(COATING_TYPES).map(
-                                      ([key, value]) => (
-                                        <SelectItem key={key} value={value}>
-                                          {value}
-                                        </SelectItem>
-                                      )
-                                    )}
+                                    {coatingOptions.map((option) => (
+                                      <SelectItem key={option.value} value={option.value}>
+                                        {option.label}
+                                      </SelectItem>
+                                    ))}
                                   </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -1139,13 +1140,11 @@ function CreateJobTicket() {
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                      {Object.entries(INK_STATUS).map(
-                                        ([key, value]) => (
-                                          <SelectItem key={key} value={value}>
-                                            {value}
-                                          </SelectItem>
-                                        )
-                                      )}
+                                      {inkStatusOptions.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                          {option.label}
+                                        </SelectItem>
+                                      ))}
                                     </SelectContent>
                                   </Select>
                                   <FormMessage />
@@ -1290,13 +1289,11 @@ function CreateJobTicket() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {Object.entries(PLATES_STATUS).map(
-                              ([key, value]) => (
-                                <SelectItem key={key} value={value}>
-                                  {value}
-                                </SelectItem>
-                              )
-                            )}
+                            {plateStatusOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -1338,13 +1335,11 @@ function CreateJobTicket() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {Object.entries(PLATES_STATUS).map(
-                              ([key, value]) => (
-                                <SelectItem key={key} value={value}>
-                                  {value}
-                                </SelectItem>
-                              )
-                            )}
+                            {plateStatusOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -1425,13 +1420,11 @@ function CreateJobTicket() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {Object.entries(INK_STATUS).map(
-                                    ([key, value]) => (
-                                      <SelectItem key={key} value={value}>
-                                        {value}
-                                      </SelectItem>
-                                    )
-                                  )}
+                                  {inkStatusOptions.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                               <FormMessage />
