@@ -1,3 +1,12 @@
+/** How much of the bank account a quotation prints: none, all of it, or all but the account number */
+export type BankDetailsMode = "NONE" | "FULL" | "HIDE_NUMBER";
+
+/** The bank account a quotation prints and how much of it; no account means the default one */
+export interface QuotationBankChoice {
+    bank_details: BankDetailsMode;
+    bank_account_id: number | null;
+}
+
 export interface QUOTATIONS {
     quote_id: number;
     customer_id: number;
@@ -26,6 +35,8 @@ export interface QUOTATIONS {
     updated_by: string;
     items?: QuotationItems[];
     quote_date?: string;
+    bank_details?: BankDetailsMode;
+    bank_account_id?: number | null;
     [key: string]: unknown; // For ExportButton compatibility
 }
 
@@ -59,6 +70,8 @@ export interface CREATE_QUOTATION_REQUEST {
     net_total: string;
     created_by: string;
     created_on: Date;
+    bank_details?: BankDetailsMode;
+    bank_account_id?: number | null;
     items: QuotationItems[];
 }
 
@@ -81,6 +94,9 @@ export interface UPDATE_QUOTATION_REQUEST {
     net_total?: string;
     updated_on?: Date;
     updated_by?: string;
+    /** Left out by status changes, so the saved bank choice stays as it is */
+    bank_details?: BankDetailsMode;
+    bank_account_id?: number | null;
     items?: QuotationItems[];
 }
 

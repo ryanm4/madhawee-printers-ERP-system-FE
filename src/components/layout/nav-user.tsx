@@ -11,17 +11,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Power } from "lucide-react";
-
-const LIGHT_AVATAR_COLORS = [
-  "b3e5fc",
-  "c8e6c9",
-  "d1c4e9",
-  "ffe0b2",
-  "ffccbc",
-  "f0f4c3",
-  "bbdefb",
-  "e1bee7",
-];
+import { avatarFor } from "@/lib/avatar";
 
 export function NavUser() {
   const router = useRouter();
@@ -30,9 +20,8 @@ export function NavUser() {
   useEffect(() => {
     const userData = getUser();
     if (userData) {
-      const avatarUrl = `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${encodeURIComponent(
-        userData.email || "user",
-      )}&backgroundColor=${LIGHT_AVATAR_COLORS.join(",")}`;
+      // Seeded by the account, so each person keeps their own picture
+      const avatarUrl = avatarFor(String(userData.id ?? userData.name ?? "user"));
 
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setUser({

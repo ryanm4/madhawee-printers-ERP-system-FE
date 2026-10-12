@@ -76,11 +76,11 @@ export function LoginForm({
 
   return (
     <div className={cn("flex flex-col", className)} {...props}>
-      <h1 className="text-[2rem] leading-tight font-bold tracking-[-0.02em] text-[#1A2233]">
+      <h1 className="text-[1.875rem] leading-tight font-semibold tracking-[-0.02em] text-[#14213D]">
         Sign in
       </h1>
       <p className="mt-2 text-[0.9375rem] leading-relaxed text-pretty text-[#5B6474]">
-        Use your Madhawee ERP username and password.
+        Welcome back. Enter your ERP username and password.
       </p>
 
       <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="mt-7">
@@ -105,7 +105,7 @@ export function LoginForm({
               disabled={isLoading}
               aria-invalid={Boolean(errors.name)}
               aria-describedby={errors.name ? "name-error" : undefined}
-              className="h-11 rounded-[4px] text-[0.9375rem] md:text-[0.9375rem]"
+              className="h-11 rounded-lg text-[0.9375rem] md:text-[0.9375rem]"
               {...form.register("name")}
             />
             {errors.name && (
@@ -125,7 +125,7 @@ export function LoginForm({
                 disabled={isLoading}
                 aria-invalid={Boolean(errors.password)}
                 aria-describedby={errors.password ? "password-error" : undefined}
-                className="h-11 rounded-[4px] pr-12 text-[0.9375rem] md:text-[0.9375rem]"
+                className="h-11 rounded-lg pr-12 text-[0.9375rem] md:text-[0.9375rem]"
                 {...form.register("password")}
               />
               <Button
@@ -150,7 +150,7 @@ export function LoginForm({
           <Button
             type="submit"
             disabled={isLoading}
-            className="mt-2 h-11 rounded-[4px] text-[0.9375rem] font-semibold"
+            className="mt-2 h-11 rounded-lg text-[0.9375rem] font-semibold"
           >
             {isLoading ? "Signing in…" : "Sign in"}
           </Button>

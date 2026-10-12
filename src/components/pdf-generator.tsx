@@ -100,13 +100,15 @@ const wrapText = (
 };
 
 /**
- * Company details, terms and the default bank account from Settings. Falls back to the
- * built-in details if Settings can't be reached, so a quotation can always be printed.
+ * Company details, terms and the quotation's bank account from Settings: the account chosen on
+ * the quotation, or the default one when none was chosen or it has been removed. Falls back to
+ * the built-in details if Settings can't be reached, so a quotation can always be printed.
  */
-async function loadPrintDetails() {
+async function loadPrintDetails(bankAccountId?: number | null) {
   const [companyResult, banksResult] = await Promise.allSettled([
     SettingsApi.getCompany(),
-    SettingsApi.getBankAccounts(),
+    // Retired accounts too, so an older quotation still prints the account it was saved with
+    SettingsApi.getBankAccounts(true),
   ]);
   const saved = companyResult.status === "fulfilled" ? companyResult.value.data : null;
   const fallbackBank = {
@@ -120,7 +122,10 @@ async function loadPrintDetails() {
   let account_details: typeof fallbackBank | null = fallbackBank;
   if (banksResult.status === "fulfilled") {
     const banks = banksResult.value.data ?? [];
-    const bank = banks.find((b) => b.is_default) ?? banks[0];
+    const bank =
+      banks.find((b) => b.id === bankAccountId) ??
+      banks.find((b) => b.is_default && b.is_active) ??
+      banks.find((b) => b.is_active);
     account_details = bank
       ? {
           account_number: bank.account_number,
@@ -145,7 +150,7 @@ async function loadPrintDetails() {
 }
 
 export const generateQuotationPDF = async (
-  data: QUOTATIONS & { showAccountDetails?: boolean; items: QuotationItems[] }
+  data: QUOTATIONS & { items: QuotationItems[] }
 ) => {
   try {
     const pdfDoc = await PDFDocument.create();
@@ -186,7 +191,8 @@ export const generateQuotationPDF = async (
       return pdfDoc.getPages()[pdfDoc.getPageCount() - 1]; // Return current page
     };
 
-    const companyData = await loadPrintDetails();
+    const companyData = await loadPrintDetails(data.bank_account_id);
+    const bankDetails = data.bank_details ?? "NONE";
 
     const currency = (data.currency || "LKR") as Currency;
 
@@ -807,7 +813,7 @@ export const generateQuotationPDF = async (
     moveDown(10);
 
     // --- ACCOUNT DETAILS ---
-    if (data?.showAccountDetails && companyData.account_details) {
+    if (bankDetails !== "NONE" && companyData.account_details) {
       currentPage = checkPageBreak(100);
       currentPage.drawText("Account Details", {
         x: margin,
@@ -821,7 +827,8 @@ export const generateQuotationPDF = async (
       const details = [
         {
           label: "Account Number",
-          val: companyData.account_details.account_number,
+          // Some quotations go out without the account number
+          val: bankDetails === "HIDE_NUMBER" ? "" : companyData.account_details.account_number,
         },
         { label: "Bank Name", val: companyData.account_details.bank_name },
         { label: "Branch Name", val: companyData.account_details.branch },

@@ -44,12 +44,13 @@ import { CUSTOMER } from "@/modules/customer/types";
 import { quotationApi } from "@/modules/quotations/api";
 import { toast } from "sonner";
 import {
+  QuotationBankChoice,
   UPDATE_QUOTATION_REQUEST,
 } from "@/modules/quotations/types";
 import { userApi } from "@/modules/users/api";
 import { GET_ALL_USER } from "@/modules/users/types";
 import { Combobox } from "@/components/shared/combobox";
-import { Checkbox } from "@/components/ui/checkbox";
+import { BankDetailsPicker } from "../../_components/bank-details-picker";
 import {
   QuotationType,
   QuotationTaxType,
@@ -92,7 +93,7 @@ function EditQuotation({
   const [recordLoaded, setRecordLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quoteDate, setQuoteDate] = useState<Date>(new Date());
-  const [showAccountDetails, setShowAccountDetails] = useState(false);
+  const [bankChoice, setBankChoice] = useState<QuotationBankChoice>({ bank_details: "NONE", bank_account_id: null });
 
   useEffect(() => {
     getCustomerList();
@@ -297,6 +298,8 @@ function EditQuotation({
         }),
         no_of_items: data.no_of_items,
         net_total: data.net_total,
+        bank_details: bankChoice.bank_details,
+        bank_account_id: bankChoice.bank_account_id,
         updated_by: user?.name || "User",
         updated_on: new Date(),
         items: data.items.map((item) => ({
@@ -377,6 +380,10 @@ function EditQuotation({
               })) || [],
           });
           setQuoteDate(new Date(quoteData.created_on));
+          setBankChoice({
+            bank_details: quoteData.bank_details ?? "NONE",
+            bank_account_id: quoteData.bank_account_id ?? null,
+          });
         }
       } catch (err) {
         console.error("Failed to fetch quotation:", err);
@@ -774,25 +781,7 @@ function EditQuotation({
                   ))}
                 </div>
 
-                {/* Show Account Details in PDF */}
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showAccountDetails"
-                    checked={showAccountDetails}
-                    onCheckedChange={(checked) =>
-                      setShowAccountDetails(checked as boolean)
-                    }
-                  />
-                  <label
-                    htmlFor="showAccountDetails"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Show Account Details in PDF
-                  </label>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Include account details in the printed quotation
-                </p>
+                <BankDetailsPicker value={bankChoice} onChange={setBankChoice} />
               </CardContent>
             </Card>
           </div>

@@ -254,6 +254,16 @@ function ViewQuotation() {
                         <Detail label="Tax type" value={taxTypeLabel(taxId)} />
                         <Detail label="Currency" value={quotation.currency} />
                         <Detail label="Marketing person" value={quotation.marketing_person} />
+                        <Detail
+                            label="Bank details on printout"
+                            value={
+                                quotation.bank_details === "FULL"
+                                    ? "All details"
+                                    : quotation.bank_details === "HIDE_NUMBER"
+                                      ? "Without account number"
+                                      : "Not shown"
+                            }
+                        />
                     </DetailGrid>
                 </ViewSection>
             </div>

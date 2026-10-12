@@ -42,9 +42,9 @@ import { CustomerApi } from "@/modules/customer/api";
 import { CUSTOMER, CONTACT_PERSON } from "@/modules/customer/types";
 import { quotationApi } from "@/modules/quotations/api";
 import { toast } from "sonner";
-import { CREATE_QUOTATION_REQUEST } from "@/modules/quotations/types";
+import { CREATE_QUOTATION_REQUEST, QuotationBankChoice } from "@/modules/quotations/types";
 import { Combobox } from "@/components/shared/combobox";
-import { Checkbox } from "@/components/ui/checkbox";
+import { BankDetailsPicker } from "../_components/bank-details-picker";
 import {
   QuotationType,
   QuotationTaxType,
@@ -80,7 +80,7 @@ function CreateQuotation({
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quoteDate, setQuoteDate] = useState<Date>(new Date());
-  const [showAccountDetails, setShowAccountDetails] = useState(false);
+  const [bankChoice, setBankChoice] = useState<QuotationBankChoice>({ bank_details: "NONE", bank_account_id: null });
 
   useEffect(() => {
     getCustomerList();
@@ -283,6 +283,8 @@ function CreateQuotation({
         }),
         no_of_items: data.no_of_items,
         net_total: data.net_total,
+        bank_details: bankChoice.bank_details,
+        bank_account_id: bankChoice.bank_account_id,
         created_by: user?.name || "User",
 
         created_on: new Date(),
@@ -691,25 +693,7 @@ function CreateQuotation({
                   ))}
                 </div>
 
-                {/* Show Account Details in PDF */}
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showAccountDetails"
-                    checked={showAccountDetails}
-                    onCheckedChange={(checked) =>
-                      setShowAccountDetails(checked as boolean)
-                    }
-                  />
-                  <label
-                    htmlFor="showAccountDetails"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Show Account Details in PDF
-                  </label>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Include account details in the printed quotation
-                </p>
+                <BankDetailsPicker value={bankChoice} onChange={setBankChoice} />
               </CardContent>
             </Card>
           </div>
