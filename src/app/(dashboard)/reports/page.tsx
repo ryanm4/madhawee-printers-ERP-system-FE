@@ -409,7 +409,7 @@ function ReportsPage() {
         : await ReportsApi.createSummary(payload);
 
       setReportData(response.data?.data || response.data || []);
-      setGrandTotal(response.data?.grand_total || null);
+      setGrandTotal(toAmount(response.data?.grand_total));
       setLastRun({ from: data.fromDate, to: data.toDate });
     } catch (error) {
       console.error(error);
@@ -457,7 +457,7 @@ function ReportsPage() {
 
       const response = await ReportsApi.createCustomInventory(payload);
       setReportData(response.data?.data || response.data || []);
-      setGrandTotal(response.data?.grand_total || null);
+      setGrandTotal(toAmount(response.data?.grand_total));
       setLastRun(
         requiresDates ? { from: data.from_date, to: data.to_date } : {}
       );
@@ -482,7 +482,7 @@ function ReportsPage() {
 
       const response = await ReportsApi.createCustomSales(payload);
       setReportData(response.data?.data || response.data || []);
-      setGrandTotal(response.data?.grand_total || null);
+      setGrandTotal(toAmount(response.data?.grand_total));
       setLastRun({ from: data.from_date, to: data.to_date });
     } catch (error) {
       console.error(error);
@@ -515,7 +515,7 @@ function ReportsPage() {
 
       const response = await ReportsApi.createAdvanced(payload);
       setReportData(response.data?.data || response.data || []);
-      setGrandTotal(response.data?.grand_total || null);
+      setGrandTotal(toAmount(response.data?.grand_total));
       setLastRun({ from: data.fromDate, to: data.toDate });
     } catch (error) {
       console.error(error);
@@ -643,6 +643,13 @@ function ReportsPage() {
       c.customer_type?.toLowerCase() === "supplier" ||
       c.customer_type?.toLowerCase() === "both"
   );
+
+  /** A money figure as a number, whether it arrives as 1234.5 or as text like "LKR 1,234.50" */
+  const toAmount = (value: unknown) => {
+    if (value === null || value === undefined || value === "") return null;
+    const n = parseFloat(String(value).replace(/[^0-9.-]/g, ""));
+    return isNaN(n) ? null : n;
+  };
 
   const formatNum = (num: any) => {
     const n = parseFloat(num);
@@ -1378,6 +1385,15 @@ function ReportsPage() {
         );
       }
 
+      // Some reports arrive with the server's own TOTAL row, worked out before the filters above
+      // and in a different shape per report. Drop it; each report below totals the rows it shows
+      data = data.filter(
+        (row: any) =>
+          !["grn_id", "item_category", "job_id", "job_number"].some(
+            (key) => String(row[key] ?? "").toUpperCase() === "TOTAL"
+          )
+      );
+
       data = sortInventoryItemsByCategory(data);
 
       if (watchedInventoryType === "GRN_REPORT") {
@@ -1849,7 +1865,8 @@ function ReportsPage() {
           const totalAmt = mapped.reduce(
             (sum: number, r: any) =>
               sum +
-              (parseFloat(String(r["Total Amount"]).replace(/,/g, "")) || 0),
+              (parseFloat(String(r["Total Amount"]).replace(/[^0-9.-]/g, "")) ||
+                0),
             0
           );
           mapped.push({
@@ -1997,7 +2014,9 @@ function ReportsPage() {
           const consumedQty = extractConsumedQty(row);
           let unitPrice = extractUnitPrice(row, inv);
           const rawTotal = parseFloat(
-            String(row.total_cost || row.total_amount || row.amount || 0)
+            String(
+              row.total_cost || row.total_amount || row.amount || row.total_value || 0
+            ).replace(/[^0-9.-]/g, "")
           );
           if (rawTotal > 0 && unitPrice === 0 && consumedQty > 0) {
             unitPrice = rawTotal / consumedQty;
