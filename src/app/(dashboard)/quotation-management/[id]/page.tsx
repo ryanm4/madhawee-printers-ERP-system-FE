@@ -35,6 +35,12 @@ const taxTypeLabel = (id: number) => {
     return "None";
 };
 
+/** Stored with fixed decimals ("223.00", "23.000000"); show only the places that matter */
+const formatQty = (value: string) =>
+    Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
+const formatRate = (value: string) =>
+    Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+
 const quotationTypeLabel = (id: number) =>
     id === 1 ? "Normal" : id === 2 ? "Optional" : String(id);
 
@@ -302,8 +308,8 @@ function ViewQuotation() {
                             className: "max-w-[320px] whitespace-pre-wrap break-words",
                             cell: (item) => item.item_description || <span className="text-muted-foreground">Not set</span>,
                         },
-                        { header: "Qty", align: "right", cell: (item) => item.item_qty },
-                        { header: `Rate (${currencySymbol})`, align: "right", cell: (item) => item.item_unit_price },
+                        { header: "Qty", align: "right", cell: (item) => formatQty(item.item_qty) },
+                        { header: `Rate (${currencySymbol})`, align: "right", cell: (item) => formatRate(item.item_unit_price) },
                         {
                             header: `Total excl. (${currencySymbol})`,
                             align: "right",

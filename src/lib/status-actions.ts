@@ -1,4 +1,4 @@
-import { JobTicketStatus, PurchaseOrderStatus, QuotationStatus } from "@/config/enum";
+import { JobTicketStatus, QuotationStatus } from "@/config/enum";
 import type { ClientPermissions } from "@/lib/permissions";
 
 /** One status a record can be moved to, as offered on its view screen */
@@ -38,21 +38,8 @@ export const statusActions = {
     return actions;
   },
 
-  purchaseOrder(status: string, jobStatuses: string[], p: ClientPermissions): StatusAction[] {
-    if (status === PurchaseOrderStatus.CREATED && (p.canApprove || p.canModifyPO)) {
-      return [{ to: PurchaseOrderStatus.APPROVED, label: "Approve order", description: "The order is checked and can go ahead." }];
-    }
-    if (status === PurchaseOrderStatus.APPROVED && p.canModifyPO) {
-      const open = jobStatuses.filter((s) => s !== JobTicketStatus.COMPLETED).length;
-      return [
-        {
-          to: PurchaseOrderStatus.COMPLETED,
-          label: "Mark order completed",
-          description: "Everything on this order has been made and delivered.",
-          blockedReason: open > 0 ? `${open} job ${open === 1 ? "ticket is" : "tickets are"} still open. Finish them first.` : undefined,
-        },
-      ];
-    }
+  /** None by hand: orders are approved when entered and complete themselves when all their jobs are done */
+  purchaseOrder(): StatusAction[] {
     return [];
   },
 

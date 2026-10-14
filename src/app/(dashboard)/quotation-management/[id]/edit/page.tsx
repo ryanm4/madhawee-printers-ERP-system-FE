@@ -59,7 +59,7 @@ import {
 } from "@/config/enum";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
-import { formatAmount } from "@/components/shared/record-view";
+import { formatAmount, plainNumber } from "@/components/shared/record-view";
 import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
 import { usePermissions } from "@/hooks/use-permissions";
 
@@ -372,11 +372,11 @@ function EditQuotation({
               quoteData.items?.map((item) => ({
                 item_id: item.item_id,
                 item_category: item.item_category,
-                item_qty: String(item.item_qty || "0"),
+                item_qty: plainNumber(item.item_qty) || "0",
                 item_description: item.item_description || "",
-                item_unit_price: String(item.item_unit_price || "0"),
-                item_unit_discount: String(item.item_unit_discount || "0"),
-                item_total_price: String(item.item_total_price || "0"),
+                item_unit_price: plainNumber(item.item_unit_price) || "0",
+                item_unit_discount: plainNumber(item.item_unit_discount) || "0",
+                item_total_price: plainNumber(item.item_total_price) || "0",
               })) || [],
           });
           setQuoteDate(new Date(quoteData.created_on));

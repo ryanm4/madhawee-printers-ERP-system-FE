@@ -12,11 +12,6 @@ import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { PURCHASE_ORDER_ID } from "@/modules/purchase-order/types";
 import { parseLocalDate } from "@/hooks/sql-date-time";
 import { usePermissions } from "@/hooks/use-permissions";
-import { StatusChanger } from "@/components/shared/status-changer";
-import { toast } from "sonner";
-import { getErrorMessage } from "@/lib/error-utils";
-import { statusActions } from "@/lib/status-actions";
-import { updatePurchaseOrderStatus } from "@/modules/purchase-order/update-status";
 import {
   Detail,
   ViewError,
@@ -106,23 +101,6 @@ function ViewPurchaseOrder() {
           <Button variant="outline" type="button" onClick={() => router.push("/purchase-order")}>
             Back to List
           </Button>
-          {po && (
-            <StatusChanger
-              current={status ?? ""}
-              actions={statusActions.purchaseOrder(status ?? "", (po.jobs ?? []).map((job) => job.status), permissions)}
-              onChange={async (to) => {
-                try {
-                  await updatePurchaseOrderStatus(po, to);
-                  setPo({ ...po, status: to, po_status: to });
-                  toast.success(`Order is now ${sentenceCase(to).toLowerCase()}`);
-                  return true;
-                } catch (error) {
-                  toast.error(getErrorMessage(error, "Couldn't change the status"));
-                  return false;
-                }
-              }}
-            />
-          )}
           {canModifyPO && (
             <Button type="button" onClick={() => router.push(`/purchase-order/${id}/edit`)}>
               <Edit2 className="h-4 w-4" /> Edit Purchase Order

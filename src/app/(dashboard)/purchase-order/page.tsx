@@ -19,8 +19,7 @@ import { cn } from "@/lib/utils";
 
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { PURCHASE_ORDER } from "@/modules/purchase-order/types";
-import { updatePurchaseOrderStatus } from "@/modules/purchase-order/update-status";
-import { PurchaseOrderStatus, JobTicketStatus } from "@/config/enum";
+import { JobTicketStatus } from "@/config/enum";
 import { PurchaseOrderList } from "./_components/purchase-order-list";
 import { usePermissions } from "@/hooks/use-permissions";
 
@@ -67,39 +66,6 @@ function PurchaseOrderPage() {
     } catch (error) {
       console.error("Failed to delete PO:", error);
       appToast.error("Failed to Delete Purchase Order", getErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStatusChange = async (id: number, status: string) => {
-    try {
-      setLoading(true);
-      const response = await purchaseOrderApi.getById(String(id));
-      if (response.data) {
-        const data = response.data;
-
-        if (status === PurchaseOrderStatus.COMPLETED) {
-          const hasIncompleteJobs = (data.jobs || []).some(
-            (job) => job.status !== JobTicketStatus.COMPLETED
-          );
-
-          if (hasIncompleteJobs) {
-            appToast.warning("Cannot Complete Purchase Order", "This Purchase Order has active Job Tickets. All linked Job Tickets must be COMPLETED first.");
-            setLoading(false);
-            return;
-          }
-        }
-
-        await updatePurchaseOrderStatus(data, status);
-        appToast.success("Status Updated", `Purchase Order status updated to ${status}`);
-        await fetchData();
-      } else {
-        appToast.error("Data Error", "Failed to fetch PO details for status update");
-      }
-    } catch (error) {
-      console.error("Status Update Error:", error);
-      appToast.error("Update Failed", getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -253,7 +219,6 @@ function PurchaseOrderPage() {
             canModify={canModifyPO}
             onDelete={handleDelete}
             onRefresh={fetchData}
-            onStatusChange={handleStatusChange}
           />
           <p className="text-sm text-[#4B5567]">
             Showing {visibleData.length} of {data.length} purchase {data.length === 1 ? "order" : "orders"}

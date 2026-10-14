@@ -26,6 +26,15 @@ export const formatAmount = (value: number | string | null | undefined, digits =
     : "";
 };
 
+/**
+ * A stored number as typed by a person, for an input: "23.000000" -> "23", "8.500" -> "8.5".
+ * The database keeps fixed decimal places, which otherwise show up as trailing zeros.
+ */
+export const plainNumber = (value: number | string | null | undefined) => {
+  const n = Number(value);
+  return value === null || value === undefined || value === "" || !Number.isFinite(n) ? "" : String(n);
+};
+
 const isEmpty = (value: React.ReactNode) =>
   value === null || value === undefined || value === "" || value === false || value === "null" || value === "undefined";
 

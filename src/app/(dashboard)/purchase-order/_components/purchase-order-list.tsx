@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
-  ArrowRightIcon,
   CalendarDays,
   ChevronDown,
   ChevronRight,
@@ -27,9 +26,6 @@ import { AlertDeleteDialog } from "@/components/shared/delete_popup";
 import { StatusPill } from "@/components/shared/status-text";
 import { CreateJobTicketDialog } from "../../job-ticket/_components/create-job-ticket-dialog";
 import { JobTicketStatus } from "@/config/enum";
-import { statusActions } from "@/lib/status-actions";
-import { usePermissions } from "@/hooks/use-permissions";
-import { appToast } from "@/lib/toast-utils";
 import { parseLocalDate } from "@/hooks/sql-date-time";
 import { cn } from "@/lib/utils";
 import type { PURCHASE_ORDER, PURCHASE_ORDER_JOBS } from "@/modules/purchase-order/types";
@@ -37,7 +33,7 @@ import type { PURCHASE_ORDER, PURCHASE_ORDER_JOBS } from "@/modules/purchase-ord
 const formatDate = (value?: Date | string | null) => (value ? format(new Date(value), "dd MMM yyyy") : null);
 
 /** Words people use for an order, rather than the stored codes */
-const ORDER_LABEL: Record<string, string> = { CREATED: "Order placed" };
+const ORDER_LABEL: Record<string, string> = { CREATED: "Approved" };
 const JOB_LABEL: Record<string, string> = { CREATED: "Not started" };
 
 /**
@@ -59,10 +55,9 @@ interface ListProps {
   canModify: boolean;
   onDelete: (id: number) => Promise<void>;
   onRefresh: () => Promise<void>;
-  onStatusChange: (id: number, status: string) => Promise<void>;
 }
 
-export function PurchaseOrderList({ orders, canModify, onDelete, onRefresh, onStatusChange }: ListProps) {
+export function PurchaseOrderList({ orders, canModify, onDelete, onRefresh }: ListProps) {
   const [open, setOpen] = useState<Set<number>>(new Set());
 
   const toggle = (id: number) =>
@@ -99,7 +94,6 @@ export function PurchaseOrderList({ orders, canModify, onDelete, onRefresh, onSt
             canModify={canModify}
             onDelete={onDelete}
             onRefresh={onRefresh}
-            onStatusChange={onStatusChange}
           />
         ))}
       </ul>
@@ -114,7 +108,6 @@ function OrderRow({
   canModify,
   onDelete,
   onRefresh,
-  onStatusChange,
 }: {
   order: PURCHASE_ORDER;
   expanded: boolean;
@@ -153,7 +146,7 @@ function OrderRow({
         </div>
 
         <div className="col-start-3 row-start-1 flex items-center gap-1 lg:order-last lg:col-auto lg:row-auto lg:justify-end">
-          <OrderActions order={order} canModify={canModify} onDelete={onDelete} onRefresh={onRefresh} onStatusChange={onStatusChange} />
+          <OrderActions order={order} canModify={canModify} onDelete={onDelete} onRefresh={onRefresh} />
         </div>
 
         <div className="col-span-2 col-start-2 flex min-w-0 flex-col gap-2 lg:contents">
@@ -316,14 +309,11 @@ function OrderActions({
   canModify,
   onDelete,
   onRefresh,
-  onStatusChange,
 }: { order: PURCHASE_ORDER } & Omit<ListProps, "orders">) {
   const router = useRouter();
   const [isJobTicketOpen, setIsJobTicketOpen] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const jobs = order.jobs ?? [];
-  const statusOptions = statusActions.purchaseOrder(order.status, jobs.map((job) => job.status), usePermissions());
 
   return (
     <Fragment>
@@ -334,25 +324,6 @@ function OrderActions({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-[210px]" align="end">
-          {statusOptions.map((action) => (
-            <DropdownMenuItem
-              key={action.to}
-              disabled={isUpdatingStatus}
-              onClick={async () => {
-                if (action.blockedReason) {
-                  appToast.warning("Can't complete this order yet", action.blockedReason);
-                  return;
-                }
-                setIsUpdatingStatus(true);
-                await onStatusChange(order.po_id, action.to);
-                setIsUpdatingStatus(false);
-              }}
-            >
-              <ArrowRightIcon className="mr-2 h-4 w-4" />
-              {action.label}
-            </DropdownMenuItem>
-          ))}
-          {statusOptions.length > 0 && <DropdownMenuSeparator />}
           {canModify && (
             <>
               <DropdownMenuItem onSelect={() => setIsJobTicketOpen(true)}>
@@ -367,7 +338,7 @@ function OrderActions({
               <DropdownMenuItem
                 onSelect={() => setOpenDelete(true)}
                 variant="destructive"
-                disabled={jobs.length > 0 || isUpdatingStatus}
+                disabled={jobs.length > 0}
               >
                 <TrashIcon className="mr-2 h-4 w-4" />
                 Delete Purchase Order

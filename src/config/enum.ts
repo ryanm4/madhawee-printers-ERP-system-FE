@@ -16,8 +16,8 @@ export enum QuotationStatus {
     REJECTED = "REJECTED",
 }
 
+/** Orders are approved when entered and complete themselves once all their jobs are completed */
 export enum PurchaseOrderStatus {
-    CREATED = "CREATED",
     APPROVED = "APPROVED",
     COMPLETED = "COMPLETED",
 

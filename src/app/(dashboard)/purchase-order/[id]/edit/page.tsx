@@ -40,13 +40,14 @@ import { CalendarIcon, Edit2, Loader2, PlusIcon, Trash2 } from "lucide-react";
 import { FullPageLoader } from "@/components/shared/loader";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { PRODUCT_TYPES, PurchaseOrderStatus, PurchaseOrderType } from "@/config/enum";
-import { useEffect, useState } from "react";
+import { PRODUCT_TYPES, PurchaseOrderType } from "@/config/enum";
+import { useEffect, useRef, useState } from "react";
 import { CustomerApi } from "@/modules/customer/api";
 import { CUSTOMER } from "@/modules/customer/types";
 import { QUOTATIONS } from "@/modules/quotations/types";
 import { quotationApi } from "@/modules/quotations/api";
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
+import { purchaseOrderFromQuotation } from "@/modules/purchase-order/from-quotation";
 import { toast } from "sonner";
 import {
   CREATE_PURCHASE_ORDER,
@@ -152,10 +153,45 @@ function EditPurchaseOrder() {
     fields: itemDetailsFields,
     append: appendItemDetails,
     remove: removeItemDetails,
+    replace: replaceItemDetails,
   } = useFieldArray({
     control: form.control,
     name: "itemDetails",
   });
+
+  // Tracks the latest selected quotation so a slow earlier response can't overwrite a newer pick
+  const selectedQuotationRef = useRef<string>("");
+
+  const populateFromQuotation = async (quoteId: string) => {
+    selectedQuotationRef.current = quoteId;
+    if (!quoteId) return;
+
+    try {
+      setLoading(true);
+      const { data: quote } = await quotationApi.getById(quoteId);
+      if (selectedQuotationRef.current !== quoteId) return;
+
+      const values = purchaseOrderFromQuotation(quote, customer);
+      form.setValue("customer", values.customer);
+      form.setValue("customerAddress", values.customerAddress);
+      form.setValue("customerPhone", values.customerPhone);
+      form.setValue("customerEmail", values.customerEmail);
+      if (values.currency) form.setValue("currency", values.currency);
+      if (values.salesRef) form.setValue("salesRef", values.salesRef);
+      form.setValue("purchaseOrderType", values.purchaseOrderType);
+      if (values.itemDetails.length > 0) {
+        replaceItemDetails(values.itemDetails);
+      }
+      form.clearErrors();
+
+      toast.success(`Details loaded from quotation #${quote.quote_id}`);
+    } catch (error) {
+      console.error("Failed to fetch quotation", error);
+      toast.error(getErrorMessage(error, "Failed to load quotation details"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   async function onSubmit(data: PurchaseOrderFormValues) {
     try {
@@ -176,7 +212,6 @@ function EditPurchaseOrder() {
         TC_E_PR_No: data.tceprNo,
         updated_on: new Date(),
         updated_by: user?.name || "User",
-        status: PurchaseOrderStatus.CREATED,
         customer_po: data.customer_po,
         currency: data.currency,
         po_items: data.itemDetails.map((item) => ({
@@ -404,10 +439,15 @@ function EditPurchaseOrder() {
                     <Combobox
                       items={quotationList.map((quote) => ({
                         value: String(quote.quote_id),
-                        label: String(quote.quote_id),
+                        label: quote.company_name
+                          ? `${quote.quote_id} - ${quote.company_name}`
+                          : String(quote.quote_id),
                       }))}
                       value={field.value || ""}
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        populateFromQuotation(value);
+                      }}
                       placeholder="Select a Quotation"
                       searchPlaceholder="Search quotation..."
                     />
@@ -545,7 +585,6 @@ function EditPurchaseOrder() {
                       <FormLabel>Currency</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
                         value={field.value}
                       >
                         <FormControl>
