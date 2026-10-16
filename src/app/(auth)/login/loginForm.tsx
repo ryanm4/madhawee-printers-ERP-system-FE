@@ -1,6 +1,6 @@
 "use client";
 import axios from "axios";
-import { Eye, EyeOff, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -15,7 +15,6 @@ import { loginApi } from "@/modules/login/api";
 import { setToken, setUser } from "@/lib/auth";
 import { getDefaultRoute } from "@/lib/permissions";
 import { toast } from "sonner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
@@ -76,23 +75,15 @@ export function LoginForm({
 
   return (
     <div className={cn("flex flex-col", className)} {...props}>
-      <h1 className="text-[1.875rem] leading-tight font-semibold tracking-[-0.02em] text-[#14213D]">
-        Sign in
+      <h1 className="text-3xl font-semibold tracking-tight text-balance text-[#14213D]">
+        Sign in to your workspace
       </h1>
-      <p className="mt-2 text-[0.9375rem] leading-relaxed text-pretty text-[#5B6474]">
-        Welcome back. Enter your ERP username and password.
+      <p className="mt-2 text-sm leading-relaxed text-[#5B6474]">
+        Quotations, job tickets, stock and dispatch in one place.
       </p>
 
-      <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="mt-7">
+      <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="mt-8">
         <FieldGroup className="gap-5">
-          {error && (
-            <Alert variant="destructive" role="alert">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Couldn&apos;t sign in</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
           <Field className="gap-2">
             <FieldLabel htmlFor="name">Username</FieldLabel>
             <Input
@@ -152,8 +143,15 @@ export function LoginForm({
             disabled={isLoading}
             className="mt-2 h-11 rounded-lg text-[0.9375rem] font-semibold"
           >
+            {isLoading && <Loader2 className="animate-spin" aria-hidden />}
             {isLoading ? "Signing in…" : "Sign in"}
           </Button>
+
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
         </FieldGroup>
       </form>
     </div>
