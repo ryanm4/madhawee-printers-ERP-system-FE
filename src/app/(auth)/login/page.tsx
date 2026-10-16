@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { LoginActivityPanel } from "@/components/auth/login-activity-panel";
+import { OrbitPanel } from "@/components/auth/orbit-panel";
 import { LoginForm } from "./loginForm";
 
 /* 45/55 split from 860px; below that it is the form alone. */
@@ -25,7 +25,7 @@ export default function LoginPage() {
         <p className="text-sm text-[#5B6474]">© {new Date().getFullYear()} Madhawee Printers (Pvt) Ltd</p>
       </main>
 
-      <LoginActivityPanel />
+      <OrbitPanel />
     </div>
   );
 }
