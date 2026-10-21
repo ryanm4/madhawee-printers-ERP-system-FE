@@ -24,7 +24,7 @@ import { PurchaseOrderList } from "./_components/purchase-order-list";
 import { usePermissions } from "@/hooks/use-permissions";
 
 function PurchaseOrderPage() {
-  const { canModifyPO, canCreatePO, canExportList } = usePermissions();
+  const { canModifyPO, canCreatePO, canCreateJobTicket, canExportList } = usePermissions();
   const [data, setData] = useState<PURCHASE_ORDER[]>([]);
   const [loading, setLoading] = useState(true);  // starts loading: the page fetches as soon as it opens
   const [search, setSearch] = useSessionStorage("purchase-order-search", "");
@@ -217,6 +217,7 @@ function PurchaseOrderPage() {
           <PurchaseOrderList
             orders={visibleData}
             canModify={canModifyPO}
+            canCreateJob={canCreateJobTicket}
             onDelete={handleDelete}
             onRefresh={fetchData}
           />

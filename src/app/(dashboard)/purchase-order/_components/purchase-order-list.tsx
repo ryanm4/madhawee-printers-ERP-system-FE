@@ -53,11 +53,12 @@ const ROW_GRID = "lg:grid lg:grid-cols-[2rem_minmax(9rem,1.1fr)_minmax(12rem,1.6
 interface ListProps {
   orders: PURCHASE_ORDER[];
   canModify: boolean;
+  canCreateJob: boolean;
   onDelete: (id: number) => Promise<void>;
   onRefresh: () => Promise<void>;
 }
 
-export function PurchaseOrderList({ orders, canModify, onDelete, onRefresh }: ListProps) {
+export function PurchaseOrderList({ orders, canModify, canCreateJob, onDelete, onRefresh }: ListProps) {
   const [open, setOpen] = useState<Set<number>>(new Set());
 
   const toggle = (id: number) =>
@@ -92,6 +93,7 @@ export function PurchaseOrderList({ orders, canModify, onDelete, onRefresh }: Li
             expanded={open.has(order.po_id)}
             onToggle={() => toggle(order.po_id)}
             canModify={canModify}
+            canCreateJob={canCreateJob}
             onDelete={onDelete}
             onRefresh={onRefresh}
           />
@@ -106,6 +108,7 @@ function OrderRow({
   expanded,
   onToggle,
   canModify,
+  canCreateJob,
   onDelete,
   onRefresh,
 }: {
@@ -146,7 +149,7 @@ function OrderRow({
         </div>
 
         <div className="col-start-3 row-start-1 flex items-center gap-1 lg:order-last lg:col-auto lg:row-auto lg:justify-end">
-          <OrderActions order={order} canModify={canModify} onDelete={onDelete} onRefresh={onRefresh} />
+          <OrderActions order={order} canModify={canModify} canCreateJob={canCreateJob} onDelete={onDelete} onRefresh={onRefresh} />
         </div>
 
         <div className="col-span-2 col-start-2 flex min-w-0 flex-col gap-2 lg:contents">
@@ -186,7 +189,7 @@ function OrderRow({
 
       {expanded && (
         <div id={panelId} className="px-4 pb-4 lg:pl-[3.25rem]">
-          <JobsPanel order={order} canModify={canModify} onRefresh={onRefresh} />
+          <JobsPanel order={order} canCreateJob={canCreateJob} onRefresh={onRefresh} />
         </div>
       )}
     </li>
@@ -230,7 +233,7 @@ function JobProgress({ total, done, open, allDone }: { total: number; done: numb
 
 const JOBS_SHOWN = 2;
 
-function JobsPanel({ order, canModify, onRefresh }: { order: PURCHASE_ORDER; canModify: boolean; onRefresh: () => Promise<void> }) {
+function JobsPanel({ order, canCreateJob, onRefresh }: { order: PURCHASE_ORDER; canCreateJob: boolean; onRefresh: () => Promise<void> }) {
   const [creating, setCreating] = useState(false);
   const jobs = order.jobs ?? [];
 
@@ -238,7 +241,7 @@ function JobsPanel({ order, canModify, onRefresh }: { order: PURCHASE_ORDER; can
     return (
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-[#D9DFE8] bg-white px-4 py-3 text-sm text-[#4B5567]">
         No job tickets have been created for this order yet.
-        {canModify && (
+        {canCreateJob && (
           <>
             <Button variant="outline" size="sm" onClick={() => setCreating(true)}>
               <PlusIcon className="size-4" />
@@ -307,6 +310,7 @@ function JobsPanel({ order, canModify, onRefresh }: { order: PURCHASE_ORDER; can
 function OrderActions({
   order,
   canModify,
+  canCreateJob,
   onDelete,
   onRefresh,
 }: { order: PURCHASE_ORDER } & Omit<ListProps, "orders">) {
@@ -324,12 +328,14 @@ function OrderActions({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-[210px]" align="end">
+          {canCreateJob && (
+            <DropdownMenuItem onSelect={() => setIsJobTicketOpen(true)}>
+              <PlusIcon className="mr-2 h-4 w-4" />
+              Create Job Ticket
+            </DropdownMenuItem>
+          )}
           {canModify && (
             <>
-              <DropdownMenuItem onSelect={() => setIsJobTicketOpen(true)}>
-                <PlusIcon className="mr-2 h-4 w-4" />
-                Create Job Ticket
-              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => router.push(`/purchase-order/${order.po_id}/edit`)}>
                 <PencilIcon className="mr-2 h-4 w-4" />
                 Edit Purchase Order
@@ -352,7 +358,7 @@ function OrderActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {canModify && (
+      {canCreateJob && (
         <CreateJobTicketDialog open={isJobTicketOpen} onOpenChange={setIsJobTicketOpen} initialPoId={String(order.po_id)} onSuccess={onRefresh} />
       )}
       <AlertDeleteDialog
