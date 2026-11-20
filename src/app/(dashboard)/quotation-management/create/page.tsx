@@ -59,21 +59,13 @@ import { userApi } from "@/modules/users/api";
 
 type QuotationFormValues = z.infer<typeof createQuotationSchema>;
 
-function CreateQuotation({
-  user: initialUser,
-}: {
-  user: {
-    name: string;
-    email: string;
-    avatar: string;
-  };
-}) {
+function CreateQuotation() {
   const router = useRouter();
   const [user, setUser] = useState<{
     name: string;
     email: string;
     avatar: string;
-  }>(initialUser);
+  }>();
 
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
   const [userList, setUserList] = useState<GET_ALL_USER[]>([]);

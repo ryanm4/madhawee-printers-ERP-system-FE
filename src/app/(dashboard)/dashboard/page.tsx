@@ -61,20 +61,12 @@ const byCurrency = (value: KPIItem["value"] | undefined): Record<CurrencyCode, n
 
 const percent = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100 : 0);
 
-function DashboardPage({
-  user: initialUser,
-}: {
-  user: {
-    name: string;
-    email: string;
-    avatar: string;
-  };
-}) {
+function DashboardPage() {
   const [user, setUser] = useState<{
     name: string;
     email: string;
     avatar: string;
-  }>(initialUser);
+  }>();
   const [isLoading, setIsLoading] = useState(true);
   const { canCreateQuotation, canCreateJobTicket, canCreateGRN, canCreateDispatch } = usePermissions();
   // Shortcuts to start the most common records; each shows only if the user may create it
