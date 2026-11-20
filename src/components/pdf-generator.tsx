@@ -72,7 +72,7 @@ const wrapText = (
   fontSize: number
 ): string[] => {
   // Normalize newlines and split into paragraphs
-  const paragraphs = text.replace(/\r/g, "").split("\n");
+  const paragraphs = toPrintableText(text.replace(/\r/g, ""), font).split("\n");
   const result: string[] = [];
 
   for (const paragraph of paragraphs) {
@@ -394,7 +394,7 @@ export const generateQuotationPDF = async (
 
     // data.customer might be ID or name depending on usage. Assuming Name based on previous code.
     const customerName = data.company_name || "";
-    currentPage.drawText(`TO : ${customerName}`, {
+    currentPage.drawText(toPrintableText(`TO : ${customerName}`, helveticaBold), {
       x: rightColX,
       y: rightY,
       size: labelSize,
@@ -404,7 +404,7 @@ export const generateQuotationPDF = async (
 
     // Customer Detail
     if (data.contact_person) {
-      currentPage.drawText(data.contact_person, {
+      currentPage.drawText(toPrintableText(data.contact_person, helvetica), {
         x: rightColX,
         y: rightY,
         size: labelSize,
@@ -432,7 +432,7 @@ export const generateQuotationPDF = async (
     }
 
     if (data.customer_phone) {
-      currentPage.drawText(data.customer_phone, {
+      currentPage.drawText(toPrintableText(data.customer_phone, helvetica), {
         x: rightColX,
         y: rightY,
         size: labelSize,
@@ -442,7 +442,7 @@ export const generateQuotationPDF = async (
     }
 
     if (data.customer_email) {
-      currentPage.drawText(data.customer_email, {
+      currentPage.drawText(toPrintableText(data.customer_email, helvetica), {
         x: rightColX,
         y: rightY,
         size: labelSize,
@@ -842,7 +842,7 @@ export const generateQuotationPDF = async (
       details.forEach((det) => {
         if (det.val) {
           currentPage = checkPageBreak(12);
-          currentPage.drawText(`${det.label}: ${det.val}`, {
+          currentPage.drawText(toPrintableText(`${det.label}: ${det.val}`, helvetica), {
             x: margin,
             y: yPosition,
             size: 9,
