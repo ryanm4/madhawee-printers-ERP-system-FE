@@ -61,11 +61,26 @@ const wrapText = (text: string, width: number, font: PDFFont, fontSize: number):
     return result;
 };
 
-export const generateQuotationPDF = async (data: any) => {
+// Standard fonts are WinAnsi-only: tabs, emoji, etc. throw "WinAnsi cannot encode".
+const sanitizeForFont = (value: any, charset: Set<number>): any => {
+    if (typeof value === "string") {
+        return Array.from(value.replace(/\t/g, "    "))
+            .filter((ch) => ch === "\n" || ch === "\r" || charset.has(ch.codePointAt(0)!))
+            .join("");
+    }
+    if (Array.isArray(value)) return value.map((v) => sanitizeForFont(v, charset));
+    if (value && typeof value === "object") {
+        return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, sanitizeForFont(v, charset)]));
+    }
+    return value;
+};
+
+export const generateQuotationPDF = async (rawData: any) => {
     try {
         const pdfDoc = await PDFDocument.create();
         const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
         const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        const data = sanitizeForFont(rawData, new Set(helvetica.getCharacterSet()));
 
         // A4 Dimensions: 595.28 x 841.89 points
         const page = pdfDoc.addPage([595.28, 841.89]);
