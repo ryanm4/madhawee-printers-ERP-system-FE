@@ -1,0 +1,426 @@
+"use client";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Printer } from "lucide-react";
+import { format } from "date-fns";
+import { parseLocalDate } from "@/hooks/sql-date-time";
+
+export interface JobTicketPrintData {
+  jobNumber?: string;
+  productType?: string;
+  orderReceivedDate?: Date | string;
+  quantity?: string | number;
+  jobOpenDate?: Date | string;
+  paperType?: string;
+  customer?: string;
+  coating?: string;
+  jobName?: string;
+  customerDeliveryDate?: Date | string;
+  packingDate?: Date | string;
+  expiryDate?: Date | string;
+  poNo?: string;
+  tcNo?: string;
+  batchRef?: string;
+  remarks?: string;
+  oldPlatesQuantity?: string;
+  oldPlatesStatus?: string;
+  oldPlatesRemarks?: string;
+  newPlatesQuantity?: string;
+  newPlatesStatus?: string;
+  newPlatesRemarks?: string;
+  inks?: {
+    ink: string;
+    quantity?: string;
+    status?: string;
+    remarks?: string;
+  }[];
+  rawMaterials?: {
+    material_name?: string;
+    size?: string;
+    quantity?: number | string;
+    status?: string;
+    remarks?: string;
+  }[];
+}
+
+interface JobTicketPrintDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  data: JobTicketPrintData;
+  onDecline?: () => void;
+}
+
+/** Unique, non-empty values joined for one print cell, e.g. several paper types on one job */
+export function joinDistinct(values: (string | null | undefined)[]): string | undefined {
+  const unique = Array.from(new Set(values.map((v) => (v ?? "").trim()).filter(Boolean)));
+  return unique.length > 0 ? unique.join(", ") : undefined;
+}
+
+/** Status and remarks share the Remarks column, e.g. "NOT AVAILABLE - order by Friday" */
+function statusAndRemarks(status?: string, remarks?: string): string {
+  return [status, remarks].map((v) => (v ?? "").trim()).filter(Boolean).join(" - ");
+}
+
+function formatDate(date?: Date | string): string {
+  if (!date) return "";
+  try {
+    return format(parseLocalDate(date), "dd/MM/yyyy");
+  } catch {
+    return String(date);
+  }
+}
+
+function formatNumber(value?: string | number): string {
+  if (value === undefined || value === null || value === "") return "";
+  const num = Number(value);
+  if (isNaN(num)) return String(value);
+  if (num === 0) return "";
+  return num.toLocaleString();
+}
+
+export function handleJobTicketPrint(data: JobTicketPrintData) {
+  // Build the printable HTML that matches the reference layout
+  const printContent = buildPrintHTML(data);
+
+  // Remove any existing print iframe
+  const existingFrame = document.getElementById('job-ticket-print-frame');
+  if (existingFrame) existingFrame.remove();
+
+  // Use a hidden iframe instead of window.open to avoid popup blockers
+  // and race conditions across different Chrome builds
+  const iframe = document.createElement('iframe');
+  iframe.id = 'job-ticket-print-frame';
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = 'none';
+  iframe.style.opacity = '0';
+  document.body.appendChild(iframe);
+
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!iframeDoc || !iframe.contentWindow) {
+    iframe.remove();
+    return;
+  }
+
+  iframeDoc.open();
+  iframeDoc.write(printContent);
+  iframeDoc.close();
+
+  // Wait for iframe content (including the logo image) to fully load
+  iframe.onload = () => {
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } catch {
+      // Fallback: if cross-origin issues arise, clean up
+      iframe.remove();
+    }
+  };
+
+  // Clean up the iframe after the user finishes printing
+  iframe.contentWindow.addEventListener('afterprint', () => {
+    setTimeout(() => iframe.remove(), 500);
+  });
+}
+
+export function JobTicketPrintDialog({
+  open,
+  onOpenChange,
+  data,
+  onDecline,
+}: JobTicketPrintDialogProps) {
+  const handlePrint = () => {
+    handleJobTicketPrint(data);
+    onOpenChange(false);
+  };
+
+  const handleDecline = () => {
+    onDecline?.();
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Printer className="h-5 w-5" />
+            Print Job Ticket?
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Job ticket has been saved successfully. Would you like to print a copy
+          now?
+        </p>
+        <DialogFooter className="flex gap-2 sm:justify-end">
+          <Button variant="outline" onClick={handleDecline}>
+            No, skip
+          </Button>
+          <Button onClick={handlePrint} className="bg-primary text-white">
+            <Printer className="h-4 w-4 mr-2" />
+            Yes, Print
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function buildPrintHTML(data: JobTicketPrintData): string {
+  // Escape user text so remarks containing < or & print as typed and can't inject markup
+  const safe = (val: unknown) =>
+    val !== undefined && val !== null && String(val).trim() !== ""
+      ? String(val)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/\n/g, "<br/>")
+      : "&nbsp;";
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <base href="${window.location.origin}" />
+  <title>Job Ticket - ${data.jobNumber || ""}</title>
+  <style>
+    @media print {
+      @page { margin: 10mm; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      color: #000;
+      margin: 0;
+      padding: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin-bottom: 0px;
+    }
+    td {
+      border: 1px solid #333;
+      padding: 5px 8px;
+    }
+    .label {
+      font-weight: bold;
+      background: #f8f8f8;
+      vertical-align: middle;
+    }
+    .value {
+      text-align: center;
+      vertical-align: middle;
+      word-wrap: break-word;
+    }
+    .value-bold {
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .value-highlight {
+      background: #e8e8e8;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .materials-header td {
+      font-weight: bold;
+      background: #f0f0f0;
+      text-align: center;
+    }
+    .group-label {
+      font-weight: bold;
+      vertical-align: middle;
+      text-align: center;
+      background: #f8f8f8;
+    }
+    .center { text-align: center; }
+  </style>
+</head>
+<body>
+
+  <!-- Unified Master Table for Alignment -->
+  <table>
+    <!-- Define column widths for 12-column grid to allow mixing 2, 3, 4, 6 column layouts -->
+    <colgroup>
+      <col style="width: 8.33%"><col style="width: 8.33%"><col style="width: 8.33%"><col style="width: 8.33%">
+      <col style="width: 8.33%"><col style="width: 8.33%"><col style="width: 8.33%"><col style="width: 8.33%">
+      <col style="width: 8.33%"><col style="width: 8.33%"><col style="width: 8.33%"><col style="width: 8.33%">
+    </colgroup>
+
+    <!-- Company Header -->
+    <tr>
+      <td colspan="12" style="border: 2px solid #333; text-align: center; padding: 10px;">
+        <img src="/images/madhawee_logo.svg" style="height: 50px; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto;" />
+      </td>
+    </tr>
+
+    <!-- Spacer -->
+    <tr style="height: 10px; border: none;"><td colspan="12" style="border: none;"></td></tr>
+
+    <!-- Row 1: Job Number & Product Type -->
+    <tr>
+      <td colspan="2" class="label">Job Number:</td>
+      <td colspan="4" class="value">${safe(data.jobNumber)}</td>
+      <td colspan="2" class="label">Product Type</td>
+      <td colspan="4" class="value">${safe(data.productType)}</td>
+    </tr>
+
+    <!-- Row 2: Order Date & Quantity -->
+    <tr>
+      <td colspan="2" class="label">Order Rec Date</td>
+      <td colspan="4" class="value">${safe(formatDate(data.orderReceivedDate))}</td>
+      <td colspan="2" class="label">Quantity:</td>
+      <td colspan="4" class="value value-bold" style="font-size: 20px;">${safe(formatNumber(data.quantity))}</td>
+    </tr>
+
+    <!-- Row 3: Open Date & Paper Type -->
+    <tr>
+      <td colspan="2" class="label">Job Open Date</td>
+      <td colspan="4" class="value">${safe(formatDate(data.jobOpenDate))}</td>
+      <td colspan="2" class="label">Paper Type:</td>
+      <td colspan="4" class="value">${safe(data.paperType)}</td>
+    </tr>
+
+    <!-- Row 4: Customer & Coating -->
+    <tr>
+      <td colspan="2" class="label">Customer:</td>
+      <td colspan="4" class="value value-bold" style="font-size: 18px;">${safe(data.customer)}</td>
+      <td colspan="2" class="label">Coating</td>
+      <td colspan="4" class="value">${safe(data.coating)}</td>
+    </tr>
+
+    <!-- Row 5: Job Name & Customer Del Date -->
+    <tr>
+      <td colspan="2" class="label">Description:</td>
+      <td colspan="4" class="value value-highlight" style="text-align:center;">${safe(data.jobName)}</td>
+      <td colspan="2" class="label">Customer Del Date</td>
+      <td colspan="4" class="value">${safe(formatDate(data.customerDeliveryDate))}</td>
+    </tr>
+
+    <!-- Spacer -->
+    <tr style="height: 5px; border: none;"><td colspan="12" style="border: none;"></td></tr>
+
+    <!-- Packing & Expiry -->
+    <tr>
+      <td colspan="2" class="label">Packing Date</td>
+      <td colspan="4" class="value">${safe(data.packingDate)}</td>
+      <td colspan="2" class="label">Expiry Date</td>
+      <td colspan="4" class="value">${safe(data.expiryDate)}</td>
+    </tr>
+
+    <!-- Spacer -->
+    <tr style="height: 5px; border: none;"><td colspan="12" style="border: none;"></td></tr>
+
+    <!-- PO / TC / Batch (6 equal segments) -->
+    <tr>
+      <td colspan="2" class="label">PO No.</td>
+      <td colspan="2" class="value">${safe(data.poNo)}</td>
+      <td colspan="2" class="label">TC/E/PR/No.</td>
+      <td colspan="2" class="value">${safe(data.tcNo)}</td>
+      <td colspan="2" class="label">Batch Ref.</td>
+      <td colspan="2" class="value">${safe(data.batchRef)}</td>
+    </tr>
+
+    <!-- Spacer -->
+    <tr style="height: 5px; border: none;"><td colspan="12" style="border: none;"></td></tr>
+
+    <!-- Remarks -->
+    <tr>
+      <td colspan="2" class="label" style="vertical-align: middle;">Remarks</td>
+      <td colspan="10" class="value value-highlight" style="text-align: left; font-size: 14px;">${safe(data.remarks)}</td>
+    </tr>
+
+    <!-- Spacer -->
+    <tr style="height: 10px; border: none;"><td colspan="12" style="border: none;"></td></tr>
+
+    <!-- Materials Header -->
+    <tr class="materials-header">
+      <td colspan="2">Materials</td>
+      <td colspan="4">Items</td>
+      <td colspan="2">Quantity</td>
+      <td colspan="4">Remarks</td>
+    </tr>
+
+    <!-- CTP Plates -->
+    <tr>
+      <td rowspan="2" colspan="2" class="group-label">CTP Plates</td>
+      <td colspan="4" style="padding-left: 24px;">Old Plates</td>
+      <td colspan="2" class="center">${safe(formatNumber(data.oldPlatesQuantity))}</td>
+      <td colspan="4">${safe(statusAndRemarks(data.oldPlatesStatus, data.oldPlatesRemarks))}</td>
+    </tr>
+    <tr>
+      <td colspan="4" style="padding-left: 24px;">New Plates</td>
+      <td colspan="2" class="center">${safe(formatNumber(data.newPlatesQuantity))}</td>
+      <td colspan="4">${safe(statusAndRemarks(data.newPlatesStatus, data.newPlatesRemarks))}</td>
+    </tr>
+
+    <!-- Raw Materials -->
+    ${(data.rawMaterials || []).length > 0
+      ? `<tr>
+      <td rowspan="${data.rawMaterials!.length}" colspan="2" class="group-label">Raw Material</td>
+      <td colspan="4" style="padding-left: 24px;">${safe(data.rawMaterials![0].material_name)} ${data.rawMaterials![0].size ? "- " + safe(data.rawMaterials![0].size) : ""}</td>
+      <td colspan="2" class="center">${safe(formatNumber(data.rawMaterials![0].quantity))}</td>
+      <td colspan="4">${safe(statusAndRemarks(data.rawMaterials![0].status, data.rawMaterials![0].remarks))}</td>
+    </tr>${(data.rawMaterials || [])
+        .slice(1)
+        .map(
+          (rm) => `
+    <tr>
+      <td colspan="4" style="padding-left: 24px;">${safe(rm.material_name)} ${rm.size ? "- " + safe(rm.size) : ""}</td>
+      <td colspan="2" class="center">${safe(formatNumber(rm.quantity))}</td>
+      <td colspan="4">${safe(statusAndRemarks(rm.status, rm.remarks))}</td>
+    </tr>`
+        )
+        .join("")}`
+      : `<tr>
+      <td colspan="2" class="group-label">Raw Material</td>
+      <td colspan="4">&nbsp;</td>
+      <td colspan="2" class="center">&nbsp;</td>
+      <td colspan="4">&nbsp;</td>
+    </tr>`
+    }
+
+    <!-- Ink & Others -->
+    ${(data.inks || []).length > 0
+      ? `<tr>
+      <td rowspan="${data.inks!.length}" colspan="2" class="group-label">Ink & Others</td>
+      <td colspan="4" style="padding-left: 24px;">${safe(data.inks![0].ink)}</td>
+      <td colspan="2" class="center">${safe(formatNumber(data.inks![0].quantity))}</td>
+      <td colspan="4">${safe(statusAndRemarks(data.inks![0].status, data.inks![0].remarks))}</td>
+    </tr>${(data.inks || [])
+        .slice(1)
+        .map(
+          (ink) => `
+    <tr>
+      <td colspan="4" style="padding-left: 24px;">${safe(ink.ink)}</td>
+      <td colspan="2" class="center">${safe(formatNumber(ink.quantity))}</td>
+      <td colspan="4">${safe(statusAndRemarks(ink.status, ink.remarks))}</td>
+    </tr>`
+        )
+        .join("")}`
+      : `<tr>
+      <td colspan="2" class="group-label">Ink & Others</td>
+      <td colspan="4">&nbsp;</td>
+      <td colspan="2" class="center">&nbsp;</td>
+      <td colspan="4">&nbsp;</td>
+    </tr>`
+    }
+  </table>
+
+</body>
+</html>`;
+}

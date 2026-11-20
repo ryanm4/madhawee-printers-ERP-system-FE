@@ -1,6 +1,8 @@
 "use client";
 import { dispatchInvoiceScheme } from "@/modules/dispatch-invoice/validation";
+import { FormSkeleton } from "@/components/shared/page-skeletons";
 import { useParams, useRouter } from "next/navigation";
+import { getErrorMessage } from "@/lib/error-utils";
 import React, { useEffect, useState } from "react";
 import { FieldPath, useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,20 +23,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
@@ -45,14 +40,19 @@ import { toMySQLDateTime } from "@/hooks/sql-date-time";
 import { Combobox } from "@/components/shared/combobox";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
+import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
+import { usePermissions } from "@/hooks/use-permissions";
 
 type DispatchFormValues = z.infer<typeof dispatchInvoiceScheme>;
 
 function EditDispatchandInvoice() {
   const router = useRouter();
+  const { canModify } = usePermissions();
   const [isLoading, setIsLoading] = useState(false);
-  const [isJobLoading, setIsJobLoading] = useState(false);
+  // False until the record has been fetched; until then a skeleton stands in for the form
+  const [recordLoaded, setRecordLoaded] = useState(false);
   const [JobData, setJobData] = useState<ALL_TICKETS[]>([]);
+  const [originalDispatchQty, setOriginalDispatchQty] = useState(0);
   const params = useParams();
   const [user, setUser] = useState<{
     name: string;
@@ -72,10 +72,11 @@ function EditDispatchandInvoice() {
     dispatch_quantity: "",
     dispatch_bundles_qty: "",
     dispatch_description: "",
+    customer_id: "",
   };
 
   const form = useForm<DispatchFormValues>({
-    resolver: zodResolver(dispatchInvoiceScheme),
+    resolver: zodResolver(dispatchInvoiceScheme) as any,
     defaultValues: baseDefaultValues,
   });
 
@@ -85,7 +86,7 @@ function EditDispatchandInvoice() {
     if (userData) {
       setUser({
         name: userData.name || "User",
-        email: userData.email,
+        email: userData.email ?? "",
         avatar: "",
       });
     }
@@ -98,13 +99,18 @@ function EditDispatchandInvoice() {
 
       if (response.status === 200) {
         const completedJobs = response.data.filter(
-          (x) => x.status === "COMPLETED"
+          (x) =>
+            x.status === "PRINTING COMPLETED" ||
+            x.status === "PARTIALLY DISPATCHED" ||
+            x.status === "DISPATCHED" ||
+            x.status === "COMPLETED",
         );
 
         setJobData(completedJobs);
       }
     } catch (error) {
-      console.error("Failed to fetch inventory");
+      console.error("Failed to fetch jobs", error);
+      toast.error(getErrorMessage(error, "Failed to fetch jobs"));
     } finally {
       setIsLoading(false);
     }
@@ -113,8 +119,31 @@ function EditDispatchandInvoice() {
   const onSubmit: SubmitHandler<DispatchFormValues> = async (data) => {
     try {
       setIsLoading(true);
+
+      const selectedJob = JobData.find(
+        (j) => String(j.job_id) === String(data.job_id),
+      );
+      const jobQty = Number(selectedJob?.quantity || 0);
+      const previouslyCompleted = Number(selectedJob?.completed_qty || 0);
+      const dispatchQty = Number(data.dispatch_quantity || 0);
+
+      // Delta between new dispatch quantity and what it originally was
+      const delta = dispatchQty - originalDispatchQty;
+      const totalDispatched = previouslyCompleted + delta;
+
+      if (totalDispatched > jobQty) {
+        toast.error("Invalid Dispatch Quantity", {
+          description: `Total dispatched quantity (${totalDispatched}) cannot exceed Job quantity (${jobQty}).`,
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      const newJobStatus =
+        totalDispatched >= jobQty ? "COMPLETED" : "PARTIALLY DISPATCHED";
+
       const payload: CREATE_DISPATCH = {
-        customer_id: data.customer_phone ?? "", // Assuming customer_phone as id for now or change based on actual mapping
+        customer_id: data.customer_id || "",
         job_id: data.job_id,
         dispatch_note: data.dispatch_note ?? "",
         dispatch_date: toMySQLDateTime(new Date()),
@@ -122,18 +151,39 @@ function EditDispatchandInvoice() {
         no_of_bundles: data.dispatch_bundles_qty ?? "",
         description: data.dispatch_description ?? "",
         delivery_address: data.delivery_address ?? "",
-        status: "PENDING",
-        updated_by: user?.name || "Admin",
+        status: newJobStatus,
+        updated_by: user?.name || "User",
         updated_on: new Date(),
       };
-      const response = await dispatchInventoryApi.create(payload);
+      await dispatchInventoryApi.update(id, payload);
 
-      toast("Dispatch Updated Successfully");
-      form.reset(baseDefaultValues);
+      // Patch the job ticket to reflect updated totals and status
+      if (data.job_id) {
+        try {
+          await jobTicketsApi.patch(data.job_id, {
+            status: newJobStatus,
+            completed_qty: totalDispatched,
+            updated_by: user?.name || "User",
+          });
+        } catch (err) {
+          console.error(
+            "Failed to update Job Ticket status during dispatch edit:",
+            err,
+          );
+        }
+      }
+
+      toast.success("Dispatch Updated Successfully");
       form.clearErrors();
       router.push("/dispatch-invoice");
     } catch (error) {
-      toast("Failed to update dispatch");
+      console.error("Failed to update dispatch record:", error);
+      toast.error("Failed to update dispatch", {
+        description: getErrorMessage(
+          error,
+          "An error occurred while updating the dispatch record. Please try again.",
+        ),
+      });
     } finally {
       setIsLoading(false);
     }
@@ -143,10 +193,8 @@ function EditDispatchandInvoice() {
     name: TName,
     render: Parameters<
       typeof FormField<DispatchFormValues, TName>
-    >["0"]["render"]
+    >["0"]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
-
-  const findCustomer = form.watch("job_id");
 
   const jobId = form.watch("job_id");
 
@@ -163,19 +211,21 @@ function EditDispatchandInvoice() {
       try {
         setIsLoading(true);
         const selectedJob = JobData.find(
-          (job) => String(job.job_id) === String(jobId)
+          (job) => String(job.job_id) === String(jobId),
         );
         if (!selectedJob) return;
         const customerId = selectedJob.customer_id;
         const response = await CustomerApi.getById(customerId);
         if (response.status === 200) {
           const customer = response.data;
+          form.setValue("customer_id", String(customer.customer_id));
           form.setValue("customer_name", customer.company_name ?? "");
           form.setValue("customer_phone", customer.phone ?? "");
           form.setValue("customer_address", customer.address ?? "");
         }
       } catch (err) {
         console.error("Failed to fetch customer:", err);
+        toast.error(getErrorMessage(err, "Failed to fetch customer details"));
         form.setValue("customer_name", "");
         form.setValue("customer_phone", "");
         form.setValue("customer_address", "");
@@ -194,19 +244,22 @@ function EditDispatchandInvoice() {
         const response = await dispatchInventoryApi.getById(id);
         if (response.status === 200) {
           const dispatch = response.data;
-          form.setValue("job_id", dispatch.job_id);
+          form.setValue("job_id", String(dispatch.job_id));
+          form.setValue("customer_id", String(dispatch.customer_id));
           form.setValue("customer_name", dispatch.customer_name);
           form.setValue("customer_phone", dispatch.customer_phone);
           form.setValue("customer_address", dispatch.customer_address);
           form.setValue("delivery_address", dispatch.delivery_address);
           form.setValue("dispatch_note", dispatch.dispatch_note);
-          form.setValue("dispatch_date", dispatch.dispatch_date);
-          form.setValue("dispatch_quantity", dispatch.dispatch_qty);
-          form.setValue("dispatch_bundles_qty", dispatch.no_of_bundles);
+          form.setValue("dispatch_date", new Date(dispatch.dispatch_date));
+          form.setValue("dispatch_quantity", String(dispatch.dispatch_qty));
+          setOriginalDispatchQty(Number(dispatch.dispatch_qty));
+          form.setValue("dispatch_bundles_qty", String(dispatch.no_of_bundles));
           form.setValue("dispatch_description", dispatch.description);
         }
       } catch (err) {
         console.error("Failed to fetch dispatch:", err);
+        toast.error(getErrorMessage(err, "Failed to load dispatch record"));
         form.setValue("job_id", "");
         form.setValue("customer_name", "");
         form.setValue("customer_phone", "");
@@ -219,74 +272,89 @@ function EditDispatchandInvoice() {
         form.setValue("dispatch_description", "");
       } finally {
         setIsLoading(false);
+        setRecordLoaded(true);
       }
     };
 
     fetchDispatch();
   }, [id, form]);
 
+  if (!canModify) {
+    return <RestrictedRouteGuard />;
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      {isLoading && <FullPageLoader />}
+      {isLoading && recordLoaded && <FullPageLoader />}
       <PageTitleWithBreadcrumb
-        title="Edit Dispatch and Invoice Management"
+        title="Edit Dispatch Note"
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
           {
-            title: "Dispatch and Invoice Management",
+            title: "Dispatch Note",
             href: "/dispatch-invoice",
           },
         ]}
       />
+      {!recordLoaded && <FormSkeleton />}
 
       <Form {...form}>
+        <div className={recordLoaded ? "contents" : "hidden"}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6  pb-0"
         >
-          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-            <Button
-              size="lg"
-              variant="outline"
-              type="button"
-              onClick={() => router.push("/dispatch-invoice")}
-            >
-              Cancel
-            </Button>
-            <Button size="lg" type="submit" className="bg-primary text-white">
-              Update
-            </Button>
-          </div>
-
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Purchase Order</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Purchase Order</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Edit your purchase order details here
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                {renderFormField("job_id", ({ field }) => (
+                <div className="grid grid-cols-2 gap-4">
+                  {renderFormField("job_id", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Job ID</FormLabel>
+                      <Combobox
+                        items={JobData.map((job) => ({
+                          value: String(job.job_id),
+                          label: `Job-${job.job_id} (${
+                            job.job_name.length > 25
+                              ? job.job_name.substring(0, 25) + "..."
+                              : job.job_name
+                          })`,
+                        }))}
+                        value={field.value ? String(field.value) : ""}
+                        onValueChange={field.onChange}
+                        placeholder="Select a Job Ticket"
+                        searchPlaceholder="Search job..."
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  ))}
                   <FormItem>
-                    <FormLabel>Job ID</FormLabel>
-                    <Combobox
-                      items={JobData.map((job) => ({
-                        value: String(job.job_id),
-                        label: `Job-${job.job_id} (${job.job_name})`,
-                      }))}
-                      value={field.value ? String(field.value) : ""}
-                      onValueChange={field.onChange}
-                      placeholder="Select a Job Ticket"
-                      searchPlaceholder="Search job..."
-                    />
-                    <FormMessage />
+                    <FormLabel>Job Quantity</FormLabel>
+                    <FormControl>
+                      <Input
+                        readOnly
+                        disabled
+                        className="bg-gray-50 border-gray-200 cursor-not-allowed"
+                        value={
+                          JobData.find(
+                            (j) =>
+                              String(j.job_id) === String(form.watch("job_id")),
+                          )?.quantity || ""
+                        }
+                      />
+                    </FormControl>
                   </FormItem>
-                ))}{" "}
+                </div>
                 <div className="flex flex-row gap-4">
                   {renderFormField("customer_name", ({ field }) => (
                     <FormItem className="w-full">
@@ -311,21 +379,21 @@ function EditDispatchandInvoice() {
                           onChange={(e) => {
                             const digitsOnly = e.target.value.replace(
                               /\D/g,
-                              ""
+                              "",
                             );
                             field.onChange(digitsOnly);
                           }}
                           onBlur={() => {
                             if (!field.value) return;
                             const formatted = formatPhone(
-                              field.value as string
+                              field.value as string,
                             );
                             field.onChange(formatted);
                           }}
                           onFocus={() => {
                             if (!field.value) return;
                             field.onChange(
-                              (field.value as string).replace(/\D/g, "")
+                              (field.value as string).replace(/\D/g, ""),
                             );
                           }}
                         />
@@ -365,17 +433,17 @@ function EditDispatchandInvoice() {
 
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Dispatch Note</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Dispatch Note</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Add your dispatch note details here
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                {renderFormField("dispatch_note", ({ field }) => (
+                {/* {renderFormField("dispatch_note", ({ field }) => (
                   <FormItem>
                     <FormLabel>Dispatch Note</FormLabel>
                     <FormControl>
@@ -383,7 +451,7 @@ function EditDispatchandInvoice() {
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                ))}
+                ))} */}
                 {renderFormField("dispatch_date", ({ field }) => (
                   <FormItem>
                     <FormLabel>Dispatch Date</FormLabel>
@@ -394,7 +462,7 @@ function EditDispatchandInvoice() {
                             variant={"outline"}
                             className={cn(
                               "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
+                              !field.value && "text-muted-foreground",
                             )}
                           >
                             {field.value
@@ -421,8 +489,7 @@ function EditDispatchandInvoice() {
                     <FormItem className="w-full">
                       <FormLabel>Dispatch Quantity</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
+                        <Input min={0} type="number" step="any"
                           placeholder="Enter dispatch quantity"
                           {...field}
                           value={field.value ?? ""}
@@ -435,8 +502,7 @@ function EditDispatchandInvoice() {
                     <FormItem className="w-full">
                       <FormLabel>No.of Bundles</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
+                        <Input min={0} type="number" step="any"
                           placeholder="Enter no.of bundles"
                           {...field}
                           value={field.value ?? ""}
@@ -463,7 +529,35 @@ function EditDispatchandInvoice() {
               </CardContent>
             </Card>
           </div>
+
+          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
+            <Button
+              size="lg"
+              variant="outline"
+              type="button"
+              onClick={() => router.push("/dispatch-invoice")}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="lg"
+              type="submit"
+              className="bg-primary text-white"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Update"
+              )}
+            </Button>
+          </div>
         </form>
+        </div>
       </Form>
     </div>
   );

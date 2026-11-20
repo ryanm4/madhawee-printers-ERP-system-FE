@@ -1,11 +1,10 @@
 "use client";
 
 import * as React from "react";
+import { getUser } from "@/lib/auth";
+import { isAdminRole, isRouteAllowedForUser, getDefaultRoute } from "@/lib/permissions";
 import {
-  IconHelp,
   IconInnerShadowTop,
-  IconSearch,
-  IconSettings,
 } from "@tabler/icons-react";
 import { NavMain } from "@/components/layout/nav-main";
 import { NavUser } from "@/components/layout/nav-user";
@@ -17,6 +16,10 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+  SidebarRail,
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
@@ -29,73 +32,150 @@ import {
   SquareUser,
   Settings,
   ChartNoAxesCombined,
+  PackagePlus,
+  PackageOpen,
+  Store,
 } from "lucide-react";
-import { NavSecondary } from "./nav-secondary";
 import Image from "next/image";
 import company_logo from "@/assets/Images/company_logo.jpeg";
 
+import Link from "next/link";
+
 const data = {
-  navMain: [
+  user: {
+    name: "Admin User",
+    email: "admin@madhawee.com",
+    avatar: "/avatars/admin.png",
+  },
+  navGroups: [
     {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: LayoutDashboard,
+      title: "Main",
+      items: [
+        {
+          title: "Dashboard",
+          url: "/dashboard",
+          icon: LayoutDashboard,
+        },
+      ],
     },
     {
-      title: "Quotations",
-      url: "/quotation-management",
-      icon: FileText,
+      title: "Sales & CRM",
+      items: [
+        {
+          title: "Quotations",
+          url: "/quotation-management",
+          icon: FileText,
+        },
+        {
+          title: "Customers",
+          url: "/customers",
+          icon: Users,
+        },
+      ],
     },
     {
-      title: "Purchase Orders",
-      url: "/purchase-order",
-      icon: ShoppingCart,
-    },
-    {
-      title: "Job Tickets",
-      url: "/job-ticket",
-      icon: ClipboardCheck,
-    },
-    {
-      title: "Dispatch and Invoice",
-      url: "/dispatch-invoice",
-      icon: Truck,
+      title: "Production",
+      items: [
+        {
+          title: "Purchase Orders",
+          url: "/purchase-order",
+          icon: ShoppingCart,
+        },
+        {
+          title: "Job Tickets",
+          url: "/job-ticket",
+          icon: ClipboardCheck,
+        },
+        {
+          title: "Dispatch",
+          url: "/dispatch-invoice",
+          icon: Truck,
+        },
+      ],
     },
     {
       title: "Inventory",
-      icon: Warehouse,
-      url: "/inventory",
+      items: [
+        {
+          title: "Stock List",
+          url: "/inventory",
+          icon: Warehouse,
+        },
+        {
+          title: "Receive Goods",
+          url: "/grn",
+          icon: PackagePlus
+        },
+        {
+          title: "Issue Material",
+          url: "/issue-notes",
+          icon: PackageOpen
+        },
+        {
+          title: "Suppliers",
+          url: "/suppliers",
+          icon: Store
+        },
+      ],
     },
     {
-      title: "Customers",
-      icon: Users,
-      url: "/customers",
+      title: "Reporting & Analytics",
+      items: [
+        {
+          title: "Reports",
+          icon: ChartNoAxesCombined,
+          url: "/reports",
+        },
+      ]
     },
     {
-      title: "Users",
-      icon: SquareUser,
-      url: "/users",
-    },
-    {
-      title: "Reports",
-      icon: ChartNoAxesCombined,
-      url: "/reports",
+      title: "System",
+      items: [
+        {
+          title: "Users",
+          icon: SquareUser,
+          url: "/users",
+        },
+
+        {
+          title: "Settings",
+          icon: Settings,
+          url: "/settings",
+        },
+      ],
     },
   ],
 };
 
+function getNavGroupsForRole(isAdmin: boolean, userRole?: string) {
+  if (isAdmin) return data.navGroups;
+
+  return data.navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => isRouteAllowedForUser(item.url, userRole)),
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const user = getUser();
+  const isAdmin = isAdminRole(user?.user_role);
+  const navGroups = getNavGroupsForRole(isAdmin, user?.user_role);
+  const homeHref = getDefaultRoute(user?.user_role);
+
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar className="no-print" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
+              size="lg"
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="/dashboard">
-                <div className="flex aspect-square size-8 items-center justify-center    text-sidebar-primary-foreground">
+              <Link href={homeHref}>
+                <div className="flex aspect-square size-8 items-center justify-center ">
                   <Image
                     src={company_logo}
                     alt="Madhawee Printers"
@@ -109,19 +189,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <span className="truncate font-semibold">
                     Madhawee Printers
                   </span>
-                  <span className="truncate text-xs">ERP System</span>
+                  <span className="truncate text-xs">v1.0.9</span>
                 </div>
-              </a>
+                <IconInnerShadowTop className="ml-auto size-4 opacity-50" />
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={data.navMain} />
+      <SidebarContent className="gap-0">
+        {navGroups.map((group) => (
+          <SidebarGroup key={group.title} className="py-1">
+            <SidebarGroupLabel className="h-5 mb-0 px-2 text-xs font-semibold">{group.title}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <NavMain items={group.items} />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
       <SidebarFooter>
         <NavUser />
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }

@@ -1,6 +1,13 @@
 "use client";
 
-import { FieldPath, useFieldArray, useForm } from "react-hook-form";
+import { getErrorMessage } from "@/lib/error-utils";
+import { FormSkeleton } from "@/components/shared/page-skeletons";
+import {
+  FieldErrors,
+  FieldPath,
+  useFieldArray,
+  useForm,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
@@ -17,7 +24,6 @@ import { useState, useRef, useEffect } from "react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 
 import {
   Form,
@@ -49,26 +55,33 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CUSTOMER } from "@/modules/customer/types";
 import { CustomerApi } from "@/modules/customer/api";
 import {
-  COATING_TYPES,
-  INK_STATUS,
-  PLATES_STATUS,
-  PRODUCT_TYPES,
+  JobTicketStatus,
+  PurchaseOrderStatus,
 } from "@/config/enum";
+import { useOptionList } from "@/hooks/use-option-list";
 
 import { Combobox } from "@/components/shared/combobox";
 import {
   PURCHASE_ORDER,
   PURCHASE_ORDER_ID,
+  PO_ITEMS,
 } from "@/modules/purchase-order/types";
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { PaperTypeCombobox } from "../../_components/paper-type-combobox";
+import { JobTicketPrintDialog, joinDistinct } from "../../_components/job-ticket-print-dialog";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
-import { CREATE_TICKETS } from "@/modules/job-tickets/types";
+import {
+  CREATE_TICKETS,
+  JOB_TICKET_DETAIL,
+  JobTicketPrintData,
+} from "@/modules/job-tickets/types";
 import { toast } from "sonner";
 
-import { toMySQLDateTime } from "@/hooks/sql-date-time";
+import { parseLocalDate, toMySQLDateTime } from "@/hooks/sql-date-time";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
+import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
+import { usePermissions } from "@/hooks/use-permissions";
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
 import { inventoryApi } from "@/modules/inventory/api";
 import { useDispatch } from "react-redux";
@@ -77,10 +90,128 @@ import { AppDispatch } from "@/store/store";
 
 type JobTicketFormValues = z.infer<typeof jobTicketSchema>;
 
+const emptyRawMaterial = {
+  item_id: undefined,
+  material_name: "",
+  material_type: "",
+  size: "",
+  material_description: "",
+  quantity: 0,
+  status: "",
+  remarks: "",
+};
+
+function mapRawMaterials(
+  materials: unknown
+): JobTicketFormValues["paperTypes"][number]["rawMaterials"] {
+  if (!Array.isArray(materials)) {
+    return [{ ...emptyRawMaterial }];
+  }
+
+  const mapped = materials.map((rm: Record<string, unknown>) => ({
+    item_id: rm.item_id ? Number(rm.item_id) : undefined,
+    material_name: String(rm.material_name ?? ""),
+    material_type: String(rm.material_type ?? ""),
+    size: String(rm.size ?? ""),
+    material_description: String(rm.material_description ?? ""),
+    quantity: Number(rm.quantity ?? 0),
+    status: String(rm.status ?? ""),
+    remarks: String(rm.remarks ?? ""),
+  }));
+
+  return mapped.length > 0 ? mapped : [{ ...emptyRawMaterial }];
+}
+
+function mapPaperTypesFromTicket(
+  jt: JOB_TICKET_DETAIL
+): JobTicketFormValues["paperTypes"] {
+  const record = jt as Record<string, unknown>;
+  const rawList =
+    jt.paperCoating ??
+    jt.paper_coating ??
+    (Array.isArray(record.paperCoatingData) ? record.paperCoatingData : null);
+
+  if (Array.isArray(rawList) && rawList.length > 0) {
+    return rawList.map((pt: Record<string, unknown>) => {
+      let paperValue = String(pt.paper ?? pt.paper_type ?? "");
+      const materials = pt.materials ?? pt.raw_materials;
+      
+      if (!paperValue && Array.isArray(materials) && materials.length > 0) {
+        const mat = materials[0] as Record<string, unknown>;
+        if (mat.material_type && mat.material_name) {
+          paperValue = `${mat.material_type} ${mat.material_name}`;
+        }
+      }
+
+      // Filter raw materials to only match this specific paper set's paper type
+      const allMaterials = Array.isArray(materials) ? materials : [];
+      const filteredMaterials = allMaterials.filter((m: Record<string, unknown>) => {
+        if (!paperValue) return true;
+        const mKey = `${m.material_type || ""} ${m.material_name || ""}`.trim().toLowerCase();
+        const pKey = paperValue.trim().toLowerCase();
+        return mKey === pKey;
+      });
+
+      return {
+        paper: paperValue,
+        coating: String(pt.coating ?? ""),
+        rawMaterials: mapRawMaterials(filteredMaterials),
+      };
+    });
+  }
+
+  if (jt.paper_type_id || jt.coating) {
+    return [
+      {
+        paper: String(jt.paper_type_id ?? ""),
+        coating: String(jt.coating ?? ""),
+        rawMaterials: [{ ...emptyRawMaterial }],
+      },
+    ];
+  }
+
+  return [
+    {
+      paper: "",
+      coating: "",
+      rawMaterials: [{ ...emptyRawMaterial }],
+    },
+  ];
+}
+
+function getFirstValidationMessage(
+  errors: FieldErrors<JobTicketFormValues>
+): string {
+  const walk = (value: unknown): string | undefined => {
+    if (!value || typeof value !== "object") return undefined;
+    if (
+      "message" in value &&
+      typeof (value as { message?: unknown }).message === "string"
+    ) {
+      return (value as { message: string }).message;
+    }
+    for (const nested of Object.values(value)) {
+      const message = walk(nested);
+      if (message) return message;
+    }
+    return undefined;
+  };
+
+  return (
+    walk(errors) ??
+    "Please complete all required fields (Product Type, Quantity, Paper Type, and Coating)."
+  );
+}
+
 function EditJobTicket() {
+  const { canModifyJobTicket } = usePermissions();
   const router = useRouter();
   const { id } = useParams() as { id: string };
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(false);
+  // False until the record has been fetched; until then a skeleton stands in for the form
+  const [recordLoaded, setRecordLoaded] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isInitialLoad = useRef(true);
   const [customerData, setCustomerData] = useState<CUSTOMER[]>([]);
   const [purchaseOrderData, setPurchaseOrderData] = useState<PURCHASE_ORDER[]>(
     []
@@ -94,9 +225,18 @@ function EditJobTicket() {
     avatar: string;
   } | null>(null);
   const [inventoryList, setInventoryList] = useState<GET_ALL_INVENTORY[]>([]);
+  const [inkItems, setInkItems] = useState<{ value: string; label: string }[]>(
+    []
+  );
   const dispatch = useDispatch<AppDispatch>();
-  const baseDefaultValues = {
-    poNumber: "",
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
+  const [printData, setPrintData] = useState<JobTicketPrintData | null>(null);
+  const [ticketStatus, setTicketStatus] = useState<string>(
+    JobTicketStatus.CREATED
+  );
+
+  const baseDefaultValues: JobTicketFormValues = {
+    customer_po: "",
     item: "",
     orderReceivedDate: undefined,
     jobNumber: "",
@@ -104,9 +244,9 @@ function EditJobTicket() {
     customer: "",
     jobName: "",
     productType: "",
-    completed_qty: "",
     quantity: "",
     wastage: "",
+    deliveryDate: undefined,
     packingDate: undefined,
     expiryDate: undefined,
     tcNo: "",
@@ -119,17 +259,11 @@ function EditJobTicket() {
     newPlatesQuantity: "",
     newPlatesStatus: "",
     newPlatesRemarks: "",
-    inks: [
-      { ink: "Black", quantity: "", status: "", remarks: "" },
-      { ink: "Cyan", quantity: "", status: "", remarks: "" },
-      { ink: "Magenta", quantity: "", status: "", remarks: "" },
-      { ink: "Yellow", quantity: "", status: "", remarks: "" },
-    ],
+    inks: [{ ink: "", quantity: "", status: "", remarks: "" }],
     paperTypes: [
       {
         paper: "",
         coating: "",
-        delivery_date: new Date(),
         rawMaterials: [
           {
             item_id: undefined,
@@ -147,9 +281,16 @@ function EditJobTicket() {
   };
 
   const form = useForm<JobTicketFormValues>({
-    resolver: zodResolver(jobTicketSchema),
+    resolver: zodResolver(jobTicketSchema) as any,
     defaultValues: baseDefaultValues,
   });
+  const productTypeOptions = useOptionList("product_type", form.watch("productType"));
+  const coatingOptions = useOptionList("coating_type", form.watch("paperTypes")?.map((p) => p.coating));
+  const plateStatusOptions = useOptionList("plate_status", [form.watch("oldPlatesStatus"), form.watch("newPlatesStatus")]);
+  const inkStatusOptions = useOptionList("ink_status", [
+    ...(form.watch("inks") ?? []).map((ink) => ink.status),
+    ...(form.watch("paperTypes") ?? []).flatMap((p) => (p.rawMaterials ?? []).map((rm) => rm.status)),
+  ]);
 
   const {
     fields: paperTypeFields,
@@ -213,17 +354,25 @@ function EditJobTicket() {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + sizes[i];
   };
 
+  const onInvalid = (errors: FieldErrors<JobTicketFormValues>) => {
+    toast.error("Cannot save job ticket", {
+      description: getFirstValidationMessage(errors),
+    });
+  };
+
   async function onSubmit(data: JobTicketFormValues) {
     try {
-      setIsLoading(true);
+      setIsSubmitting(true);
       const formattedData: Partial<CREATE_TICKETS> = {
-        po_id: Number(data.poNumber),
+        po_id: Number(data.customer_po),
+        job_item: data.item,
+        job_number: data.jobNumber,
         customer_id: Number(data.customer),
         job_name: data.jobName,
         product_type: data.productType,
         quantity: data.quantity ? Number(data.quantity) : undefined,
-        completed_qty: data.completed_qty
-          ? Number(data.completed_qty)
+        delivery_date: data.deliveryDate
+          ? toMySQLDateTime(data.deliveryDate)
           : undefined,
         wastage: data.wastage,
         order_received_date: data.orderReceivedDate
@@ -232,12 +381,8 @@ function EditJobTicket() {
         job_open_date: data.jobOpenDate
           ? toMySQLDateTime(data.jobOpenDate)
           : undefined,
-        packing_date: data.packingDate
-          ? toMySQLDateTime(data.packingDate)
-          : undefined,
-        expiry_date: data.expiryDate
-          ? toMySQLDateTime(data.expiryDate)
-          : undefined,
+        packing_date: data.packingDate,
+        expiry_date: data.expiryDate,
         tc_no: data.tcNo,
         batch_ref: data.batchRef,
         remarks: data.remarks,
@@ -257,9 +402,6 @@ function EditJobTicket() {
         paperCoating: data.paperTypes.map((pt) => ({
           paper: pt.paper,
           coating: pt.coating,
-          delivery_date: pt.delivery_date
-            ? toMySQLDateTime(pt.delivery_date)
-            : undefined,
           materials: pt.rawMaterials?.map((rm) => ({
             item_id: rm.item_id,
             material_type: rm.material_type,
@@ -271,182 +413,229 @@ function EditJobTicket() {
             remarks: rm.remarks,
           })),
         })),
-        inks: data.inks?.map((ink) => ({
-          ...ink,
-          ink: ink.ink,
-        })),
-        updated_by: user?.email || "admin@admin.com",
-        updated_on: new Date(),
+        inks: data.inks
+          ?.filter((ink) => ink.ink && ink.ink.trim() !== "")
+          ?.map((ink) => ({
+            ink: ink.ink,
+            quantity: ink.quantity && ink.quantity.trim() !== "" ? ink.quantity : null,
+            status: ink.status || null,
+            remarks: ink.remarks || null,
+          })),
+        updated_by: user?.name || "User",
+        updated_on: toMySQLDateTime(new Date()),
+        status: ticketStatus,
       };
 
-      const response = await jobTicketsApi.update(id, formattedData as any);
+      const response = await jobTicketsApi.update(
+        id,
+        formattedData as CREATE_TICKETS
+      );
 
       if (response.status === 200) {
-        toast("Job Ticket updated successfully");
-        router.push("/job-ticket");
+        toast.success("Job Ticket updated successfully");
+
+        // Build print data and show print dialog
+                const allRawMaterials =
+          data.paperTypes?.flatMap((p) => p.rawMaterials || []) || [];
+        const matchingPo = purchaseOrderData.find(
+          (po) => String(po.po_id) === data.customer_po
+        );
+        const pd: JobTicketPrintData = {
+          jobNumber: data.jobNumber,
+          productType: data.productType,
+          orderReceivedDate: data.orderReceivedDate,
+          quantity: data.quantity,
+          jobOpenDate: data.jobOpenDate || new Date(),
+          paperType: joinDistinct((data.paperTypes || []).map((p) => p.paper)),
+          customer:
+            customerData.find((c) => String(c.customer_id) === data.customer)
+              ?.company_name || data.customer,
+          coating: joinDistinct((data.paperTypes || []).map((p) => p.coating)),
+          jobName: data.jobName,
+          customerDeliveryDate: data.deliveryDate,
+          packingDate: data.packingDate,
+          expiryDate: data.expiryDate,
+          poNo: matchingPo?.customer_po || String(data.customer_po),
+          tcNo: data.tcNo || matchingPo?.TC_E_PR_No,
+          batchRef: data.batchRef || matchingPo?.batch_ref,
+          remarks: data.remarks,
+          oldPlatesQuantity: data.oldPlatesQuantity,
+          newPlatesQuantity: data.newPlatesQuantity,
+          oldPlatesStatus: data.oldPlatesStatus || undefined,
+          oldPlatesRemarks: data.oldPlatesRemarks || undefined,
+          newPlatesStatus: data.newPlatesStatus || undefined,
+          newPlatesRemarks: data.newPlatesRemarks || undefined,
+          inks: (data.inks || [])
+            .filter((i) => i.ink && i.ink.trim() !== "")
+            .map((i) => ({
+              ink: i.ink || "",
+              quantity: i.quantity && i.quantity.trim() !== "" ? i.quantity : undefined,
+              status: i.status || undefined,
+              remarks: i.remarks || undefined,
+            })),
+          rawMaterials: allRawMaterials,
+        };
+        setPrintData(pd);
+        setShowPrintDialog(true);
       }
     } catch (error) {
       console.error("Failed to update Job Ticket:", error);
-      toast("Failed to update Job Ticket");
+      toast.error(getErrorMessage(error, "Failed to update Job Ticket"));
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   }
 
-  const fetchData = async () => {
-    try {
-      setIsLoading(true);
-      const [poResponse, customerResponse] = await Promise.all([
-        purchaseOrderApi.getAll(),
-        CustomerApi.getAll(),
-      ]);
-
-      setPurchaseOrderData(poResponse.data);
-      setCustomerData(customerResponse.data);
-    } catch (error) {
-      console.error("Failed to fetch data", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getInventoryList = async () => {
-    try {
-      setIsLoading(true);
-      const response = await inventoryApi.getAll();
-
-      if (response.status === 200) {
-        setInventoryList(response.data);
-        dispatch(setReduxInventoryList(response.data));
-      }
-    } catch (error) {
-      console.error("Failed to fetch inventory");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    const fetchJobTicketDetail = async () => {
-      if (!id) return;
+    const fetchDataAndTicket = async () => {
       try {
-        setIsLoading(true);
-        const response = await jobTicketsApi.getById(id);
-        if (response.status === 200) {
-          const jt = response.data;
+        setIsPageLoading(true);
+        isInitialLoad.current = true;
+
+        // 1. Fetch reference data first
+        const [poResponse, customerResponse, inventoryResponse] =
+          await Promise.all([
+            purchaseOrderApi.getAll(),
+            CustomerApi.getAll(),
+            inventoryApi.getAll(),
+          ]);
+
+        const pos = poResponse.data;
+        const customers = customerResponse.data;
+        const inventory = inventoryResponse.data;
+
+        // Initial filter for Approved POs
+        const filteredPOs = pos.filter(
+          (p: PURCHASE_ORDER) => p.status === PurchaseOrderStatus.APPROVED
+        );
+
+        setPurchaseOrderData(filteredPOs);
+        setCustomerData(customers);
+        setInventoryList(inventory);
+        dispatch(setReduxInventoryList(inventory));
+
+        // Filter ink & others items from inventory
+        const filteredInks = inventory.filter(
+          (item: GET_ALL_INVENTORY) =>
+            item.item_category === "INK" ||
+            ["INK", "OTHER", "LAMINATING FILM", "SPIRAL"].includes(item.item_sub_category)
+        );
+
+        const uniqueInks = Array.from(
+          new Set(
+            filteredInks.map((item: GET_ALL_INVENTORY) =>
+              item.size && item.size.trim() !== "" && item.size !== "N/A"
+                ? `${item.item_name} - ${item.size}`
+                : item.item_name
+            )
+          )
+        ) as string[];
+
+        const inkItems = uniqueInks.map((name: string) => ({
+          value: name,
+          label: name,
+        }));
+        setInkItems(inkItems);
+
+        // 2. Now fetch the ticket detail
+        const ticketResponse = await jobTicketsApi.getById(id);
+        if (ticketResponse.status === 200) {
+          const jt = ticketResponse.data;
+          setTicketStatus(jt.status);
+
+          // 3. Ensure the currently linked PO is in the list even if not APPROVED
+          const currentPo = pos.find(
+            (p: PURCHASE_ORDER) => String(p.po_id) === String(jt.po_id)
+          );
+          if (
+            currentPo &&
+            !filteredPOs.some((p) => String(p.po_id) === String(jt.po_id))
+          ) {
+            setPurchaseOrderData((prev) => [...prev, currentPo]);
+          }
+
+          // Find the matching PO for fallbacks
+          const matchingPo = currentPo;
+
           form.reset({
-            poNumber: String(jt.po_id),
-            item: (jt as any).item_code || "",
-            orderReceivedDate: (jt as any).order_received_date
-              ? new Date((jt as any).order_received_date)
+            item: String(jt.job_item),
+            customer_po: String(jt.po_id),
+            po_id: Number(jt.po_id),
+            orderReceivedDate: jt.order_received_date
+              ? parseLocalDate(jt.order_received_date)
+              : jt.created_on
+              ? parseLocalDate(jt.created_on)
               : undefined,
-            jobNumber: (jt as any).job_number || String(jt.job_id),
+            jobNumber: jt.job_number || String(jt.job_id),
             jobOpenDate: jt.job_open_date
-              ? new Date(jt.job_open_date)
+              ? parseLocalDate(jt.job_open_date)
+              : jt.created_on
+              ? parseLocalDate(jt.created_on)
               : undefined,
             customer: String(jt.customer_id),
             jobName: jt.job_name,
-            productType: jt.product_type,
-            completed_qty: String(jt.completed_qty),
-            quantity: String(jt.quantity),
-            wastage: jt.wastage,
-            packingDate: jt.packing_date
-              ? new Date(jt.packing_date)
+            productType: jt.product_type || "",
+            quantity: jt.quantity != null ? String(jt.quantity) : "",
+            deliveryDate: jt.delivery_date
+              ? parseLocalDate(jt.delivery_date)
               : undefined,
-            expiryDate: jt.expiry_date ? new Date(jt.expiry_date) : undefined,
-            tcNo: (jt as any).tc_no,
-            batchRef: (jt as any).batch_ref,
+            wastage: jt.wastage || "",
+            packingDate: jt.packing_date ? String(jt.packing_date) : "",
+            expiryDate: jt.expiry_date ? String(jt.expiry_date) : "",
+            // Prioritize JT data, fallback to PO data if missing
+            tcNo: jt.tc_no || matchingPo?.TC_E_PR_No || "",
+            batchRef: jt.batch_ref || matchingPo?.batch_ref || "",
             remarks: jt.remarks,
-            oldPlatesQuantity: (jt as any).old_plate_quantity,
-            oldPlatesStatus: (jt as any).old_plate_status,
-            oldPlatesRemarks: (jt as any).old_plate_remarks,
-            newPlatesQuantity: (jt as any).new_plate_quantity,
-            newPlatesStatus: (jt as any).new_plate_status,
-            newPlatesRemarks: (jt as any).new_plate_remarks,
-            inks: (jt as any).inks?.map((ink: any) => ({
-              ink: ink.ink,
-              quantity: String(ink.quantity),
-              status: ink.status,
-              remarks: ink.remarks,
-            })) || [
-              { ink: "Black", quantity: "", status: "", remarks: "" },
-              { ink: "Cyan", quantity: "", status: "", remarks: "" },
-              { ink: "Magenta", quantity: "", status: "", remarks: "" },
-              { ink: "Yellow", quantity: "", status: "", remarks: "" },
-            ],
-            paperTypes: (jt as any).paperCoatingData?.map((pt: any) => ({
-              paper: pt.paper,
-              coating: pt.coating,
-              delivery_date: pt.delivery_date
-                ? new Date(pt.delivery_date)
-                : undefined,
-              rawMaterials: pt.materials?.map((rm: any) => ({
-                item_id: rm.item_id,
-                material_name: rm.material_name,
-                material_type: rm.material_type,
-                size: rm.size || "",
-                material_description: rm.material_description,
-                quantity: rm.quantity,
-                status: rm.status,
-                remarks: rm.remarks,
-              })) || [
-                {
-                  item_id: undefined,
-                  material_name: "",
-                  material_type: "",
-                  size: "",
-                  material_description: "",
-                  quantity: 0,
-                  status: "",
-                  remarks: "",
-                },
-              ],
-            })) || [
-              {
-                paper: "",
-                coating: "",
-                delivery_date: new Date(),
-                rawMaterials: [
-                  {
-                    item_id: undefined,
-                    material_name: "",
-                    material_type: "",
-                    size: "",
-                    material_description: "",
-                    quantity: 0,
-                    status: "",
-                    remarks: "",
-                  },
-                ],
-              },
-            ],
+            oldPlatesQuantity: jt.old_plate_quantity
+              ? String(jt.old_plate_quantity)
+              : "",
+            oldPlatesStatus: jt.old_plate_status || "",
+            oldPlatesRemarks: jt.old_plate_remarks || "",
+            newPlatesQuantity: jt.new_plate_quantity
+              ? String(jt.new_plate_quantity)
+              : "",
+            newPlatesStatus: jt.new_plate_status || "",
+            newPlatesRemarks: jt.new_plate_remarks || "",
+            inks: jt.inks?.length
+              ? jt.inks
+                  .filter((v, i, a) => a.findIndex(t => (t.ink === v.ink && t.quantity === v.quantity && t.status === v.status && t.remarks === v.remarks)) === i)
+                  .map((ink) => ({
+                    ink: ink.ink,
+                    quantity: String(ink.quantity || ""),
+                    status: ink.status || "",
+                    remarks: ink.remarks || "",
+                  }))
+              : [{ ink: "", quantity: "", status: "", remarks: "" }],
+            paperTypes: mapPaperTypesFromTicket(jt),
           });
+
+          // Mark initial load as complete after setting form data
+          isInitialLoad.current = false;
         }
       } catch (error) {
-        console.error("Failed to fetch job ticket:", error);
-        toast("Failed to load job ticket data");
+        console.error("Failed to fetch initial data or job ticket:", error);
+        toast.error(getErrorMessage(error, "Failed to load job ticket data"));
       } finally {
-        setIsLoading(false);
+        setIsPageLoading(false);
+        setRecordLoaded(true);
       }
     };
 
-    fetchJobTicketDetail();
-    fetchData();
-    getInventoryList();
-  }, [id]);
+    fetchDataAndTicket();
+  }, [id, dispatch]);
 
   useEffect(() => {
     const userData = getUser();
     if (userData) {
       setUser({
         name: userData.name || "User",
-        email: userData.email,
+        email: userData.email ?? "",
         avatar: "",
       });
     }
   }, []);
 
-  const selectedPoId = form.watch("poNumber");
+  const selectedPoId = form.watch("customer_po");
   const selectedPoItems = selectedPoDetails?.po_items ?? [];
 
   useEffect(() => {
@@ -464,15 +653,23 @@ function EditJobTicket() {
             setSelectedPoDetails(po);
 
             if (po.customer) {
-              // Find the customer in our list to ensure we have the right value
-              // or just use the ID if we decide to use IDs as values
-              form.setValue("customer", String(po.customer.customer_id));
+              // Only auto-fill customer if not already set or it's a manual change
+              if (!isInitialLoad.current || !form.getValues("customer")) {
+                form.setValue("customer", String(po.customer.customer_id));
+              }
             }
-            if (po.po_date) {
+            if (
+              po.po_date &&
+              (!isInitialLoad.current || !form.getValues("orderReceivedDate"))
+            ) {
               form.setValue("orderReceivedDate", new Date(po.po_date));
             }
+
             form.setValue("tcNo", po.TC_E_PR_No);
             form.setValue("batchRef", po.batch_ref);
+            isInitialLoad.current = false;
+
+            isInitialLoad.current = false;
           }
         } catch (err) {
           console.error("Error fetching PO details", err);
@@ -483,8 +680,11 @@ function EditJobTicket() {
     };
 
     fetchPoDetails();
-    form.setValue("item", "");
   }, [selectedPoId, form]);
+
+  if (!canModifyJobTicket) {
+    return <RestrictedRouteGuard />;
+  }
 
   const renderFormField = <TName extends FieldPath<JobTicketFormValues>>(
     name: TName,
@@ -495,7 +695,7 @@ function EditJobTicket() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      {isLoading && <FullPageLoader />}
+      {isPageLoading && recordLoaded && <FullPageLoader />}
       <PageTitleWithBreadcrumb
         title="Edit Job Ticket"
         breadcrumbs={[
@@ -503,16 +703,21 @@ function EditJobTicket() {
           { title: "Job Ticket", href: "/job-ticket" },
         ]}
       />
+      {!recordLoaded && <FormSkeleton />}
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-0">
+        <div className={recordLoaded ? "contents" : "hidden"}>
+        <form
+          onSubmit={form.handleSubmit(onSubmit, onInvalid)}
+          className="space-y-6 pb-0"
+        >
           <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
             <Button
               size="lg"
               variant="outline"
               type="button"
               onClick={() => router.push("/job-ticket")}
-              disabled={isLoading}
+              disabled={isPageLoading || isSubmitting}
             >
               Cancel
             </Button>
@@ -520,31 +725,31 @@ function EditJobTicket() {
               size="lg"
               type="submit"
               className="bg-primary text-white"
-              disabled={isLoading}
+              disabled={isPageLoading || isSubmitting}
             >
-              {isLoading ? "Saving..." : "Save"}
+              {isSubmitting ? "Saving..." : "Save"}
             </Button>
           </div>
           <Card
             className={cn(
-              "w-full shdow-sm hover:shadow-md transition-shadow flex flex-col"
+              "w-full rounded-xl border-[#E4E8F0] shadow-none flex flex-col"
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
-              <h3 className="text-md font-medium mb-2">Job Ticket Details</h3>
+              <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Job Ticket Details</h3>
               <p className="text-xs text-muted-foreground mb-4">
                 Enter Job Ticket Details
               </p>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {renderFormField("poNumber", ({ field }) => (
+                {renderFormField("customer_po", ({ field }) => (
                   <FormItem>
                     <FormLabel>PO Number</FormLabel>
                     <Combobox
                       items={purchaseOrderData.map((po) => ({
                         value: String(po.po_id),
-                        label: String(po.po_id),
+                        label: String(po.customer_po),
                       }))}
                       value={field.value || ""}
                       onValueChange={(value) => {
@@ -561,15 +766,30 @@ function EditJobTicket() {
                   <FormItem>
                     <FormLabel>Item</FormLabel>
                     <Combobox
-                      items={selectedPoItems.map((item: any) => ({
-                        value: item.item_code,
-                        label: item.item_code,
-                      }))}
+                      items={(() => {
+                        const baseItems = selectedPoItems.map(
+                          (item: PO_ITEMS) => ({
+                            value: String(item.item_code),
+                            label: String(item.item_code),
+                          })
+                        );
+                        const currentValue = String(field.value || "");
+                        if (
+                          currentValue &&
+                          !baseItems.some((i) => i.value === currentValue)
+                        ) {
+                          return [
+                            { value: currentValue, label: currentValue },
+                            ...baseItems,
+                          ];
+                        }
+                        return baseItems;
+                      })()}
                       value={field.value || ""}
                       onValueChange={(value) => {
                         field.onChange(value);
                         const selectedItem = selectedPoItems.find(
-                          (i: any) => i.item_code === value
+                          (i: PO_ITEMS) => i.item_code === value
                         );
                         if (selectedItem) {
                           form.setValue(
@@ -601,7 +821,7 @@ function EditJobTicket() {
                   <FormItem>
                     <FormLabel>Job Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="MPL/8450/25/TIEP" {...field} />
+                      <Input readOnly placeholder="MPL/8450/25/TIEP" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -719,9 +939,9 @@ function EditJobTicket() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.entries(PRODUCT_TYPES).map(([key, value]) => (
-                          <SelectItem key={key} value={value}>
-                            {value}
+                        {productTypeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -735,8 +955,7 @@ function EditJobTicket() {
                       Quantity <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
+                      <Input min={0} type="number" step="any"
                         placeholder="Enter Quantity"
                         {...field}
                       />
@@ -744,18 +963,36 @@ function EditJobTicket() {
                     <FormMessage />
                   </FormItem>
                 ))}
-                {renderFormField("completed_qty", ({ field }) => (
+                {renderFormField("deliveryDate", ({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      Completed Quantity <span className="text-red-500">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Enter Completed Quantity"
-                        {...field}
-                      />
-                    </FormControl>
+                    <FormLabel>Delivery Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value
+                              ? format(field.value, "PPP")
+                              : format(new Date(), "PPP")}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date < new Date("1900-01-01")}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 ))}
@@ -763,8 +1000,7 @@ function EditJobTicket() {
                   <FormItem>
                     <FormLabel>Wastage %</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
+                      <Input min={0} type="number" step="any"
                         placeholder="Enter Wastage"
                         {...field}
                       />
@@ -872,53 +1108,13 @@ function EditJobTicket() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {Object.entries(COATING_TYPES).map(
-                                    ([key, value]) => (
-                                      <SelectItem key={key} value={value}>
-                                        {value}
-                                      </SelectItem>
-                                    )
-                                  )}
+                                  {coatingOptions.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )
-                        )}
-                        {renderFormField(
-                          `paperTypes.${index}.delivery_date`,
-                          ({ field }) => (
-                            <FormItem>
-                              <FormLabel>Delivery Date</FormLabel>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <FormControl>
-                                    <Button
-                                      variant={"outline"}
-                                      className={cn(
-                                        "w-full pl-3 text-left font-normal",
-                                        !field.value && "text-muted-foreground"
-                                      )}
-                                    >
-                                      {field.value
-                                        ? format(field.value, "PPP")
-                                        : format(new Date(), "PPP")}
-                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                  </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                  className="w-auto p-0"
-                                  align="start"
-                                >
-                                  <Calendar
-                                    mode="single"
-                                    captionLayout="dropdown"
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                  />
-                                </PopoverContent>
-                              </Popover>
                               <FormMessage />
                             </FormItem>
                           )
@@ -929,12 +1125,12 @@ function EditJobTicket() {
                       <h5 className="text-xs font-medium mb-2 mt-2">
                         Raw Materials
                       </h5>
-                      {rawMaterials.map((_rm: any, rmIndex: number) => (
+                      {rawMaterials.map((_rm, rmIndex: number) => (
                         <div
                           key={rmIndex}
                           className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-2"
                         >
-                          {renderFormField(
+                           {renderFormField(
                             `paperTypes.${index}.rawMaterials.${rmIndex}.size`,
                             ({ field }) => {
                               const selectedPaperName = form.watch(
@@ -942,8 +1138,8 @@ function EditJobTicket() {
                               );
                               const filteredInventory = inventoryList.filter(
                                 (item) =>
-                                  `${item.item_sub_category} ${item.item_name}` ===
-                                  selectedPaperName
+                                  `${item.item_sub_category || ""} ${item.item_name}`.trim() ===
+                                  (selectedPaperName || "").trim()
                               );
 
                               return (
@@ -958,7 +1154,7 @@ function EditJobTicket() {
                                       field.onChange(val);
                                       const selectedMaterial =
                                         filteredInventory.find(
-                                          (item) => item.size === val
+                                          (item) => (item.size || "") === val
                                         );
                                       if (selectedMaterial) {
                                         form.setValue(
@@ -986,9 +1182,9 @@ function EditJobTicket() {
                                       {filteredInventory.map((item) => (
                                         <SelectItem
                                           key={item.item_id}
-                                          value={item.size}
+                                          value={item.size || ""}
                                         >
-                                          {item.size}
+                                          {item.size || "No Size"}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -1008,8 +1204,7 @@ function EditJobTicket() {
                                   Quantity
                                 </FormLabel>
                                 <FormControl>
-                                  <Input
-                                    type="number"
+                                  <Input min={0} type="number" step="any"
                                     placeholder="Enter Quantity"
                                     {...field}
                                     onChange={(e) =>
@@ -1044,13 +1239,11 @@ function EditJobTicket() {
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    {Object.entries(INK_STATUS).map(
-                                      ([key, value]) => (
-                                        <SelectItem key={key} value={value}>
-                                          {value}
-                                        </SelectItem>
-                                      )
-                                    )}
+                                    {inkStatusOptions.map((option) => (
+                                      <SelectItem key={option.value} value={option.value}>
+                                        {option.label}
+                                      </SelectItem>
+                                    ))}
                                   </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -1090,7 +1283,7 @@ function EditJobTicket() {
                                   form.setValue(
                                     `paperTypes.${index}.rawMaterials`,
                                     current.filter(
-                                      (_: any, i: number) => i !== rmIndex
+                                      (_, i: number) => i !== rmIndex
                                     )
                                   );
                                 }
@@ -1140,7 +1333,6 @@ function EditJobTicket() {
                       appendPaperType({
                         paper: "",
                         coating: "",
-                        delivery_date: undefined,
                         rawMaterials: [
                           {
                             item_id: undefined,
@@ -1167,64 +1359,24 @@ function EditJobTicket() {
                 {renderFormField("packingDate", ({ field }) => (
                   <FormItem>
                     <FormLabel>Packing Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value
-                              ? format(field.value, "PPP")
-                              : format(new Date(), "PPP")}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          captionLayout="dropdown"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter Packing Date e.g. Apr 2026"
+                        {...field}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 ))}
                 {renderFormField("expiryDate", ({ field }) => (
                   <FormItem>
                     <FormLabel>Expiry Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value
-                              ? format(field.value, "PPP")
-                              : format(new Date(), "PPP")}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          captionLayout="dropdown"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter Expiry Date e.g. Apr 2031"
+                        {...field}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 ))}
@@ -1235,7 +1387,7 @@ function EditJobTicket() {
                   <FormItem>
                     <FormLabel>TC No</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter TC No" {...field} />
+                      <Input readOnly placeholder="Enter TC No" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1244,7 +1396,11 @@ function EditJobTicket() {
                   <FormItem>
                     <FormLabel>Batch Ref</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter Batch Ref" {...field} />
+                      <Input
+                        readOnly
+                        placeholder="Enter Batch Ref"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1276,8 +1432,7 @@ function EditJobTicket() {
                     <FormItem>
                       <FormLabel>Old Plates Quantity</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
+                        <Input min={0} type="number" step="any"
                           placeholder="Quantity"
                           {...field}
                         />
@@ -1298,9 +1453,9 @@ function EditJobTicket() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {Object.entries(PLATES_STATUS).map(([key, value]) => (
-                            <SelectItem key={key} value={value}>
-                              {value}
+                          {plateStatusOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1323,8 +1478,7 @@ function EditJobTicket() {
                     <FormItem>
                       <FormLabel>New Plates Quantity</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
+                        <Input min={0} type="number" step="any"
                           placeholder="Quantity"
                           {...field}
                         />
@@ -1345,9 +1499,9 @@ function EditJobTicket() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {Object.entries(PLATES_STATUS).map(([key, value]) => (
-                            <SelectItem key={key} value={value}>
-                              {value}
+                          {plateStatusOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1369,9 +1523,9 @@ function EditJobTicket() {
 
               {/* Ink Section with updated delete logic */}
               <div>
-                <h3 className="text-sm font-medium">Ink</h3>
+                <h3 className="text-sm font-medium">Ink & Others</h3>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Select the Ink that best fits your needs.
+                  Select the Ink or other material that best fits your needs.
                 </p>
 
                 {inkFields.map((field, index) => (
@@ -1380,26 +1534,16 @@ function EditJobTicket() {
                       {renderFormField(`inks.${index}.ink`, ({ field }) => (
                         <FormItem>
                           <FormLabel className={index !== 0 ? "sr-only" : ""}>
-                            Ink
+                            Ink & Others
                           </FormLabel>
-                          <Select
+                          <Combobox
+                            items={inkItems}
+                            value={field.value || ""}
                             onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="w-full">
-                                <SelectValue
-                                  placeholder={field.value || "Select Ink"}
-                                />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Black">Black</SelectItem>
-                              <SelectItem value="Cyan">Cyan</SelectItem>
-                              <SelectItem value="Magenta">Magenta</SelectItem>
-                              <SelectItem value="Yellow">Yellow</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            placeholder="Select or enter item"
+                            searchPlaceholder="Search ink & others..."
+                            allowCreate
+                          />
                           <FormMessage />
                         </FormItem>
                       ))}
@@ -1411,8 +1555,7 @@ function EditJobTicket() {
                               Quantity
                             </FormLabel>
                             <FormControl>
-                              <Input
-                                type="number"
+                              <Input min={0} type="number" step="any"
                                 placeholder="Enter Quantity"
                                 {...field}
                               />
@@ -1436,13 +1579,11 @@ function EditJobTicket() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {Object.entries(INK_STATUS).map(
-                                ([key, value]) => (
-                                  <SelectItem key={key} value={value}>
-                                    {value}
-                                  </SelectItem>
-                                )
-                              )}
+                              {inkStatusOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -1559,7 +1700,28 @@ function EditJobTicket() {
             </CardContent>
           </Card>
         </form>
+        </div>
       </Form>
+
+      {/* Print dialog — shown after successful save */}
+      {printData && (
+        <JobTicketPrintDialog
+          open={showPrintDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowPrintDialog(false);
+              setPrintData(null);
+              router.push("/job-ticket");
+            }
+          }}
+          data={printData}
+          onDecline={() => {
+            setShowPrintDialog(false);
+            setPrintData(null);
+            router.push("/job-ticket");
+          }}
+        />
+      )}
     </div>
   );
 }

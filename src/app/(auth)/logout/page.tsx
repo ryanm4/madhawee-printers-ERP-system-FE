@@ -3,16 +3,29 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { clearAuth } from "@/lib/auth"
+import axios from "axios"
 
 export default function LogoutPage() {
     const router = useRouter()
 
     useEffect(() => {
-        // Clear auth cookies
-        clearAuth()
+        const performLogout = async () => {
+            try {
+                // Call the logout API to revoke the refresh token on the backend
+                await axios.post('/api/auth/logout', {}, { withCredentials: true })
+            } catch (error) {
+                // Ignore errors — we still want to clear client-side state
+                console.error("Logout API error:", error)
+            }
 
-        // Redirect to login page
-        router.push("/login")
+            // Clear client-side auth data (sessionStorage + cookies)
+            clearAuth()
+
+            // Redirect to login page
+            router.push("/login")
+        }
+
+        performLogout()
     }, [router])
 
     return (

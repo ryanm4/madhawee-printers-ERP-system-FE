@@ -1,3 +1,4 @@
+"use client";
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
@@ -9,7 +10,6 @@ import {
     EmptyTitle,
 } from "@/components/ui/empty"
 import { IconFolderCode } from "@tabler/icons-react"
-import { ArrowUpRightIcon } from "lucide-react"
 import { EmptyCardProps } from "@/types/empty_card"
 
 
@@ -44,13 +44,13 @@ export function EmptyState({
                 )}
             </EmptyHeader>
 
-            <EmptyContent className="flex-row justify-center gap-2">
-                <Button onClick={handleCreate}>
-                    {createLabel}
-                </Button>
-
-
-            </EmptyContent>
+            {createLabel && (
+                <EmptyContent className="flex-row justify-center gap-2">
+                    <Button onClick={handleCreate}>
+                        {createLabel}
+                    </Button>
+                </EmptyContent>
+            )}
         </Empty>
     )
 }

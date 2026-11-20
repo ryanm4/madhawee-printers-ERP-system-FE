@@ -6,24 +6,30 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ColumnDef } from "@tanstack/react-table"
-import { Download, MoreHorizontal, PencilIcon, Printer, TrashIcon, ArrowRightIcon } from "lucide-react"
+import { MoreHorizontal, PencilIcon, Printer, TrashIcon, ArrowRightIcon, EyeIcon } from "lucide-react"
 import { QUOTATIONS } from "@/modules/quotations/types"
 import { ArrowUpDown } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { TaxTypes } from "@/config/enum"
+import { StatusBadge } from "@/components/shared/status-badge";
+import { TaxTypes, QuotationStatus } from "@/config/enum"
 import { format } from "date-fns"
 import { getNextQuotationStatus } from "@/lib/status-workflow"
 
 interface QuotationTableActions {
     onEdit: (id: number) => void
+    onView: (id: number) => void
     onDelete: (id: number) => void
     onDownload: (id: number) => void
     onStatusChange: (id: number, status: string) => void
 }
 
 export const quotationColumns = (
-    actions: QuotationTableActions
-): ColumnDef<QUOTATIONS>[] => [
+    actions: QuotationTableActions,
+    options?: { canModify?: boolean; canApprove?: boolean }
+): ColumnDef<QUOTATIONS>[] => {
+    const canModify = options?.canModify ?? true;
+    const canApprove = options?.canApprove ?? false;
+
+    return [
         {
             accessorKey: "quote_id",
             header: ({ column }) => {
@@ -32,7 +38,7 @@ export const quotationColumns = (
                         variant="ghost"
                         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                     >
-                        Quotation ID
+                        ID
                         <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                 )
@@ -45,10 +51,6 @@ export const quotationColumns = (
         {
             accessorKey: "customer_address",
             header: "Customer Address",
-        },
-        {
-            accessorKey: "customer_type",
-            header: "Customer Type",
         },
         {
             accessorKey: "customer_phone",
@@ -73,25 +75,23 @@ export const quotationColumns = (
                 const taxId = row.original.tax_type_id
                 const taxMap: Record<number, TaxTypes> = {
                     0: TaxTypes.VAT,
-                    1: TaxTypes.SVAT,
+                    1: TaxTypes.TIEP,
                     2: TaxTypes.NON,
                 }
                 const taxType = taxMap[taxId] ?? TaxTypes.NON
 
-                const colorClass = taxType === TaxTypes.NON ? "bg-gray-100 text-gray-800" :
-                    taxType === TaxTypes.SVAT ? "bg-yellow-100 text-yellow-800" :
-                        "bg-green-100 text-green-800"
-
                 return (
-                    <Badge className={`uppercase ${colorClass} px-2 py-1 rounded-md text-sm font-medium`}>
-                        {taxType}
-                    </Badge>
+                    <StatusBadge status={taxType} type="TAX" />
                 )
             }
         },
         {
             accessorKey: "contact_person",
             header: "Contact Person",
+        },
+        {
+            accessorKey: "marketing_person",
+            header: "Marketing Person"
         },
         {
             accessorKey: "currency",
@@ -134,21 +134,7 @@ export const quotationColumns = (
             cell: ({ row }) => {
                 const status = row.original.status
                 return (
-                    <Badge
-                        className={`uppercase px-2 py-1 rounded-md text-sm font-medium transition-colors duration-200
-    ${status === "Created"
-                                ? "bg-blue-100 text-blue-800 hover:bg-blue-600 hover:text-white"
-                                : status === "Pending"
-                                    ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-600 hover:text-white"
-                                    : status === "Completed"
-                                        ? "bg-green-100 text-green-800 hover:bg-green-600 hover:text-white"
-                                        : "bg-gray-100 text-gray-800 hover:bg-gray-600 hover:text-white"
-                            }
-  `}
-                    >
-                        {status}
-                    </Badge>
-
+                    <StatusBadge status={status} type="QUOTATION" />
                 )
             },
         },
@@ -170,40 +156,53 @@ export const quotationColumns = (
                             <DropdownMenuContent align="end">
                                 {(() => {
                                     const nextStatus = getNextQuotationStatus(quotation.status);
-                                    if (nextStatus) {
+                                    if (nextStatus && canApprove) {
                                         return (
                                             <DropdownMenuItem
                                                 onClick={() => actions.onStatusChange(quotation.quote_id, nextStatus)}
                                             >
                                                 <ArrowRightIcon className="mr-2 h-4 w-4" />
-                                                Move Status to {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1).toLowerCase()}
+                                                Update Status to {nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1).toLowerCase()}
                                             </DropdownMenuItem>
                                         );
                                     }
                                     return null;
                                 })()}
+                                {canModify && (
+                                    <DropdownMenuItem
+                                        onClick={() => actions.onEdit(quotation.quote_id)}
+                                    >
+                                        <PencilIcon className="mr-2 h-4 w-4" />
+                                        Edit Quotation
+                                    </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem
-                                    onClick={() => actions.onEdit(quotation.quote_id)}
+                                    onClick={() => actions.onView(quotation.quote_id)}
                                 >
-                                    <PencilIcon className="mr-2 h-4 w-4" />
-                                    Edit Quotation
+                                    <EyeIcon className="mr-2 h-4 w-4" />
+                                    View Quotation
                                 </DropdownMenuItem>
 
-                                <DropdownMenuItem
-                                    variant="destructive"
-                                    onClick={() => actions.onDelete(quotation.quote_id)}
-                                >
-                                    <TrashIcon className="mr-2 h-4 w-4" />
-                                    Delete Quotation
-                                </DropdownMenuItem>
+                                {canModify && (
+                                    <DropdownMenuItem
+                                        variant="destructive"
+                                        onClick={() => actions.onDelete(quotation.quote_id)}
+                                    >
+                                        <TrashIcon className="mr-2 h-4 w-4" />
+                                        Delete Quotation
+                                    </DropdownMenuItem>
+                                )}
                             </DropdownMenuContent>
                         </DropdownMenu>
 
-                        <Button onClick={() => actions.onDownload(quotation.quote_id)} variant="outline" size="icon" aria-label="Submit">
-                            <Printer />
-                        </Button>
+                        {quotation.status === QuotationStatus.ACCEPTED && (
+                            <Button onClick={() => actions.onDownload(quotation.quote_id)} variant="outline" size="icon" aria-label="Download quotation PDF">
+                                <Printer />
+                            </Button>
+                        )}
                     </div>
                 )
             },
         },
-    ]
+    ];
+};

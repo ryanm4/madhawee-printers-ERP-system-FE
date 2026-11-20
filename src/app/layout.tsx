@@ -1,5 +1,4 @@
 "use client";
-import type { Metadata } from "next";
 import { Manrope, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
@@ -28,9 +27,11 @@ export default function RootLayout({
   const isLoginPage = pathname === "/login";
 
   return (
-    <html lang="en" className={`${manrope.variable} ${geistMono.variable}`}>
+    <html lang="en" className={`${manrope.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body className="antialiased font-sans">
         <StoreProvider>
+          {/* The app has no dark mode, so toasts stay light even when the device is set to dark */}
+          <Toaster position="bottom-right" theme="light" closeButton />
           {isLoginPage ? (
             <>{children}</>
           ) : (
@@ -38,7 +39,6 @@ export default function RootLayout({
               <AppSidebar variant="inset" />
               <SidebarInset>
                 <SiteHeader />
-                <Toaster position="top-right" richColors />
                 <main className="w-full relative flex-1 flex flex-col">
                   {children}
                 </main>

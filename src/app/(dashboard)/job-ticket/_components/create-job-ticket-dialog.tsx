@@ -1,11 +1,7 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-utils";
 
-import {
-  SubmitHandler,
-  useFieldArray,
-  useForm,
-  FieldPath,
-} from "react-hook-form";
+import { useFieldArray, useForm, FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
@@ -18,7 +14,7 @@ import {
   FileArchive,
 } from "lucide-react"; // Import icons
 import { format } from "date-fns";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -56,23 +52,24 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { jobTicketSchema } from "@/modules/job-tickets/validation";
 import {
-  COATING_TYPES,
-  INK_STATUS,
   JobTicketStatus,
-  PRODUCT_TYPES,
-  PurchaseOrderType,
 } from "@/config/enum";
+import { useOptionList } from "@/hooks/use-option-list";
 import {
   PURCHASE_ORDER,
   PURCHASE_ORDER_ID,
+  PO_ITEMS,
 } from "@/modules/purchase-order/types";
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
 import { CustomerApi } from "@/modules/customer/api";
 import { CUSTOMER } from "@/modules/customer/types";
-import { jobTicketsApi } from "@/modules/job-tickets/api";
-import { ALL_TICKETS, CREATE_TICKETS } from "@/modules/job-tickets/types";
+import { jobTicketsApi, NextSequenceResponse } from "@/modules/job-tickets/api";
+import {
+  CREATE_TICKETS,
+  JobTicketPrintData,
+} from "@/modules/job-tickets/types";
 import { toast } from "sonner";
-import { toMySQLDateTime } from "@/hooks/sql-date-time";
+import { parseLocalDate, toMySQLDateTime } from "@/hooks/sql-date-time";
 import { inventoryApi } from "@/modules/inventory/api";
 import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
 import { useDispatch } from "react-redux";
@@ -92,6 +89,7 @@ interface CreateJobTicketDialogProps {
 import { PaperTypeCombobox } from "./paper-type-combobox";
 import { Combobox } from "@/components/shared/combobox";
 import { getUser } from "@/lib/auth";
+import { JobTicketPrintDialog, joinDistinct } from "./job-ticket-print-dialog";
 
 export function CreateJobTicketDialog({
   open,
@@ -100,21 +98,36 @@ export function CreateJobTicketDialog({
   onSuccess,
 }: CreateJobTicketDialogProps) {
   const [purchaseOrderData, setPurchaseOrderData] = useState<PURCHASE_ORDER[]>(
-    []
+    [],
   );
   const [customerData, setCustomerData] = useState<CUSTOMER[]>([]);
   const [selectedPoDetails, setSelectedPoDetails] =
     useState<PURCHASE_ORDER_ID | null>(null);
-  const [loading, setLoading] = useState(false);
   const [fetchingDetails, setFetchingDetails] = useState(false);
   const [user, setUser] = useState<{
     name: string;
     email: string;
     avatar: string;
   } | null>(null);
-  const [existingTickets, setExistingTickets] = useState<ALL_TICKETS[]>([]);
   const [inventoryList, setInventoryList] = useState<GET_ALL_INVENTORY[]>([]);
+  const [inkItems, setInkItems] = useState<{ value: string; label: string }[]>(
+    []
+  );
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
+  const [printData, setPrintData] = useState<JobTicketPrintData | null>(null);
   const dispatch = useDispatch<AppDispatch>();
+
+  // Job number sequence state
+  const [jobSeqData, setJobSeqData] = useState<NextSequenceResponse | null>(null);
+  const [jobSeqOverride, setJobSeqOverride] = useState<string>("");
+  const [jobSeqLoading, setJobSeqLoading] = useState(false);
+
+  // Map PO type IDs to backend job number type keys
+  const PO_TYPE_TO_JOB_TYPE: Record<number, string> = {
+    1: "TIEP",
+    2: "NON_TIEP",
+    3: "MP",
+  };
 
   const baseDefaultValues = {
     poNumber: "",
@@ -126,8 +139,8 @@ export function CreateJobTicketDialog({
     jobName: "",
     productType: "",
     quantity: "",
-    completed_qty: "",
     wastage: "",
+    deliveryDate: undefined,
     packingDate: undefined,
     expiryDate: undefined,
     tcNo: "",
@@ -140,17 +153,11 @@ export function CreateJobTicketDialog({
     newPlatesQuantity: "",
     newPlatesStatus: "",
     newPlatesRemarks: "",
-    inks: [
-      { ink: "Black", quantity: "", status: "", remarks: "" },
-      { ink: "Cyan", quantity: "", status: "", remarks: "" },
-      { ink: "Magenta", quantity: "", status: "", remarks: "" },
-      { ink: "Yellow", quantity: "", status: "", remarks: "" },
-    ],
+    inks: [{ ink: "", quantity: "", status: "", remarks: "" }],
     paperTypes: [
       {
         paper: "",
         coating: "",
-        delivery_date: new Date(),
         rawMaterials: [
           {
             item_id: undefined,
@@ -168,9 +175,12 @@ export function CreateJobTicketDialog({
   };
 
   const form = useForm<JobTicketFormValues>({
-    resolver: zodResolver(jobTicketSchema),
+    resolver: zodResolver(jobTicketSchema) as any,
     defaultValues: baseDefaultValues,
   });
+  const productTypeOptions = useOptionList("product_type");
+  const coatingOptions = useOptionList("coating_type");
+  const inkStatusOptions = useOptionList("ink_status");
 
   const {
     fields: paperTypeFields,
@@ -207,7 +217,7 @@ export function CreateJobTicketDialog({
         setUploadedFile(file);
       } else {
         alert(
-          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB."
+          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB.",
         );
       }
     }
@@ -235,32 +245,32 @@ export function CreateJobTicketDialog({
   };
 
   async function onSubmit(data: JobTicketFormValues) {
+    if (!jobSeqData || !jobSeqOverride || jobSeqOverride.trim() === "") {
+      toast.error("A valid Job Number is required.");
+      return;
+    }
+
     try {
-      setLoading(true);
       const payload: CREATE_TICKETS = {
-        po_id: data.poNumber ? Number(data.poNumber) : undefined,
+        po_id: data.customer_po ? Number(data.customer_po) : undefined,
         job_item: data.item,
-        job_number: `MPL/####/YY/${
-          PurchaseOrderType[Number(selectedPoDetails?.po_type_id)]
-        }`,
+        job_number: jobSeqData
+          ? `${jobSeqData.prefix}${jobSeqOverride}${jobSeqData.suffix}`
+          : undefined,
         order_received_date: toMySQLDateTime(
-          data.orderReceivedDate || new Date()
+          data.orderReceivedDate || new Date(),
         ),
         job_open_date: toMySQLDateTime(data.jobOpenDate || new Date()),
         customer_id: data.customer,
         job_name: data.jobName,
         product_type: data.productType,
         quantity: data.quantity ? Number(data.quantity) : undefined,
-        completed_qty: data.completed_qty
-          ? Number(data.completed_qty)
+        delivery_date: data.deliveryDate
+          ? toMySQLDateTime(data.deliveryDate)
           : undefined,
         wastage: data.wastage,
-        packing_date: data.packingDate
-          ? toMySQLDateTime(data.packingDate)
-          : undefined,
-        expiry_date: data.expiryDate
-          ? toMySQLDateTime(data.expiryDate)
-          : undefined,
+        packing_date: data.packingDate,
+        expiry_date: data.expiryDate,
         tc_no: data.tcNo,
         batch_ref: data.batchRef,
         remarks: data.remarks,
@@ -278,13 +288,17 @@ export function CreateJobTicketDialog({
         new_plate_status: data.newPlatesStatus,
         new_plate_remarks: data.newPlatesRemarks,
 
-        inks: data.inks,
+        inks: data.inks
+          ?.filter((ink) => ink.ink && ink.ink.trim() !== "")
+          ?.map((ink) => ({
+            ink: ink.ink,
+            quantity: ink.quantity && ink.quantity.trim() !== "" ? ink.quantity : null,
+            status: ink.status || null,
+            remarks: ink.remarks || null,
+          })),
         paperCoating: data.paperTypes?.map((p) => ({
           paper: p.paper,
           coating: p.coating,
-          delivery_date: p.delivery_date
-            ? toMySQLDateTime(p.delivery_date)
-            : undefined,
           materials: p.rawMaterials?.map((rm) => ({
             item_id: rm.item_id,
             material_type: rm.material_type,
@@ -298,13 +312,56 @@ export function CreateJobTicketDialog({
         })),
 
         status: JobTicketStatus.CREATED,
-        created_by: user?.email || "admin@admin.com",
-        created_on: new Date(),
+        created_by: user?.name || "User",
+        created_on: toMySQLDateTime(new Date()),
       };
 
-      const response = await jobTicketsApi.create(payload);
+      await jobTicketsApi.create(payload);
 
-      toast("Job Ticket Created Successfully");
+      toast.success("Job Ticket Created Successfully");
+
+      // Build print data from submitted form values
+            const allRawMaterials =
+        data.paperTypes?.flatMap((p) => p.rawMaterials || []) || [];
+      const pd: JobTicketPrintData = {
+        jobNumber: jobSeqData
+          ? `${jobSeqData.prefix}${jobSeqOverride}${jobSeqData.suffix}`
+          : payload.job_number,
+        productType: data.productType,
+        orderReceivedDate: data.orderReceivedDate,
+        quantity: data.quantity,
+        jobOpenDate: data.jobOpenDate || new Date(),
+        paperType: joinDistinct((data.paperTypes || []).map((p) => p.paper)),
+        customer:
+          customerData.find((c) => String(c.customer_id) === data.customer)
+            ?.company_name || data.customer,
+        coating: joinDistinct((data.paperTypes || []).map((p) => p.coating)),
+        jobName: data.jobName,
+        customerDeliveryDate: data.deliveryDate,
+        packingDate: data.packingDate,
+        expiryDate: data.expiryDate,
+        poNo: selectedPoDetails ? String(data.customer_po) : data.customer_po,
+        tcNo: data.tcNo,
+        batchRef: data.batchRef,
+        remarks: data.remarks,
+        oldPlatesQuantity: data.oldPlatesQuantity,
+        newPlatesQuantity: data.newPlatesQuantity,
+        oldPlatesStatus: data.oldPlatesStatus || undefined,
+        oldPlatesRemarks: data.oldPlatesRemarks || undefined,
+        newPlatesStatus: data.newPlatesStatus || undefined,
+        newPlatesRemarks: data.newPlatesRemarks || undefined,
+        inks: (data.inks || [])
+          .filter((i) => i.ink && i.ink.trim() !== "")
+          .map((i) => ({
+            ink: i.ink || "",
+            quantity: i.quantity && i.quantity.trim() !== "" ? i.quantity : undefined,
+            status: i.status || undefined,
+            remarks: i.remarks || undefined,
+          })),
+        rawMaterials: allRawMaterials,
+      };
+
+      setPrintData(pd);
 
       if (data.addAnotherJob) {
         form.reset(
@@ -314,69 +371,61 @@ export function CreateJobTicketDialog({
           },
           {
             keepDefaultValues: false,
-          }
+          },
         );
         form.clearErrors();
       } else {
-        onOpenChange(false);
-        onSuccess?.();
-
-        form.reset(
-          {
-            ...baseDefaultValues,
-            addAnotherJob: false,
-          },
-          {
-            keepDefaultValues: false,
-          }
-        );
-        form.clearErrors();
+        // Show print dialog; actual close/reset happens after it's dismissed
+        setShowPrintDialog(true);
       }
-    } catch (error: any) {
-      toast("Failed to Create Job Ticket", {
-        description:
-          error?.response?.data?.message ||
-          "An error occurred while creating the job ticket. Please try again.",
+    } catch (error: unknown) {
+      toast.error("Failed to Create Job Ticket", {
+        description: getErrorMessage(error),
       });
     } finally {
-      setLoading(false);
     }
   }
 
-  useEffect(() => {
-    if (open) {
-      fetchData();
-      getInventoryList();
-      const userData = getUser();
-      if (userData) {
-        setUser({
-          name: userData.name || "User",
-          email: userData.email,
-          avatar: "",
-        });
-      }
-    }
-  }, [open]);
-
-  const getInventoryList = async () => {
+  const getInventoryList = useCallback(async () => {
     try {
-      setLoading(true);
       const response = await inventoryApi.getAll();
 
       if (response.status === 200) {
         setInventoryList(response.data);
         dispatch(setReduxInventoryList(response.data));
+
+        // Filter ink & others items from inventory
+        const filteredInks = response.data.filter(
+          (item: GET_ALL_INVENTORY) =>
+            item.item_category === "INK" ||
+            ["INK", "OTHER", "LAMINATING FILM", "SPIRAL"].includes(item.item_sub_category)
+        );
+
+        const uniqueInks = Array.from(
+          new Set(
+            filteredInks.map((item: GET_ALL_INVENTORY) =>
+              item.size && item.size.trim() !== "" && item.size !== "N/A"
+                ? `${item.item_name} - ${item.size}`
+                : item.item_name
+            )
+          )
+        ) as string[];
+
+        const fetchedInkItems = uniqueInks.map((name: string) => ({
+          value: name,
+          label: name,
+        }));
+        
+        setInkItems(fetchedInkItems);
       }
-    } catch (error) {
+    } catch {
       console.error("Failed to fetch inventory");
     } finally {
-      setLoading(false);
     }
-  };
+  }, [dispatch]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
-      setLoading(true);
       const [poResponse, customerResponse] = await Promise.all([
         purchaseOrderApi.getAll(),
         CustomerApi.getAll(),
@@ -387,11 +436,25 @@ export function CreateJobTicketDialog({
     } catch (error) {
       console.error("Failed to fetch data", error);
     } finally {
-      setLoading(false);
     }
-  };
+  }, []);
 
-  const selectedPoId = form.watch("poNumber");
+  useEffect(() => {
+    if (open) {
+      fetchData();
+      getInventoryList();
+      const userData = getUser();
+      if (userData) {
+        setUser({
+          name: userData.name || "User",
+          email: userData.email ?? "",
+          avatar: "",
+        });
+      }
+    }
+  }, [open, fetchData, getInventoryList]);
+
+  const selectedPoId = form.watch("customer_po");
   const selectedPoItems = selectedPoDetails?.po_items ?? [];
 
   useEffect(() => {
@@ -400,6 +463,7 @@ export function CreateJobTicketDialog({
         setSelectedPoDetails(null);
         return;
       }
+
       try {
         setFetchingDetails(true);
         const response = await purchaseOrderApi.getById(selectedPoId);
@@ -414,7 +478,7 @@ export function CreateJobTicketDialog({
             form.setValue("customer", String(po.customer.customer_id));
           }
           if (po.po_date) {
-            form.setValue("orderReceivedDate", new Date(po.po_date));
+            form.setValue("orderReceivedDate", parseLocalDate(po.po_date));
           }
           form.setValue("tcNo", po.TC_E_PR_No);
           form.setValue("batchRef", po.batch_ref);
@@ -428,11 +492,45 @@ export function CreateJobTicketDialog({
 
     fetchPoDetails();
     form.setValue("item", "");
-  }, [selectedPoId, form]);
+  }, [selectedPoId, form, purchaseOrderData]);
+
+  // Fetch next job number sequence when PO details change
+  useEffect(() => {
+    const fetchSequence = async () => {
+      if (!selectedPoDetails?.po_type_id) {
+        setJobSeqData(null);
+        setJobSeqOverride("");
+        return;
+      }
+      const jobType = PO_TYPE_TO_JOB_TYPE[Number(selectedPoDetails.po_type_id)];
+      if (!jobType) {
+        setJobSeqData(null);
+        setJobSeqOverride("");
+        return;
+      }
+      try {
+        setJobSeqLoading(true);
+        const response = await jobTicketsApi.getNextSequence(jobType);
+        const seqData = response.data as unknown as NextSequenceResponse;
+        setJobSeqData(seqData);
+        setJobSeqOverride(String(seqData.nextSequence).padStart(4, "0"));
+      } catch (err) {
+        console.error("Error fetching next sequence", err);
+        toast.error(getErrorMessage(err, "Failed to fetch job sequence"));
+        setJobSeqData(null);
+        setJobSeqOverride("");
+      } finally {
+        setJobSeqLoading(false);
+      }
+    };
+
+    fetchSequence();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPoDetails?.po_type_id]);
 
   useEffect(() => {
     if (open && initialPoId) {
-      form.setValue("poNumber", initialPoId);
+      form.setValue("customer_po", initialPoId);
     }
   }, [open, initialPoId, form]);
 
@@ -440,543 +538,480 @@ export function CreateJobTicketDialog({
     name: TName,
     render: Parameters<
       typeof FormField<JobTicketFormValues, TName>
-    >["0"]["render"]
+    >["0"]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto w-full p-0 gap-0">
-        <DialogHeader className="px-6 py-4 border-b">
-          <div className="flex justify-between items-center">
-            <DialogTitle className="text-xl font-semibold">
-              Job Details
-            </DialogTitle>
-            {/* Optional: Add close button or other header actions */}
-          </div>
-        </DialogHeader>
-
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-6 pt-6 px-6 pb-0"
-          >
-            <h3 className="text-sm font-medium mb-2">
-              Update Fields to add a Job ticket
-            </h3>
-            <p className="text-xs text-muted-foreground mb-4">
-              Complete this form to update or create a job ticket.
-            </p>
-            {/* General Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {renderFormField("poNumber", ({ field }) => (
-                <FormItem>
-                  <FormLabel>PO Number</FormLabel>
-                  <Combobox
-                    items={purchaseOrderData.map((po) => ({
-                      value: String(po.po_id),
-                      label: String(po.po_id),
-                    }))}
-                    value={field.value || ""}
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      form.setValue("item", "");
-                    }}
-                    placeholder="Select PO Number"
-                    searchPlaceholder="Search PO..."
-                  />
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("item", ({ field }) => (
-                <FormItem>
-                  <FormLabel>Item</FormLabel>
-                  <Combobox
-                    items={selectedPoItems.map((item: any) => ({
-                      value: item.item_code,
-                      label: item.item_code,
-                    }))}
-                    value={field.value || ""}
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      const selectedItem = selectedPoItems.find(
-                        (i: any) => i.item_code === value
-                      );
-                      if (selectedItem) {
-                        form.setValue(
-                          "quantity",
-                          String(selectedItem.quantity)
-                        );
-                        form.setValue("jobName", selectedItem.description);
-                      }
-                    }}
-                    placeholder={
-                      fetchingDetails
-                        ? "Loading items..."
-                        : selectedPoItems.length > 0
-                        ? "Select Item"
-                        : "No items found"
-                    }
-                    disabled={!selectedPoId || fetchingDetails}
-                    searchPlaceholder="Search item..."
-                    emptyMessage={
-                      fetchingDetails
-                        ? "Loading..."
-                        : "No items found in this PO"
-                    }
-                  />
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("jobNumber", ({ field }) => (
-                <FormItem>
-                  <FormLabel>Job Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="MPL/8450/25/TIEP" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("orderReceivedDate", ({ field }) => (
-                <FormItem>
-                  <FormLabel>Order Received Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value
-                            ? format(field.value, "PPP")
-                            : format(new Date(), "PPP")}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) =>
-                          date > new Date() || date < new Date("1900-01-01")
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              ))}
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto w-full p-0 gap-0">
+          <DialogHeader className="px-6 py-4 border-b">
+            <div className="flex justify-between items-center">
+              <DialogTitle className="text-xl font-semibold">
+                Job Details
+              </DialogTitle>
+              {/* Optional: Add close button or other header actions */}
             </div>
+          </DialogHeader>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {renderFormField("jobOpenDate", ({ field }) => (
-                <FormItem>
-                  <FormLabel>Job Open Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value
-                            ? format(field.value, "PPP")
-                            : format(new Date(), "PPP")}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) =>
-                          date > new Date() || date < new Date("1900-01-01")
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("customer", ({ field }) => (
-                <FormItem>
-                  <FormLabel>Customer</FormLabel>
-                  <Combobox
-                    items={[
-                      ...customerData.map((cust) => ({
-                        value: String(cust.customer_id),
-                        label: cust.company_name,
-                      })),
-                      ...(field.value &&
-                      !customerData.some(
-                        (c) => String(c.customer_id) === field.value
-                      )
-                        ? [
-                            {
-                              value: field.value,
-                              label:
-                                selectedPoDetails?.customer?.name ||
-                                field.value,
-                            },
-                          ]
-                        : []),
-                    ]}
-                    value={field.value || ""}
-                    onValueChange={field.onChange}
-                    placeholder="Select Customer"
-                    searchPlaceholder="Search customer..."
-                  />
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("jobName", ({ field }) => (
-                <FormItem>
-                  <FormLabel>Job Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter Job Name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
-            </div>
-            {/* Product Details */}
-            <div className="grid grid-cols-4 md:grid-cols-4 gap-4">
-              {renderFormField("productType", ({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Product Type <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select Product Type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.entries(PRODUCT_TYPES).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("quantity", ({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Quantity <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="Enter Quantity"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
-
-              {renderFormField("completed_qty", ({ field }) => (
-                <FormItem>
-                  <FormLabel>Completed Quantity</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="Enter Completed Quantity"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
-
-              {renderFormField("wastage", ({ field }) => (
-                <FormItem>
-                  <FormLabel>Wastage %</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="Enter Wastage"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
-            </div>
-
-            <div>
-              <h3 className="text-sm font-medium mb-2">Paper & Raw Material</h3>
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-6 pt-6 px-6 pb-0"
+            >
+              <h3 className="text-sm font-medium mb-2">
+                Update Fields to add a Job ticket
+              </h3>
               <p className="text-xs text-muted-foreground mb-4">
-                Select the Paper Type and corresponding Raw Material for this
-                job.
+                Complete this form to update or create a job ticket.
               </p>
-
-              {paperTypeFields.map((field, index) => {
-                const rawMaterials =
-                  form.watch(`paperTypes.${index}.rawMaterials`) || [];
-                return (
-                  <div
-                    key={field.id}
-                    className="border rounded-lg p-4 mb-4 bg-muted/20"
-                  >
-                    <div className="flex justify-between items-center mb-4">
-                      <h4 className="text-sm font-semibold">Set {index + 1}</h4>
-                      <div className="flex space-x-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          onClick={() => {}}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          onClick={() => removePaperType(index)}
-                          disabled={paperTypeFields.length <= 1}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <FormField
-                        control={form.control}
-                        name={`paperTypes.${index}.paper`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Paper Type <span className="text-red-500">*</span>
-                            </FormLabel>
-                            <PaperTypeCombobox
-                              value={field.value}
-                              onChange={(val) => {
-                                field.onChange(val);
-                                if (val) {
-                                  const selectedPaper = inventoryList.find(
-                                    (item) =>
-                                      `${item.item_sub_category} ${item.item_name}` ===
-                                      val
-                                  );
-                                  if (selectedPaper) {
-                                    const rawMaterials = form.getValues(
-                                      `paperTypes.${index}.rawMaterials`
-                                    );
-                                    rawMaterials?.forEach((_, rmIndex) => {
-                                      form.setValue(
-                                        `paperTypes.${index}.rawMaterials.${rmIndex}.size`,
-                                        selectedPaper.size
-                                      );
-                                    });
-                                  }
-                                }
-                              }}
-                            />
-                            <FormMessage className="min-h-[20px]" />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`paperTypes.${index}.coating`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Coating <span className="text-red-500">*</span>
-                            </FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Select Coating" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {Object.entries(COATING_TYPES).map(
-                                  ([key, value]) => (
-                                    <SelectItem key={key} value={value}>
-                                      {value}
-                                    </SelectItem>
-                                  )
-                                )}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage className="min-h-[20px]" />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`paperTypes.${index}.delivery_date`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Delivery Date</FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                      "w-full pl-3 text-left font-normal",
-                                      !field.value && "text-muted-foreground"
-                                    )}
-                                  >
-                                    {field.value
-                                      ? format(field.value, "PPP")
-                                      : format(new Date(), "PPP")}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent
-                                className="w-auto p-0"
-                                align="start"
-                              >
-                                <Calendar
-                                  mode="single"
-                                  captionLayout="dropdown"
-                                  selected={field.value}
-                                  onSelect={field.onChange}
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            <FormMessage className="min-h-[20px]" />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* Raw Materials for this Paper Type */}
-                    <h5 className="text-xs font-medium mb-2 mt-2">
-                      Raw Materials
-                    </h5>
-                    {rawMaterials.map((_rm: any, rmIndex: number) => (
-                      <div
-                        key={rmIndex}
-                        className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-2"
-                      >
-                        <FormField
-                          control={form.control}
-                          name={`paperTypes.${index}.rawMaterials.${rmIndex}.size`}
-                          render={({ field }) => {
-                            const selectedPaperName = form.watch(
-                              `paperTypes.${index}.paper`
-                            );
-                            const filteredInventory = inventoryList.filter(
-                              (item) =>
-                                `${item.item_sub_category} ${item.item_name}` ===
-                                selectedPaperName
-                            );
-
-                            return (
-                              <FormItem>
-                                <FormLabel
-                                  className={rmIndex !== 0 ? "sr-only" : ""}
-                                >
-                                  Raw Material
-                                </FormLabel>
-                                <Select
-                                  onValueChange={(val) => {
-                                    field.onChange(val);
-                                    const selectedMaterial =
-                                      filteredInventory.find(
-                                        (item) => item.size === val
-                                      );
-                                    if (selectedMaterial) {
-                                      form.setValue(
-                                        `paperTypes.${index}.rawMaterials.${rmIndex}.item_id`,
-                                        selectedMaterial.item_id
-                                      );
-                                      form.setValue(
-                                        `paperTypes.${index}.rawMaterials.${rmIndex}.material_type`,
-                                        selectedMaterial.item_sub_category
-                                      );
-                                      form.setValue(
-                                        `paperTypes.${index}.rawMaterials.${rmIndex}.material_name`,
-                                        selectedMaterial.item_name
-                                      );
-                                    }
-                                  }}
-                                  value={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger className="w-full">
-                                      <SelectValue placeholder="Select Size" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {filteredInventory.map((item) => (
-                                      <SelectItem
-                                        key={item.item_id}
-                                        value={item.size}
-                                      >
-                                        {item.size}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage className="min-h-[20px]" />
-                              </FormItem>
-                            );
-                          }}
+              {/* General Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {renderFormField("customer_po", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>PO Number</FormLabel>
+                    <Combobox
+                      items={purchaseOrderData.map((po) => ({
+                        value: String(po.po_id),
+                        label: String(po.customer_po),
+                      }))}
+                      value={field.value || ""}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        form.setValue("item", "");
+                      }}
+                      placeholder="Select PO Number"
+                      searchPlaceholder="Search PO..."
+                    />
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("item", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <Combobox
+                      items={selectedPoItems.map((item: PO_ITEMS) => ({
+                        value: item.description,
+                        label: item.description,
+                      }))}
+                      value={field.value || ""}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        const selectedItem = selectedPoItems.find(
+                          (i: PO_ITEMS) => i.description === value,
+                        );
+                        if (selectedItem) {
+                          form.setValue(
+                            "quantity",
+                            String(selectedItem.quantity),
+                          );
+                          form.setValue("jobName", selectedItem.description);
+                        }
+                      }}
+                      placeholder={
+                        fetchingDetails
+                          ? "Loading items..."
+                          : selectedPoItems.length > 0
+                            ? "Select Item"
+                            : "No items found"
+                      }
+                      disabled={!selectedPoId || fetchingDetails}
+                      searchPlaceholder="Search item..."
+                      emptyMessage={
+                        fetchingDetails
+                          ? "Loading..."
+                          : "No items found in this PO"
+                      }
+                    />
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("jobNumber", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Job Number</FormLabel>
+                    <FormControl>
+                      {jobSeqLoading ? (
+                        <Input
+                          readOnly
+                          placeholder="Loading sequence..."
+                          value="Loading..."
                         />
+                      ) : jobSeqData ? (
+                        <div className="flex items-center gap-0 rounded-md border border-input">
+                          <span className="px-3 py-2 text-sm text-muted-foreground bg-muted rounded-l-md border-r border-input whitespace-nowrap">
+                            {jobSeqData.prefix}
+                          </span>
+                          <Input
+                            className="border-0 rounded-none text-center font-mono w-[80px] focus-visible:ring-0 focus-visible:ring-offset-0"
+                            value={jobSeqOverride}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/[^0-9]/g, "");
+                              setJobSeqOverride(val);
+                              field.onChange(
+                                `${jobSeqData.prefix}${val}${jobSeqData.suffix}`
+                              );
+                            }}
+                            placeholder="0000"
+                          />
+                          <span className="px-3 py-2 text-sm text-muted-foreground bg-muted rounded-r-md border-l border-input whitespace-nowrap">
+                            {jobSeqData.suffix}
+                          </span>
+                        </div>
+                      ) : (
+                        <Input
+                          readOnly
+                          placeholder="Select a PO to generate job number"
+                          {...field}
+                        />
+                      )}
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("orderReceivedDate", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Order Received Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground",
+                            )}
+                          >
+                            {field.value
+                              ? format(field.value, "PPP")
+                              : format(new Date(), "PPP")}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date > new Date() || date < new Date("1900-01-01")
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {renderFormField("jobOpenDate", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Job Open Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground",
+                            )}
+                          >
+                            {field.value
+                              ? format(field.value, "PPP")
+                              : format(new Date(), "PPP")}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date > new Date() || date < new Date("1900-01-01")
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("customer", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Customer</FormLabel>
+                    <Combobox
+                      items={[
+                        ...customerData.map((cust) => ({
+                          value: String(cust.customer_id),
+                          label: cust.company_name,
+                        })),
+                        ...(field.value &&
+                        !customerData.some(
+                          (c) => String(c.customer_id) === field.value,
+                        )
+                          ? [
+                              {
+                                value: field.value,
+                                label:
+                                  selectedPoDetails?.customer?.name ||
+                                  field.value,
+                              },
+                            ]
+                          : []),
+                      ]}
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                      placeholder="Select Customer"
+                      searchPlaceholder="Search customer..."
+                    />
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("jobName", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Job Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter Job Name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </div>
+              {/* Product Details */}
+              <div className="grid grid-cols-4 md:grid-cols-4 gap-4">
+                {renderFormField("productType", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Product Type <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select Product Type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {productTypeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("quantity", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Quantity <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input min={0} type="number" step="any"
+                        placeholder="Enter Quantity"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+
+                {renderFormField("deliveryDate", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Delivery Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value
+                              ? format(field.value, "PPP")
+                              : format(new Date(), "PPP")}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          captionLayout="dropdown"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+
+                {renderFormField("wastage", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Wastage %</FormLabel>
+                    <FormControl>
+                      <Input min={0} type="number" step="any"
+                        placeholder="Enter Wastage"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </div>
+
+              {/* Dates */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {renderFormField("packingDate", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Packing Date</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter Packing Date " {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("expiryDate", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Expiry Date</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter Expiry Date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+                {renderFormField("tcNo", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>TC/E/PR/No</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter TC No" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("batchRef", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Batch Ref</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter Batch Ref" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </div>
+
+              {renderFormField("remarks", ({ field }) => (
+                <FormItem>
+                  <FormLabel>Remarks</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Enter Remarks"
+                      className="resize-none"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              ))}
+
+              <div>
+                <h3 className="text-sm font-medium mb-2">
+                  Paper & Raw Material
+                </h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Select the Paper Type and corresponding Raw Material for this
+                  job.
+                </p>
+
+                {paperTypeFields.map((field, index) => {
+                  const rawMaterials =
+                    form.watch(`paperTypes.${index}.rawMaterials`) || [];
+                  return (
+                    <div
+                      key={field.id}
+                      className="border rounded-lg p-4 mb-4 bg-muted/20"
+                    >
+                      <div className="flex justify-between items-center mb-4">
+                        <h4 className="text-sm font-semibold">
+                          Set {index + 1}
+                        </h4>
+                        <div className="flex space-x-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {}}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            onClick={() => removePaperType(index)}
+                            disabled={paperTypeFields.length <= 1}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <FormField
                           control={form.control}
-                          name={`paperTypes.${index}.rawMaterials.${rmIndex}.quantity`}
+                          name={`paperTypes.${index}.paper`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel
-                                className={rmIndex !== 0 ? "sr-only" : ""}
-                              >
-                                Quantity
+                              <FormLabel>
+                                Paper Type{" "}
+                                <span className="text-red-500">*</span>
                               </FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  placeholder="Enter Quantity"
-                                  {...field}
-                                  onChange={(e) =>
-                                    field.onChange(
-                                      e.target.value === ""
-                                        ? 0
-                                        : Number(e.target.value)
-                                    )
+                              <PaperTypeCombobox
+                                value={field.value}
+                                onChange={(val) => {
+                                  field.onChange(val);
+                                  if (val) {
+                                    const selectedPaper = inventoryList.find(
+                                      (item) =>
+                                        `${item.item_sub_category} ${item.item_name}` ===
+                                        val,
+                                    );
+                                    if (selectedPaper) {
+                                      const rawMaterials = form.getValues(
+                                        `paperTypes.${index}.rawMaterials`,
+                                      );
+                                      rawMaterials?.forEach((_, rmIndex) => {
+                                        form.setValue(
+                                          `paperTypes.${index}.rawMaterials.${rmIndex}.size`,
+                                          selectedPaper.size,
+                                        );
+                                      });
+                                    }
                                   }
-                                />
-                              </FormControl>
-                              <FormMessage />
+                                }}
+                              />
+                              <FormMessage className="min-h-[20px]" />
                             </FormItem>
                           )}
                         />
                         <FormField
                           control={form.control}
-                          name={`paperTypes.${index}.rawMaterials.${rmIndex}.status`}
+                          name={`paperTypes.${index}.coating`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel
-                                className={rmIndex !== 0 ? "sr-only" : ""}
-                              >
-                                Status
+                              <FormLabel>
+                                Coating <span className="text-red-500">*</span>
                               </FormLabel>
                               <Select
                                 onValueChange={field.onChange}
@@ -984,368 +1019,391 @@ export function CreateJobTicketDialog({
                               >
                                 <FormControl>
                                   <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select Status" />
+                                    <SelectValue placeholder="Select Coating" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="s1">Status 1</SelectItem>
+                                  {coatingOptions.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
-                              <FormMessage />
+                              <FormMessage className="min-h-[20px]" />
                             </FormItem>
                           )}
                         />
-                        <FormField
-                          control={form.control}
-                          name={`paperTypes.${index}.rawMaterials.${rmIndex}.remarks`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel
-                                className={rmIndex !== 0 ? "sr-only" : ""}
-                              >
-                                Remarks
-                              </FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter Remarks" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <div className="flex items-end pb-2">
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            onClick={() => {
-                              const current =
-                                form.getValues(
-                                  `paperTypes.${index}.rawMaterials`
-                                ) || [];
-                              if (current.length > 1) {
-                                form.setValue(
-                                  `paperTypes.${index}.rawMaterials`,
-                                  current.filter(
-                                    (_: any, i: number) => i !== rmIndex
-                                  )
-                                );
-                              }
-                            }}
-                            disabled={rawMaterials.length <= 1}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
                       </div>
-                    ))}
-                    <div className="flex justify-end mt-1 mb-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const current =
-                            form.getValues(
-                              `paperTypes.${index}.rawMaterials`
-                            ) || [];
-                          form.setValue(`paperTypes.${index}.rawMaterials`, [
-                            ...current,
-                            {
-                              item_id: undefined,
-                              material_name: "",
-                              material_type: "",
-                              size: "",
-                              material_description: "",
-                              quantity: 0,
-                              status: "",
-                              remarks: "",
-                            },
-                          ]);
-                        }}
-                      >
-                        <Plus className="h-4 w-4 mr-1" /> Add Material
-                      </Button>
+
+                      {/* Raw Materials for this Paper Type */}
+                      <h5 className="text-xs font-medium mb-2 mt-2">
+                        Raw Materials
+                      </h5>
+                      {rawMaterials.map((_rm, rmIndex: number) => (
+                        <div
+                          key={rmIndex}
+                          className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-2"
+                        >
+                          <FormField
+                            control={form.control}
+                            name={`paperTypes.${index}.rawMaterials.${rmIndex}.size`}
+                            render={({ field }) => {
+                              const selectedPaperName = form.watch(
+                                `paperTypes.${index}.paper`,
+                              );
+                              const filteredInventory = inventoryList.filter(
+                                (item) =>
+                                  `${item.item_sub_category || ""} ${item.item_name}`.trim() ===
+                                  (selectedPaperName || "").trim(),
+                              );
+
+                              return (
+                                <FormItem>
+                                  <FormLabel
+                                    className={rmIndex !== 0 ? "sr-only" : ""}
+                                  >
+                                    Raw Material
+                                  </FormLabel>
+                                  <Select
+                                    onValueChange={(val) => {
+                                      field.onChange(val);
+                                      const selectedMaterial =
+                                        filteredInventory.find(
+                                          (item) => (item.size || "") === val,
+                                        );
+                                      if (selectedMaterial) {
+                                        form.setValue(
+                                          `paperTypes.${index}.rawMaterials.${rmIndex}.item_id`,
+                                          selectedMaterial.item_id,
+                                        );
+                                        form.setValue(
+                                          `paperTypes.${index}.rawMaterials.${rmIndex}.material_type`,
+                                          selectedMaterial.item_sub_category,
+                                        );
+                                        form.setValue(
+                                          `paperTypes.${index}.rawMaterials.${rmIndex}.material_name`,
+                                          selectedMaterial.item_name,
+                                        );
+                                      }
+                                    }}
+                                    value={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select Size" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {filteredInventory.map((item) => (
+                                        <SelectItem
+                                          key={item.item_id}
+                                          value={item.size || ""}
+                                        >
+                                          {item.size || "No Size"}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage className="min-h-[20px]" />
+                                </FormItem>
+                              );
+                            }}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`paperTypes.${index}.rawMaterials.${rmIndex}.quantity`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel
+                                  className={rmIndex !== 0 ? "sr-only" : ""}
+                                >
+                                  Quantity
+                                </FormLabel>
+                                <FormControl>
+                                  <Input min={0} type="number" step="any"
+                                    placeholder="Enter Quantity"
+                                    {...field}
+                                    onChange={(e) =>
+                                      field.onChange(
+                                        e.target.value === ""
+                                          ? 0
+                                          : Number(e.target.value),
+                                      )
+                                    }
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`paperTypes.${index}.rawMaterials.${rmIndex}.status`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel
+                                  className={rmIndex !== 0 ? "sr-only" : ""}
+                                >
+                                  Status
+                                </FormLabel>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  value={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue placeholder="Select Status" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="s1">Status 1</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`paperTypes.${index}.rawMaterials.${rmIndex}.remarks`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel
+                                  className={rmIndex !== 0 ? "sr-only" : ""}
+                                >
+                                  Remarks
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Enter Remarks"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <div className="flex items-end pb-2">
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              onClick={() => {
+                                const current =
+                                  form.getValues(
+                                    `paperTypes.${index}.rawMaterials`,
+                                  ) || [];
+                                if (current.length > 1) {
+                                  form.setValue(
+                                    `paperTypes.${index}.rawMaterials`,
+                                    current.filter(
+                                      (_: unknown, i: number) => i !== rmIndex,
+                                    ),
+                                  );
+                                }
+                              }}
+                              disabled={rawMaterials.length <= 1}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="flex justify-end mt-1 mb-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const current =
+                              form.getValues(
+                                `paperTypes.${index}.rawMaterials`,
+                              ) || [];
+                            form.setValue(`paperTypes.${index}.rawMaterials`, [
+                              ...current,
+                              {
+                                item_id: undefined,
+                                material_name: "",
+                                material_type: "",
+                                size: "",
+                                material_description: "",
+                                quantity: 0,
+                                status: "",
+                                remarks: "",
+                              },
+                            ]);
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-1" /> Add Material
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-              <div className="flex justify-end mt-2">
-                <Button
-                  type="button"
-                  onClick={() =>
-                    appendPaperType({
-                      paper: "",
-                      coating: "",
-                      delivery_date: undefined,
-                      rawMaterials: [
-                        {
-                          item_id: undefined,
-                          material_name: "",
-                          material_type: "",
-                          size: "",
-                          material_description: "",
-                          quantity: 0,
-                          status: "",
-                          remarks: "",
-                        },
-                      ],
-                    })
-                  }
-                  className="bg-primary text-white hover:bg-primary/90"
-                >
-                  Add More Sets
-                </Button>
+                  );
+                })}
+                <div className="flex justify-end mt-2">
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      appendPaperType({
+                        paper: "",
+                        coating: "",
+                        rawMaterials: [
+                          {
+                            item_id: undefined,
+                            material_name: "",
+                            material_type: "",
+                            size: "",
+                            material_description: "",
+                            quantity: 0,
+                            status: "",
+                            remarks: "",
+                          },
+                        ],
+                      })
+                    }
+                    className="bg-primary text-white hover:bg-primary/90"
+                  >
+                    Add More Sets
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            {/* Dates */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {renderFormField("packingDate", ({ field }) => (
-                <FormItem>
-                  <FormLabel>Packing Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
+              {/* CTP Plates */}
+              <div>
+                <h3 className="text-sm font-medium mb-2">CTP Plates</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Select the CTP Plates for Old and New Plates.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3  gap-4 mb-2">
+                  {renderFormField("oldPlatesQuantity", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Old Plates Quantity</FormLabel>
                       <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value
-                            ? format(field.value, "PPP")
-                            : format(new Date(), "PPP")}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
+                        <Input min={0} type="number" step="any"
+                          placeholder="Quantity"
+                          {...field}
+                        />
                       </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        captionLayout="dropdown"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("expiryDate", ({ field }) => (
-                <FormItem>
-                  <FormLabel>Expiry Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                  {renderFormField("oldPlatesStatus", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Old Plates Status</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="s1">Status 1</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                  {renderFormField("oldPlatesRemarks", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Old Plates Remarks</FormLabel>
                       <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value
-                            ? format(field.value, "PPP")
-                            : format(new Date(), "PPP")}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
+                        <Input placeholder="Remarks" {...field} />
                       </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        captionLayout="dropdown"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-              {renderFormField("tcNo", ({ field }) => (
-                <FormItem>
-                  <FormLabel>TC/E/PR/No</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter TC No" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("batchRef", ({ field }) => (
-                <FormItem>
-                  <FormLabel>Batch Ref</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter Batch Ref" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
-            </div>
-
-            {renderFormField("remarks", ({ field }) => (
-              <FormItem>
-                <FormLabel>Remarks</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Enter Remarks"
-                    className="resize-none"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            ))}
-
-            {/* CTP Plates */}
-            <div>
-              <h3 className="text-sm font-medium mb-2">CTP Plates</h3>
-              <p className="text-xs text-muted-foreground mb-4">
-                Select the CTP Plates for Old and New Plates.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3  gap-4 mb-2">
-                {renderFormField("oldPlatesQuantity", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>Old Plates Quantity</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="Quantity" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                ))}
-                {renderFormField("oldPlatesStatus", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>Old Plates Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {renderFormField("newPlatesQuantity", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>New Plates Quantity</FormLabel>
                       <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Status" />
-                        </SelectTrigger>
+                        <Input min={0} type="number" step="any"
+                          placeholder="Quantity"
+                          {...field}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="s1">Status 1</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                ))}
-                {renderFormField("oldPlatesRemarks", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>Old Plates Remarks</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Remarks" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                ))}
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                  {renderFormField("newPlatesStatus", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>New Plates Status</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="s1">Status 1</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                  {renderFormField("newPlatesRemarks", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>New Plates Remarks</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Remarks" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {renderFormField("newPlatesQuantity", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>New Plates Quantity</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="Quantity" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                ))}
-                {renderFormField("newPlatesStatus", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>New Plates Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="s1">Status 1</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                ))}
-                {renderFormField("newPlatesRemarks", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>New Plates Remarks</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Remarks" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                ))}
-              </div>
-            </div>
 
-            {/* Raw Material Section with updated delete logic */}
+              {/* Raw Material Section with updated delete logic */}
 
-            {/* Ink Section with updated delete logic */}
-            <div>
-              <h3 className="text-sm font-medium">Ink</h3>
-              <p className="text-xs text-muted-foreground mb-4">
-                Select the Ink that best fits your needs.
-              </p>
+              {/* Ink & Others Section with updated delete logic */}
+              <div>
+                <h3 className="text-sm font-medium">Ink & Others</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Select the Ink or other material that best fits your needs.
+                </p>
 
-              {inkFields.map((field, index) => (
-                <div key={field.id} className="flex gap-2 mb-2">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
-                    <FormField
-                      control={form.control}
-                      name={`inks.${index}.ink`}
-                      render={({ field }) => (
+                {inkFields.map((field, index) => (
+                  <div key={field.id} className="flex gap-2 mb-2">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
+                      {renderFormField(`inks.${index}.ink`, ({ field }) => (
                         <FormItem>
                           <FormLabel className={index !== 0 ? "sr-only" : ""}>
-                            Ink
+                            Ink & Others
                           </FormLabel>
-                          <Select
+                          <Combobox
+                            items={inkItems}
+                            value={field.value || ""}
                             onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="w-full">
-                                <SelectValue
-                                  placeholder={field.value || "Select Ink"}
-                                />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Black">Black</SelectItem>
-                              <SelectItem value="Cyan">Cyan</SelectItem>
-                              <SelectItem value="Magenta">Magenta</SelectItem>
-                              <SelectItem value="Yellow">Yellow</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            placeholder="Select or enter item"
+                            searchPlaceholder="Search ink & others..."
+                            allowCreate
+                          />
                           <FormMessage />
                         </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`inks.${index}.quantity`}
-                      render={({ field }) => (
+                      ))}
+                      {renderFormField(`inks.${index}.quantity`, ({ field }) => (
                         <FormItem>
                           <FormLabel className={index !== 0 ? "sr-only" : ""}>
                             Quantity
                           </FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
+                            <Input min={0} type="number" step="any"
                               placeholder="Enter Quantity"
                               {...field}
                             />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`inks.${index}.status`}
-                      render={({ field }) => (
+                      ))}
+                      {renderFormField(`inks.${index}.status`, ({ field }) => (
                         <FormItem>
                           <FormLabel className={index !== 0 ? "sr-only" : ""}>
                             Status
@@ -1360,23 +1418,17 @@ export function CreateJobTicketDialog({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {Object.entries(INK_STATUS).map(
-                                ([key, value]) => (
-                                  <SelectItem key={key} value={value}>
-                                    {value}
-                                  </SelectItem>
-                                )
-                              )}
+                              {inkStatusOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
                         </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`inks.${index}.remarks`}
-                      render={({ field }) => (
+                      ))}
+                      {renderFormField(`inks.${index}.remarks`, ({ field }) => (
                         <FormItem>
                           <FormLabel className={index !== 0 ? "sr-only" : ""}>
                             Remarks
@@ -1386,137 +1438,169 @@ export function CreateJobTicketDialog({
                           </FormControl>
                           <FormMessage />
                         </FormItem>
-                      )}
-                    />
+                      ))}
+                    </div>
+                    <div className="flex space-x-2 items-end pb-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {}}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => removeInk(index)}
+                        disabled={inkFields.length <= 1} // Disable if only one item
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex space-x-2 items-end pb-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => {}}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => removeInk(index)}
-                      disabled={inkFields.length <= 1} // Disable if only one item
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                ))}
+                <div className="flex justify-end mt-2">
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      appendInk({
+                        ink: "",
+                        quantity: "",
+                        status: "",
+                        remarks: "",
+                      })
+                    }
+                    className="bg-primary text-white hover:bg-primary/90"
+                  >
+                    Add More
+                  </Button>
                 </div>
-              ))}
-              <div className="flex justify-end mt-2">
-                <Button
-                  type="button"
-                  onClick={() =>
-                    appendInk({
-                      ink: "",
-                      quantity: "",
-                      status: "",
-                      remarks: "",
-                    })
-                  }
-                  className="bg-primary text-white hover:bg-primary/90"
-                >
-                  Add More
-                </Button>
               </div>
-            </div>
 
-            {/* Artwork */}
-            <div>
-              <h3 className="text-sm font-medium mb-2">Artwork</h3>
-              <div
-                className="border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center text-center cursor-pointer hover:border-gray-400 transition-colors"
-                onClick={() => fileInputRef.current?.click()}
-                onDrop={handleDrop}
-                onDragOver={(e) => e.preventDefault()}
-              >
-                <CloudUpload className="h-10 w-10 text-muted-foreground mb-2" />
-                <p className="text-sm font-medium">
-                  Drag your file(s) or{" "}
-                  <span className="font-bold underline">browse</span>
+              {/* Artwork */}
+              <div>
+                <h3 className="text-sm font-medium mb-2">Artwork</h3>
+                <div
+                  className="border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center text-center cursor-pointer hover:border-gray-400 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                  onDrop={handleDrop}
+                  onDragOver={(e) => e.preventDefault()}
+                >
+                  <CloudUpload className="h-10 w-10 text-muted-foreground mb-2" />
+                  <p className="text-sm font-medium">
+                    Drag your file(s) or{" "}
+                    <span className="font-bold underline">browse</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Max 10 MB files are allowed
+                  </p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.svg,.zip"
+                    className="hidden"
+                    onChange={(e) =>
+                      handleFileSelect(e.target.files?.[0] || null)
+                    }
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-2 mb-3">
+                  Only support .jpg, .png and .svg and zip files
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Max 10 MB files are allowed
-                </p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".jpg,.jpeg,.png,.svg,.zip"
-                  className="hidden"
-                  onChange={(e) =>
-                    handleFileSelect(e.target.files?.[0] || null)
+
+                {/* File Preview */}
+                {uploadedFile && (
+                  <div className="mt-4 border rounded-lg p-3 flex items-center justify-between bg-gray-50">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-blue-100 p-2 rounded">
+                        <FileArchive className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">
+                          {uploadedFile.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatFileSize(uploadedFile.size)}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeFile}
+                      className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+                    >
+                      <X className="h-5 w-5 text-gray-600" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center space-x-2 mb-3">
+                <Checkbox
+                  id="add-another-job"
+                  onCheckedChange={(checked) =>
+                    form.setValue("addAnotherJob", checked as boolean)
                   }
                 />
-              </div>
-              <p className="text-xs text-muted-foreground mt-2 mb-3">
-                Only support .jpg, .png and .svg and zip files
-              </p>
-
-              {/* File Preview */}
-              {uploadedFile && (
-                <div className="mt-4 border rounded-lg p-3 flex items-center justify-between bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-blue-100 p-2 rounded">
-                      <FileArchive className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">
-                        {uploadedFile.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatFileSize(uploadedFile.size)}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={removeFile}
-                    className="p-1 hover:bg-gray-200 rounded-full transition-colors"
-                  >
-                    <X className="h-5 w-5 text-gray-600" />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center space-x-2 mb-3">
-              <Checkbox
-                id="add-another-job"
-                onCheckedChange={(checked) =>
-                  form.setValue("addAnotherJob", checked as boolean)
-                }
-              />
-              <label
-                htmlFor="add-another-job"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Add Another Job
-              </label>
-            </div>
-            <DialogFooter className="px-6 py-4 border-t flex items-center justify-end sm:justify-end w-full mt-6">
-              <div className="flex space-x-2 ">
-                <Button
-                  variant="outline"
-                  type="button"
-                  onClick={() => onOpenChange(false)}
+                <label
+                  htmlFor="add-another-job"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
-                  Cancel
-                </Button>
-                <Button type="submit" className="bg-primary text-white">
-                  Save
-                </Button>
+                  Add Another Job
+                </label>
               </div>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+              <DialogFooter className="px-6 py-4 border-t flex items-center justify-end sm:justify-end w-full mt-6">
+                <div className="flex space-x-2 ">
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={() => onOpenChange(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-primary text-white">
+                    Save
+                  </Button>
+                </div>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Print dialog — shown after successful save */}
+      {printData && (
+        <JobTicketPrintDialog
+          open={showPrintDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowPrintDialog(false);
+              setPrintData(null);
+              onOpenChange(false);
+              onSuccess?.();
+              form.reset(
+                { ...baseDefaultValues, addAnotherJob: false },
+                { keepDefaultValues: false },
+              );
+              form.clearErrors();
+            }
+          }}
+          data={printData}
+          onDecline={() => {
+            setShowPrintDialog(false);
+            setPrintData(null);
+            onOpenChange(false);
+            onSuccess?.();
+            form.reset(
+              { ...baseDefaultValues, addAnotherJob: false },
+              { keepDefaultValues: false },
+            );
+            form.clearErrors();
+          }}
+        />
+      )}
+    </>
   );
 }

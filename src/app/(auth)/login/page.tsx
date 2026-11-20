@@ -1,14 +1,31 @@
-import { GalleryVerticalEnd } from "lucide-react";
 import Image from "next/image";
-import company_logo from "../../../assets/Images/fvpns.png";
-import login_page from "../../../assets/Images/login_page.jpg";
+import { OrbitPanel } from "@/components/auth/orbit-panel";
 import { LoginForm } from "./loginForm";
+
+/* 45/55 split from 860px; below that it is the form alone. */
 export default function LoginPage() {
   return (
-    <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
-      <div className="w-full max-w-sm">
-        <LoginForm />
-      </div>
+    <div className="grid min-h-svh bg-white min-[860px]:grid-cols-[45fr_55fr]">
+      <main className="flex flex-col px-6 py-10 sm:px-10">
+        <div className="flex flex-1 items-center justify-center">
+          <div className="flex w-full max-w-[380px] flex-col gap-8">
+            <Image
+              src="/images/madhawee_logo.svg"
+              alt="Madhawee Printers (Pvt) Ltd"
+              width={260}
+              height={38}
+              priority
+              unoptimized
+              className="-ml-2 h-auto w-[200px]"
+            />
+            <LoginForm />
+          </div>
+        </div>
+
+        <p className="text-sm text-[#5B6474]">© {new Date().getFullYear()} Madhawee Printers (Pvt) Ltd</p>
+      </main>
+
+      <OrbitPanel />
     </div>
   );
 }

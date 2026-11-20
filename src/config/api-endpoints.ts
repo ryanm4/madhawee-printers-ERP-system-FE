@@ -33,7 +33,9 @@ export const API_ENDPOINTS = {
     CREATE: `${API_BASE_URL}/jobs`,
     GET: (jobId: number | string) => `${API_BASE_URL}/jobs/${jobId}`,
     UPDATE: (jobId: number | string) => `${API_BASE_URL}/jobs/${jobId}`,
+    PATCH: (jobId: number | string) => `${API_BASE_URL}/jobs/${jobId}`,
     DELETE: (jobId: number | string) => `${API_BASE_URL}/jobs/${jobId}`,
+    NEXT_SEQUENCE: (type: string) => `${API_BASE_URL}/jobs/next-sequence/${type}`,
   },
   DISPATCH: {
     LIST: `${API_BASE_URL}/dispatch`,
@@ -56,6 +58,21 @@ export const API_ENDPOINTS = {
       `${API_BASE_URL}/customers/${customerId}`,
   },
 
+  GRN: {
+    LIST: `${API_BASE_URL}/grn`,
+    CREATE: `${API_BASE_URL}/grn`,
+    GET: (id: number | string) => `${API_BASE_URL}/grn/${id}`,
+    UPDATE: (id: number | string) => `${API_BASE_URL}/grn/${id}`,
+    DELETE: (id: number | string) => `${API_BASE_URL}/grn/${id}`,
+  },
+  ISSUE_NOTES: {
+    LIST: `${API_BASE_URL}/issue-notes`,
+    CREATE: `${API_BASE_URL}/issue-notes`,
+    GET: (id: number | string) => `${API_BASE_URL}/issue-notes/${id}`,
+    UPDATE: (id: number | string) => `${API_BASE_URL}/issue-notes/${id}`,
+    DELETE: (id: number | string) => `${API_BASE_URL}/issue-notes/${id}`,
+  },
+
   USER: {
     LIST: `${API_BASE_URL}/auth/users`,
     CREATE: `${API_BASE_URL}/auth/register`,
@@ -74,6 +91,8 @@ export const API_ENDPOINTS = {
   REPORTS: {
     ADVANCED: `${API_BASE_URL}/reports`,
     SUMMARY: `${API_BASE_URL}/reports/summary`,
+    CUSTOM_INVENTORY: `${API_BASE_URL}/reports/custom/inventory`,
+    CUSTOM_SALES: `${API_BASE_URL}/reports/custom/sales`,
   },
 
   RELATIVE: {
@@ -114,6 +133,8 @@ export const API_ENDPOINTS = {
       GET: (jobId: number | string) => `${NEXTJS_API_BASE}/jobs/${jobId}`,
       UPDATE: (jobId: number | string) => `${NEXTJS_API_BASE}/jobs/${jobId}`,
       DELETE: (jobId: number | string) => `${NEXTJS_API_BASE}/jobs/${jobId}`,
+      PATCH: (jobId: number | string) => `${NEXTJS_API_BASE}/jobs/${jobId}`,
+      NEXT_SEQUENCE: (type: string) => `${NEXTJS_API_BASE}/jobs/next-sequence/${type}`,
     },
     DISPATCH: {
       LIST: `${NEXTJS_API_BASE}/dispatch`,
@@ -136,6 +157,21 @@ export const API_ENDPOINTS = {
         `${NEXTJS_API_BASE}/customers/${customerId}`,
     },
 
+    GRN: {
+      LIST: `${NEXTJS_API_BASE}/grn`,
+      CREATE: `${NEXTJS_API_BASE}/grn`,
+      GET: (id: number | string) => `${NEXTJS_API_BASE}/grn/${id}`,
+      UPDATE: (id: number | string) => `${NEXTJS_API_BASE}/grn/${id}`,
+      DELETE: (id: number | string) => `${NEXTJS_API_BASE}/grn/${id}`,
+    },
+    ISSUE_NOTES: {
+      LIST: `${NEXTJS_API_BASE}/issue-notes`,
+      CREATE: `${NEXTJS_API_BASE}/issue-notes`,
+      GET: (id: number | string) => `${NEXTJS_API_BASE}/issue-notes/${id}`,
+      UPDATE: (id: number | string) => `${NEXTJS_API_BASE}/issue-notes/${id}`,
+      DELETE: (id: number | string) => `${NEXTJS_API_BASE}/issue-notes/${id}`,
+    },
+
     USER: {
       LIST: `${NEXTJS_API_BASE}/users`,
       CREATE: `${NEXTJS_API_BASE}/users`,
@@ -154,6 +190,8 @@ export const API_ENDPOINTS = {
       },
       ADVANCED: `${NEXTJS_API_BASE}/reports`,
       SUMMARY: `${NEXTJS_API_BASE}/reports/summary`,
+      CUSTOM_INVENTORY: `${NEXTJS_API_BASE}/reports/custom/inventory`,
+      CUSTOM_SALES: `${NEXTJS_API_BASE}/reports/custom/sales`,
     },
 
 }

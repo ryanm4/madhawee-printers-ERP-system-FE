@@ -1,31 +1,27 @@
-import { JobTicketStatus, PurchaseOrderStatus, QuotationStatus } from "@/config/enum";
+import { JobTicketStatus, QuotationStatus } from "@/config/enum";
 
 export const getNextJobTicketStatus = (currentStatus: string): JobTicketStatus | null => {
     const statusOrder = [
         JobTicketStatus.CREATED,
-        JobTicketStatus.APPROVED,
-        JobTicketStatus.MATERIALS_REQUESTED,
-        JobTicketStatus.MATERIALS_ALLOCATED,
-        JobTicketStatus.IN_PRINTING,
-        JobTicketStatus.PRINTING_COMPLETED,
+        JobTicketStatus.IN_PRODUCTION,
         JobTicketStatus.PARTIALLY_DISPATCHED,
-        JobTicketStatus.DISPATCHED,
         JobTicketStatus.COMPLETED
     ];
 
     const currentIndex = statusOrder.indexOf(currentStatus as JobTicketStatus);
-    if (currentIndex === -1 || currentIndex === statusOrder.length - 1) {
-        return null; // Unknown status or last status
+
+    // User can only change status manually up to IN PRODUCTION
+    if (currentIndex === -1 || currentStatus === JobTicketStatus.IN_PRODUCTION || currentIndex >= statusOrder.indexOf(JobTicketStatus.IN_PRODUCTION)) {
+        return null;
     }
+
     return statusOrder[currentIndex + 1];
 };
 
 export const getNextQuotationStatus = (currentStatus: string): QuotationStatus | null => {
     const statusOrder = [
-        QuotationStatus.PENDING,
         QuotationStatus.CREATED,
-        QuotationStatus.APPROVED,
-        QuotationStatus.COMPLETED
+        QuotationStatus.ACCEPTED
     ];
     // Note: REJECTED is a terminal state that doesn't fit a simple linear "next" flow usually, 
     // but maybe we can just allow moving to Completed?
@@ -33,21 +29,6 @@ export const getNextQuotationStatus = (currentStatus: string): QuotationStatus |
     // For a linear flow user request, let's stick to the happy path.
 
     const currentIndex = statusOrder.indexOf(currentStatus as QuotationStatus);
-    if (currentIndex === -1 || currentIndex === statusOrder.length - 1) {
-        return null;
-    }
-    return statusOrder[currentIndex + 1];
-};
-
-export const getNextPurchaseOrderStatus = (currentStatus: string): PurchaseOrderStatus | null => {
-    const statusOrder = [
-        PurchaseOrderStatus.PENDING,
-        PurchaseOrderStatus.CREATED,
-        PurchaseOrderStatus.APPROVED,
-        PurchaseOrderStatus.COMPLETED
-    ];
-
-    const currentIndex = statusOrder.indexOf(currentStatus as PurchaseOrderStatus);
     if (currentIndex === -1 || currentIndex === statusOrder.length - 1) {
         return null;
     }

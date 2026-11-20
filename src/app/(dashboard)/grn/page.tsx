@@ -1,0 +1,165 @@
+"use client";
+import { useSessionStorage } from "@/hooks/use-session-storage";
+import { TableSkeleton } from "@/components/shared/page-skeletons";
+import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { getErrorMessage } from "@/lib/error-utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { grnApi } from "@/modules/grn/api";
+import { PlusIcon, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import { DataTable } from "./_components/grn_table";
+import { grnColumns } from "./_components/grn_columns";
+import { GRN } from "@/modules/grn/types";
+import { toast } from "sonner";
+import { EmptyState } from "@/components/shared/empty-page";
+import { ExportButton } from "@/components/shared/export-button";
+import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { useMemo } from "react";
+
+import { handleGRNPrint } from "./_components/grn-print-dialog";
+import { usePermissions } from "@/hooks/use-permissions";
+import { inventoryApi } from "@/modules/inventory/api";
+import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
+
+function GRNManagement() {
+  const router = useRouter();
+  const { canModifyGRN, canCreateGRN, canExportList } = usePermissions();
+  const [data, setData] = useState<GRN[]>([]);
+  const [inventoryData, setInventoryData] = useState<GET_ALL_INVENTORY[]>([]);
+  const [isLoading, setIsLoading] = useState(true);  // starts loading: the page fetches as soon as it opens
+  const [search, setSearch] = useSessionStorage("grn-search", "");
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      const [grnResponse, inventoryResponse] = await Promise.all([
+        grnApi.getAll(),
+        inventoryApi.getAll(),
+      ]);
+
+      if (grnResponse.status === 200) {
+        const sortedData = grnResponse.data.sort(
+          (a, b) =>
+            new Date(b.created_on || 0).getTime() -
+            new Date(a.created_on || 0).getTime()
+        );
+
+        setData(sortedData);
+      }
+
+      if (inventoryResponse.status === 200) {
+        setInventoryData(inventoryResponse.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch GRN data", error);
+      toast.error(getErrorMessage(error, "Failed to fetch GRN data"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedGrnId, setSelectedGrnId] = useState<string | number | null>(
+    null
+  );
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handlers = useMemo(
+    () => ({
+      onView: (id: number | string) => {
+        router.push(`/grn/${id}`);
+      },
+      onEdit: (id: number | string) => {
+        router.push(`/grn/${id}/edit`);
+      },
+      onDelete: (id: number | string) => {
+        setSelectedGrnId(id);
+        setIsDeleteDialogOpen(true);
+      },
+      onPrint: (grn: GRN) => {
+        handleGRNPrint(grn, inventoryData);
+        toast.success("Opening GRN Print View...");
+      },
+    }),
+    [router, inventoryData]
+  );
+
+  const columns = useMemo(() => grnColumns(handlers, { canModify: canModifyGRN }), [handlers, canModifyGRN]);
+
+  const handleDelete = async () => {
+    if (!selectedGrnId) return;
+    try {
+      setIsDeleting(true);
+      const response = await grnApi.delete(selectedGrnId.toString());
+      if (response.status === 200 || response.status === 204) {
+        toast.success("GRN deleted successfully");
+        fetchData();
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Failed to delete GRN"));
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+      setSelectedGrnId(null);
+    }
+  };
+
+  return (
+    <>
+      <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+        <PageTitleWithBreadcrumb
+          title="Goods Received Notes (GRN)"
+          breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
+        />
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="relative w-full sm:w-[300px]">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search by Supplier or PO"
+              className="w-full pl-8"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          {canExportList && <ExportButton data={data} filename="grn-list" />}
+          {canCreateGRN && (
+            <Button onClick={() => router.push("/grn/create")}>
+              <PlusIcon /> Create New GRN
+            </Button>
+          )}
+        </div>
+        {isLoading ? (
+          <TableSkeleton />
+        ) : data.length === 0 ? (
+          <EmptyState
+            title="No GRN Found"
+            description="You haven't recorded any Goods Received Notes yet."
+            createLabel={canCreateGRN ? "Create New GRN" : ""}
+            createPath={canCreateGRN ? "/grn/create" : ""}
+          />
+        ) : (
+          <DataTable columns={columns} data={data} searchValue={search} />
+        )}
+      </div>
+
+      <DeleteConfirmationDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDelete}
+        title="Delete GRN"
+        description="Are you sure you want to delete this Good Received Note? This action cannot be undone."
+        loading={isDeleting}
+      />
+    </>
+  );
+}
+
+export default GRNManagement;

@@ -6,18 +6,24 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal, PencilIcon, TrashIcon } from "lucide-react"
+import { ArrowUpDown, Eye, MoreHorizontal, PencilIcon, Printer, TrashIcon } from "lucide-react"
 import { ALL_DISPATCH } from "@/modules/dispatch-invoice/types"
-import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/shared/status-badge"
 
 interface DispatchTableActions {
     onEdit: (id: string | number) => void
     onDelete: (id: string | number) => void
+    onView: (id: string | number) => void
+    onPrint: (dispatch: ALL_DISPATCH) => void
 }
 
 export const DispatchColumns = (
-    actions: DispatchTableActions
-): ColumnDef<ALL_DISPATCH>[] => [
+    actions: DispatchTableActions,
+    options?: { canModify?: boolean }
+): ColumnDef<ALL_DISPATCH>[] => {
+    const canModify = options?.canModify ?? true;
+
+    return [
         {
             accessorKey: "dispatch_id",
             header: ({ column }) => {
@@ -33,43 +39,51 @@ export const DispatchColumns = (
             },
         },
         {
-            accessorKey: "dispatch_note",
-            header: "Dispatch Note",
-        },
-        {
-            accessorKey: "dispatch_qty",
-            header: "Dispatch Qty",
-        },
-        {
-            accessorKey: "no_of_bundles",
-            header: "No of Bundles",
-        },
-        {
-            accessorKey: "customer_name",
-            header: "Customer Name",
-        },
-        {
-            accessorKey: "contact_person",
-            header: "Contact Person",
+            accessorKey: "job_number",
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    >
+                        Job Number
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                )
+            },
         },
         {
             accessorKey: "job_name",
             header: "Job Name",
         },
         {
+            accessorKey: "customer_name",
+            header: "Customer Name",
+        },
+        {
+            accessorKey: "job_quantity",
+            header: "Job Quantity",
+        },
+        {
+            accessorKey: "dispatch_qty",
+            header: "Dispatch Qty",
+        },
+
+
+
+
+        {
+            accessorKey: "created_by",
+            header: "Created By",
+        },
+
+        {
             accessorKey: "status",
             header: "Status",
             cell: ({ row }) => {
-                const status = row.original.status
+                const status = row.getValue("status") as string | undefined
                 return (
-                    <Badge
-                        className={`uppercase ${status === "COMPLETED" ? "bg-green-100 text-green-800 hover:bg-green-600 hover:text-white" :
-                            status === "PENDING" ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-600 hover:text-white" :
-                                "bg-gray-100 text-gray-800 hover:bg-gray-600 hover:text-white"
-                            } px-2 py-1 rounded-md text-sm font-medium`}
-                    >
-                        {status}
-                    </Badge>
+                    <StatusBadge status={status || "N/A"} type="DISPATCH_INVOICE" />
                 )
             },
         },
@@ -80,31 +94,57 @@ export const DispatchColumns = (
                 const dispatch = row.original
 
                 return (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <MoreHorizontal />
-                            </Button>
-                        </DropdownMenuTrigger>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="icon"
 
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                                onClick={() => actions.onEdit(dispatch.dispatch_id)}
-                            >
-                                <PencilIcon className="mr-2 h-4 w-4" />
-                                Edit Dispatch
-                            </DropdownMenuItem>
+                            onClick={() => actions.onPrint(dispatch)}
+                            title="Print Delivery Note"
+                        >
+                            <Printer className="h-4 w-4" />
+                        </Button>
 
-                            <DropdownMenuItem
-                                variant="destructive"
-                                onClick={() => actions.onDelete(dispatch.dispatch_id)}
-                            >
-                                <TrashIcon className="mr-2 h-4 w-4" />
-                                Delete Dispatch
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <MoreHorizontal />
+                                </Button>
+                            </DropdownMenuTrigger>
+
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                    onClick={() => actions.onView(dispatch.dispatch_id)}
+                                >
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View Dispatch
+                                </DropdownMenuItem>
+
+                                {canModify && (
+                                    <>
+                                        <DropdownMenuItem
+                                            onClick={() => actions.onEdit(dispatch.dispatch_id)}
+                                        >
+                                            <PencilIcon className="mr-2 h-4 w-4" />
+                                            Edit Dispatch
+                                        </DropdownMenuItem>
+
+                                        <DropdownMenuItem
+                                            variant="destructive"
+                                            onClick={() => actions.onDelete(dispatch.dispatch_id)}
+                                        >
+                                            <TrashIcon className="mr-2 h-4 w-4" />
+                                            Delete Dispatch
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                 )
             },
         },
-    ]
+    ];
+};

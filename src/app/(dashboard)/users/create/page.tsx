@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { CREATE_USER } from "@/modules/users/types";
 import { userApi } from "@/modules/users/api";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/error-utils";
 import {
   Form,
   FormControl,
@@ -39,35 +40,36 @@ function CreateUser() {
     user_role: "",
     name: "",
     email: "",
+    phone: "",
     password: "",
   };
   const form = useForm<UserFormValues>({
-    resolver: zodResolver(userSchema),
+    resolver: zodResolver(userSchema) as any,
     defaultValues: baseDefaultValues,
   });
 
   const onSubmit: SubmitHandler<UserFormValues> = async (data) => {
-    debugger;
     try {
       setIsLoading(true);
       const payload: CREATE_USER = {
         user_role: data.user_role,
         name: data.name,
         email: data.email,
+        phone: data.phone || undefined,
         password: data.password,
       };
-      const response = await userApi.create(payload);
+      await userApi.create(payload);
 
-      toast("User Created", {
+      toast.success("User Created", {
         description: "The user record has been created successfully.",
       });
       form.reset(baseDefaultValues);
       form.clearErrors();
       router.push("/users");
     } catch (error) {
-      toast("Failed to Create User", {
-        description:
-          "An error occurred while creating the user record. Please try again.",
+      console.error("Failed to create user:", error);
+      toast.error("Failed to Create User", {
+        description: getErrorMessage(error, "An error occurred while creating the user record. Please try again."),
       });
     } finally {
       setIsLoading(false);
@@ -110,11 +112,11 @@ function CreateUser() {
 
           <Card
             className={cn(
-              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col"
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
-              <h3 className="text-md font-medium mb-2">User Details</h3>
+              <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">User Details</h3>
               <p className="text-xs text-muted-foreground mb-4">
                 Edit your user details here
               </p>
@@ -130,8 +132,16 @@ function CreateUser() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="user">User</SelectItem>
+                      <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
+                      <SelectItem value="DIRECTOR_GM">Director/GM</SelectItem>
+                      <SelectItem value="MARKETING_EXECUTIVE_MANAGER">Marketing Executive/Manager</SelectItem>
+                      <SelectItem value="ADMIN_OFFICER">Admin Officer</SelectItem>
+                      <SelectItem value="PRODUCTION_MANAGER">Production Manager</SelectItem>
+                      <SelectItem value="PRODUCTION_EXECUTIVE">Production Executive</SelectItem>
+                      <SelectItem value="PROCUREMENT_MANAGER">Procurement Manager</SelectItem>
+                      <SelectItem value="STORE_KEEPER">Store Keeper</SelectItem>
+                      <SelectItem value="DISPATCH_DELIVERY_OFFICER">Dispatch/Delivery Officer</SelectItem>
+                      <SelectItem value="FINANCE_MANAGER_ACCOUNTANT">Finance Manager/Accountant</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -151,6 +161,15 @@ function CreateUser() {
                   <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter Email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              ))}
+              {renderFormField("phone", ({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter Phone Number" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

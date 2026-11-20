@@ -8,82 +8,148 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Download } from "lucide-react";
 import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/error-utils";
+import { generateReportPdf } from "@/lib/report-pdf";
 
 interface ExportButtonProps {
-    data: any[];
+    data: Record<string, unknown>[];
     filename: string;
 }
 
+/** "LKR 718,956.00" -> 718956; anything else is returned as null */
+const currencyToNumber = (value: unknown): number | null => {
+    if (typeof value !== "string") return null;
+    const match = value.trim().match(/^LKR\s*(-?[\d,]+(?:\.\d+)?)$/i);
+    if (!match) return null;
+    const n = Number(match[1].replace(/,/g, ""));
+    return Number.isFinite(n) ? n : null;
+};
+
 export const ExportButton: React.FC<ExportButtonProps> = ({ data, filename }) => {
-    const exportToCSV = () => {
+    const exportToXLSX = () => {
         if (!data || data.length === 0) return;
 
-        const worksheet = XLSX.utils.json_to_sheet(data);
-        const csv = XLSX.utils.sheet_to_csv(worksheet);
-        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `${filename}.csv`);
-        link.style.visibility = "hidden";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const rowsToExport: Record<string, any>[] = [];
+        // Positions of job breakdown rows, so they can be grouped under their item in Excel
+        const jobRowIndexes: number[] = [];
+
+        data.forEach((item) => {
+            const rowCopy: Record<string, any> = {};
+            Object.keys(item).forEach((k) => {
+                if (k !== "jobs") {
+                    rowCopy[k] = item[k];
+                }
+            });
+            rowsToExport.push(rowCopy);
+
+            if (Array.isArray(item.jobs) && item.jobs.length > 0) {
+                const keys = Object.keys(item).filter((k) => k !== "jobs");
+                item.jobs.forEach((job: any, idx: number) => {
+                    jobRowIndexes.push(rowsToExport.length);
+                    const subRow: Record<string, any> = {};
+                    keys.forEach((key) => {
+                        const kLower = key.toLowerCase();
+                        if (key === "#") subRow[key] = `   ↳ ${idx + 1}`;
+                        else if (kLower.includes("category") && !kLower.includes("sub")) subRow[key] = `Job #: ${job.job_number || "-"}`;
+                        else if (kLower.includes("sub") || kLower.includes("note")) subRow[key] = `Note #: ${job.issue_note_no || "-"}`;
+                        else if (kLower.includes("name") || kLower.includes("description") || kLower.includes("item")) subRow[key] = job.job_name || "-";
+                        else if (kLower.includes("size") || kLower.includes("date")) subRow[key] = `Date: ${job.issue_date || "-"}`;
+                        else if (kLower.includes("uom") || kLower.includes("unit of measure")) subRow[key] = "";
+                        else if (kLower.includes("qty") || kLower.includes("quantity") || kLower.includes("consumed")) subRow[key] = job.consumed_qty;
+                        else if (kLower.includes("rate") || kLower.includes("price") || kLower.includes("unit")) subRow[key] = job.unit_rate;
+                        else if (kLower.includes("amount") || kLower.includes("total") || kLower.includes("value") || kLower.includes("cost")) subRow[key] = job.total_value;
+                        else subRow[key] = "";
+                    });
+                    rowsToExport.push(subRow);
+                });
+            }
+        });
+
+        // Excel gets the amount only, as a real number, without the "LKR" prefix
+        const moneyCells: { row: number; key: string }[] = [];
+        rowsToExport.forEach((r, rowIndex) => {
+            Object.keys(r).forEach((key) => {
+                const n = currencyToNumber(r[key]);
+                if (n !== null) {
+                    r[key] = n;
+                    moneyCells.push({ row: rowIndex, key });
+                }
+            });
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(rowsToExport);
+
+        // Show those amounts with thousands separators and two decimals
+        const headers = Object.keys(rowsToExport[0] || {});
+        moneyCells.forEach(({ row, key }) => {
+            const col = headers.indexOf(key);
+            if (col < 0) return;
+            // +1 because json_to_sheet writes the column names as the first row
+            const cell = worksheet[XLSX.utils.encode_cell({ r: row + 1, c: col })];
+            if (cell) cell.z = "#,##0.00";
+        });
+
+        // Adjust column widths based on maximum string lengths
+        const colWidths = Object.keys(rowsToExport[0] || {}).map((key) => {
+            let maxLen = key.length + 4;
+            rowsToExport.forEach((r) => {
+                const val = String(r[key] ?? "");
+                if (val.length + 4 > maxLen) {
+                    maxLen = Math.min(val.length + 4, 60);
+                }
+            });
+            return { wch: Math.max(maxLen, 12) };
+        });
+        worksheet["!cols"] = colWidths;
+
+        // Group job rows under their item so Excel shows the +/- outline buttons in the margin.
+        // "above" puts the button on the item row itself; Excel otherwise expects the summary
+        // row to sit below its detail rows.
+        if (jobRowIndexes.length > 0) {
+            const sheetRows: XLSX.RowInfo[] = [];
+            // +1 because json_to_sheet writes the column names as the first row
+            jobRowIndexes.forEach((index) => {
+                sheetRows[index + 1] = { level: 1 };
+            });
+            worksheet["!rows"] = sheetRows;
+            (worksheet as XLSX.WorkSheet & {
+                "!outline"?: { above?: boolean; left?: boolean };
+            })["!outline"] = { above: true };
+        }
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Report Data");
+        XLSX.writeFile(workbook, `${filename}.xlsx`);
     };
 
-    const exportToPDF = () => {
-        if (!data || data.length === 0) return;
-
+    const exportToPDF = async () => {
         try {
-            const doc = new jsPDF();
-            const keys = Object.keys(data[0]);
-
-            // Format headers for display
-            const headers = keys.map(key => key.replace(/_/g, ' ').toUpperCase());
-
-            // Map data to rows
-            const rows = data.map(item => keys.map(key => String(item[key] ?? "")));
-
-            // Add title
-            doc.setFontSize(18);
-            doc.text(filename.replace(/-/g, ' ').toUpperCase(), 14, 22);
-            doc.setFontSize(11);
-            doc.setTextColor(100);
-
-            autoTable(doc, {
-                head: [headers],
-                body: rows,
-                startY: 30,
-                styles: { fontSize: 8, cellPadding: 2 },
-                headStyles: { fillColor: [34, 63, 122], textColor: [255, 255, 255] }, // Matching primary color #223F7A
-                alternateRowStyles: { fillColor: [234, 236, 242] }, // Matching table body color #EAECF2
-                margin: { top: 30 },
-            });
-
-            doc.save(`${filename}.pdf`);
+            await generateReportPdf(data, filename);
         } catch (error) {
             console.error("Error generating PDF:", error);
+            toast.error(getErrorMessage(error, "Failed to generate PDF"));
         }
     };
 
     return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                    <Download className="h-4 w-4" />
-                    Download Data
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={exportToCSV}>
-                    Download as CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={exportToPDF}>
-                    Download as PDF
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-2">
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                        <Download className="h-4 w-4" />
+                        Download
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={exportToXLSX}>
+                        Download as Excel
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={exportToPDF}>
+                        Download as PDF
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
     );
 };

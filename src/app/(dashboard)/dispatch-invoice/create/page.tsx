@@ -1,6 +1,8 @@
 "use client";
 import { dispatchInvoiceScheme } from "@/modules/dispatch-invoice/validation";
 import { useRouter } from "next/navigation";
+import { getErrorMessage } from "@/lib/error-utils";
+import { cn } from "@/lib/utils";
 import React, { useEffect, useState } from "react";
 import { FieldPath, useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,21 +22,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { jobTicketsApi } from "@/modules/job-tickets/api";
@@ -46,12 +40,17 @@ import { Combobox } from "@/components/shared/combobox";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
 
+import {
+  handleDispatchPrint,
+  DispatchPrintData,
+} from "../_components/dispatch-print-dialog";
+import { DispatchStatus, JobTicketStatus } from "@/config/enum";
+
 type DispatchFormValues = z.infer<typeof dispatchInvoiceScheme>;
 
 function CreateDispatchandInvoice() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [isJobLoading, setIsJobLoading] = useState(false);
   const [JobData, setJobData] = useState<ALL_TICKETS[]>([]);
   const [user, setUser] = useState<{
     name: string;
@@ -73,7 +72,7 @@ function CreateDispatchandInvoice() {
   };
 
   const form = useForm<DispatchFormValues>({
-    resolver: zodResolver(dispatchInvoiceScheme),
+    resolver: zodResolver(dispatchInvoiceScheme) as any,
     defaultValues: baseDefaultValues,
   });
 
@@ -83,7 +82,7 @@ function CreateDispatchandInvoice() {
     if (userData) {
       setUser({
         name: userData.name || "User",
-        email: userData.email,
+        email: userData.email ?? "",
         avatar: "",
       });
     }
@@ -96,13 +95,16 @@ function CreateDispatchandInvoice() {
 
       if (response.status === 200) {
         const completedJobs = response.data.filter(
-          (x) => x.status === "COMPLETED"
+          (x) =>
+            x.status === JobTicketStatus.IN_PRODUCTION ||
+            x.status === JobTicketStatus.PARTIALLY_DISPATCHED,
         );
 
         setJobData(completedJobs);
       }
     } catch (error) {
-      console.error("Failed to fetch inventory");
+      console.error("Failed to fetch jobs", error);
+      toast.error(getErrorMessage(error, "Failed to fetch jobs"));
     } finally {
       setIsLoading(false);
     }
@@ -111,31 +113,99 @@ function CreateDispatchandInvoice() {
   const onSubmit: SubmitHandler<DispatchFormValues> = async (data) => {
     try {
       setIsLoading(true);
+
+      const selectedJob = JobData.find(
+        (j) => String(j.job_id) === String(data.job_id),
+      );
+      const previouslyCompleted = Number(selectedJob?.completed_qty || 0);
+      const totalJobQty = Number(selectedJob?.quantity || 0);
+      const currentDispatchQty = Number(data.dispatch_quantity || 0);
+      const totalDispatched = previouslyCompleted + currentDispatchQty;
+
+      if (totalDispatched > totalJobQty) {
+        toast.error("Invalid Dispatch Quantity", {
+          description: `Total dispatched quantity (${totalDispatched}) cannot exceed Job quantity (${totalJobQty}).`,
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      const newJobStatus =
+        totalDispatched >= totalJobQty
+          ? JobTicketStatus.COMPLETED
+          : JobTicketStatus.PARTIALLY_DISPATCHED;
+
       const payload: CREATE_DISPATCH = {
-        customer_id: data.customer_id ?? "",
+        customer_id: data.customer_id || "",
         job_id: data.job_id,
         dispatch_note: data.dispatch_note ?? "",
-        dispatch_date: toMySQLDateTime(new Date("2025-01-05")),
+        dispatch_date: toMySQLDateTime(new Date()),
         dispatch_qty: data.dispatch_quantity ?? "",
         no_of_bundles: data.dispatch_bundles_qty ?? "",
         description: data.dispatch_description ?? "",
         delivery_address: data.delivery_address ?? "",
-        status: "PENDING",
-        created_by: user?.name || "Admin",
+        status:
+          newJobStatus === JobTicketStatus.COMPLETED
+            ? DispatchStatus.COMPLETED
+            : DispatchStatus.PARTIALLY_DISPATCHED,
+        created_by: user?.name || "User",
         created_on: new Date(),
       };
       const response = await dispatchInventoryApi.create(payload);
 
-      toast("Dispatch Created", {
+      // Update Job Ticket status based on total dispatch quantity using PATCH API
+      if (data.job_id) {
+        try {
+          await jobTicketsApi.patch(data.job_id, {
+            status: newJobStatus,
+            completed_qty: totalDispatched,
+            updated_by: user?.name || "User",
+          });
+        } catch (err) {
+          console.error(
+            "Failed to update Job Ticket status during dispatch:",
+            err,
+          );
+        }
+      }
+
+      toast.success("Dispatch Created", {
         description: "The dispatch record has been created successfully.",
       });
+
+      // Prepare print data
+      const pData: DispatchPrintData = {
+        dispatch_id:
+          (response.data as { dispatch_id?: string }).dispatch_id || "N/A",
+        dispatch_date: new Date(),
+        customer_name: data.customer_name || "",
+        customer_address: data.customer_address || "",
+        customer_phone: data.customer_phone || "",
+        delivery_address: data.delivery_address || "",
+        dispatch_qty: data.dispatch_quantity || "",
+        no_of_bundles: data.dispatch_bundles_qty || "",
+        description: data.dispatch_description || "",
+        job_id: data.job_id,
+        job_number: selectedJob?.job_number || "",
+        job_name: selectedJob?.job_name || "",
+        customer_po: selectedJob?.customer_po || "",
+        remarks: data.dispatch_note || "",
+        created_by: user?.name || "User",
+      };
+
+      // Auto-trigger print
+      handleDispatchPrint(pData);
+
       form.reset(baseDefaultValues);
       form.clearErrors();
       router.push("/dispatch-invoice");
     } catch (error) {
-      toast("Failed to Create Dispatch", {
-        description:
+      console.error("Failed to create dispatch record:", error);
+      toast.error("Failed to Create Dispatch", {
+        description: getErrorMessage(
+          error,
           "An error occurred while creating the dispatch record. Please try again.",
+        ),
       });
     } finally {
       setIsLoading(false);
@@ -146,10 +216,8 @@ function CreateDispatchandInvoice() {
     name: TName,
     render: Parameters<
       typeof FormField<DispatchFormValues, TName>
-    >["0"]["render"]
+    >["0"]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
-
-  const findCustomer = form.watch("job_id");
 
   const jobId = form.watch("job_id");
 
@@ -166,7 +234,7 @@ function CreateDispatchandInvoice() {
       try {
         setIsLoading(true);
         const selectedJob = JobData.find(
-          (job) => String(job.job_id) === String(jobId)
+          (job) => String(job.job_id) === String(jobId),
         );
         if (!selectedJob) return;
         const customerId = selectedJob.customer_id;
@@ -180,6 +248,7 @@ function CreateDispatchandInvoice() {
         }
       } catch (err) {
         console.error("Failed to fetch customer:", err);
+        toast.error(getErrorMessage(err, "Failed to fetch customer details"));
         form.setValue("customer_name", "");
         form.setValue("customer_phone", "");
         form.setValue("customer_address", "");
@@ -195,11 +264,11 @@ function CreateDispatchandInvoice() {
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
       {isLoading && <FullPageLoader />}
       <PageTitleWithBreadcrumb
-        title="Create Dispatch and Invoice Management"
+        title="Create Dispatch Note"
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
           {
-            title: "Dispatch and Invoice Management",
+            title: "Dispatch Note",
             href: "/dispatch-invoice",
           },
         ]}
@@ -210,49 +279,61 @@ function CreateDispatchandInvoice() {
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6  pb-0"
         >
-          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-            <Button
-              size="lg"
-              variant="outline"
-              type="button"
-              onClick={() => router.push("/dispatch-invoice")}
-            >
-              Cancel
-            </Button>
-            <Button size="lg" type="submit" className="bg-primary text-white">
-              Save
-            </Button>
-          </div>
-
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Purchase Order</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Purchase Order</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Edit your purchase order details here
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                {renderFormField("job_id", ({ field }) => (
+                <div className="grid grid-cols-2 gap-4">
+                  {renderFormField("job_id", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Job ID</FormLabel>
+                      <Combobox
+                        items={JobData.map((job) => {
+                          const jobName = job.job_name || "";
+
+                          return {
+                            value: String(job.job_id),
+                            label: `Job-${job.job_number} (${
+                              jobName.length > 25
+                                ? jobName.substring(0, 25) + "..."
+                                : jobName
+                            })`,
+                          };
+                        })}
+                        value={field.value ? String(field.value) : ""}
+                        onValueChange={field.onChange}
+                        placeholder="Select a Job Ticket"
+                        searchPlaceholder="Search job..."
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  ))}
                   <FormItem>
-                    <FormLabel>Job ID</FormLabel>
-                    <Combobox
-                      items={JobData.map((job) => ({
-                        value: String(job.job_id),
-                        label: `Job-${job.job_id} (${job.job_name})`,
-                      }))}
-                      value={field.value ? String(field.value) : ""}
-                      onValueChange={field.onChange}
-                      placeholder="Select a Job Ticket"
-                      searchPlaceholder="Search job..."
-                    />
-                    <FormMessage />
+                    <FormLabel>Job Quantity</FormLabel>
+                    <FormControl>
+                      <Input
+                        readOnly
+                        disabled
+                        className="bg-gray-50 border-gray-200 cursor-not-allowed"
+                        value={
+                          JobData.find(
+                            (j) =>
+                              String(j.job_id) === String(form.watch("job_id")),
+                          )?.quantity || ""
+                        }
+                      />
+                    </FormControl>
                   </FormItem>
-                ))}
+                </div>
                 <div className="flex flex-row gap-4">
                   {renderFormField("customer_name", ({ field }) => (
                     <FormItem className="w-full">
@@ -277,21 +358,21 @@ function CreateDispatchandInvoice() {
                           onChange={(e) => {
                             const digitsOnly = e.target.value.replace(
                               /\D/g,
-                              ""
+                              "",
                             );
                             field.onChange(digitsOnly);
                           }}
                           onBlur={() => {
                             if (!field.value) return;
                             const formatted = formatPhone(
-                              field.value as string
+                              field.value as string,
                             );
                             field.onChange(formatted);
                           }}
                           onFocus={() => {
                             if (!field.value) return;
                             field.onChange(
-                              (field.value as string).replace(/\D/g, "")
+                              (field.value as string).replace(/\D/g, ""),
                             );
                           }}
                         />
@@ -331,17 +412,17 @@ function CreateDispatchandInvoice() {
 
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Dispatch Note</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Dispatch Note</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Add your dispatch note details here
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                {renderFormField("dispatch_note", ({ field }) => (
+                {/* {renderFormField("dispatch_note", ({ field }) => (
                   <FormItem>
                     <FormLabel>Dispatch Note</FormLabel>
                     <FormControl>
@@ -349,7 +430,7 @@ function CreateDispatchandInvoice() {
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                ))}
+                ))} */}
                 {renderFormField("dispatch_date", ({ field }) => (
                   <FormItem>
                     <FormLabel>Dispatch Date</FormLabel>
@@ -360,7 +441,7 @@ function CreateDispatchandInvoice() {
                             variant={"outline"}
                             className={cn(
                               "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
+                              !field.value && "text-muted-foreground",
                             )}
                           >
                             {field.value
@@ -387,8 +468,7 @@ function CreateDispatchandInvoice() {
                     <FormItem className="w-full">
                       <FormLabel>Dispatch Quantity</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
+                        <Input min={0} type="number" step="any"
                           placeholder="Enter dispatch quantity"
                           {...field}
                           value={field.value ?? ""}
@@ -401,8 +481,7 @@ function CreateDispatchandInvoice() {
                     <FormItem className="w-full">
                       <FormLabel>No.of Bundles</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
+                        <Input min={0} type="number" step="any"
                           placeholder="Enter no.of bundles"
                           {...field}
                           value={field.value ?? ""}
@@ -428,6 +507,32 @@ function CreateDispatchandInvoice() {
                 ))}
               </CardContent>
             </Card>
+          </div>
+          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
+            <Button
+              size="lg"
+              variant="outline"
+              type="button"
+              onClick={() => router.push("/dispatch-invoice")}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="lg"
+              type="submit"
+              className="bg-primary text-white"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create"
+              )}
+            </Button>
           </div>
         </form>
       </Form>

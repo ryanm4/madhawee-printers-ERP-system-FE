@@ -1,5 +1,6 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { purchaseOrderScheme } from "@/modules/purchase-order/validation";
@@ -36,23 +37,31 @@ import { CalendarIcon, Edit2, Loader2, PlusIcon, Trash2 } from "lucide-react";
 import { FullPageLoader } from "@/components/shared/loader";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { PurchaseOrderStatus, PurchaseOrderType } from "@/config/enum";
-import { useEffect, useState } from "react";
+import {
+  PRODUCT_TYPES,
+  PurchaseOrderStatus,
+  PurchaseOrderType,
+} from "@/config/enum";
+import { useEffect, useRef, useState } from "react";
 import { CustomerApi } from "@/modules/customer/api";
 import { CUSTOMER } from "@/modules/customer/types";
 import { QUOTATIONS } from "@/modules/quotations/types";
 import { quotationApi } from "@/modules/quotations/api";
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
+import { purchaseOrderFromQuotation } from "@/modules/purchase-order/from-quotation";
 import { toast } from "sonner";
 import { CREATE_PURCHASE_ORDER } from "@/modules/purchase-order/types";
 import { Combobox } from "@/components/shared/combobox";
 import { getUser } from "@/lib/auth";
+import { GET_ALL_USER } from "@/modules/users/types";
+import { userApi } from "@/modules/users/api";
 
 type PurchaseOrderFormValues = z.infer<typeof purchaseOrderScheme>;
 
 function CreatePurchaseOrder() {
   const router = useRouter();
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
+  const [userList, setUserList] = useState<GET_ALL_USER[]>([]);
   const [quotationList, setQuotationList] = useState<QUOTATIONS[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,11 +74,12 @@ function CreatePurchaseOrder() {
   useEffect(() => {
     getCustomerList();
     getQuotationList();
+    getUserList();
     const userData = getUser();
     if (userData) {
       setUser({
         name: userData.name || "User",
-        email: userData.email,
+        email: userData.email ?? "",
         avatar: "",
       });
     }
@@ -81,7 +91,7 @@ function CreatePurchaseOrder() {
       const response = await CustomerApi.getAll();
 
       setCustomer(response.data);
-    } catch (error) {
+    } catch {
       console.error("Failed to fetch POs");
     } finally {
       setLoading(false);
@@ -93,8 +103,23 @@ function CreatePurchaseOrder() {
       const response = await quotationApi.getAll();
 
       setQuotationList(response.data);
-    } catch (error) {
+    } catch {
       console.error("Failed to fetch POs");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getUserList = async () => {
+    try {
+      setLoading(true);
+      const response = await userApi.getAll();
+      if (response.status === 200) {
+        setUserList(response?.data?.users);
+      }
+    } catch (error) {
+      console.error("Failed to fetch users", error);
+      toast.error(getErrorMessage(error, "Failed to fetch users"));
     } finally {
       setLoading(false);
     }
@@ -105,29 +130,64 @@ function CreatePurchaseOrder() {
     customerAddress: "",
     customerEmail: "",
     customerPhone: "",
-    purchaseOrderNo: "",
+    customer_po: "",
     quotationId: "",
     tceprNo: "",
     purchaseOrderType: PurchaseOrderType.TIEP,
     batchRef: "",
+    salesRef: "",
     poDate: new Date(),
-    itemDetails: [
-      { itemCode: "", description: "", quantity: 0, unit: "", price: 0 },
-    ],
+    currency: "LKR",
+    itemDetails: [{ description: "", quantity: "", unit: 0, price: "" }],
   };
 
   const form = useForm<PurchaseOrderFormValues>({
-    resolver: zodResolver(purchaseOrderScheme),
+    resolver: zodResolver(purchaseOrderScheme) as any,
     defaultValues: baseDefaultValues,
   });
   const {
     fields: itemDetailsFields,
     append: appendItemDetails,
     remove: removeItemDetails,
+    replace: replaceItemDetails,
   } = useFieldArray({
     control: form.control,
     name: "itemDetails",
   });
+
+  // Tracks the latest selected quotation so a slow earlier response can't overwrite a newer pick
+  const selectedQuotationRef = useRef<string>("");
+
+  const populateFromQuotation = async (quoteId: string) => {
+    selectedQuotationRef.current = quoteId;
+    if (!quoteId) return;
+
+    try {
+      setLoading(true);
+      const { data: quote } = await quotationApi.getById(quoteId);
+      if (selectedQuotationRef.current !== quoteId) return;
+
+      const values = purchaseOrderFromQuotation(quote, customer);
+      form.setValue("customer", values.customer);
+      form.setValue("customerAddress", values.customerAddress);
+      form.setValue("customerPhone", values.customerPhone);
+      form.setValue("customerEmail", values.customerEmail);
+      if (values.currency) form.setValue("currency", values.currency);
+      if (values.salesRef) form.setValue("salesRef", values.salesRef);
+      form.setValue("purchaseOrderType", values.purchaseOrderType);
+      if (values.itemDetails.length > 0) {
+        replaceItemDetails(values.itemDetails);
+      }
+      form.clearErrors();
+
+      toast.success(`Details loaded from quotation #${quote.quote_id}`);
+    } catch (error) {
+      console.error("Failed to fetch quotation", error);
+      toast.error(getErrorMessage(error, "Failed to load quotation details"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   async function onSubmit(data: PurchaseOrderFormValues) {
     try {
@@ -138,35 +198,35 @@ function CreatePurchaseOrder() {
         [PurchaseOrderType.NON_TIEP]: 2,
         [PurchaseOrderType.MP]: 3,
       };
-      const formatDate = (date: Date) => {
-        return date.toISOString().split("T")[0]; // "YYYY-MM-DD" format
-      };
-
       const payload: CREATE_PURCHASE_ORDER = {
         quote_id: data.quotationId ? parseInt(data.quotationId) : 0,
         customer_id: data.customer ? parseInt(data.customer) : 0,
         po_type_id: poTypeMap[data.purchaseOrderType] || 1,
         batch_ref: data.batchRef,
-        po_date:
-          data.poDate instanceof Date ? formatDate(data.poDate) : data.poDate,
+        sales_ref: data.salesRef,
+        po_date: format(data.poDate, "yyyy-MM-dd HH:mm:ss"),
         TC_E_PR_No: data.tceprNo,
-        created_by: user?.name || "admin",
+        created_by: user?.name || "User",
         created_on: new Date(),
-        status: PurchaseOrderStatus.CREATED,
-        customer_po: data.purchaseOrderNo,
-        po_items: data.itemDetails.map((item: any) => ({
-          item_code: item.itemCode,
-          description: item.description,
-          quantity: String(item.quantity),
-          uom: item.unit,
-          price: String(item.price),
-        })),
+        status: PurchaseOrderStatus.APPROVED,
+        customer_po: data.customer_po,
+        currency: data.currency,
+        po_items: data.itemDetails.map((item) => {
+          const itemCodeStr = Object.values(PRODUCT_TYPES)[Number(item.unit) - 1] || "";
+          return {
+            item_code: itemCodeStr,
+            description: item.description,
+            quantity: String(item.quantity),
+            uom: "Nos",
+            price: String(item.price),
+          };
+        }),
       };
 
-      const response = await purchaseOrderApi.create(payload);
+      await purchaseOrderApi.create(payload);
 
-      toast("Purchase Order Created", {
-        description: `Purchase Order ${data.purchaseOrderNo} has been created successfully.`,
+      toast.success("Purchase Order Created", {
+        description: `Purchase Order ${data.customer_po} has been created successfully.`,
       });
 
       form.reset(baseDefaultValues);
@@ -176,9 +236,11 @@ function CreatePurchaseOrder() {
       router.push("/purchase-order");
     } catch (error) {
       console.error("Failed to submit PO:", error);
-      toast("Failed to Create Purchase Order", {
-        description:
+      toast.error("Failed to Create Purchase Order", {
+        description: getErrorMessage(
+          error,
           "An error occurred while creating the purchase order. Please try again.",
+        ),
       });
     } finally {
       setIsSubmitting(false);
@@ -190,7 +252,7 @@ function CreatePurchaseOrder() {
     name: TName,
     render: Parameters<
       typeof FormField<PurchaseOrderFormValues, TName>
-    >["0"]["render"]
+    >["0"]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
 
   return (
@@ -209,41 +271,14 @@ function CreatePurchaseOrder() {
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6  pb-0"
         >
-          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-            <Button
-              size="lg"
-              variant="outline"
-              type="button"
-              onClick={() => router.push("/purchase-order")}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="lg"
-              type="submit"
-              className="bg-primary text-white"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save"
-              )}
-            </Button>
-          </div>
-
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Customer</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Customer</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Add your customer details here
                 </p>
@@ -253,30 +288,32 @@ function CreatePurchaseOrder() {
                   <FormItem>
                     <FormLabel>Customer</FormLabel>
                     <Combobox
-                      items={customer.map((c) => ({
-                        value: String(c.customer_id),
-                        label: c.company_name,
-                      }))}
+                      items={customer
+                        .filter((c) => c.customer_type === "customer")
+                        .map((c) => ({
+                          value: String(c.customer_id),
+                          label: c.company_name,
+                        }))}
                       value={field.value || ""}
                       onValueChange={(value) => {
                         field.onChange(value);
 
                         const selectedCustomer = customer.find(
-                          (c) => String(c.customer_id) === value
+                          (c) => String(c.customer_id) === value,
                         );
 
                         if (selectedCustomer) {
                           form.setValue(
                             "customerAddress",
-                            selectedCustomer.address
+                            selectedCustomer.address,
                           );
                           form.setValue(
                             "customerPhone",
-                            selectedCustomer.phone
+                            selectedCustomer.phone,
                           );
                           form.setValue(
                             "customerEmail",
-                            selectedCustomer.email
+                            selectedCustomer.email,
                           );
                         }
                       }}
@@ -324,17 +361,17 @@ function CreatePurchaseOrder() {
             </Card>
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Purchase Order</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Purchase Order</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Add your purchase order details here
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                {renderFormField("purchaseOrderNo", ({ field }) => (
+                {renderFormField("customer_po", ({ field }) => (
                   <FormItem>
                     <FormLabel>
                       Purchase Order No <span className="text-red-500">*</span>
@@ -352,10 +389,15 @@ function CreatePurchaseOrder() {
                     <Combobox
                       items={quotationList.map((q) => ({
                         value: String(q.quote_id),
-                        label: String(q.quote_id),
+                        label: q.company_name
+                          ? `${q.quote_id} - ${q.company_name}`
+                          : String(q.quote_id),
                       }))}
                       value={field.value || ""}
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        populateFromQuotation(value);
+                      }}
                       placeholder="Select a Quotation"
                       searchPlaceholder="Search quotation..."
                     />
@@ -405,6 +447,7 @@ function CreatePurchaseOrder() {
                       </FormItem>
                     );
                   })}
+
                   {renderFormField("tceprNo", ({ field }) => (
                     <FormItem>
                       <FormLabel>TC/E/PR/No</FormLabel>
@@ -415,61 +458,111 @@ function CreatePurchaseOrder() {
                     </FormItem>
                   ))}
                 </div>
-                {renderFormField("batchRef", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>Batch Ref</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter Batch Ref" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                ))}
 
-                {renderFormField("poDate", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      PO Date <span className="text-red-500">*</span>
-                    </FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
+                <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+                  {renderFormField("batchRef", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Batch Ref</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter Batch Ref" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+
+                  {renderFormField("salesRef", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Marketing Person</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
                         <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value
-                              ? format(field.value, "PPP")
-                              : format(new Date(), "PPP")}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select contact person" />
+                          </SelectTrigger>
                         </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          captionLayout="dropdown"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                ))}
+                        <SelectContent>
+                          {userList.map((cp, idx) => (
+                            <SelectItem key={idx} value={cp.name}>
+                              {cp.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+                  {renderFormField("poDate", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        PO Date <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground",
+                              )}
+                            >
+                              {field.value
+                                ? format(field.value, "PPP")
+                                : format(new Date(), "PPP")}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            captionLayout="dropdown"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+
+                  {renderFormField("currency", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Currency</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select Currency" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="LKR">🇱🇰 LKR</SelectItem>
+                          <SelectItem value="USD">🇺🇸 USD</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </div>
 
           <Card
             className={cn(
-              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
-              <h3 className="text-md font-medium mb-2">Item Details</h3>
+              <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Item Details</h3>
               <p className="text-xs text-muted-foreground mb-4">
                 Add your Item Details here
               </p>
@@ -481,11 +574,10 @@ function CreatePurchaseOrder() {
                   variant="secondary"
                   onClick={() =>
                     appendItemDetails({
-                      itemCode: "",
                       description: "",
-                      quantity: 0,
-                      unit: "",
-                      price: 0,
+                      quantity: "",
+                      unit: 0,
+                      price: "",
                     })
                   }
                 >
@@ -499,19 +591,43 @@ function CreatePurchaseOrder() {
                     key={item.id}
                     className="grid grid-cols-[1fr_auto] gap-2 mb-2 items-start"
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
                       {renderFormField(
-                        `itemDetails.${index}.itemCode`,
-                        ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Item Code</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter Item Code" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )
+                        `itemDetails.${index}.unit`,
+                        ({ field }) => {
+                          const groupedItems = Object.values(PRODUCT_TYPES).map(
+                            (type, idx) => ({
+                              value: String(idx + 1),
+                              label: type,
+                            }),
+                          );
+
+                          return (
+                            <FormItem>
+                              <FormLabel>Item Type</FormLabel>
+                              <Combobox
+                                items={groupedItems}
+                                value={field.value ? String(field.value) : ""}
+                                onValueChange={(value) => {
+                                  const selectedGroupItem = groupedItems.find(
+                                    (i) => i.value === value,
+                                  );
+
+                                  if (selectedGroupItem) {
+                                    field.onChange(
+                                      parseInt(selectedGroupItem.value, 10),
+                                    );
+                                  }
+                                }}
+                                placeholder="Select Item"
+                                searchPlaceholder="Search item..."
+                              />
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        },
                       )}
+
                       {renderFormField(
                         `itemDetails.${index}.description`,
                         ({ field }) => (
@@ -521,14 +637,14 @@ function CreatePurchaseOrder() {
                               <span className="text-red-500">*</span>
                             </FormLabel>
                             <FormControl>
-                              <Input
+                              <Textarea
                                 placeholder="Enter Description"
                                 {...field}
                               />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
-                        )
+                        ),
                       )}
                       {renderFormField(
                         `itemDetails.${index}.quantity`,
@@ -539,12 +655,11 @@ function CreatePurchaseOrder() {
                             </FormLabel>
                             <FormControl>
                               <Input
-                                type="number"
+                                type="number" step="any"
+                                min={0}
                                 placeholder="Enter Quantity"
                                 value={field.value}
-                                onChange={(e) =>
-                                  field.onChange(Number(e.target.value))
-                                }
+                                onChange={(e) => field.onChange(e.target.value)}
                                 onBlur={field.onBlur}
                                 name={field.name}
                                 ref={field.ref}
@@ -552,22 +667,10 @@ function CreatePurchaseOrder() {
                             </FormControl>
                             <FormMessage />
                           </FormItem>
-                        )
+                        ),
                       )}
-                      {renderFormField(
-                        `itemDetails.${index}.unit`,
-                        ({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Unit <span className="text-red-500">*</span>
-                            </FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter Unit" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )
-                      )}
+
+
                       {renderFormField(
                         `itemDetails.${index}.price`,
                         ({ field }) => (
@@ -577,12 +680,11 @@ function CreatePurchaseOrder() {
                             </FormLabel>
                             <FormControl>
                               <Input
-                                type="number"
+                                type="number" step="any"
+                                min={0}
                                 placeholder="Enter Price"
                                 value={field.value}
-                                onChange={(e) =>
-                                  field.onChange(Number(e.target.value))
-                                }
+                                onChange={(e) => field.onChange(e.target.value)}
                                 onBlur={field.onBlur}
                                 name={field.name}
                                 ref={field.ref}
@@ -590,7 +692,7 @@ function CreatePurchaseOrder() {
                             </FormControl>
                             <FormMessage />
                           </FormItem>
-                        )
+                        ),
                       )}
                     </div>
                     <div className="flex space-x-2 items-start pt-5">
@@ -617,6 +719,33 @@ function CreatePurchaseOrder() {
               </div>
             </CardContent>
           </Card>
+
+          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
+            <Button
+              size="lg"
+              variant="outline"
+              type="button"
+              onClick={() => router.push("/purchase-order")}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="lg"
+              type="submit"
+              className="bg-primary text-white"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create"
+              )}
+            </Button>
+          </div>
         </form>
       </Form>
     </div>

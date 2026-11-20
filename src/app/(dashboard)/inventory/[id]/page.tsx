@@ -1,192 +1,132 @@
-"use client"
+"use client";
 
-import PageTitleWithBreadcrumb from '@/components/shared/page-title-with-breadcrumb'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { inventoryApi } from '@/modules/inventory/api'
-import { inventoryManagementScheme } from '@/modules/inventory/validation'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useParams, useRouter } from 'next/navigation'
-import React, { useEffect, useState } from 'react'
-import { FieldPath, useForm, ControllerProps } from 'react-hook-form'
-import { toast } from 'sonner'
-import { z } from 'zod'
-import { cn } from '@/lib/utils'
+import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { RecordViewSkeleton } from "@/components/shared/page-skeletons";
+import { getErrorMessage } from "@/lib/error-utils";
+import { Button } from "@/components/ui/button";
+import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
+import { inventoryApi } from "@/modules/inventory/api";
+import { useParams, useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import { appToast } from "@/lib/toast-utils";
+import { usePermissions } from "@/hooks/use-permissions";
+import { cn } from "@/lib/utils";
+import {
+  Detail,
+  DetailGrid,
+  ViewHeader,
+  ViewSection,
+  formatAmount,
+} from "@/components/shared/record-view";
 
-type InventoryFormValues = z.infer<typeof inventoryManagementScheme>
+/** Sizes saved as "x" or "-" mean there is no size */
+const cleanSize = (size?: string) => {
+  const s = size?.trim();
+  return !s || s === "x" || s === "-" ? null : s;
+};
 
 function ViewInventoryItem() {
-    const router = useRouter()
-    const [isLoading, setIsLoading] = useState(false);
-    const params = useParams();
-    const id = params.id as string;
+  const router = useRouter();
+  const params = useParams();
+  const { canModifyInventoryItem } = usePermissions();
+  const id = params.id as string;
 
-    const form = useForm<InventoryFormValues>({
-        resolver: zodResolver(inventoryManagementScheme),
-        defaultValues: {
-            item_category: "",
-            item_sub_category: "",
-            item_name: "",
-            size: "",
-            quantity: 0,
-            unit_of_measure: "",
-            reorder_level: "",
-            status: "",
-            remarks: "",
-        },
-    })
+  const [item, setItem] = useState<GET_ALL_INVENTORY | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        async function fetchInventoryData() {
-            try {
-                setIsLoading(true);
-                const response = await inventoryApi.getById(id);
-                // @ts-ignore
-                const data = response.data[0] || response.data; // Handle potential array response or single object
+  useEffect(() => {
+    async function fetchInventoryData() {
+      try {
+        setIsLoading(true);
+        const response = await inventoryApi.getById(id);
+        const data = (Array.isArray(response.data) ? response.data[0] : response.data) as GET_ALL_INVENTORY;
+        setItem(data);
+      } catch (error) {
+        console.error("Failed to fetch inventory item:", error);
+        appToast.error("Failed to load inventory data", getErrorMessage(error));
+        router.push("/inventory");
+      } finally {
+        setIsLoading(false);
+      }
+    }
 
-                // Populate form with fetched data
-                form.reset({
-                    item_category: data.item_category,
-                    item_sub_category: data.item_sub_category,
-                    item_name: data.item_name,
-                    size: data.size,
-                    // Parse quantity as number because schema expects number, but API might return string
-                    // @ts-ignore
-                    quantity: Number(data.quantity) || 0,
-                    unit_of_measure: data.unit_of_measure,
-                    reorder_level: data.reorder_level,
-                    status: data.status,
-                    remarks: data.remarks,
-                });
-            } catch (error) {
-                console.error("Failed to fetch inventory item:", error);
-                toast("Failed to load inventory data");
-                router.push("/inventory");
-            } finally {
-                setIsLoading(false);
-            }
+    if (id) fetchInventoryData();
+  }, [id, router]);
+
+  const quantity = Number(item?.quantity) || 0;
+  const reorderLevel = Number(item?.reorder_level) || 0;
+  const unitPrice = Number(item?.unit_price) || 0;
+  const unit = item?.unit_of_measure || "";
+  const belowReorder = reorderLevel > 0 && quantity <= reorderLevel;
+  const size = cleanSize(item?.size);
+
+  return (
+    <div className="mt-3 flex flex-1 flex-col gap-5 p-4 pt-0 sm:p-6 sm:pt-0">
+      <PageTitleWithBreadcrumb
+        title="View Inventory Item"
+        breadcrumbs={[
+          { title: "Dashboard", href: "/dashboard" },
+          { title: "Inventory", href: "/inventory" },
+          { title: "View Item", href: `/inventory/${id}` },
+        ]}
+      />
+
+      <ViewHeader
+        title={item?.item_name}
+        status={item?.status}
+        statusType="INVENTORY"
+        subtitle={item && [item.item_category, item.item_sub_category, size].filter(Boolean).join(", ")}
+        actions={
+          <>
+            <Button variant="outline" type="button" onClick={() => router.push("/inventory")}>
+              Back to List
+            </Button>
+            {canModifyInventoryItem && (
+              <Button type="button" onClick={() => router.push(`/inventory/${id}/edit`)}>
+                Edit Item
+              </Button>
+            )}
+          </>
         }
+      />
+      {isLoading && !item && <RecordViewSkeleton />}
 
-        if (id) {
-            fetchInventoryData();
-        }
-    }, [id, form, router]);
+      {item && (
+        <div className="grid gap-5 lg:grid-cols-5">
+          <ViewSection title="Stock" className="lg:col-span-2">
+            <p className="text-[13px] text-muted-foreground">Quantity in stock</p>
+            <p className="mt-1 text-3xl font-bold tracking-tight tabular-nums text-[#1B2433]">
+              {quantity.toLocaleString()}
+              {unit && <span className="ml-1.5 text-base font-medium text-muted-foreground">{unit}</span>}
+            </p>
+            <p className={cn("mt-2 text-sm", belowReorder ? "font-medium text-[#B45309]" : "text-muted-foreground")}>
+              {reorderLevel > 0
+                ? belowReorder
+                  ? `At or below the reorder level of ${reorderLevel.toLocaleString()}. Reorder soon.`
+                  : `Reorder level is ${reorderLevel.toLocaleString()}.`
+                : "No reorder level set."}
+            </p>
+            <DetailGrid columns={2} className="mt-5 border-t border-[#EEF1F5] pt-5">
+              <Detail label="Unit price" value={unitPrice ? formatAmount(unitPrice) : null} />
+              <Detail label="Stock value" value={unitPrice ? formatAmount(unitPrice * quantity) : null} />
+            </DetailGrid>
+          </ViewSection>
 
-    const renderFormField = <TName extends FieldPath<InventoryFormValues>>(
-        name: TName,
-        render: ControllerProps<InventoryFormValues, TName>["render"]
-    ) => (
-        <FormField<InventoryFormValues, TName>
-            control={form.control}
-            name={name}
-            render={render}
-        />
-    );
-
-    return (
-        <div className='flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3'>
-            <PageTitleWithBreadcrumb
-                title="View Inventory Item"
-                breadcrumbs={[
-                    { title: "Dashboard", href: "/dashboard" },
-                    { title: "Inventory", href: "/inventory" },
-                    { title: "View Item", href: `/inventory/${id}` },
-                ]}
-            />
-
-            <Form {...form}>
-                <form className='space-y-6 pb-0'>
-                    <Card className={cn("w-full shadow-sm hover:shadow-md transition-shadow flex flex-col")}>
-                        <CardHeader className="flex flex-col gap-[0.5px]">
-                            <h3 className="text-md font-medium mb-2">Inventory Details</h3>
-                            <p className="text-xs text-muted-foreground mb-4">View inventory item details</p>
-                        </CardHeader>
-                        <CardContent className='flex flex-col gap-4'>
-                            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                                {renderFormField("item_category", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Item Category</FormLabel>
-                                        <FormControl><Input readOnly placeholder="Item Category" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("item_sub_category", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Sub Category</FormLabel>
-                                        <FormControl><Input readOnly placeholder="Sub Category" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                            </div>
-
-                            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                                {renderFormField("item_name", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Item Name</FormLabel>
-                                        <FormControl><Input readOnly placeholder="Item Name" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("size", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Size</FormLabel>
-                                        <FormControl><Input readOnly placeholder="Size" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                            </div>
-
-                            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                                {renderFormField("quantity", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Quantity</FormLabel>
-                                        <FormControl><Input readOnly type="number" placeholder="Quantity" {...field} onChange={event => field.onChange(+event.target.value)} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("unit_of_measure", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Unit of Measure</FormLabel>
-                                        <FormControl><Input readOnly placeholder="UOM" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                                {renderFormField("reorder_level", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Reorder Level</FormLabel>
-                                        <FormControl><Input readOnly placeholder="Reorder Level" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                            </div>
-
-                            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                                {renderFormField("status", ({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Status</FormLabel>
-                                        <FormControl><Input readOnly placeholder="Status" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                ))}
-                            </div>
-
-                            {renderFormField("remarks", ({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Remarks</FormLabel>
-                                    <FormControl><Textarea readOnly placeholder="Remarks" className="resize-none" {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            ))}
-                        </CardContent>
-                    </Card>
-                </form>
-            </Form>
+          <ViewSection title="Item details" className="lg:col-span-3">
+            <DetailGrid columns={2}>
+              <Detail label="Item category" value={item.item_category} />
+              <Detail label="Sub category" value={item.item_sub_category} />
+              <Detail label="Item name" value={item.item_name} />
+              <Detail label="Size" value={size} />
+              <Detail label="Unit of measure" value={unit} />
+              <Detail label="Reorder level" value={reorderLevel ? reorderLevel.toLocaleString() : null} />
+              <Detail label="Remarks" value={item.remarks} className="col-span-2" />
+            </DetailGrid>
+          </ViewSection>
         </div>
-    )
+      )}
+    </div>
+  );
 }
 
-export default ViewInventoryItem
+export default ViewInventoryItem;

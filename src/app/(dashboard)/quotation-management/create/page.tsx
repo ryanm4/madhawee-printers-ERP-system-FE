@@ -1,5 +1,6 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { createQuotationSchema } from "@/modules/quotations/validation";
@@ -8,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { FieldPath, useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { getCurrencySymbol, Currency } from "@/lib/currencyUtils";
 import {
   Form,
   FormControl,
@@ -37,21 +39,23 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
 import { CustomerApi } from "@/modules/customer/api";
-import { CUSTOMER } from "@/modules/customer/types";
+import { CUSTOMER, CONTACT_PERSON } from "@/modules/customer/types";
 import { quotationApi } from "@/modules/quotations/api";
 import { toast } from "sonner";
-import { CREATE_QUOTATION_REQUEST } from "@/modules/quotations/types";
+import { CREATE_QUOTATION_REQUEST, QuotationBankChoice } from "@/modules/quotations/types";
 import { Combobox } from "@/components/shared/combobox";
-import { Checkbox } from "@/components/ui/checkbox";
+import { BankDetailsPicker } from "../_components/bank-details-picker";
 import {
   QuotationType,
   QuotationTaxType,
   QuotationStatus,
+  PRODUCT_TYPES,
 } from "@/config/enum";
 import { getUser } from "@/lib/auth";
-import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
-import { inventoryApi } from "@/modules/inventory/api";
 import { FullPageLoader } from "@/components/shared/loader";
+import { formatAmount } from "@/components/shared/record-view";
+import { GET_ALL_USER } from "@/modules/users/types";
+import { userApi } from "@/modules/users/api";
 
 type QuotationFormValues = z.infer<typeof createQuotationSchema>;
 
@@ -72,15 +76,15 @@ function CreateQuotation({
   }>(initialUser);
 
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
+  const [userList, setUserList] = useState<GET_ALL_USER[]>([]);
   const [loading, setLoading] = useState(false);
-  const [itemList, setItemList] = useState<GET_ALL_INVENTORY[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quoteDate, setQuoteDate] = useState<Date>(new Date());
-  const [showAccountDetails, setShowAccountDetails] = useState(false);
+  const [bankChoice, setBankChoice] = useState<QuotationBankChoice>({ bank_details: "NONE", bank_account_id: null });
 
   useEffect(() => {
     getCustomerList();
-    getItemList();
+    getUserList();
   }, []);
 
   const getCustomerList = async () => {
@@ -89,21 +93,23 @@ function CreateQuotation({
       const response = await CustomerApi.getAll();
       setCustomer(response.data);
     } catch (error) {
-      console.error("Failed to fetch customers");
-      toast("Failed to load customers");
+      console.error("Failed to fetch customers", error);
+      toast.error(getErrorMessage(error, "Failed to load customers"));
     } finally {
       setLoading(false);
     }
   };
 
-  const getItemList = async () => {
+  const getUserList = async () => {
     try {
       setLoading(true);
-      const response = await inventoryApi.getAll();
-      setItemList(response.data);
+      const response = await userApi.getAll();
+      if (response.status === 200) {
+        setUserList(response?.data?.users);
+      }
     } catch (error) {
-      console.error("Failed to fetch items");
-      toast("Failed to load items");
+      console.error("Failed to fetch users", error);
+      toast.error(getErrorMessage(error, "Failed to fetch users"));
     } finally {
       setLoading(false);
     }
@@ -113,9 +119,11 @@ function CreateQuotation({
     customer_id: 0,
     type_id: QuotationType.NORMAL,
     delivery_days: "",
+    validity_period: "",
     tax_type_id: QuotationTaxType.NONE,
     currency: "LKR",
     contact_person: "",
+    marketing_person: "",
     notes: "",
     status: QuotationStatus.CREATED,
     sub_total: "0",
@@ -138,8 +146,8 @@ function CreateQuotation({
   };
 
   const form = useForm<QuotationFormValues>({
-    resolver: zodResolver(createQuotationSchema),
-    defaultValues: baseDefaultValues as any,
+    resolver: zodResolver(createQuotationSchema) as any,
+    defaultValues: baseDefaultValues as QuotationFormValues,
   });
 
   useEffect(() => {
@@ -148,7 +156,7 @@ function CreateQuotation({
       const name = userData.name || "User";
       setUser({
         name: name,
-        email: userData.email,
+        email: userData.email ?? "",
         avatar: "", // GET_ALL_USER doesn't have avatar
       });
       form.setValue("created_by", name);
@@ -168,31 +176,31 @@ function CreateQuotation({
   const watchTaxType = form.watch("tax_type_id");
 
   // Helper to calculate totals
-  const calculateTotals = (currentItems: any[], taxTypeId: number) => {
-    let subTotal = 0;
-    const updatedItems = currentItems.map((item) => {
-      const qty = parseFloat(item.item_qty || "0");
-      const price = parseFloat(item.item_unit_price || "0");
-      const total = qty * price;
-      subTotal += total;
-      return {
-        ...item,
-        item_total_price: total.toFixed(2),
-      };
-    });
+  const calculateTotals = (
+    currentItems: QuotationFormValues["items"],
+    taxTypeId: number,
+  ) => {
+    const subTotal = currentItems.reduce(
+      (sum, item) =>
+        sum + parseFloat(item.item_qty || "0") * parseFloat(item.item_unit_price || "0"),
+      0,
+    );
 
     // Calculate net total based on tax type
     let netTotal = subTotal;
-    if (taxTypeId === QuotationTaxType.VAT) {
-      // VAT
-      netTotal = subTotal * 1.15;
+    if (
+      taxTypeId === QuotationTaxType.VAT ||
+      taxTypeId === QuotationTaxType.TIEP
+    ) {
+      // VAT/TIEP 18%
+      netTotal = subTotal * 1.18;
     }
 
     return {
-      subTotal: subTotal.toFixed(2),
-      netTotal: netTotal.toFixed(2),
+      subTotal: String(Number(subTotal.toFixed(4))),
+      netTotal: String(Number(netTotal.toFixed(4))),
       noOfItems: String(currentItems.length),
-      totalWithoutTax: subTotal.toFixed(2),
+      totalWithoutTax: String(Number(subTotal.toFixed(4))),
     };
   };
 
@@ -222,44 +230,25 @@ function CreateQuotation({
   const handleItemChange = (
     index: number,
     field: "item_qty" | "item_unit_price",
-    value: string
+    value: string,
   ) => {
-    let sanitizedValue = value.replace(/^0+(?!$)/, "");
+    let sanitizedValue = value.replace(/^0+(?=\d)/, "");
     if (sanitizedValue === "" && value !== "") sanitizedValue = "0";
 
     form.setValue(`items.${index}.${field}`, sanitizedValue);
-
-    // Validate qty against inventory stock
-    if (field === "item_qty") {
-      const itemId = form.getValues(`items.${index}.item_id`);
-      const selectedItem = itemList.find((i) => i.item_id === itemId);
-
-      if (selectedItem) {
-        const qty = parseFloat(sanitizedValue || "0");
-
-        if (qty > Number(selectedItem.quantity)) {
-          form.setError(`items.${index}.item_qty` as any, {
-            type: "manual",
-            message: `Only ${selectedItem.quantity} items available in stock`,
-          });
-        } else {
-          form.clearErrors(`items.${index}.item_qty` as any);
-        }
-      }
-    }
 
     // Calculate row total immediately
     const qty = parseFloat(
       field === "item_qty"
         ? sanitizedValue
-        : form.getValues(`items.${index}.item_qty`) || "0"
+        : form.getValues(`items.${index}.item_qty`) || "0",
     );
     const price = parseFloat(
       field === "item_unit_price"
         ? sanitizedValue
-        : form.getValues(`items.${index}.item_unit_price`) || "0"
+        : form.getValues(`items.${index}.item_unit_price`) || "0",
     );
-    const rowTotal = (qty * price).toFixed(2);
+    const rowTotal = String(Number((qty * price).toFixed(4)));
     form.setValue(`items.${index}.item_total_price`, rowTotal);
 
     // Recalculate global totals
@@ -281,22 +270,28 @@ function CreateQuotation({
         customer_id: data.customer_id,
         type_id: data.type_id,
         delivery_days: data.delivery_days,
+        validity_period: data.validity_period,
         tax_type_id: data.tax_type_id,
         currency: data.currency,
-        contact_person: data.contact_person,
+        contact_person: data.contact_person ?? null,
+        marketing_person: data.marketing_person ?? null,
         notes: data.notes || "",
         status: data.status,
-        sub_total: data.sub_total,
+        ...(data.tax_type_id !== QuotationTaxType.NONE && {
+          sub_total: data.sub_total,
+          total_without_tax: data.total_without_tax,
+        }),
         no_of_items: data.no_of_items,
-        total_without_tax: data.total_without_tax,
         net_total: data.net_total,
-        created_by: user?.name || "Admin",
+        bank_details: bankChoice.bank_details,
+        bank_account_id: bankChoice.bank_account_id,
+        created_by: user?.name || "User",
 
         created_on: new Date(),
 
         items: data.items.map((item) => ({
-          item_id: item.item_id,
-          item_category: item.item_category,
+          item_id: item.item_id || 0,
+          item_category: item.item_category || "Uncategorized",
           item_qty: item.item_qty,
           item_description: item.item_description,
           item_unit_price: item.item_unit_price,
@@ -305,21 +300,23 @@ function CreateQuotation({
         })),
       };
 
-      const response = await quotationApi.create(payload);
+      await quotationApi.create(payload);
 
-      toast("Quotation Created", {
+      toast.success("Quotation Created", {
         description: `Quotation has been created successfully.`,
       });
 
-      form.reset(baseDefaultValues as any);
+      form.reset(baseDefaultValues as QuotationFormValues);
       form.clearErrors();
 
       router.push("/quotation-management");
     } catch (error) {
       console.error("Failed to submit quotation:", error);
-      toast("Failed to Create Quotation", {
-        description:
+      toast.error("Failed to Create Quotation", {
+        description: getErrorMessage(
+          error,
           "An error occurred while creating the quotation. Please try again.",
+        ),
       });
     } finally {
       setIsSubmitting(false);
@@ -330,7 +327,7 @@ function CreateQuotation({
     name: TName,
     render: Parameters<
       typeof FormField<QuotationFormValues, TName>
-    >[0]["render"]
+    >[0]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
 
   return (
@@ -346,42 +343,15 @@ function CreateQuotation({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-0">
-          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-            <Button
-              size="lg"
-              variant="outline"
-              type="button"
-              onClick={() => router.push("/quotation-management")}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="lg"
-              type="submit"
-              className="bg-primary text-white"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Create Quotation"
-              )}
-            </Button>
-          </div>
-
           {/* Card 1: Customer Selection */}
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
               className={cn(
-                "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Customer Details</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Customer Details</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Select customer and enter details
                 </p>
@@ -424,22 +394,32 @@ function CreateQuotation({
                         <span className="text-red-500">*</span>
                       </FormLabel>
                       <Combobox
-                        items={customer.map((c) => ({
-                          value: String(c.customer_id),
-                          label: c.company_name,
-                        }))}
+                        items={customer
+                          .filter((c) => c.customer_type === "customer")
+                          .map((c) => ({
+                            value: String(c.customer_id),
+                            label: c.company_name,
+                          }))}
                         value={field.value === 0 ? "" : String(field.value)}
                         onValueChange={(value) => {
                           field.onChange(parseInt(value));
                           const selectedCustomer = customer.find(
-                            (c) => String(c.customer_id) === value
+                            (c) => String(c.customer_id) === value,
                           );
                           if (selectedCustomer) {
-                            // Auto-populate contact person
+                            // Auto-populate first contact person by default
+                            const contactPersons = Array.isArray(
+                              selectedCustomer.contacts,
+                            )
+                              ? selectedCustomer.contacts
+                              : [];
+                            const firstContact = contactPersons[0];
                             form.setValue(
                               "contact_person",
-                              selectedCustomer.contact_person || ""
+                              firstContact?.name || "",
                             );
+                          } else {
+                            form.setValue("contact_person", "");
                           }
                         }}
                         placeholder="Select company"
@@ -458,7 +438,7 @@ function CreateQuotation({
                     className="resize-none"
                     value={
                       customer.find(
-                        (c) => c.customer_id === form.watch("customer_id")
+                        (c) => c.customer_id === form.watch("customer_id"),
                       )?.address || ""
                     }
                     readOnly
@@ -467,26 +447,62 @@ function CreateQuotation({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Contact Person */}
-                  {renderFormField("contact_person", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Person</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Select contact person" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
+                  {renderFormField("contact_person", ({ field }) => {
+                    const selectedCustomer = customer.find(
+                      (c) => c.customer_id === form.watch("customer_id"),
+                    );
+                    const contacts = Array.isArray(selectedCustomer?.contacts)
+                      ? selectedCustomer.contacts
+                      : [];
+
+                    return (
+                      <FormItem>
+                        <FormLabel>Contact Person</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select contact person" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {contacts.map((cp: CONTACT_PERSON, idx: number) => (
+                              <SelectItem key={idx} value={cp.name}>
+                                {cp.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  })}
 
                   {/* Mobile Number */}
                   <FormItem>
                     <FormLabel>Mobile Number</FormLabel>
                     <Input
                       placeholder="Mobile Number"
-                      value={
-                        customer.find(
-                          (c) => c.customer_id === form.watch("customer_id")
-                        )?.phone || ""
-                      }
+                      value={(() => {
+                        const selectedCustomerId = form.watch("customer_id");
+                        const selectedContactName =
+                          form.watch("contact_person");
+                        const selectedCustomer = customer.find(
+                          (c) => c.customer_id === selectedCustomerId,
+                        );
+                        const contactPersons = Array.isArray(
+                          selectedCustomer?.contacts,
+                        )
+                          ? selectedCustomer.contacts
+                          : [];
+                        const contact = contactPersons.find(
+                          (cp: CONTACT_PERSON) =>
+                            cp.name === selectedContactName,
+                        );
+                        return contact?.phone || "";
+                      })()}
                       readOnly
                     />
                   </FormItem>
@@ -497,17 +513,17 @@ function CreateQuotation({
             {/* Card 2: Quotation Overview */}
             <Card
               className={cn(
-                "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Quotation Overview</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Quotation Overview</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Configure quotation settings
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Quotation Type */}
                   {renderFormField("type_id", ({ field }) => {
                     const quotationTypeLabels: Record<QuotationType, string> = {
@@ -553,7 +569,20 @@ function CreateQuotation({
                         Delivery Days <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="1" {...field} />
+                        <Input min={0} type="number" step="any" placeholder="1" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+
+                  {/* Validity Period */}
+                  {renderFormField("validity_period", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Validity Period (Days) <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input min={0} type="number" step="any" placeholder="30" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -566,7 +595,7 @@ function CreateQuotation({
                     const taxTypeLabels: Record<QuotationTaxType, string> = {
                       [QuotationTaxType.NONE]: "None",
                       [QuotationTaxType.VAT]: "VAT",
-                      [QuotationTaxType.SVAT]: "SVAT",
+                      [QuotationTaxType.TIEP]: "TIEP",
                     };
                     return (
                       <FormItem>
@@ -635,25 +664,36 @@ function CreateQuotation({
                   ))}
                 </div>
 
-                {/* Show Account Details in PDF */}
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showAccountDetails"
-                    checked={showAccountDetails}
-                    onCheckedChange={(checked) =>
-                      setShowAccountDetails(checked as boolean)
-                    }
-                  />
-                  <label
-                    htmlFor="showAccountDetails"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Show Account Details in PDF
-                  </label>
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                  {/* Marketing Person */}
+                  {renderFormField("marketing_person", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Marketing Person <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select marketing person" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {userList.map((cp, idx) => (
+                            <SelectItem key={idx} value={cp.name}>
+                              {cp.name}{cp.phone ? ` (${cp.phone})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Include account details in the printed quotation
-                </p>
+
+                <BankDetailsPicker value={bankChoice} onChange={setBankChoice} />
               </CardContent>
             </Card>
           </div>
@@ -661,11 +701,11 @@ function CreateQuotation({
           {/* Card 3: Item Table */}
           <Card
             className={cn(
-              "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              "w-full rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
-              <h3 className="text-md font-medium mb-2">Items</h3>
+              <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Items</h3>
               <p className="text-xs text-muted-foreground mb-4">
                 Add items to the quotation
               </p>
@@ -686,13 +726,16 @@ function CreateQuotation({
                         Quantity
                       </th>
                       <th className="text-left p-2 text-sm font-medium">
-                        Rate (Rs)
+                        Rate (
+                        {getCurrencySymbol(form.watch("currency") as Currency)})
                       </th>
                       <th className="text-left p-2 text-sm font-medium">
-                        Total (VAT exclusive) (Rs)
+                        Total (VAT exclusive) (
+                        {getCurrencySymbol(form.watch("currency") as Currency)})
                       </th>
                       <th className="text-left p-2 text-sm font-medium">
-                        Total (VAT inclusive) (Rs)
+                        Total (VAT inclusive) (
+                        {getCurrencySymbol(form.watch("currency") as Currency)})
                       </th>
                       <th className="text-left p-2 text-sm font-medium">
                         Actions
@@ -702,15 +745,16 @@ function CreateQuotation({
                   <tbody>
                     {itemFields.map((item, index) => {
                       const qty = parseFloat(
-                        form.watch(`items.${index}.item_qty`) || "0"
+                        form.watch(`items.${index}.item_qty`) || "0",
                       );
                       const price = parseFloat(
-                        form.watch(`items.${index}.item_unit_price`) || "0"
+                        form.watch(`items.${index}.item_unit_price`) || "0",
                       );
                       const totalExclusive = qty * price;
                       const totalInclusive =
-                        watchTaxType === 2
-                          ? totalExclusive * 1.15
+                        watchTaxType === QuotationTaxType.VAT ||
+                          watchTaxType === QuotationTaxType.TIEP
+                          ? totalExclusive * 1.18
                           : totalExclusive;
 
                       return (
@@ -718,35 +762,53 @@ function CreateQuotation({
                           <td className="p-2">
                             {renderFormField(
                               `items.${index}.item_category`,
-                              ({ field }) => (
-                                <FormItem>
-                                  <Combobox
-                                    items={itemList.map((item) => ({
-                                      value: String(item.item_id),
-                                      label: item.item_name,
-                                    }))}
-                                    value={
-                                      field.value ? String(field.value) : ""
-                                    }
-                                    onValueChange={(value) => {
-                                      const selectedItem = itemList.find(
-                                        (i) => String(i.item_id) === value
-                                      );
+                              ({ field }) => {
+                                const groupedItems = Object.values(
+                                  PRODUCT_TYPES,
+                                ).map((type, idx) => ({
+                                  value: String(idx + 1),
+                                  label: type,
+                                }));
 
-                                      if (selectedItem) {
-                                        field.onChange(selectedItem.item_name);
-                                        form.setValue(
-                                          `items.${index}.item_id`,
-                                          selectedItem.item_id
-                                        );
+                                return (
+                                  <FormItem>
+                                    <Combobox
+                                      items={groupedItems}
+                                      value={
+                                        field.value
+                                          ? String(
+                                            groupedItems.find(
+                                              (i) => i.label === field.value,
+                                            )?.value || "",
+                                          )
+                                          : ""
                                       }
-                                    }}
-                                    placeholder="Select Item"
-                                    searchPlaceholder="Search item..."
-                                  />
-                                  <FormMessage />
-                                </FormItem>
-                              )
+                                      onValueChange={(value) => {
+                                        const selectedGroupItem =
+                                          groupedItems.find(
+                                            (i) => i.value === value,
+                                          );
+
+                                        if (selectedGroupItem) {
+                                          field.onChange(
+                                            selectedGroupItem.label,
+                                          );
+                                          form.setValue(
+                                            `items.${index}.item_id`,
+                                            parseInt(
+                                              selectedGroupItem.value,
+                                              10,
+                                            ),
+                                          );
+                                        }
+                                      }}
+                                      placeholder="Select Item"
+                                      searchPlaceholder="Search item..."
+                                    />
+                                    <FormMessage />
+                                  </FormItem>
+                                );
+                              },
                             )}
                           </td>
                           <td className="p-2">
@@ -760,7 +822,7 @@ function CreateQuotation({
                                     {...field}
                                   />
                                 </FormItem>
-                              )
+                              ),
                             )}
                           </td>
                           <td className="p-2">
@@ -769,8 +831,7 @@ function CreateQuotation({
                               ({ field }) => (
                                 <FormItem>
                                   <FormControl>
-                                    <Input
-                                      type="number"
+                                    <Input min={0} type="number" step="any"
                                       placeholder="0"
                                       className="w-[80px]"
                                       {...field}
@@ -778,14 +839,14 @@ function CreateQuotation({
                                         handleItemChange(
                                           index,
                                           "item_qty",
-                                          e.target.value
+                                          e.target.value,
                                         )
                                       }
                                     />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
-                              )
+                              ),
                             )}
                           </td>
                           <td className="p-2">
@@ -793,8 +854,7 @@ function CreateQuotation({
                               `items.${index}.item_unit_price`,
                               ({ field }) => (
                                 <FormItem>
-                                  <Input
-                                    type="number"
+                                  <Input min={0} type="number" step="any"
                                     placeholder="0"
                                     className="w-[100px]"
                                     {...field}
@@ -802,25 +862,25 @@ function CreateQuotation({
                                       handleItemChange(
                                         index,
                                         "item_unit_price",
-                                        e.target.value
+                                        e.target.value,
                                       )
                                     }
                                   />
                                 </FormItem>
-                              )
+                              ),
                             )}
                           </td>
                           <td className="p-2">
                             <Input
                               type="text"
-                              value={`Rs ${totalExclusive.toFixed(2)}`}
+                              value={`${getCurrencySymbol(form.watch("currency") as Currency)} ${formatAmount(totalExclusive)}`}
                               className="w-[120px]"
                             />
                           </td>
                           <td className="p-2">
                             <Input
                               type="text"
-                              value={`Rs ${totalInclusive.toFixed(2)}`}
+                              value={`${getCurrencySymbol(form.watch("currency") as Currency)} ${formatAmount(totalInclusive)}`}
                               className="w-[120px]"
                             />
                           </td>
@@ -838,20 +898,20 @@ function CreateQuotation({
                                     form.getValues("tax_type_id");
                                   const totals = calculateTotals(
                                     currentItems,
-                                    currentTaxType
+                                    currentTaxType,
                                   );
 
                                   form.setValue("sub_total", totals.subTotal);
                                   form.setValue(
                                     "no_of_items",
-                                    totals.noOfItems
+                                    totals.noOfItems,
                                   );
                                   form.setValue(
                                     "total_without_tax",
-                                    totals.totalWithoutTax
+                                    totals.totalWithoutTax,
                                   );
                                   form.setValue("net_total", totals.netTotal);
-                                  toast("Totals updated");
+                                  toast.success("Totals updated");
                                 }}
                               >
                                 <Check className="h-4 w-4" />
@@ -914,32 +974,84 @@ function CreateQuotation({
               {/* Calculation Summary */}
               <div className="flex justify-end">
                 <div className="w-full md:w-1/2 space-y-2 border-t pt-4">
-                  <div className="flex justify-between text-sm">
-                    <span>Sub Total (Without TAX):</span>
-                    <span className="font-medium">
-                      Rs {form.watch("sub_total") || "0"}
-                    </span>
-                  </div>
+                  {watchTaxType !== QuotationTaxType.NONE && (
+                    <>
+                      <div className="flex justify-between text-sm text-muted-foreground italic">
+                        <span>Sub Total (Without TAX):</span>
+                        <span className="font-medium">
+                          {getCurrencySymbol(
+                            form.watch("currency") as Currency,
+                          )}{" "}
+                          {formatAmount(form.watch("sub_total") || 0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm text-muted-foreground italic">
+                        <span>Total Amount (Without TAX):</span>
+                        <span className="font-medium">
+                          {getCurrencySymbol(
+                            form.watch("currency") as Currency,
+                          )}{" "}
+                          {formatAmount(form.watch("total_without_tax") || 0)}
+                        </span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span>No. of Items:</span>
                     <span className="font-medium">
                       {form.watch("no_of_items") || "0"}
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Total Amount (Without TAX):</span>
-                    <span className="font-medium">
-                      Rs {form.watch("total_without_tax") || "0"}
-                    </span>
-                  </div>
+                  {(watchTaxType === QuotationTaxType.VAT ||
+                    watchTaxType === QuotationTaxType.TIEP) && (
+                      <div className="flex justify-between text-sm text-muted-foreground italic">
+                        <span>
+                          {watchTaxType === QuotationTaxType.VAT ? "VAT" : "TIEP"}{" "}
+                          Amount (18%):
+                        </span>
+                        <span className="font-medium">
+                          {getCurrencySymbol(form.watch("currency") as Currency)}{" "}
+                          {formatAmount(parseFloat(form.watch("sub_total") || "0") * 0.18)}
+                        </span>
+                      </div>
+                    )}
                   <div className="flex justify-between text-sm font-bold border-t pt-2">
                     <span>Net Total:</span>
-                    <span>Rs {form.watch("net_total") || "0"}</span>
+                    <span>
+                      {getCurrencySymbol(form.watch("currency") as Currency)}{" "}
+                      {formatAmount(form.watch("net_total") || 0)}
+                    </span>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
+          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
+            <Button
+              size="lg"
+              variant="outline"
+              type="button"
+              onClick={() => router.push("/quotation-management")}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="lg"
+              type="submit"
+              className="bg-primary text-white"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create"
+              )}
+            </Button>
+          </div>
         </form>
       </Form>
     </div>

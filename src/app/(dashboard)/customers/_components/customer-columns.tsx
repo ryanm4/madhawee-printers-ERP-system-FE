@@ -1,11 +1,10 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { CUSTOMER } from "@/modules/customer/types"
 import { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown, EyeIcon, MoreHorizontal, PencilIcon, TrashIcon } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
@@ -23,8 +22,12 @@ const formatPhone = (phone: string) => {
 }
 
 export const customerColumns = (
-    actions: CustomerTableActions
-): ColumnDef<CUSTOMER>[] => [
+    actions: CustomerTableActions,
+    options?: { canModify?: boolean }
+): ColumnDef<CUSTOMER>[] => {
+    const canModify = options?.canModify ?? true;
+
+    return [
         {
             accessorKey: "customer_id",
             header: ({ column }) => {
@@ -43,10 +46,7 @@ export const customerColumns = (
             accessorKey: "company_name",
             header: "Company Name",
         },
-        {
-            accessorKey: "customer_type",
-            header: "Customer/Supplier",
-        },
+
         {
             accessorKey: "email",
             header: "Email",
@@ -60,23 +60,7 @@ export const customerColumns = (
             },
         },
 
-        {
-            accessorKey: "status",
-            header: "Status",
-            cell: ({ row }) => {
-                const status = row.original.status
-                return (
-                    <Badge
-                        className={`uppercase ${status === "ACTIVE" ? "bg-green-100 text-green-800" :
-                            status === "INACTIVE" ? "bg-red-100 text-red-800 hover:bg-red-600 hover:text-white" :
-                                "bg-gray-100 text-gray-800 hover:bg-gray-600 hover:text-white"
-                            } px-2 py-1 rounded-md text-sm font-medium`}
-                    >
-                        {status || "N/A"}
-                    </Badge>
-                )
-            },
-        },
+
         {
             id: "actions",
             enableHiding: false,
@@ -98,23 +82,28 @@ export const customerColumns = (
                                 View Customer
                             </DropdownMenuItem>
 
-                            <DropdownMenuItem
-                                onClick={() => actions.onEdit(customer.customer_id)}
-                            >
-                                <PencilIcon className="mr-2 h-4 w-4" />
-                                Edit Customer
-                            </DropdownMenuItem>
+                            {canModify && (
+                                <>
+                                    <DropdownMenuItem
+                                        onClick={() => actions.onEdit(customer.customer_id)}
+                                    >
+                                        <PencilIcon className="mr-2 h-4 w-4" />
+                                        Edit Customer
+                                    </DropdownMenuItem>
 
-                            <DropdownMenuItem
-                                variant="destructive"
-                                onClick={() => actions.onDelete(customer.customer_id)}
-                            >
-                                <TrashIcon className="mr-2 h-4 w-4" />
-                                Delete Customer
-                            </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        variant="destructive"
+                                        onClick={() => actions.onDelete(customer.customer_id)}
+                                    >
+                                        <TrashIcon className="mr-2 h-4 w-4" />
+                                        Delete Customer
+                                    </DropdownMenuItem>
+                                </>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 )
             },
         },
-    ]
+    ];
+};

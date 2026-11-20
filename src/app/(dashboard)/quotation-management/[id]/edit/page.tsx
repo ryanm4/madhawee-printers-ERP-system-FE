@@ -1,5 +1,7 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { FormSkeleton } from "@/components/shared/page-skeletons";
+import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { createQuotationSchema } from "@/modules/quotations/validation";
@@ -8,6 +10,7 @@ import { useParams, useRouter } from "next/navigation";
 import { FieldPath, useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { getCurrencySymbol, Currency } from "@/lib/currencyUtils";
 import {
   Form,
   FormControl,
@@ -41,18 +44,24 @@ import { CUSTOMER } from "@/modules/customer/types";
 import { quotationApi } from "@/modules/quotations/api";
 import { toast } from "sonner";
 import {
-  CREATE_QUOTATION_REQUEST,
+  QuotationBankChoice,
   UPDATE_QUOTATION_REQUEST,
 } from "@/modules/quotations/types";
+import { userApi } from "@/modules/users/api";
+import { GET_ALL_USER } from "@/modules/users/types";
 import { Combobox } from "@/components/shared/combobox";
-import { Checkbox } from "@/components/ui/checkbox";
+import { BankDetailsPicker } from "../../_components/bank-details-picker";
 import {
   QuotationType,
   QuotationTaxType,
   QuotationStatus,
+  PRODUCT_TYPES,
 } from "@/config/enum";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
+import { formatAmount, plainNumber } from "@/components/shared/record-view";
+import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
+import { usePermissions } from "@/hooks/use-permissions";
 
 type QuotationFormValues = z.infer<typeof createQuotationSchema>;
 
@@ -65,6 +74,7 @@ function EditQuotation({
     avatar: string;
   };
 }) {
+  const { canModifyQuotation } = usePermissions();
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -74,13 +84,20 @@ function EditQuotation({
     avatar: string;
   }>(initialUser);
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
+  const [userList, setUserList] = useState<GET_ALL_USER[]>([]);
+
   const [loading, setLoading] = useState(false);
+
+  // False until the record has been fetched; until then a skeleton stands in for the form
+
+  const [recordLoaded, setRecordLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quoteDate, setQuoteDate] = useState<Date>(new Date());
-  const [showAccountDetails, setShowAccountDetails] = useState(false);
+  const [bankChoice, setBankChoice] = useState<QuotationBankChoice>({ bank_details: "NONE", bank_account_id: null });
 
   useEffect(() => {
     getCustomerList();
+    getUserList();
   }, []);
 
   const getCustomerList = async () => {
@@ -89,8 +106,23 @@ function EditQuotation({
       const response = await CustomerApi.getAll();
       setCustomer(response.data);
     } catch (error) {
-      console.error("Failed to fetch customers");
-      toast("Failed to load customers");
+      console.error("Failed to fetch customers", error);
+      toast.error(getErrorMessage(error, "Failed to load customers"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getUserList = async () => {
+    try {
+      setLoading(true);
+      const response = await userApi.getAll();
+      if (response.status === 200 || response.status === 201) {
+        setUserList(response?.data?.users || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch users", error);
+      toast.error(getErrorMessage(error, "Failed to fetch users"));
     } finally {
       setLoading(false);
     }
@@ -100,11 +132,13 @@ function EditQuotation({
     customer_id: 0,
     type_id: QuotationType.NORMAL,
     delivery_days: "",
+    validity_period: "",
     tax_type_id: QuotationTaxType.NONE,
     currency: "LKR",
     contact_person: "",
+    marketing_person: "",
     notes: "",
-    status: QuotationStatus.PENDING,
+    status: QuotationStatus.CREATED,
     sub_total: "0",
     no_of_items: "0",
     total_without_tax: "0",
@@ -125,8 +159,8 @@ function EditQuotation({
   };
 
   const form = useForm<QuotationFormValues>({
-    resolver: zodResolver(createQuotationSchema),
-    defaultValues: baseDefaultValues as any,
+    resolver: zodResolver(createQuotationSchema) as any,
+    defaultValues: baseDefaultValues as QuotationFormValues,
   });
 
   useEffect(() => {
@@ -135,7 +169,7 @@ function EditQuotation({
       const name = userData.name || "User";
       setUser({
         name: name,
-        email: userData.email,
+        email: userData.email ?? "",
         avatar: "", // GET_ALL_USER doesn't have avatar
       });
       form.setValue("created_by", name);
@@ -155,31 +189,31 @@ function EditQuotation({
   const watchTaxType = form.watch("tax_type_id");
 
   // Helper to calculate totals
-  const calculateTotals = (currentItems: any[], taxTypeId: number) => {
-    let subTotal = 0;
-    const updatedItems = currentItems.map((item) => {
-      const qty = parseFloat(item.item_qty || "0");
-      const price = parseFloat(item.item_unit_price || "0");
-      const total = qty * price;
-      subTotal += total;
-      return {
-        ...item,
-        item_total_price: total.toFixed(2),
-      };
-    });
+  const calculateTotals = (
+    currentItems: QuotationFormValues["items"],
+    taxTypeId: number,
+  ) => {
+    const subTotal = currentItems.reduce(
+      (sum, item) =>
+        sum + parseFloat(item.item_qty || "0") * parseFloat(item.item_unit_price || "0"),
+      0,
+    );
 
     // Calculate net total based on tax type
     let netTotal = subTotal;
-    if (taxTypeId === QuotationTaxType.VAT) {
-      // VAT
-      netTotal = subTotal * 1.15;
+    if (
+      taxTypeId === QuotationTaxType.VAT ||
+      taxTypeId === QuotationTaxType.TIEP
+    ) {
+      // VAT/TIEP 18%
+      netTotal = subTotal * 1.18;
     }
 
     return {
-      subTotal: subTotal.toFixed(2),
-      netTotal: netTotal.toFixed(2),
+      subTotal: String(Number(subTotal.toFixed(4))),
+      netTotal: String(Number(netTotal.toFixed(4))),
       noOfItems: String(currentItems.length),
-      totalWithoutTax: subTotal.toFixed(2),
+      totalWithoutTax: String(Number(subTotal.toFixed(4))),
     };
   };
 
@@ -209,10 +243,10 @@ function EditQuotation({
   const handleItemChange = (
     index: number,
     field: "item_qty" | "item_unit_price",
-    value: string
+    value: string,
   ) => {
     // Strip leading zeros unless it's just "0"
-    let sanitizedValue = value.replace(/^0+(?!$)/, "");
+    let sanitizedValue = value.replace(/^0+(?=\d)/, "");
     if (sanitizedValue === "" && value !== "") sanitizedValue = "0";
 
     form.setValue(`items.${index}.${field}`, sanitizedValue);
@@ -221,14 +255,14 @@ function EditQuotation({
     const qty = parseFloat(
       field === "item_qty"
         ? sanitizedValue
-        : form.getValues(`items.${index}.item_qty`) || "0"
+        : form.getValues(`items.${index}.item_qty`) || "0",
     );
     const price = parseFloat(
       field === "item_unit_price"
         ? sanitizedValue
-        : form.getValues(`items.${index}.item_unit_price`) || "0"
+        : form.getValues(`items.${index}.item_unit_price`) || "0",
     );
-    const rowTotal = (qty * price).toFixed(2);
+    const rowTotal = String(Number((qty * price).toFixed(4)));
     form.setValue(`items.${index}.item_total_price`, rowTotal);
 
     // Recalculate global totals
@@ -251,20 +285,26 @@ function EditQuotation({
         customer_id: data.customer_id,
         type_id: data.type_id,
         delivery_days: data.delivery_days,
+        validity_period: data.validity_period,
         tax_type_id: data.tax_type_id,
         currency: data.currency,
-        contact_person: data.contact_person,
+        contact_person: data.contact_person ?? null,
+        marketing_person: data.marketing_person ?? null,
         notes: data.notes || "",
         status: data.status,
-        sub_total: data.sub_total,
+        ...(data.tax_type_id !== QuotationTaxType.NONE && {
+          sub_total: data.sub_total,
+          total_without_tax: data.total_without_tax,
+        }),
         no_of_items: data.no_of_items,
-        total_without_tax: data.total_without_tax,
         net_total: data.net_total,
-        updated_by: user?.name || "admin",
+        bank_details: bankChoice.bank_details,
+        bank_account_id: bankChoice.bank_account_id,
+        updated_by: user?.name || "User",
         updated_on: new Date(),
         items: data.items.map((item) => ({
-          item_id: item.item_id,
-          item_category: item.item_category,
+          item_id: item.item_id || 0,
+          item_category: item.item_category || "Uncategorized",
           item_qty: item.item_qty,
           item_description: item.item_description,
           item_unit_price: item.item_unit_price,
@@ -273,21 +313,23 @@ function EditQuotation({
         })),
       };
 
-      const response = await quotationApi.update(id, payload);
+      await quotationApi.update(id, payload);
 
-      toast("Quotation Updated", {
+      toast.success("Quotation Updated", {
         description: `Quotation has been updated successfully.`,
       });
 
-      form.reset(baseDefaultValues as any);
+      form.reset(baseDefaultValues as QuotationFormValues);
       form.clearErrors();
 
       router.push("/quotation-management");
     } catch (error) {
       console.error("Failed to submit quotation:", error);
-      toast("Failed to Create Quotation", {
-        description:
-          "An error occurred while creating the quotation. Please try again.",
+      toast.error("Failed to Update Quotation", {
+        description: getErrorMessage(
+          error,
+          "An error occurred while updating the quotation. Please try again.",
+        ),
       });
     } finally {
       setIsSubmitting(false);
@@ -298,7 +340,7 @@ function EditQuotation({
     name: TName,
     render: Parameters<
       typeof FormField<QuotationFormValues, TName>
-    >[0]["render"]
+    >[0]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
 
   useEffect(() => {
@@ -312,35 +354,43 @@ function EditQuotation({
           form.reset({
             customer_id: quoteData.customer_id,
             type_id: quoteData.type_id,
-            delivery_days: quoteData.delivery_days,
+            delivery_days: String(quoteData.delivery_days || ""),
+            validity_period: String(quoteData.validity_period || ""),
             tax_type_id: quoteData.tax_type_id,
-            currency: quoteData.currency,
+            currency: quoteData.currency || "LKR",
             contact_person: quoteData.contact_person,
+            marketing_person: quoteData.marketing_person || "",
             notes: quoteData.notes || "",
             status: quoteData.status,
-            sub_total: quoteData.sub_total,
-            no_of_items: quoteData.no_of_items,
-            total_without_tax: quoteData.total_without_tax,
-            net_total: quoteData.net_total,
-            created_by: quoteData.created_by,
-            updated_by: user?.name || quoteData.updated_by,
+            sub_total: String(quoteData.sub_total || "0"),
+            no_of_items: String(quoteData.no_of_items || "0"),
+            total_without_tax: String(quoteData.total_without_tax || "0"),
+            net_total: String(quoteData.net_total || "0"),
+            created_by: quoteData.created_by || "User",
+            updated_by: user?.name || quoteData.updated_by || "User",
             items:
-              (quoteData as any).items?.map((item: any) => ({
+              quoteData.items?.map((item) => ({
                 item_id: item.item_id,
                 item_category: item.item_category,
-                item_qty: String(item.item_qty),
+                item_qty: plainNumber(item.item_qty) || "0",
                 item_description: item.item_description || "",
-                item_unit_price: item.item_unit_price,
-                item_unit_discount: item.item_unit_discount || "0",
-                item_total_price: item.item_total_price,
+                item_unit_price: plainNumber(item.item_unit_price) || "0",
+                item_unit_discount: plainNumber(item.item_unit_discount) || "0",
+                item_total_price: plainNumber(item.item_total_price) || "0",
               })) || [],
           });
           setQuoteDate(new Date(quoteData.created_on));
+          setBankChoice({
+            bank_details: quoteData.bank_details ?? "NONE",
+            bank_account_id: quoteData.bank_account_id ?? null,
+          });
         }
       } catch (err) {
         console.error("Failed to fetch quotation:", err);
+        toast.error(getErrorMessage(err, "Failed to load quotation data"));
       } finally {
         setLoading(false);
+        setRecordLoaded(true);
       }
     };
 
@@ -349,9 +399,13 @@ function EditQuotation({
     }
   }, [id, form]);
 
+  if (!canModifyQuotation) {
+    return <RestrictedRouteGuard />;
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      {loading && <FullPageLoader />}
+      {loading && recordLoaded && <FullPageLoader />}
       <PageTitleWithBreadcrumb
         title="Edit Quotation"
         breadcrumbs={[
@@ -359,45 +413,28 @@ function EditQuotation({
           { title: "Quotation Management", href: "/quotation-management" },
         ]}
       />
+      {!recordLoaded && <FormSkeleton />}
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-0">
-          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-            <Button
-              size="lg"
-              variant="outline"
-              type="button"
-              onClick={() => router.push("/quotation-management")}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="lg"
-              type="submit"
-              className="bg-primary text-white"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                "Update Quotation"
-              )}
-            </Button>
-          </div>
-
+        <div className={recordLoaded ? "contents" : "hidden"}>
+        <form
+          onSubmit={form.handleSubmit(onSubmit, (errors) => {
+            console.error("Form validation errors:", errors);
+            toast.error("Form Validation Error", {
+              description: "Please check the form for errors and try again.",
+            });
+          })}
+          className="space-y-6 pb-0"
+        >
           {/* Card 1: Customer Selection */}
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
               className={cn(
-                "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Customer Details</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Customer Details</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Select customer and enter details
                 </p>
@@ -440,22 +477,32 @@ function EditQuotation({
                         <span className="text-red-500">*</span>
                       </FormLabel>
                       <Combobox
-                        items={customer.map((c) => ({
-                          value: String(c.customer_id),
-                          label: c.company_name,
-                        }))}
+                        items={customer
+                          .filter((c) => c.customer_type === "customer")
+                          .map((c) => ({
+                            value: String(c.customer_id),
+                            label: c.company_name,
+                          }))}
                         value={field.value === 0 ? "" : String(field.value)}
                         onValueChange={(value) => {
                           field.onChange(parseInt(value));
                           const selectedCustomer = customer.find(
-                            (c) => String(c.customer_id) === value
+                            (c) => String(c.customer_id) === value,
                           );
                           if (selectedCustomer) {
-                            // Auto-populate contact person
+                            // Auto-populate first contact person by default
+                            const contactPersons = Array.isArray(
+                              selectedCustomer.contacts,
+                            )
+                              ? selectedCustomer.contacts
+                              : [];
+                            const firstContact = contactPersons[0];
                             form.setValue(
                               "contact_person",
-                              selectedCustomer.contact_person || ""
+                              firstContact?.name || "",
                             );
+                          } else {
+                            form.setValue("contact_person", "");
                           }
                         }}
                         placeholder="Select company"
@@ -474,7 +521,7 @@ function EditQuotation({
                     className="resize-none"
                     value={
                       customer.find(
-                        (c) => c.customer_id === form.watch("customer_id")
+                        (c) => c.customer_id === form.watch("customer_id"),
                       )?.address || ""
                     }
                     readOnly
@@ -483,26 +530,61 @@ function EditQuotation({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Contact Person */}
-                  {renderFormField("contact_person", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Person</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Select contact person" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
+                  {renderFormField("contact_person", ({ field }) => {
+                    const selectedCustomer = customer.find(
+                      (c) => c.customer_id === form.watch("customer_id"),
+                    );
+                    const contacts = Array.isArray(selectedCustomer?.contacts)
+                      ? selectedCustomer.contacts
+                      : [];
+
+                    return (
+                      <FormItem>
+                        <FormLabel>Contact Person</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select contact person" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {contacts.map((cp, idx) => (
+                              <SelectItem key={idx} value={cp.name}>
+                                {cp.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  })}
 
                   {/* Mobile Number */}
                   <FormItem>
                     <FormLabel>Mobile Number</FormLabel>
                     <Input
                       placeholder="Mobile Number"
-                      value={
-                        customer.find(
-                          (c) => c.customer_id === form.watch("customer_id")
-                        )?.phone || ""
-                      }
+                      value={(() => {
+                        const selectedCustomerId = form.watch("customer_id");
+                        const selectedContactName =
+                          form.watch("contact_person");
+                        const selectedCustomer = customer.find(
+                          (c) => c.customer_id === selectedCustomerId,
+                        );
+                        const contactPersons = Array.isArray(
+                          selectedCustomer?.contacts,
+                        )
+                          ? selectedCustomer.contacts
+                          : [];
+                        const contact = contactPersons.find(
+                          (cp) => cp.name === selectedContactName,
+                        );
+                        return contact?.phone || "";
+                      })()}
                       readOnly
                     />
                   </FormItem>
@@ -513,17 +595,17 @@ function EditQuotation({
             {/* Card 2: Quotation Overview */}
             <Card
               className={cn(
-                "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Quotation Overview</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Quotation Overview</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Configure quotation settings
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Quotation Type */}
                   {renderFormField("type_id", ({ field }) => {
                     const quotationTypeLabels: Record<QuotationType, string> = {
@@ -569,7 +651,20 @@ function EditQuotation({
                         Delivery Days <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="1" {...field} />
+                        <Input min={0} type="number" step="any" placeholder="1" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+
+                  {/* Validity Period */}
+                  {renderFormField("validity_period", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Validity Period (Days) <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input min={0} type="number" step="any" placeholder="30" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -582,7 +677,7 @@ function EditQuotation({
                     const taxTypeLabels: Record<QuotationTaxType, string> = {
                       [QuotationTaxType.NONE]: "None",
                       [QuotationTaxType.VAT]: "VAT",
-                      [QuotationTaxType.SVAT]: "SVAT",
+                      [QuotationTaxType.TIEP]: "TIEP",
                     };
                     return (
                       <FormItem>
@@ -651,25 +746,42 @@ function EditQuotation({
                   ))}
                 </div>
 
-                {/* Show Account Details in PDF */}
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showAccountDetails"
-                    checked={showAccountDetails}
-                    onCheckedChange={(checked) =>
-                      setShowAccountDetails(checked as boolean)
-                    }
-                  />
-                  <label
-                    htmlFor="showAccountDetails"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Show Account Details in PDF
-                  </label>
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                  {/* Marketing Person */}
+                  {renderFormField("marketing_person", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Marketing Person <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select marketing person" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {field.value &&
+                            !userList.some((u) => u.name === field.value) && (
+                              <SelectItem value={field.value}>
+                                {field.value}
+                              </SelectItem>
+                            )}
+                          {userList.map((cp, idx) => (
+                            <SelectItem key={idx} value={cp.name}>
+                              {cp.name}{cp.phone ? ` (${cp.phone})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Include account details in the printed quotation
-                </p>
+
+                <BankDetailsPicker value={bankChoice} onChange={setBankChoice} />
               </CardContent>
             </Card>
           </div>
@@ -677,11 +789,11 @@ function EditQuotation({
           {/* Card 3: Item Table */}
           <Card
             className={cn(
-              "w-full shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              "w-full rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
-              <h3 className="text-md font-medium mb-2">Items</h3>
+              <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Items</h3>
               <p className="text-xs text-muted-foreground mb-4">
                 Add items to the quotation
               </p>
@@ -702,13 +814,16 @@ function EditQuotation({
                         Quantity
                       </th>
                       <th className="text-left p-2 text-sm font-medium">
-                        Rate (Rs)
+                        Rate (
+                        {getCurrencySymbol(form.watch("currency") as Currency)})
                       </th>
                       <th className="text-left p-2 text-sm font-medium">
-                        Total (VAT exclusive) (Rs)
+                        Total (VAT exclusive) (
+                        {getCurrencySymbol(form.watch("currency") as Currency)})
                       </th>
                       <th className="text-left p-2 text-sm font-medium">
-                        Total (VAT inclusive) (Rs)
+                        Total (VAT inclusive) (
+                        {getCurrencySymbol(form.watch("currency") as Currency)})
                       </th>
                       <th className="text-left p-2 text-sm font-medium">
                         Actions
@@ -718,15 +833,16 @@ function EditQuotation({
                   <tbody>
                     {itemFields.map((item, index) => {
                       const qty = parseFloat(
-                        form.watch(`items.${index}.item_qty`) || "0"
+                        form.watch(`items.${index}.item_qty`) || "0",
                       );
                       const price = parseFloat(
-                        form.watch(`items.${index}.item_unit_price`) || "0"
+                        form.watch(`items.${index}.item_unit_price`) || "0",
                       );
                       const totalExclusive = qty * price;
                       const totalInclusive =
-                        watchTaxType === 2
-                          ? totalExclusive * 1.15
+                        watchTaxType === QuotationTaxType.VAT ||
+                          watchTaxType === QuotationTaxType.TIEP
+                          ? totalExclusive * 1.18
                           : totalExclusive;
 
                       return (
@@ -734,43 +850,53 @@ function EditQuotation({
                           <td className="p-2">
                             {renderFormField(
                               `items.${index}.item_category`,
-                              ({ field }) => (
-                                <FormItem>
-                                  <Select
-                                    onValueChange={(val) => {
-                                      field.onChange(val);
-                                      // Set a corresponding item_id based on the selection
-                                      const idMap: Record<string, number> = {
-                                        item1: 1,
-                                        item2: 2,
-                                        item3: 3,
-                                      };
-                                      form.setValue(
-                                        `items.${index}.item_id`,
-                                        idMap[val] || 0
-                                      );
-                                    }}
-                                    value={field.value}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger className="w-[150px]">
-                                        <SelectValue placeholder="Select an item" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="item1">
-                                        Item 1
-                                      </SelectItem>
-                                      <SelectItem value="item2">
-                                        Item 2
-                                      </SelectItem>
-                                      <SelectItem value="item3">
-                                        Item 3
-                                      </SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </FormItem>
-                              )
+                              ({ field }) => {
+                                const groupedItems = Object.values(
+                                  PRODUCT_TYPES,
+                                ).map((type, idx) => ({
+                                  value: String(idx + 1),
+                                  label: type,
+                                }));
+
+                                return (
+                                  <FormItem>
+                                    <Combobox
+                                      items={groupedItems}
+                                      value={
+                                        field.value
+                                          ? String(
+                                            groupedItems.find(
+                                              (i) => i.label === field.value,
+                                            )?.value || "",
+                                          )
+                                          : ""
+                                      }
+                                      onValueChange={(value) => {
+                                        const selectedGroupItem =
+                                          groupedItems.find(
+                                            (i) => i.value === value,
+                                          );
+
+                                        if (selectedGroupItem) {
+                                          field.onChange(
+                                            selectedGroupItem.label,
+                                          );
+                                          form.setValue(
+                                            `items.${index}.item_id`,
+                                            parseInt(
+                                              selectedGroupItem.value,
+                                              10,
+                                            ),
+                                          );
+                                        }
+                                      }}
+                                      placeholder="Select Item"
+                                      searchPlaceholder="Search item..."
+                                    />
+                                    <FormMessage />
+                                  </FormItem>
+                                );
+                              },
                             )}
                           </td>
                           <td className="p-2">
@@ -784,7 +910,7 @@ function EditQuotation({
                                     {...field}
                                   />
                                 </FormItem>
-                              )
+                              ),
                             )}
                           </td>
                           <td className="p-2">
@@ -792,8 +918,7 @@ function EditQuotation({
                               `items.${index}.item_qty`,
                               ({ field }) => (
                                 <FormItem>
-                                  <Input
-                                    type="number"
+                                  <Input min={0} type="number" step="any"
                                     placeholder="0"
                                     className="w-[80px]"
                                     {...field}
@@ -801,12 +926,12 @@ function EditQuotation({
                                       handleItemChange(
                                         index,
                                         "item_qty",
-                                        e.target.value
+                                        e.target.value,
                                       )
                                     }
                                   />
                                 </FormItem>
-                              )
+                              ),
                             )}
                           </td>
                           <td className="p-2">
@@ -814,8 +939,7 @@ function EditQuotation({
                               `items.${index}.item_unit_price`,
                               ({ field }) => (
                                 <FormItem>
-                                  <Input
-                                    type="number"
+                                  <Input min={0} type="number" step="any"
                                     placeholder="0"
                                     className="w-[100px]"
                                     {...field}
@@ -823,25 +947,25 @@ function EditQuotation({
                                       handleItemChange(
                                         index,
                                         "item_unit_price",
-                                        e.target.value
+                                        e.target.value,
                                       )
                                     }
                                   />
                                 </FormItem>
-                              )
+                              ),
                             )}
                           </td>
                           <td className="p-2">
                             <Input
                               type="text"
-                              value={`Rs ${totalExclusive.toFixed(2)}`}
+                              value={`${getCurrencySymbol(form.watch("currency") as Currency)} ${formatAmount(totalExclusive)}`}
                               className="w-[120px]"
                             />
                           </td>
                           <td className="p-2">
                             <Input
                               type="text"
-                              value={`Rs ${totalInclusive.toFixed(2)}`}
+                              value={`${getCurrencySymbol(form.watch("currency") as Currency)} ${formatAmount(totalInclusive)}`}
                               className="w-[120px]"
                             />
                           </td>
@@ -859,20 +983,20 @@ function EditQuotation({
                                     form.getValues("tax_type_id");
                                   const totals = calculateTotals(
                                     currentItems,
-                                    currentTaxType
+                                    currentTaxType,
                                   );
 
                                   form.setValue("sub_total", totals.subTotal);
                                   form.setValue(
                                     "no_of_items",
-                                    totals.noOfItems
+                                    totals.noOfItems,
                                   );
                                   form.setValue(
                                     "total_without_tax",
-                                    totals.totalWithoutTax
+                                    totals.totalWithoutTax,
                                   );
                                   form.setValue("net_total", totals.netTotal);
-                                  toast("Totals updated");
+                                  toast.success("Totals updated");
                                 }}
                               >
                                 <Check className="h-4 w-4" />
@@ -935,33 +1059,86 @@ function EditQuotation({
               {/* Calculation Summary */}
               <div className="flex justify-end">
                 <div className="w-full md:w-1/2 space-y-2 border-t pt-4">
-                  <div className="flex justify-between text-sm">
-                    <span>Sub Total (Without TAX):</span>
-                    <span className="font-medium">
-                      Rs {form.watch("sub_total") || "0"}
-                    </span>
-                  </div>
+                  {watchTaxType !== QuotationTaxType.NONE && (
+                    <>
+                      <div className="flex justify-between text-sm text-muted-foreground italic">
+                        <span>Sub Total (Without TAX):</span>
+                        <span className="font-medium">
+                          {getCurrencySymbol(
+                            form.watch("currency") as Currency,
+                          )}{" "}
+                          {formatAmount(form.watch("sub_total") || 0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm text-muted-foreground italic">
+                        <span>Total Amount (Without TAX):</span>
+                        <span className="font-medium">
+                          {getCurrencySymbol(
+                            form.watch("currency") as Currency,
+                          )}{" "}
+                          {formatAmount(form.watch("total_without_tax") || 0)}
+                        </span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span>No. of Items:</span>
                     <span className="font-medium">
                       {form.watch("no_of_items") || "0"}
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Total Amount (Without TAX):</span>
-                    <span className="font-medium">
-                      Rs {form.watch("total_without_tax") || "0"}
-                    </span>
-                  </div>
+                  {(watchTaxType === QuotationTaxType.VAT ||
+                    watchTaxType === QuotationTaxType.TIEP) && (
+                      <div className="flex justify-between text-sm text-muted-foreground italic">
+                        <span>
+                          {watchTaxType === QuotationTaxType.VAT ? "VAT" : "TIEP"}{" "}
+                          Amount (18%):
+                        </span>
+                        <span className="font-medium">
+                          {getCurrencySymbol(form.watch("currency") as Currency)}{" "}
+                          {formatAmount(parseFloat(form.watch("sub_total") || "0") * 0.18)}
+                        </span>
+                      </div>
+                    )}
                   <div className="flex justify-between text-sm font-bold border-t pt-2">
                     <span>Net Total:</span>
-                    <span>Rs {form.watch("net_total") || "0"}</span>
+                    <span>
+                      {getCurrencySymbol(form.watch("currency") as Currency)}{" "}
+                      {formatAmount(form.watch("net_total") || 0)}
+                    </span>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
+          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
+            <Button
+              size="lg"
+              variant="outline"
+              type="button"
+              onClick={() => router.push("/quotation-management")}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="lg"
+              type="submit"
+              className="bg-primary text-white"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Update"
+              )}
+            </Button>
+          </div>
         </form>
+        </div>
       </Form>
     </div>
   );

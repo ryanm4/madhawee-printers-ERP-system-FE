@@ -8,8 +8,9 @@ export interface ALL_DISPATCH {
     dispatch_date: Date;
     status: string;
     create_by: string;
+    created_by: string;
     created_on: Date;
-    updated_by: string
+    updated_by: string;
     updated_on: Date;
     customer_id: number;
     customer_name: string;
@@ -22,6 +23,7 @@ export interface ALL_DISPATCH {
     contact_person_email: string;
     job_id: number;
     po_id: number;
+    customer_po?: string;
     job_name: string;
     job_open_date: Date;
     product_type: string;
@@ -33,7 +35,7 @@ export interface ALL_DISPATCH {
     completed_by: string;
     wastage: string;
     job_status: string;
-
+    [key: string]: unknown;
 }
 
 export interface CREATE_DISPATCH {

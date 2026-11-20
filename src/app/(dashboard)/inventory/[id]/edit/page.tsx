@@ -1,5 +1,7 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { FormSkeleton } from "@/components/shared/page-skeletons";
+import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -19,11 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  ITEM_CATEGORY,
-  ITEM_SUB_CATEGORY,
-  UNIT_OF_MEASSURE,
-} from "@/config/enum";
+import { useOptionList } from "@/hooks/use-option-list";
 import { cn } from "@/lib/utils";
 import { inventoryApi } from "@/modules/inventory/api";
 import { CREATE_INVENTORY } from "@/modules/inventory/types";
@@ -33,15 +31,20 @@ import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { getUser } from "@/lib/auth";
 import { FieldPath, useForm, ControllerProps } from "react-hook-form";
-import { toast } from "sonner";
+import { appToast } from "@/lib/toast-utils";
 import { z } from "zod";
 import { FullPageLoader } from "@/components/shared/loader";
+import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
+import { usePermissions } from "@/hooks/use-permissions";
 
 type InventoryManagementFormValues = z.infer<typeof inventoryManagementScheme>;
 
 function EditInventoryManagement() {
+  const { canModifyInventoryItem } = usePermissions();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  // False until the record has been fetched; until then a skeleton stands in for the form
+  const [recordLoaded, setRecordLoaded] = useState(false);
   const [user, setUser] = useState<{
     name: string;
     email: string;
@@ -54,25 +57,31 @@ function EditInventoryManagement() {
     item_category: "",
     item_sub_category: "",
     item_name: "",
+    width: "",
+    height: "",
     size: "",
     quantity: 0,
     unit_of_measure: "",
-    reorder_level: "",
+    unit_price: 0,
+    reorder_level: 0,
     status: "",
     remarks: "",
   };
 
   const form = useForm<InventoryManagementFormValues>({
-    resolver: zodResolver(inventoryManagementScheme),
+    resolver: zodResolver(inventoryManagementScheme) as any,
     defaultValues: baseDefaultValues,
   });
+  const categoryOptions = useOptionList("item_category", form.watch("item_category"));
+  const subCategoryOptions = useOptionList("item_sub_category", form.watch("item_sub_category"));
+  const unitOptions = useOptionList("unit_of_measure", form.watch("unit_of_measure"));
 
   useEffect(() => {
     const userData = getUser();
     if (userData) {
       setUser({
         name: userData.name || "User",
-        email: userData.email,
+        email: userData.email ?? "",
         avatar: "",
       });
     }
@@ -85,24 +94,42 @@ function EditInventoryManagement() {
         const response = await inventoryApi.getById(id);
         const data = response.data;
 
+        // Parse size into width and height
+        let width = "";
+        let height = "";
+        const cleanSize = data.size ? data.size.trim() : "";
+        if (cleanSize && cleanSize !== "x" && cleanSize !== "-") {
+          if (cleanSize.includes("x")) {
+            const parts = cleanSize.split("x").map((p) => p.trim());
+            width = parts[0] || "";
+            height = parts[1] || "";
+          } else {
+            width = cleanSize;
+          }
+        }
+
         // ✅ Populate form with fetched data
         form.reset({
           item_category: data.item_category,
           item_sub_category: data.item_sub_category,
           item_name: data.item_name,
-          size: data.size,
+          width: width,
+          height: height,
+          size: (width && height) ? `${width} x ${height}` : "",
           quantity: Number(data.quantity),
           unit_of_measure: data.unit_of_measure,
+          unit_price: Number(data.unit_price) || 0,
           reorder_level: data.reorder_level,
           status: data.status,
           remarks: data.remarks || "",
         });
       } catch (error) {
         console.error("Failed to fetch inventory:", error);
-        toast("Failed to load inventory data");
+        appToast.error("Failed to load inventory data", getErrorMessage(error));
         router.push("/inventory");
       } finally {
         setIsLoading(false);
+        setRecordLoaded(true);
       }
     }
 
@@ -118,28 +145,35 @@ function EditInventoryManagement() {
         item_category: data.item_category,
         item_sub_category: data.item_sub_category,
         item_name: data.item_name,
-        size: data.size,
+        size: (data.width && data.height) ? `${data.width} x ${data.height}` : "",
+        width: data.width ?? "",
+        height: data.height ?? "",
         quantity: String(data.quantity),
         unit_of_measure: data.unit_of_measure,
+        unit_price: Number(data.unit_price),
         reorder_level: data.reorder_level,
         status: data.status,
         remarks: data.remarks ?? "",
-        updated_by: user?.name || "Admin",
+        updated_by: user?.name || "User",
       };
-      const response = await inventoryApi.update(id, payload);
+      await inventoryApi.update(id, payload);
 
-      toast("Inventory Item Updated", {
-        description: "The inventory item has been updated successfully.",
-      });
+      appToast.updated(
+        "Inventory Item Updated",
+        "The inventory item has been updated successfully."
+      );
       form.reset(baseDefaultValues);
       form.clearErrors();
       router.push("/inventory");
     } catch (error) {
       console.error("Failed to update inventory:", error);
-      toast("Failed to Update Inventory Item", {
-        description:
-          "An error occurred while updating the inventory item. Please try again.",
-      });
+      appToast.error(
+        "Failed to Update Inventory Item",
+        getErrorMessage(
+          error,
+          "An error occurred while updating the inventory item. Please try again."
+        )
+      );
     } finally {
       setIsLoading(false);
     }
@@ -158,22 +192,260 @@ function EditInventoryManagement() {
     />
   );
 
+  if (!canModifyInventoryItem) {
+    return <RestrictedRouteGuard />;
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      {isLoading && <FullPageLoader />}
+      {isLoading && recordLoaded && <FullPageLoader />}
       <PageTitleWithBreadcrumb
-        title="Edit Inventory Management"
+        title="Edit Stock"
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
-          { title: "Inventory Management", href: "/inventory" },
+          { title: "Stock List", href: "/inventory" },
         ]}
       />
+      {!recordLoaded && <FormSkeleton />}
 
       <Form {...form}>
+        <div className={recordLoaded ? "contents" : "hidden"}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6  pb-0"
         >
+          <Card
+            className={cn(
+              "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col"
+            )}
+          >
+            <CardHeader className="flex flex-col gap-[0.5px]">
+              <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Stock Details</h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                Edit your stock details here
+              </p>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-6">
+              {/* Row 1: Categories */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {renderFormField("item_category", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Item Category <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || undefined}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select Item Category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categoryOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("item_sub_category", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Item Sub Category <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || undefined}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select Item Sub Category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {subCategoryOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </div>
+
+              {/* Row 2: Name */}
+              <div className="grid grid-cols-1 gap-4">
+                {renderFormField("item_name", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Item Name <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter Item Name"
+                        className="resize-none"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </div>
+
+              {/* Row 3: Width, Height and Quantity */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+                  {renderFormField("width", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Width (cm)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="W" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                  <div className="pb-3 text-muted-foreground font-bold text-xs">
+                    x
+                  </div>
+                  {renderFormField("height", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Height (cm)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="H" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                </div>
+                {renderFormField("quantity", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Item Quantitiy <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input min={0} type="number" step="any"
+                        placeholder="Enter Item Quantity"
+                        value={field.value}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </div>
+
+              {/* Row 4: UOM, Unit Price, Reorder Level, Status */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {renderFormField("unit_of_measure", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Unit of Measure <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || undefined}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select Unit of Meassure" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {unitOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("unit_price", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Unit Price <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number" step="any"
+                        min={0}
+                        placeholder="Enter Unit Price"
+                        value={field.value}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("reorder_level", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Re-order Level <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number" step="any"
+                        min={0}
+                        placeholder="Enter Re-order Level"
+                        value={field.value}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("status", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Status <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || undefined}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select Status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+                        <SelectItem value="INACTIVE">INACTIVE</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </div>
+
+              {/* Row 5: Remarks */}
+              <div className="grid grid-cols-1 gap-4">
+                {renderFormField("remarks", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Remarks</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Enter Remarks"
+                        className="h-20 min-h-[80px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
           <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
             <Button
               size="lg"
@@ -193,180 +465,8 @@ function EditInventoryManagement() {
               {isLoading ? "Updating..." : "Update"}
             </Button>
           </div>
-
-          <Card
-            className={cn(
-              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
-            )}
-          >
-            <CardHeader className="flex flex-col gap-[0.5px]">
-              <h3 className="text-md font-medium mb-2">Inventory Management</h3>
-              <p className="text-xs text-muted-foreground mb-4">
-                Edit your Inventory details here
-              </p>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              {renderFormField("item_category", ({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Item Category <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select Item Category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.entries(ITEM_CATEGORY).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("item_sub_category", ({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Item Sub Category <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select Item Sub Category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.entries(ITEM_SUB_CATEGORY).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("item_name", ({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Item Name <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Enter Item Name"
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("size", ({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Size <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Enter Size"
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("quantity", ({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Item Quantitiy <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="Enter Item Quantity"
-                      value={field.value}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("unit_of_measure", ({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Unit of Measure <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select Unit of Meassure" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Object.values(UNIT_OF_MEASSURE).map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("reorder_level", ({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Re-order Level <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="Enter Re-order Level"
-                      value={field.value}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("status", ({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Status <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select Status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="ACTIVE">ACTIVE</SelectItem>
-                      <SelectItem value="INACTIVE">INACTIVE</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              ))}
-              {renderFormField("remarks", ({ field }) => (
-                <FormItem>
-                  <FormLabel>Remarks</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Enter Remarks" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ))}
-            </CardContent>
-          </Card>
         </form>
+        </div>
       </Form>
     </div>
   );

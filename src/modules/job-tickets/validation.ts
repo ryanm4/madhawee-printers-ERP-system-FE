@@ -1,6 +1,7 @@
 import * as z from "zod"
 export const jobTicketSchema = z.object({
-    poNumber: z.string().optional(),
+    customer_po: z.string().optional(),
+    po_id: z.coerce.number().optional(),
     item: z.string().optional(),
     orderReceivedDate: z.date().optional(),
     jobNumber: z.string().optional(),
@@ -11,8 +12,9 @@ export const jobTicketSchema = z.object({
     quantity: z.string().min(1, "Quantity is required"),
     completed_qty: z.string().optional(),
     wastage: z.string().optional(),
-    packingDate: z.date().optional(),
-    expiryDate: z.date().optional(),
+    deliveryDate: z.date().optional(),
+    packingDate: z.string().optional(),
+    expiryDate: z.string().optional(),
     tcNo: z.string().optional(),
     batchRef: z.string().optional(),
     remarks: z.string().optional(),
@@ -39,14 +41,13 @@ export const jobTicketSchema = z.object({
     paperTypes: z.array(z.object({
         paper: z.string().min(1, "Paper Type is required"),
         coating: z.string().min(1, "Coating is required"),
-        delivery_date: z.date().optional(),
         rawMaterials: z.array(z.object({
-            item_id: z.number().optional(),
+            item_id: z.coerce.number().optional(),
             material_name: z.string().optional(),
             material_type: z.string().optional(),
             size: z.string().optional(),
             material_description: z.string().optional(),
-            quantity: z.number().optional(),
+            quantity: z.coerce.number().optional(),
             status: z.string().optional(),
             remarks: z.string().optional(),
         })).optional(),

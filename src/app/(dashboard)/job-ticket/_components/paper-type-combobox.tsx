@@ -36,15 +36,23 @@ export const PaperTypeCombobox = ({
   const paperTypes = Array.from(
     new Map(
       inventoryList
-        .filter((item) => item.item_category === "Paper")
-        .map((item) => [
-          `${item.item_sub_category} ${item.item_name}`,
-          {
-            label: `${item.item_sub_category} ${item.item_name}`,
-            value: `${item.item_sub_category} ${item.item_name}`,
-            id: item.item_id,
-          },
-        ])
+        .filter(
+          (item) =>
+            item.item_category &&
+            (item.item_category.toUpperCase() === "PAPER" ||
+              item.item_category.toUpperCase() === "BOARD")
+        )
+        .map((item) => {
+          const key = `${item.item_sub_category || ""} ${item.item_name}`.trim();
+          return [
+            key,
+            {
+              label: key,
+              value: key,
+              id: item.item_id,
+            },
+          ];
+        })
     ).values()
   );
 
@@ -74,24 +82,29 @@ export const PaperTypeCombobox = ({
           <CommandList>
             <CommandEmpty>No paper type found.</CommandEmpty>
             <CommandGroup>
-              {paperTypes.map((item) => (
-                <CommandItem
-                  key={item.id}
-                  value={item.value}
-                  onSelect={(currentValue) => {
-                    onChange(currentValue === value ? "" : currentValue);
-                    setOpen(false);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      item.value === value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {item.label}
-                </CommandItem>
-              ))}
+              <div
+                style={{ maxHeight: "240px", overflowY: "auto" }}
+                onWheel={(e) => e.stopPropagation()}
+              >
+                {paperTypes.map((item) => (
+                  <CommandItem
+                    key={item.id}
+                    value={item.value}
+                    onSelect={(currentValue) => {
+                      onChange(currentValue === value ? "" : currentValue);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        item.value === value ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {item.label}
+                  </CommandItem>
+                ))}
+              </div>
             </CommandGroup>
           </CommandList>
         </Command>

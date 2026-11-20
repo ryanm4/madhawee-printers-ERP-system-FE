@@ -1,5 +1,9 @@
 "use client";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { FormSkeleton } from "@/components/shared/page-skeletons";
+import { GET_ALL_USER } from "@/modules/users/types";
+import { userApi } from "@/modules/users/api";
+import { getErrorMessage } from "@/lib/error-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { purchaseOrderScheme } from "@/modules/purchase-order/validation";
@@ -36,29 +40,35 @@ import { CalendarIcon, Edit2, Loader2, PlusIcon, Trash2 } from "lucide-react";
 import { FullPageLoader } from "@/components/shared/loader";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { PurchaseOrderStatus, PurchaseOrderType } from "@/config/enum";
-import { useEffect, useState } from "react";
+import { PRODUCT_TYPES, PurchaseOrderType } from "@/config/enum";
+import { useEffect, useRef, useState } from "react";
 import { CustomerApi } from "@/modules/customer/api";
 import { CUSTOMER } from "@/modules/customer/types";
 import { QUOTATIONS } from "@/modules/quotations/types";
 import { quotationApi } from "@/modules/quotations/api";
 import { purchaseOrderApi } from "@/modules/purchase-order/api";
+import { purchaseOrderFromQuotation } from "@/modules/purchase-order/from-quotation";
 import { toast } from "sonner";
 import {
   CREATE_PURCHASE_ORDER,
-  PURCHASE_ORDER,
 } from "@/modules/purchase-order/types";
 import { Combobox } from "@/components/shared/combobox";
 import { getUser } from "@/lib/auth";
+import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
+import { usePermissions } from "@/hooks/use-permissions";
 
 type PurchaseOrderFormValues = z.infer<typeof purchaseOrderScheme>;
 
 function EditPurchaseOrder() {
+  const { canModifyPO } = usePermissions();
   const router = useRouter();
   const params = useParams();
   const [customer, setCustomer] = useState<CUSTOMER[]>([]);
   const [quotationList, setQuotationList] = useState<QUOTATIONS[]>([]);
+  const [userList, setUserList] = useState<GET_ALL_USER[]>([]);
   const [loading, setLoading] = useState(false);
+  // False until the record has been fetched; until then a skeleton stands in for the form
+  const [recordLoaded, setRecordLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [user, setUser] = useState<{
     name: string;
@@ -69,11 +79,12 @@ function EditPurchaseOrder() {
   useEffect(() => {
     getCustomerList();
     getQuotationList();
+    getUserList();
     const userData = getUser();
     if (userData) {
       setUser({
         name: userData.name || "User",
-        email: userData.email,
+        email: userData.email ?? "",
         avatar: "",
       });
     }
@@ -84,10 +95,22 @@ function EditPurchaseOrder() {
       setLoading(true);
       const response = await CustomerApi.getAll();
       setCustomer(response.data);
-    } catch (error) {
+    } catch {
       console.error("Failed to fetch customers");
     } finally {
       setLoading(false);
+    }
+  };
+
+
+  const getUserList = async () => {
+    try {
+      const response = await userApi.getAll();
+      if (response.status === 200) {
+        setUserList(response?.data?.users);
+      }
+    } catch {
+      console.error("Failed to fetch users");
     }
   };
 
@@ -96,7 +119,7 @@ function EditPurchaseOrder() {
       setLoading(true);
       const response = await quotationApi.getAll();
       setQuotationList(response.data);
-    } catch (error) {
+    } catch {
       console.error("Failed to fetch quotations");
     } finally {
       setLoading(false);
@@ -108,19 +131,21 @@ function EditPurchaseOrder() {
     customerAddress: "",
     customerEmail: "",
     customerPhone: "",
-    purchaseOrderNo: "",
+    customer_po: "",
     quotationId: "",
     tceprNo: "",
     purchaseOrderType: PurchaseOrderType.TIEP,
     batchRef: "",
+    salesRef: "",
     poDate: new Date(),
+    currency: "LKR",
     itemDetails: [
-      { itemCode: "", description: "", quantity: 0, unit: "", price: 0 },
+      { itemCode: "", description: "", quantity: "", unit: 0, price: "" },
     ],
   };
 
   const form = useForm<PurchaseOrderFormValues>({
-    resolver: zodResolver(purchaseOrderScheme),
+    resolver: zodResolver(purchaseOrderScheme) as any,
     defaultValues: baseDefaultValues,
   });
 
@@ -128,10 +153,45 @@ function EditPurchaseOrder() {
     fields: itemDetailsFields,
     append: appendItemDetails,
     remove: removeItemDetails,
+    replace: replaceItemDetails,
   } = useFieldArray({
     control: form.control,
     name: "itemDetails",
   });
+
+  // Tracks the latest selected quotation so a slow earlier response can't overwrite a newer pick
+  const selectedQuotationRef = useRef<string>("");
+
+  const populateFromQuotation = async (quoteId: string) => {
+    selectedQuotationRef.current = quoteId;
+    if (!quoteId) return;
+
+    try {
+      setLoading(true);
+      const { data: quote } = await quotationApi.getById(quoteId);
+      if (selectedQuotationRef.current !== quoteId) return;
+
+      const values = purchaseOrderFromQuotation(quote, customer);
+      form.setValue("customer", values.customer);
+      form.setValue("customerAddress", values.customerAddress);
+      form.setValue("customerPhone", values.customerPhone);
+      form.setValue("customerEmail", values.customerEmail);
+      if (values.currency) form.setValue("currency", values.currency);
+      if (values.salesRef) form.setValue("salesRef", values.salesRef);
+      form.setValue("purchaseOrderType", values.purchaseOrderType);
+      if (values.itemDetails.length > 0) {
+        replaceItemDetails(values.itemDetails);
+      }
+      form.clearErrors();
+
+      toast.success(`Details loaded from quotation #${quote.quote_id}`);
+    } catch (error) {
+      console.error("Failed to fetch quotation", error);
+      toast.error(getErrorMessage(error, "Failed to load quotation details"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   async function onSubmit(data: PurchaseOrderFormValues) {
     try {
@@ -142,24 +202,20 @@ function EditPurchaseOrder() {
         [PurchaseOrderType.NON_TIEP]: 2,
         [PurchaseOrderType.MP]: 3,
       };
-      const formatDate = (date: Date) => {
-        return date.toISOString().split("T")[0]; // "YYYY-MM-DD" format
-      };
-
       const payload: CREATE_PURCHASE_ORDER = {
         quote_id: data.quotationId ? parseInt(data.quotationId) : 0,
         customer_id: data.customer ? parseInt(data.customer) : 0,
         po_type_id: poTypeMap[data.purchaseOrderType] || 1,
         batch_ref: data.batchRef,
-        po_date:
-          data.poDate instanceof Date ? formatDate(data.poDate) : data.poDate,
+        sales_ref: data.salesRef,
+        po_date: format(data.poDate, "yyyy-MM-dd HH:mm:ss"),
         TC_E_PR_No: data.tceprNo,
         updated_on: new Date(),
-        updated_by: user?.name || "admin",
-        status: PurchaseOrderStatus.CREATED,
-        customer_po: data.purchaseOrderNo,
-        po_items: data.itemDetails.map((item: any) => ({
-          item_code: item.itemCode,
+        updated_by: user?.name || "User",
+        customer_po: data.customer_po,
+        currency: data.currency,
+        po_items: data.itemDetails.map((item) => ({
+          item_code: item.itemCode ? String(item.itemCode) : "",
           description: item.description,
           quantity: String(item.quantity),
           uom: item.unit,
@@ -167,10 +223,10 @@ function EditPurchaseOrder() {
         })),
       };
 
-      const response = await purchaseOrderApi.update(Number(id), payload);
+      await purchaseOrderApi.update(Number(id), payload);
 
-      toast("Purchase Order Created", {
-        description: `Purchase Order ${data.purchaseOrderNo} has been created successfully.`,
+      toast.success("Purchase Order Updated", {
+        description: `Purchase Order ${data.customer_po} has been updated successfully.`,
       });
 
       form.reset(baseDefaultValues);
@@ -180,9 +236,11 @@ function EditPurchaseOrder() {
       router.push("/purchase-order");
     } catch (error) {
       console.error("Failed to submit PO:", error);
-      toast("Failed to Create Purchase Order", {
-        description:
-          "An error occurred while creating the purchase order. Please try again.",
+      toast.error("Failed to Update Purchase Order", {
+        description: getErrorMessage(
+          error,
+          "An error occurred while updating the purchase order. Please try again.",
+        ),
       });
     } finally {
       setIsSubmitting(false);
@@ -194,7 +252,7 @@ function EditPurchaseOrder() {
     name: TName,
     render: Parameters<
       typeof FormField<PurchaseOrderFormValues, TName>
-    >["0"]["render"]
+    >["0"]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
 
   useEffect(() => {
@@ -210,25 +268,29 @@ function EditPurchaseOrder() {
             customerPhone: poData.customer.phone,
             customerAddress: poData.customer.address,
             customerEmail: poData.customer.email,
-            purchaseOrderNo: String(poData.po_id), // Assuming po_id maps to purchaseOrderNo or similar
+            customer_po: String(poData.customer_po), // Assuming po_id maps to purchaseOrderNo or similar
             quotationId: String(poData.quote_id),
             tceprNo: poData.TC_E_PR_No,
             purchaseOrderType: poData.po_type_id as PurchaseOrderType,
             batchRef: poData.batch_ref,
-            poDate: new Date(poData.po_date),
+            salesRef: poData.sales_ref || "",
+            poDate: poData.po_date ? new Date(poData.po_date) : new Date(),
+            currency: poData.currency || "LKR",
             itemDetails: poData.po_items.map((item) => ({
-              itemCode: item.item_code,
+              item_code: item.itemCode ? String(item.itemCode) : "",
               description: item.description,
-              quantity: item.quantity,
-              unit: item.uom,
-              price: item.price,
+              quantity: String(item.quantity),
+              unit: Number(item.uom) || 0,
+              price: String(item.price),
             })),
           });
         }
       } catch (err) {
         console.error("Failed to fetch purchase order:", err);
+        toast.error(getErrorMessage(err, "Failed to load purchase order data"));
       } finally {
         setLoading(false);
+        setRecordLoaded(true);
       }
     };
 
@@ -237,9 +299,13 @@ function EditPurchaseOrder() {
     }
   }, [id, form]);
 
+  if (!canModifyPO) {
+    return <RestrictedRouteGuard />;
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      {loading && <FullPageLoader />}
+      {loading && recordLoaded && <FullPageLoader />}
       <PageTitleWithBreadcrumb
         title="Edit Purchase Order Management"
         breadcrumbs={[
@@ -247,47 +313,22 @@ function EditPurchaseOrder() {
           { title: "Purchase Order Management", href: "/purchase-order" },
         ]}
       />
+      {!recordLoaded && <FormSkeleton />}
 
       <Form {...form}>
+        <div className={recordLoaded ? "contents" : "hidden"}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6  pb-0"
         >
-          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
-            <Button
-              size="lg"
-              variant="outline"
-              type="button"
-              onClick={() => router.push("/purchase-order")}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="lg"
-              type="submit"
-              className="bg-primary text-white"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                "Update"
-              )}
-            </Button>
-          </div>
-
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Customer</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Customer</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Add your customer details here
                 </p>
@@ -297,30 +338,32 @@ function EditPurchaseOrder() {
                   <FormItem>
                     <FormLabel>Customer</FormLabel>
                     <Combobox
-                      items={customer.map((c) => ({
-                        value: String(c.customer_id),
-                        label: c.company_name,
-                      }))}
+                      items={customer
+                        .filter((c) => c.customer_type === "customer")
+                        .map((c) => ({
+                          value: String(c.customer_id),
+                          label: c.company_name,
+                        }))}
                       value={field.value || ""}
                       onValueChange={(value) => {
                         field.onChange(value);
 
                         const selectedCustomer = customer.find(
-                          (c) => String(c.customer_id) === value
+                          (c) => String(c.customer_id) === value,
                         );
 
                         if (selectedCustomer) {
                           form.setValue(
                             "customerAddress",
-                            selectedCustomer.address
+                            selectedCustomer.address,
                           );
                           form.setValue(
                             "customerPhone",
-                            selectedCustomer.phone
+                            selectedCustomer.phone,
                           );
                           form.setValue(
                             "customerEmail",
-                            selectedCustomer.email
+                            selectedCustomer.email,
                           );
                         }
                       }}
@@ -368,17 +411,17 @@ function EditPurchaseOrder() {
             </Card>
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Purchase Order</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Purchase Order</h3>
                 <p className="text-xs text-muted-foreground mb-4">
                   Add your purchase order details here
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                {renderFormField("purchaseOrderNo", ({ field }) => (
+                {renderFormField("customer_po", ({ field }) => (
                   <FormItem>
                     <FormLabel>
                       Purchase Order No <span className="text-red-500">*</span>
@@ -396,10 +439,15 @@ function EditPurchaseOrder() {
                     <Combobox
                       items={quotationList.map((quote) => ({
                         value: String(quote.quote_id),
-                        label: String(quote.quote_id),
+                        label: quote.company_name
+                          ? `${quote.quote_id} - ${quote.company_name}`
+                          : String(quote.quote_id),
                       }))}
                       value={field.value || ""}
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        populateFromQuotation(value);
+                      }}
                       placeholder="Select a Quotation"
                       searchPlaceholder="Search quotation..."
                     />
@@ -430,7 +478,7 @@ function EditPurchaseOrder() {
                           {Object.values(PurchaseOrderType)
                             .filter(
                               (v): v is PurchaseOrderType =>
-                                typeof v === "number"
+                                typeof v === "number",
                             )
                             .map((type) => (
                               <div
@@ -461,61 +509,109 @@ function EditPurchaseOrder() {
                     </FormItem>
                   ))}
                 </div>
-                {renderFormField("batchRef", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>Batch Ref</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter Batch Ref" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                ))}
-
-                {renderFormField("poDate", ({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      PO Date <span className="text-red-500">*</span>
-                    </FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
+                <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+                  {renderFormField("batchRef", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Batch Ref</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter Batch Ref" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                  {renderFormField("salesRef", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Marketing Person</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
                         <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value
-                              ? format(field.value, "PPP")
-                              : format(new Date(), "PPP")}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select contact person" />
+                          </SelectTrigger>
                         </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          captionLayout="dropdown"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                ))}
+                        <SelectContent>
+                          {userList.map((cp, idx) => (
+                            <SelectItem key={idx} value={cp.name}>
+                              {cp.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+                  {renderFormField("poDate", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        PO Date <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground",
+                              )}
+                            >
+                              {field.value
+                                ? format(field.value, "PPP")
+                                : format(new Date(), "PPP")}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            captionLayout="dropdown"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+
+                  {renderFormField("currency", ({ field }) => (
+                    <FormItem>
+                      <FormLabel>Currency</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select Currency" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="LKR">🇱🇰 LKR</SelectItem>
+                          <SelectItem value="USD">🇺🇸 USD</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </div>
 
           <Card
             className={cn(
-              "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
             )}
           >
             <CardHeader className="flex flex-col gap-[0.5px]">
-              <h3 className="text-md font-medium mb-2">Item Details</h3>
+              <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Item Details</h3>
               <p className="text-xs text-muted-foreground mb-4">
                 Add your Item Details here
               </p>
@@ -529,9 +625,9 @@ function EditPurchaseOrder() {
                     appendItemDetails({
                       itemCode: "",
                       description: "",
-                      quantity: 0,
-                      unit: "",
-                      price: 0,
+                      quantity: "",
+                      unit: 0,
+                      price: "",
                     })
                   }
                 >
@@ -548,15 +644,28 @@ function EditPurchaseOrder() {
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1">
                       {renderFormField(
                         `itemDetails.${index}.itemCode`,
-                        ({ field }) => (
-                          <FormItem>
-                            <FormLabel>Item Code</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter Item Code" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )
+                        ({ field }) => {
+                          const groupedItems = Object.values(PRODUCT_TYPES).map(
+                            (type) => ({
+                              value: type,
+                              label: type,
+                            }),
+                          );
+
+                          return (
+                            <FormItem>
+                              <FormLabel>Item Type</FormLabel>
+                              <Combobox
+                                items={groupedItems}
+                                value={field.value || ""}
+                                onValueChange={(value) => field.onChange(value)}
+                                placeholder="Select Item"
+                                searchPlaceholder="Search item..."
+                              />
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }
                       )}
                       {renderFormField(
                         `itemDetails.${index}.description`,
@@ -574,7 +683,7 @@ function EditPurchaseOrder() {
                             </FormControl>
                             <FormMessage />
                           </FormItem>
-                        )
+                        ),
                       )}
                       {renderFormField(
                         `itemDetails.${index}.quantity`,
@@ -585,9 +694,33 @@ function EditPurchaseOrder() {
                             </FormLabel>
                             <FormControl>
                               <Input
-                                type="number"
+                                type="number" step="any"
+                                min={0}
                                 placeholder="Enter Quantity"
                                 value={field.value}
+                                onChange={(e) => field.onChange(e.target.value)}
+                                onBlur={field.onBlur}
+                                name={field.name}
+                                ref={field.ref}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        ),
+                      )}
+                      {renderFormField(
+                        `itemDetails.${index}.unit`,
+                        ({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              Unit <span className="text-red-500">*</span>
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number" step="any"
+                                min={0}
+                                placeholder="Enter Unit"
+                                value={field.value || ""}
                                 onChange={(e) =>
                                   field.onChange(Number(e.target.value))
                                 }
@@ -598,21 +731,7 @@ function EditPurchaseOrder() {
                             </FormControl>
                             <FormMessage />
                           </FormItem>
-                        )
-                      )}
-                      {renderFormField(
-                        `itemDetails.${index}.unit`,
-                        ({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Unit <span className="text-red-500">*</span>
-                            </FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter Unit" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )
+                        ),
                       )}
                       {renderFormField(
                         `itemDetails.${index}.price`,
@@ -623,12 +742,11 @@ function EditPurchaseOrder() {
                             </FormLabel>
                             <FormControl>
                               <Input
-                                type="number"
+                                type="number" step="any"
+                                min={0}
                                 placeholder="Enter Price"
                                 value={field.value}
-                                onChange={(e) =>
-                                  field.onChange(Number(e.target.value))
-                                }
+                                onChange={(e) => field.onChange(e.target.value)}
                                 onBlur={field.onBlur}
                                 name={field.name}
                                 ref={field.ref}
@@ -636,7 +754,7 @@ function EditPurchaseOrder() {
                             </FormControl>
                             <FormMessage />
                           </FormItem>
-                        )
+                        ),
                       )}
                     </div>
                     <div className="flex space-x-2 items-start pt-5">
@@ -644,7 +762,7 @@ function EditPurchaseOrder() {
                         type="button"
                         variant="outline"
                         size="icon"
-                        onClick={() => {}}
+                        onClick={() => { }}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
@@ -663,7 +781,34 @@ function EditPurchaseOrder() {
               </div>
             </CardContent>
           </Card>
+          <div className="flex items-center justify-end gap-[16px] sm:justify-end w-full mt-6">
+            <Button
+              size="lg"
+              variant="outline"
+              type="button"
+              onClick={() => router.push("/purchase-order")}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="lg"
+              type="submit"
+              className="bg-primary text-white"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Update"
+              )}
+            </Button>
+          </div>
         </form>
+        </div>
       </Form>
     </div>
   );

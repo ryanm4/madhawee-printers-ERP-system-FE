@@ -1,10 +1,18 @@
 "use client";
 
+import { getErrorMessage } from "@/lib/error-utils";
+import { FormSkeleton } from "@/components/shared/page-skeletons";
+
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { customerSchema } from "@/modules/customer/validation";
 import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
-import { FieldPath, useForm, SubmitHandler } from "react-hook-form";
+import {
+  FieldPath,
+  useForm,
+  SubmitHandler,
+  useFieldArray,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -20,7 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { CloudUpload, FileArchive, X } from "lucide-react";
+import { CloudUpload, FileArchive, Plus, Trash2, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -34,13 +42,18 @@ import { CustomerApi } from "@/modules/customer/api";
 import { toast } from "sonner";
 import { getUser } from "@/lib/auth";
 import { FullPageLoader } from "@/components/shared/loader";
+import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
+import { usePermissions } from "@/hooks/use-permissions";
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
 
 function EditCustomerRelationship() {
+  const { canModifyCustomer } = usePermissions();
   const router = useRouter();
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // False until the record has been fetched; until then a skeleton stands in for the form
+  const [recordLoaded, setRecordLoaded] = useState(false);
   const [user, setUser] = useState<{
     name: string;
     email: string;
@@ -60,16 +73,29 @@ function EditCustomerRelationship() {
     vat_type: "",
     vat_no: "",
     logoUrl: "",
-    contactPerson: "",
-    contactPersonEmail: "",
-    contactPersonPhone: "",
-    created_by: "Admin", // Or get from auth
+    contactPersons: [
+      {
+        name: "",
+        email: "",
+        phone: "",
+      },
+    ],
+    created_by: "",
     status: "Active",
   };
 
   const form = useForm<CustomerFormValues>({
-    resolver: zodResolver(customerSchema),
+    resolver: zodResolver(customerSchema) as any,
     defaultValues: baseDefaultValues,
+  });
+
+  const {
+    fields: contactFields,
+    append: appendContact,
+    remove: removeContact,
+  } = useFieldArray({
+    control: form.control,
+    name: "contactPersons",
   });
 
   useEffect(() => {
@@ -78,7 +104,7 @@ function EditCustomerRelationship() {
       const name = userData.name || "User";
       setUser({
         name: name,
-        email: userData.email,
+        email: userData.email ?? "",
         avatar: "",
       });
       form.setValue("updated_by", name);
@@ -92,7 +118,10 @@ function EditCustomerRelationship() {
         const response = await CustomerApi.getById(id);
         const data = response.data;
 
-        // ✅ Populate form with fetched data
+        const contactPersonsArray = Array.isArray(data.contacts)
+          ? data.contacts
+          : [];
+
         form.reset({
           customer_type: data.customer_type,
           companyName: data.company_name,
@@ -103,17 +132,27 @@ function EditCustomerRelationship() {
           vat_type: data.vat_type,
           vat_no: data.vat_no,
           logoUrl: data.logo_url,
-          contactPerson: data.contact_person,
-          contactPersonEmail: data.contact_person_email,
-          contactPersonPhone: data.contact_person_phone,
+
+          // ✅ Safe mapping
+          contactPersons:
+            contactPersonsArray.length > 0
+              ? contactPersonsArray.map((cp) => ({
+                  id: cp.id || undefined,
+                  name: cp.name || "",
+                  email: cp.email || "",
+                  phone: cp.phone || "",
+                }))
+              : [{ name: "", email: "", phone: "" }],
+
           created_by: data.created_by,
         });
       } catch (error) {
         console.error("Failed to fetch customer:", error);
-        toast("Failed to load customer data");
+        toast.error(getErrorMessage(error, "Failed to load customer data"));
         router.push("/customers");
       } finally {
         setIsLoading(false);
+        setRecordLoaded(true);
       }
     }
 
@@ -136,7 +175,7 @@ function EditCustomerRelationship() {
         setUploadedFile(file);
       } else {
         alert(
-          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB."
+          "Invalid file type or size. Please upload a .jpg, .png, .svg, or .zip file under 10MB.",
         );
       }
     }
@@ -167,7 +206,7 @@ function EditCustomerRelationship() {
     try {
       setIsLoading(true);
       const payload: CREATE_CUSTOMER = {
-        customer_type: data.customer_type,
+        customer_type: CustomerType.CUSTOMER,
         company_name: data.companyName,
         address: data.address ?? "",
         phone: data.phone ?? "",
@@ -176,26 +215,34 @@ function EditCustomerRelationship() {
         vat_type: data.vat_type ?? "",
         vat_no: data.vat_no ?? "",
         logo_url: data.logoUrl ?? "",
-        contact_person: data.contactPerson ?? "",
-        contact_person_email: data.contactPersonEmail ?? "",
-        contact_person_phone: data.contactPersonPhone ?? "",
-        created_by: data.created_by ?? "Admin",
-        updated_by: user?.name || "Admin",
+        contacts: data.contactPersons.map((cp) => ({
+          name: cp.name,
+          email: cp.email ?? "",
+          phone: cp.phone ?? "",
+        })),
+        created_by: data.created_by || user?.name || "User",
+        updated_by: user?.name || "User",
         status: "Updated",
       };
-      const response = await CustomerApi.update(id, payload);
+      await CustomerApi.update(id, payload);
 
-      toast("Customer Updated", {
-        description: "The customer details have been updated successfully.",
+      const isSupplier = data.customer_type === CustomerType.SUPPLIER;
+      toast.success(`${isSupplier ? "Supplier" : "Customer"} Updated`, {
+        description: `The ${isSupplier ? "supplier" : "customer"} details have been updated successfully.`,
       });
       form.reset(baseDefaultValues);
       form.clearErrors();
       router.push("/customers");
     } catch (error) {
-      console.error("Failed to submit customer:", error);
-      toast("Failed to Update Customer", {
-        description:
-          "An error occurred while updating the customer. Please try again.",
+      console.error("Failed to submit entity:", error);
+      const isSupplier =
+        form.getValues("customer_type") === CustomerType.SUPPLIER;
+      const label = isSupplier ? "Supplier" : "Customer";
+      toast.error(`Failed to Update ${label}`, {
+        description: getErrorMessage(
+          error,
+          `An error occurred while updating the ${label.toLowerCase()}. Please try again.`,
+        ),
       });
     } finally {
       setIsLoading(false);
@@ -206,7 +253,7 @@ function EditCustomerRelationship() {
     name: TName,
     render: Parameters<
       typeof FormField<CustomerFormValues, TName>
-    >["0"]["render"]
+    >["0"]["render"],
   ) => <FormField control={form.control} name={name} render={render} />;
 
   const supplierType = form.watch("customer_type");
@@ -216,20 +263,27 @@ function EditCustomerRelationship() {
       form.clearErrors("creditPeriod");
     }
   }, [supplierType, form]);
+
+  if (!canModifyCustomer) {
+    return <RestrictedRouteGuard />;
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
-      {isLoading && <FullPageLoader />}
+      {isLoading && recordLoaded && <FullPageLoader />}
       <PageTitleWithBreadcrumb
-        title="Edit Customer"
+        title={`Edit ${supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"}`}
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
-          { title: "Customer", href: "/customers" },
+          { title: "Customer / Supplier Management", href: "/customers" },
         ]}
       />
+      {!recordLoaded && <FormSkeleton />}
 
       <Form {...form}>
+        <div className={recordLoaded ? "contents" : "hidden"}>
         <form
-          onSubmit={form.handleSubmit(onSubmit, (errors) => {
+          onSubmit={form.handleSubmit(onSubmit, () => {
             toast("Please fill in all required fields correctly");
           })}
           className="space-y-6  pb-0"
@@ -251,13 +305,22 @@ function EditCustomerRelationship() {
           <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card
               className={cn(
-                "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                "w-full   rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
               )}
             >
               <CardHeader className="flex flex-col gap-[0.5px]">
-                <h3 className="text-md font-medium mb-2">Customer</h3>
+                <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">
+                  {supplierType === CustomerType.SUPPLIER
+                    ? "Supplier"
+                    : "Customer"}{" "}
+                  Details
+                </h3>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Edit your customer details here
+                  Edit your{" "}
+                  {supplierType === CustomerType.SUPPLIER
+                    ? "supplier"
+                    : "customer"}{" "}
+                  details here
                 </p>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
@@ -307,10 +370,15 @@ function EditCustomerRelationship() {
                 </div>
                 {renderFormField("address", ({ field }) => (
                   <FormItem>
-                    <FormLabel>Customer Address</FormLabel>
+                    <FormLabel>
+                      {supplierType === CustomerType.SUPPLIER
+                        ? "Supplier"
+                        : "Customer"}{" "}
+                      Address
+                    </FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Enter Customer Address"
+                        placeholder={`Enter ${supplierType === CustomerType.SUPPLIER ? "Supplier" : "Customer"} Address`}
                         className="resize-none"
                         {...field}
                       />
@@ -350,7 +418,7 @@ function EditCustomerRelationship() {
                 <div className="flex flex-row gap-4">
                   {renderFormField("vat_type", ({ field }) => (
                     <FormItem className="w-full">
-                      <FormLabel>Vat Type</FormLabel>
+                      <FormLabel>VAT Type</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
@@ -381,7 +449,7 @@ function EditCustomerRelationship() {
                     </FormItem>
                   ))}
                 </div>
-                {renderFormField("logoUrl", ({ field }) => (
+                {renderFormField("logoUrl", () => (
                   <FormItem>
                     <FormLabel>Company Logo</FormLabel>
                     <FormControl>
@@ -446,68 +514,97 @@ function EditCustomerRelationship() {
               </CardContent>
             </Card>
 
-            <div className="grid grid-rows-2 md:grid-rows-2 gap-4">
+            <div className="space-y-4">
               <Card
                 className={cn(
-                  "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                  "w-full rounded-xl border-[#E4E8F0] shadow-none flex flex-col",
                 )}
               >
-                <CardHeader className="flex flex-col gap-[0.5px]">
-                  <h3 className="text-md font-medium mb-2">
-                    Contact Person One
-                  </h3>
-                  <p className="text-xs text-muted-foreground mb-4">
-                    Add your contact person details here
-                  </p>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div className="flex flex-col gap-[0.5px]">
+                    <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">
+                      Point of Contacts
+                    </h3>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Add and manage your contact persons here
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      appendContact({ name: "", email: "", phone: "" })
+                    }
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Contact
+                  </Button>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-4">
-                  {renderFormField("contactPerson", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Person Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                  {renderFormField("contactPersonEmail", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Person Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  ))}
-                  {renderFormField("contactPersonPhone", ({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Person Phone</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your phone" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                <CardContent className="space-y-6">
+                  {contactFields.map((field, index) => (
+                    <div
+                      key={field.id}
+                      className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 pr-14 border rounded-lg relative bg-accent/5"
+                    >
+                      {contactFields.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeContact(index)}
+                          className="absolute top-4 right-4 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {renderFormField(
+                        `contactPersons.${index}.name`,
+                        ({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              Name <span className="text-red-500">*</span>
+                            </FormLabel>
+                            <FormControl>
+                              <Input placeholder="Contact Name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        ),
+                      )}
+                      {renderFormField(
+                        `contactPersons.${index}.email`,
+                        ({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Email Address" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        ),
+                      )}
+                      {renderFormField(
+                        `contactPersons.${index}.phone`,
+                        ({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Phone Number" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        ),
+                      )}
+                    </div>
                   ))}
                 </CardContent>
-              </Card>
-              <Card
-                className={cn(
-                  "w-full   shadow-sm hover:shadow-md transition-shadow flex flex-col"
-                )}
-              >
-                <CardHeader className="flex flex-col gap-[0.5px]">
-                  <h3 className="text-md font-medium mb-2">
-                    Contact Person Two
-                  </h3>
-                  <p className="text-xs text-muted-foreground mb-4">
-                    Add your contact person details here
-                  </p>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-4"></CardContent>
               </Card>
             </div>
           </div>
         </form>
+        </div>
       </Form>
     </div>
   );

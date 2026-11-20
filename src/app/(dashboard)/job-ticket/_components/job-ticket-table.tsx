@@ -22,6 +22,7 @@ import {
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { format } from "date-fns"
+import { parseLocalDate } from "@/hooks/sql-date-time"
 import { utils, writeFile } from "xlsx"
 import {
     DropdownMenu,
@@ -37,14 +38,12 @@ interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[]
     data: TData[]
     searchValue?: string
-    searchColumn?: string
 }
 
 export function DataTable<TData, TValue>({
     columns,
     data,
     searchValue = "",
-    searchColumn,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = useState<SortingState>([])
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -85,34 +84,37 @@ export function DataTable<TData, TValue>({
 
     const handleExport = () => {
         // Prepare data for export
-        const exportData = data.map((item: any) => ({
-            "Job ID": item.job_id,
-            "Job Name": item.job_name,
-            "Job Number": item.job_number,
-            "Job Item": item.job_item,
-            "Description": item.description,
-            "PO ID": item.po_id,
-            "Customer ID": item.customer_id,
-            "Product Type": item.product_type,
-            "Quantity": item.quantity,
-            "Completed Qty": item.completed_qty,
-            "Wastage": item.wastage,
-            "Status": item.status,
-            "Remarks": item.remarks,
-            "Job Open Date": item.job_open_date ? format(new Date(item.job_open_date), "yyyy-MM-dd") : "",
-            "Packing Date": item.packing_date ? format(new Date(item.packing_date), "yyyy-MM-dd") : "",
-            "Expiry Date": item.expiry_date ? format(new Date(item.expiry_date), "yyyy-MM-dd") : "",
-            "Old Plate Qty": item.old_plate_quantity,
-            "Old Plate Status": item.old_plate_status,
-            "Old Plate Remarks": item.old_plate_remarks,
-            "New Plate Qty": item.new_plate_quantity,
-            "New Plate Status": item.new_plate_status,
-            "New Plate Remarks": item.new_plate_remarks,
-            "Created By": item.created_by,
-            "Created On": item.created_on ? format(new Date(item.created_on), "yyyy-MM-dd") : "",
-            "Updated By": item.updated_by,
-            "Updated On": item.updated_on ? format(new Date(item.updated_on), "yyyy-MM-dd") : "",
-        }))
+        const exportData = data.map((item) => {
+            const row = item as Record<string, unknown>;
+            return {
+                "Job ID": row.job_id,
+                "Job Name": row.job_name,
+                "Job Number": row.job_number,
+                "Job Item": row.job_item,
+                "Description": row.description,
+                "PO ID": row.po_id,
+                "Customer ID": row.customer_id,
+                "Product Type": row.product_type,
+                "Quantity": row.quantity,
+                "Completed Qty": row.completed_qty,
+                "Wastage": row.wastage,
+                "Status": row.status,
+                "Remarks": row.remarks,
+                "Job Open Date": row.job_open_date ? format(parseLocalDate(row.job_open_date as string), "yyyy-MM-dd") : "",
+                "Packing Date": row.packing_date ? format(parseLocalDate(row.packing_date as string), "yyyy-MM-dd") : "",
+                "Expiry Date": row.expiry_date ? format(parseLocalDate(row.expiry_date as string), "yyyy-MM-dd") : "",
+                "Old Plate Qty": row.old_plate_quantity,
+                "Old Plate Status": row.old_plate_status,
+                "Old Plate Remarks": row.old_plate_remarks,
+                "New Plate Qty": row.new_plate_quantity,
+                "New Plate Status": row.new_plate_status,
+                "New Plate Remarks": row.new_plate_remarks,
+                "Created By": row.created_by,
+                "Created On": row.created_on ? format(new Date(row.created_on as string), "yyyy-MM-dd") : "",
+                "Updated By": row.updated_by,
+                "Updated On": row.updated_on ? format(new Date(row.updated_on as string), "yyyy-MM-dd") : "",
+            };
+        });
 
         // Create worksheet
         const worksheet = utils.json_to_sheet(exportData)
@@ -166,7 +168,7 @@ export function DataTable<TData, TValue>({
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
-            <div className="overflow-hidden rounded-md border">
+            <div className="overflow-hidden rounded-lg border border-[#E4E8F0] bg-white">
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
@@ -201,7 +203,7 @@ export function DataTable<TData, TValue>({
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={columns.length} className="h-24 text-center">
+                                <TableCell colSpan={columns.length} className="h-24 text-center text-[#4B5567]">
                                     No results.
                                 </TableCell>
                             </TableRow>

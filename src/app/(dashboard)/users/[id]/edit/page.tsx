@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { FieldPath, SubmitHandler, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/error-utils";
 import {
   Form,
   FormControl,
@@ -42,11 +43,12 @@ function EditUser() {
     user_role: "",
     name: "",
     email: "",
+    phone: "",
     password: "",
   };
 
   const form = useForm<UserFormValues>({
-    resolver: zodResolver(editUserSchema),
+    resolver: zodResolver(editUserSchema) as any,
     defaultValues: baseDefaultValues,
   });
 
@@ -63,10 +65,10 @@ function EditUser() {
     setEditingUser(user);
 
     form.reset({
-      user_role: (user.user_role || "").toLowerCase().trim(),
+      user_role: user.user_role || "",
       name: user.name,
-
       email: user.email,
+      phone: user.phone || "",
       password: "", // keep empty on edit
     });
   }, [form, router]);
@@ -82,18 +84,19 @@ function EditUser() {
         user_role: data.user_role,
         name: data.name,
         email: data.email,
+        phone: data.phone || undefined,
       });
 
-      toast("User Updated", {
+      toast.success("User Updated", {
         description: "The user record has been updated successfully.",
       });
 
       sessionStorage.removeItem("editUser");
       router.push("/users");
     } catch (error) {
-      console.error(error);
-      toast("Failed to Update User", {
-        description: "An error occurred while updating the user.",
+      console.error("Failed to update user:", error);
+      toast.error("Failed to Update User", {
+        description: getErrorMessage(error, "An error occurred while updating the user record. Please try again."),
       });
     } finally {
       setIsLoading(false);
@@ -134,7 +137,7 @@ function EditUser() {
 
           <Card className={cn("w-full shadow-sm")}>
             <CardHeader>
-              <h3 className="text-md font-medium mb-2">Edit User Details</h3>
+              <h3 className="mb-1 text-[15px] font-semibold text-[#14213D]">Edit User Details</h3>
               <p className="text-xs text-muted-foreground">
                 Update your user details here
               </p>
@@ -156,8 +159,16 @@ function EditUser() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="user">User</SelectItem>
+                      <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
+                      <SelectItem value="DIRECTOR_GM">Director/GM</SelectItem>
+                      <SelectItem value="MARKETING_EXECUTIVE_MANAGER">Marketing Executive/Manager</SelectItem>
+                      <SelectItem value="ADMIN_OFFICER">Admin Officer</SelectItem>
+                      <SelectItem value="PRODUCTION_MANAGER">Production Manager</SelectItem>
+                      <SelectItem value="PRODUCTION_EXECUTIVE">Production Executive</SelectItem>
+                      <SelectItem value="PROCUREMENT_MANAGER">Procurement Manager</SelectItem>
+                      <SelectItem value="STORE_KEEPER">Store Keeper</SelectItem>
+                      <SelectItem value="DISPATCH_DELIVERY_OFFICER">Dispatch/Delivery Officer</SelectItem>
+                      <SelectItem value="FINANCE_MANAGER_ACCOUNTANT">Finance Manager/Accountant</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -179,6 +190,16 @@ function EditUser() {
                   <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              ))}
+
+              {renderFormField("phone", ({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter Phone Number" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

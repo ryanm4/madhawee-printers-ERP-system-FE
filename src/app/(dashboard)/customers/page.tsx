@@ -1,4 +1,6 @@
 "use client";
+import { useSessionStorage } from "@/hooks/use-session-storage";
+import { TableSkeleton } from "@/components/shared/page-skeletons";
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,17 +12,19 @@ import { useEffect, useState } from "react";
 import { CUSTOMER } from "@/modules/customer/types";
 import { CustomerApi } from "@/modules/customer/api";
 import { AlertDeleteDialog } from "@/components/shared/delete_popup";
-import { toast } from "sonner";
+import { appToast } from "@/lib/toast-utils";
 import { EmptyState } from "@/components/shared/empty-page";
 import { ExportButton } from "@/components/shared/export-button";
-import { PageLoader } from "@/components/shared/loader";
+import { CustomerType } from "@/config/enum";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function CRMPage() {
   const router = useRouter();
+  const { canModifyCustomer, canCreateCustomer, canExportList } = usePermissions();
   const [data, setData] = useState<CUSTOMER[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);  // starts loading: the page fetches as soon as it opens
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useSessionStorage("customers-search", "");
 
   useEffect(() => {
     fetchData();
@@ -31,26 +35,41 @@ export default function CRMPage() {
       const response = await CustomerApi.getAll();
 
       if (response.status === 200) {
-        setData(response.data);
+        // Filter for Customers or entities that serve both roles
+        const filteredData = response.data.filter(
+          (c: CUSTOMER) =>
+            c.customer_type === CustomerType.CUSTOMER ||
+            c.customer_type === CustomerType.BOTH
+        );
+
+        const sortedData = filteredData.sort((a, b) => {
+          const dateA = new Date(a.created_on || (a as Record<string, unknown>).created_at as string || 0).getTime();
+          const dateB = new Date(b.created_on || (b as Record<string, unknown>).created_at as string || 0).getTime();
+          return dateB - dateA;
+        });
+        setData(sortedData);
       }
     } catch (error) {
-      console.error("Failed to fetch inventory");
+      console.error("Failed to fetch customers", error);
+      appToast.error("Fetch Error", "Failed to load customer data.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const columns = customerColumns({
-    onEdit: (id) => {
+  const handlers = {
+    onEdit: (id: number) => {
       router.push(`/customers/${id}/edit`);
     },
-    onDelete: (id) => {
+    onDelete: (id: number) => {
       setDeleteId(id);
     },
-    onView: (id) => {
+    onView: (id: number) => {
       router.push(`/customers/${id}`);
     },
-  });
+  };
+
+  const columns = customerColumns(handlers, { canModify: canModifyCustomer });
 
   const handleDelete = async () => {
     if (deleteId === null) return;
@@ -58,16 +77,11 @@ export default function CRMPage() {
     try {
       setIsLoading(true);
       await CustomerApi.delete(deleteId);
-      toast("Customer Deleted", {
-        description: "Customer has been deleted successfully.",
-      });
+      appToast.success("Customer Deleted", "Customer has been deleted successfully.");
       await fetchData();
-    } catch (error) {
+    } catch {
       console.error("Failed to delete inventory item");
-      toast("Failed to Delete Customer", {
-        description:
-          "An error occurred while deleting the customer. Please try again.",
-      });
+      appToast.error("Failed to Delete Customer", "An error occurred while deleting the customer. Please try again.");
     } finally {
       setIsLoading(false);
       setDeleteId(null); // close popup
@@ -77,41 +91,42 @@ export default function CRMPage() {
     <>
       <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
         <PageTitleWithBreadcrumb
-          title="Customer  Management"
+          title="Customer "
           breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
         />
-        <div className="flex flex-row justify-end gap-[24px]">
-          <div className="relative w-[320px]">
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="relative w-full sm:w-[300px]">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Customer"
+              placeholder="Customer / Supplier Name"
               className="w-full pl-8"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
 
-          <ExportButton data={data} filename="customers-list" />
-          <Button onClick={() => router.push("/customers/create")}>
-            <PlusIcon /> Create New
-          </Button>
+          {canExportList && <ExportButton data={data} filename="customers-list" />}
+          {canCreateCustomer && (
+            <Button onClick={() => router.push("/customers/create")}>
+              <PlusIcon /> Create New
+            </Button>
+          )}
         </div>
         {isLoading ? (
-          <PageLoader />
+          <TableSkeleton />
         ) : data.length === 0 ? (
           <EmptyState
             title="No Customers Found"
             description="You haven't added any customers yet. Start building your customer base by creating your first entry."
-            createLabel="Create New Customer"
-            createPath="/customers/create"
+            createLabel={canCreateCustomer ? "Create New Customer" : ""}
+            createPath={canCreateCustomer ? "/customers/create" : ""}
           />
         ) : (
           <DataTable
             columns={columns}
             data={data}
             searchValue={search}
-            searchColumn="company_name"
           />
         )}
       </div>

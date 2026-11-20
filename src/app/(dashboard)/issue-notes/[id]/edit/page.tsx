@@ -1,0 +1,595 @@
+"use client";
+import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb";
+import { getErrorMessage } from "@/lib/error-utils";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { issueNoteSchema } from "@/modules/issue-notes/validation";
+import { cn } from "@/lib/utils";
+import { useRouter, useParams } from "next/navigation";
+import { useFieldArray, useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { CalendarIcon, Loader2, PlusIcon, Trash2 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { format, parseISO } from "date-fns";
+import { useEffect, useState } from "react";
+import { issueNotesApi } from "@/modules/issue-notes/api";
+import { jobTicketsApi } from "@/modules/job-tickets/api";
+import { inventoryApi } from "@/modules/inventory/api";
+import { toast } from "sonner";
+import { getUser } from "@/lib/auth";
+import { RestrictedRouteGuard } from "@/components/shared/restricted-route-guard";
+import { usePermissions } from "@/hooks/use-permissions";
+import { Combobox } from "@/components/shared/combobox";
+import { ALL_TICKETS } from "@/modules/job-tickets/types";
+import { GET_ALL_INVENTORY } from "@/modules/inventory/types";
+import { useCallback } from "react";
+
+type IssueNoteFormValues = z.infer<typeof issueNoteSchema>;
+
+function EditIssueNote() {
+  const router = useRouter();
+  const { id } = useParams();
+  const [loading, setLoading] = useState(true);
+  const { canModifyIssueNote } = usePermissions();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [user, setUser] = useState<{ name: string } | null>(null);
+  const [jobs, setJobs] = useState<{ value: string; label: string }[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<GET_ALL_INVENTORY[]>([]);
+  const [jobMaterials, setJobMaterials] = useState<
+    { value: number; label: string; quantity: number }[]
+  >([]);
+  const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+  const [isFetchingJob, setIsFetchingJob] = useState(false);
+
+  const form = useForm<IssueNoteFormValues>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(issueNoteSchema) as any,
+    defaultValues: {
+      date: new Date(),
+      collector_name: "",
+      remarks: "",
+      job_id: 0,
+      items: [{ item_id: 0, quantity: 0 }],
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "items",
+  });
+
+  const fetchIssueNote = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [issueNoteResponse, inventoryResponse] = await Promise.all([
+        issueNotesApi.getById(id as string),
+        inventoryApi.getAll(),
+      ]);
+
+      if (
+        issueNoteResponse.status === 200 &&
+        inventoryResponse.status === 200
+      ) {
+        const data = issueNoteResponse.data;
+        const inventory = inventoryResponse.data;
+
+        form.reset({
+          date: parseISO(data.date),
+          collector_name: data.collector_name,
+          job_id: data.job_id || 0,
+          remarks: data.remarks || "",
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          items: data.items.map((item: any) => {
+            // Find the item_id by matching the item_id first, then fallback to item_name with inventory
+            const invItem = inventory.find(
+              (i: GET_ALL_INVENTORY) => i.item_id === item.item_id
+            );
+            const matchedItem = invItem || inventory.find(
+              (i: GET_ALL_INVENTORY) =>
+                i.item_name === item.item_name ||
+                `${i.item_sub_category} ${i.item_name}` === item.item_name ||
+                `${i.item_sub_category} ${i.item_name} ${
+                  i.size || ""
+                }`.trim() === item.item_name ||
+                `${i.item_name} ${i.size || ""}`.trim() === item.item_name
+            );
+
+            return {
+              item_id: matchedItem ? matchedItem.item_id : (item.item_id || 0),
+              quantity: Number(item.quantity),
+            };
+          }),
+        });
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Failed to fetch Issue Note details"));
+      router.push("/issue-notes");
+    } finally {
+      setLoading(false);
+    }
+  }, [id, form, router]);
+
+  useEffect(() => {
+    const userData = getUser();
+    if (userData) {
+      setUser({ name: userData.name || "User" });
+    }
+    if (id) {
+      fetchIssueNote();
+    }
+
+    const fetchJobs = async () => {
+      try {
+        const response = await jobTicketsApi.getAll();
+        if (response.status === 200) {
+          setJobs(
+            response.data.map((job: ALL_TICKETS) => ({
+              value: job.job_id.toString(),
+              label: job.job_number || `Job #${job.job_id}`,
+            }))
+          );
+        }
+      } catch (err) {
+        console.error("Failed to fetch jobs", err);
+      }
+    };
+
+    const fetchInventory = async () => {
+      try {
+        const response = await inventoryApi.getAll();
+        if (response.status === 200) {
+          setInventoryItems(response.data as GET_ALL_INVENTORY[]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch inventory items", error);
+      }
+    };
+
+    fetchJobs();
+    fetchInventory();
+  }, [id, fetchIssueNote]);
+
+  const fetchJobById = async (jobId: number) => {
+    try {
+      setIsFetchingJob(true);
+      const response = await jobTicketsApi.getById(jobId);
+      if (response.status === 200 && response.data) {
+        const jobData = response.data;
+
+        const materialsMap = new Map<number, {
+          value: number;
+          label: string;
+          quantity: number;
+        }>();
+
+        const pcList =
+          jobData.paperCoating ||
+          jobData.paper_coating ||
+          jobData.paperCoatingData ||
+          [];
+
+        if (Array.isArray(pcList)) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          pcList.forEach((pc: any) => {
+            const matList = pc.materials || pc.raw_materials;
+            if (Array.isArray(matList)) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              matList.forEach((material: any) => {
+                if (material.item_id) {
+                  const itemLabel =
+                    `${material.material_type} ${material.material_name} ${material.size}`.trim();
+
+                  if (materialsMap.has(material.item_id)) {
+                    const existing = materialsMap.get(material.item_id)!;
+                    materialsMap.set(material.item_id, {
+                      ...existing,
+                      quantity: existing.quantity + Number(material.quantity || 0),
+                    });
+                  } else {
+                    materialsMap.set(material.item_id, {
+                      value: material.item_id,
+                      label: itemLabel,
+                      quantity: Number(material.quantity || 0),
+                    });
+                  }
+                }
+              });
+            }
+          });
+        }
+
+        if (jobData.inks && Array.isArray(jobData.inks)) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          jobData.inks.forEach((ink: any) => {
+            if (ink.ink) {
+              const itemLabel = ink.ink.trim();
+              let itemId = ink.item_id;
+              
+              if (!itemId) {
+                const matchedItem = inventoryItems.find((item) => item.item_name === itemLabel);
+                if (matchedItem) {
+                  itemId = matchedItem.item_id;
+                }
+              }
+
+              if (itemId) {
+                if (materialsMap.has(itemId)) {
+                  const existing = materialsMap.get(itemId)!;
+                  materialsMap.set(itemId, {
+                    ...existing,
+                    quantity: existing.quantity + Number(ink.quantity || 0),
+                  });
+                } else {
+                  materialsMap.set(itemId, {
+                    value: itemId,
+                    label: itemLabel,
+                    quantity: Number(ink.quantity || 0),
+                  });
+                }
+              }
+            }
+          });
+        }
+
+        setJobMaterials(Array.from(materialsMap.values()));
+      }
+    } catch (error) {
+      console.error("Failed to fetch job details:", error);
+      setJobMaterials([]);
+    } finally {
+      setIsFetchingJob(false);
+    }
+  };
+
+  const handleJobChange = (jobId: string) => {
+    const id = Number(jobId);
+    setSelectedJobId(id);
+    if (id > 0) {
+      fetchJobById(id);
+    } else {
+      setJobMaterials([]);
+    }
+  };
+
+  const handleItemChange = (index: number, itemValue: number) => {
+    const selectedMaterial = jobMaterials.find((m) => m.value === itemValue);
+    if (selectedMaterial) {
+      form.setValue(`items.${index}.quantity`, selectedMaterial.quantity);
+    }
+  };
+
+  const watchedJobId = form.watch("job_id");
+
+  // Load job materials when issue note is loaded or job changes
+  useEffect(() => {
+    if (watchedJobId && watchedJobId > 0 && watchedJobId !== selectedJobId) {
+      setSelectedJobId(watchedJobId);
+      fetchJobById(watchedJobId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedJobId]);
+
+  async function onSubmit(values: IssueNoteFormValues) {
+    try {
+      setIsSubmitting(true);
+      const payload = {
+        ...values,
+        date: format(values.date, "yyyy-MM-dd HH:mm:ss"),
+        updated_by: user?.name || "User",
+        items: values.items,
+      };
+
+      const response = await issueNotesApi.update(id as string, payload);
+
+      if (response.status === 200) {
+        toast.success("Issue Note Updated successfully");
+        router.push("/issue-notes");
+      }
+    } catch (error) {
+      const errorMessage = getErrorMessage(error, "Failed to update Issue Note");
+      if (errorMessage.includes("has only") && errorMessage.includes("in stock")) {
+        toast.warning(errorMessage);
+      } else {
+        toast.error(errorMessage);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+        <PageTitleWithBreadcrumb
+          title="Edit Issue Material"
+          breadcrumbs={[
+            { title: "Dashboard", href: "/dashboard" },
+            { title: "Edit", href: "#" },
+          ]}
+        />
+        <div className="flex items-center justify-end gap-3 w-full mt-6">
+          <Skeleton className="h-10 w-28" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Skeleton className="h-[400px] w-full rounded-xl" />
+          <Skeleton className="h-[400px] w-full rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!canModifyIssueNote) {
+    return <RestrictedRouteGuard />;
+  }
+
+  return (
+    <div className="flex flex-1 flex-col gap-4 p-[24px] pt-0 mt-3">
+      <PageTitleWithBreadcrumb
+        title="Edit Material Issue Note"
+        breadcrumbs={[
+          { title: "Dashboard", href: "/dashboard" },
+          { title: "Issue Material", href: "/issue-notes" },
+        ]}
+      />
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <h3 className="text-[15px] font-semibold text-[#14213D]">Issue Note Details</h3>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>
+                        Date <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="collector_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Collector Name <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="job_id"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>
+                        Related Job <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <Combobox
+                        items={jobs}
+                        value={field.value ? field.value.toString() : ""}
+                        onValueChange={(val) => {
+                          field.onChange(val ? Number(val) : 0);
+                          handleJobChange(val);
+                        }}
+                        placeholder="Select Job"
+                        searchPlaceholder="Search job..."
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="remarks"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Remarks</FormLabel>
+                      <FormControl>
+                        <Textarea className="resize-none" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <h3 className="text-[15px] font-semibold text-[#14213D]">Items List</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => append({ item_id: 0, quantity: 0 })}
+                >
+                  <PlusIcon className="mr-2 h-4 w-4" /> Add Item
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {fields.map((item, index) => (
+                  <div
+                    key={item.id}
+                    className="flex gap-4 items-start p-4 border rounded-lg bg-muted/20 relative"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.item_id`}
+                        render={({ field }) => {
+                          const currentItems = jobMaterials.map((m) => ({
+                            value: m.value.toString(),
+                            label: m.label,
+                          }));
+                          // If current item is not in jobMaterials, find it in inventoryItems and add it to the list
+                          if (
+                            field.value &&
+                            !currentItems.find(
+                              (m) => m.value === field.value.toString()
+                            )
+                          ) {
+                            const invItem = inventoryItems.find(
+                              (i: GET_ALL_INVENTORY) =>
+                                i.item_id === field.value
+                            );
+                            if (invItem) {
+                              currentItems.push({
+                                value: invItem.item_id.toString(),
+                                label: invItem.size
+                                  ? `${invItem.item_name} (${invItem.size})`
+                                  : invItem.item_name,
+                              });
+                            }
+                          }
+                          return (
+                            <FormItem className="flex flex-col">
+                              <FormLabel>Item Name</FormLabel>
+                              <Combobox
+                                items={currentItems}
+                                value={
+                                  field.value ? field.value.toString() : ""
+                                }
+                                onValueChange={(val) => {
+                                  field.onChange(val ? Number(val) : 0);
+                                  handleItemChange(
+                                    index,
+                                    val ? Number(val) : 0
+                                  );
+                                }}
+                                placeholder={
+                                  isFetchingJob ? "Loading..." : "Select Item"
+                                }
+                                searchPlaceholder="Search item..."
+                                disabled={isFetchingJob}
+                              />
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.quantity`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Quantity</FormLabel>
+                            <FormControl>
+                              <Input min={0} type="number" step="any"
+                                {...field}
+                                onChange={(e) =>
+                                  field.onChange(Number(e.target.value))
+                                }
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    {fields.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive mt-8"
+                        onClick={() => remove(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+          <div className="flex items-center justify-end gap-[16px] mt-6">
+            <Button
+              size="lg"
+              variant="outline"
+              type="button"
+              onClick={() => router.push("/issue-notes")}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="lg"
+              type="submit"
+              className="bg-primary text-white"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Update Material Issue Note"
+              )}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
+  );
+}
+
+export default EditIssueNote;
