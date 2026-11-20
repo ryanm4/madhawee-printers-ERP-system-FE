@@ -99,26 +99,25 @@ const wrapText = (
   return result;
 };
 
-// Standard fonts are WinAnsi-only: tabs, emoji, etc. throw "WinAnsi cannot encode".
-const sanitizeForFont = (value: any, charset: Set<number>): any => {
-    if (typeof value === "string") {
-        return Array.from(value.replace(/\t/g, "    "))
-            .filter((ch) => ch === "\n" || ch === "\r" || charset.has(ch.codePointAt(0)!))
-            .join("");
-    }
-    if (Array.isArray(value)) return value.map((v) => sanitizeForFont(v, charset));
-    if (value && typeof value === "object") {
-        return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, sanitizeForFont(v, charset)]));
-    }
-    return value;
-};
-
-export const generateQuotationPDF = async (rawData: any) => {
-    try {
-        const pdfDoc = await PDFDocument.create();
-        const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
-        const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-        const data = sanitizeForFont(rawData, new Set(helvetica.getCharacterSet()));
+/**
+ * Company details, terms and the quotation's bank account from Settings: the account chosen on
+ * the quotation, or the default one when none was chosen or it has been removed. Falls back to
+ * the built-in details if Settings can't be reached, so a quotation can always be printed.
+ */
+async function loadPrintDetails(bankAccountId?: number | null) {
+  const [companyResult, banksResult] = await Promise.allSettled([
+    SettingsApi.getCompany(),
+    // Retired accounts too, so an older quotation still prints the account it was saved with
+    SettingsApi.getBankAccounts(true),
+  ]);
+  const saved = companyResult.status === "fulfilled" ? companyResult.value.data : null;
+  const fallbackBank = {
+    account_number: mockCompanyData.bankDetails.accountNumber,
+    bank_name: mockCompanyData.bankDetails.bankName,
+    branch: mockCompanyData.bankDetails.branchName,
+    account_holder_name: mockCompanyData.bankDetails.accountName,
+    swift_code: "",
+  };
 
   let account_details: typeof fallbackBank | null = fallbackBank;
   if (banksResult.status === "fulfilled") {
